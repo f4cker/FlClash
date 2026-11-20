@@ -1824,15 +1824,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreBlockedOverrideMounts =>
-      '本机有配置挂载过订阅（解除挂载后该记录仍会保留），无法用“覆盖”方式恢复。现有数据未做任何改动。可将恢复策略改为“兼容”后再试。';
+      '无法覆盖恢复。本机有配置曾挂载订阅，解除挂载后仍会保留相关记录。现有数据未改动。你可以尝试“兼容”恢复，但遇到冲突时仍可能无法恢复。';
 
   @override
-  String get restoreBlockedMergeMounts =>
-      '备份中的部分配置在本机挂载过订阅，或正作为订阅被挂载，无法合并。现有数据未做任何改动。';
+  String restoreBlockedMergeMounts(Object profileNames) {
+    return '无法兼容恢复。以下配置存在冲突：$profileNames。解除挂载不会清除此限制，现有数据未改动。';
+  }
+
+  @override
+  String get restoreBlockedMergeMountsUnnamed =>
+      '无法兼容恢复。备份中的配置与本机的挂载记录存在冲突。解除挂载不会清除此限制，现有数据未改动。';
 
   @override
   String get restoreBlockedMountPending =>
       '挂载操作的结果尚未确认，暂时无法恢复。现有数据未做任何改动。请在挂载状态确认后再试。';
+
+  @override
+  String get restoreBlockedViewProfiles => '查看冲突配置';
 
   @override
   String get pruneCache => '修剪缓存';

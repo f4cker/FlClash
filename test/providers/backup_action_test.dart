@@ -30,6 +30,13 @@ Matcher _rejectedWith(String message) => throwsA(
   isA<MessageException>().having((e) => e.message, 'message', message),
 );
 
+Matcher _blockedWith(String message, {required List<int> profileIds}) =>
+    throwsA(
+      isA<RestoreBlockedException>()
+          .having((e) => e.message, 'message', message)
+          .having((e) => e.profileIds, 'profileIds', profileIds),
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -190,7 +197,10 @@ void main() {
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
         ),
-        _rejectedWith(currentAppLocalizations.restoreBlockedMergeMounts),
+        _blockedWith(
+          currentAppLocalizations.restoreBlockedMergeMounts('Source'),
+          profileIds: [77712],
+        ),
       );
 
       expect(published(), isFalse);
@@ -200,6 +210,8 @@ void main() {
     Future<void> expectBlockedLeavesAllAlone({
       required RestoreStrategy strategy,
       required String Function(AppLocalizations l10n) message,
+      required List<int> profileIds,
+      List<Profile>? imported,
     }) async {
       await testDatabase.profilesDao.putAll([
         _profile(77751, 'Target').toCompanion(0),
@@ -211,6 +223,7 @@ void main() {
       await testDatabase.mountsDao.settle(77751, mount.version);
       final settled = await testDatabase.mountsDao.target(77751);
       stageProfile(77751);
+      stageProfile(77752);
       stageProfile(77753);
       final container = buildContainer();
       container.read(currentProfileIdProvider.notifier).value = 77751;
@@ -232,12 +245,14 @@ void main() {
         action.applyRestore(
           MigrationData(
             configMap: backupConfig,
-            profiles: [_profile(77751, 'Restored'), _profile(77753, 'New')],
+            profiles:
+                imported ??
+                [_profile(77751, 'Restored'), _profile(77753, 'New')],
           ),
           RestoreOption.all,
           stagingDirPath: staging.path,
         ),
-        _rejectedWith(message(currentAppLocalizations)),
+        _blockedWith(message(currentAppLocalizations), profileIds: profileIds),
       );
 
       expect(reachedPublish, isFalse);
@@ -261,25 +276,61 @@ void main() {
       await expectBlockedLeavesAllAlone(
         strategy: RestoreStrategy.override,
         message: (l10n) => l10n.restoreBlockedOverrideMounts,
+        profileIds: [77751, 77752],
       );
     });
 
-    test('a merge overlapping a mount explains itself and changes '
+    test('a merge overlapping a mount names the profile and changes '
         'nothing', () async {
       await expectBlockedLeavesAllAlone(
         strategy: RestoreStrategy.compatible,
-        message: (l10n) => l10n.restoreBlockedMergeMounts,
+        message: (l10n) => l10n.restoreBlockedMergeMounts('Target'),
+        profileIds: [77751],
       );
+    });
+
+    test('a merge names every conflicting profile by its local name', () async {
+      await expectBlockedLeavesAllAlone(
+        strategy: RestoreStrategy.compatible,
+        imported: [
+          _profile(77752, 'Backup source'),
+          _profile(77751, 'Backup target'),
+          _profile(77753, 'New'),
+        ],
+        message: (l10n) => l10n.restoreBlockedMergeMounts('Target, Source'),
+        profileIds: [77751, 77752],
+      );
+    });
+
+    test('a merge conflict without a local profile names nothing', () async {
+      await testDatabase.customStatement('PRAGMA foreign_keys = OFF');
+      final mount = await pendingMount(77761, []);
+      await testDatabase.mountsDao.settle(77761, mount.version);
+      await testDatabase.customStatement('PRAGMA foreign_keys = ON');
+      final settled = await testDatabase.mountsDao.target(77761);
+
+      await expectLater(
+        actionOf(buildContainer()).applyRestore(
+          MigrationData(profiles: [_profile(77761, 'From backup')]),
+          RestoreOption.onlyProfiles,
+        ),
+        _blockedWith(
+          currentAppLocalizations.restoreBlockedMergeMountsUnnamed,
+          profileIds: [],
+        ),
+      );
+
+      expect(await testDatabase.profilesDao.query().get(), isEmpty);
+      expect(await testDatabase.mountsDao.target(77761), settled);
     });
 
     test('a blocked restore reads in the app language', () async {
       loadAppLocalizations(const Locale('zh'));
       addTearDown(() => loadAppLocalizations(const Locale('en')));
       await expectBlockedLeavesAllAlone(
-        strategy: RestoreStrategy.override,
-        message: (_) =>
-            '本机有配置挂载过订阅（解除挂载后该记录仍会保留），无法用“覆盖”方式恢复。'
-            '现有数据未做任何改动。可将恢复策略改为“兼容”后再试。',
+        strategy: RestoreStrategy.compatible,
+        message: (_) => '无法兼容恢复。以下配置存在冲突：Target。解除挂载不会清除此限制，现有数据未改动。',
+        profileIds: [77751],
       );
     });
 

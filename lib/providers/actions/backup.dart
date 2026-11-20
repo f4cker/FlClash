@@ -146,10 +146,7 @@ class BackupAction extends _$BackupAction {
                 );
               } on RestoreBlockedError catch (error, stack) {
                 // Thrown before any row, file or setting is written.
-                Error.throwWithStackTrace(
-                  MessageException(_restoreBlockedMessage(error.reason)),
-                  stack,
-                );
+                Error.throwWithStackTrace(await _restoreBlocked(error), stack);
               }
               // Keep both restore lanes until all dependent publication and
               // cleanup completes; a later restore must not overtake these.
@@ -196,16 +193,33 @@ class BackupAction extends _$BackupAction {
         );
   }
 
-  static String _restoreBlockedMessage(RestoreBlockedReason reason) {
+  /// An id without a local profile row is left out rather than guessed.
+  Future<RestoreBlockedException> _restoreBlocked(
+    RestoreBlockedError error,
+  ) async {
     final l10n = currentAppLocalizations;
-    return switch (reason) {
-      RestoreBlockedReason.mountPending => l10n.restoreBlockedMountPending,
-      RestoreBlockedReason.overrideWithMountGuards =>
-        l10n.restoreBlockedOverrideMounts,
-      RestoreBlockedReason.mergeWithMountGuards ||
-      RestoreBlockedReason.mergeWithMountLinks =>
-        l10n.restoreBlockedMergeMounts,
-    };
+    final local = [
+      for (final profile in await database.profilesDao.query().get())
+        if (error.profileIds.contains(profile.id)) profile,
+    ];
+    final names = local
+        .map((profile) => profile.realLabel)
+        .join(l10n.mountNameSeparator);
+    return RestoreBlockedException(
+      switch (error.reason) {
+        RestoreBlockedReason.mountPending => l10n.restoreBlockedMountPending,
+        RestoreBlockedReason.overrideWithMountGuards =>
+          l10n.restoreBlockedOverrideMounts,
+        RestoreBlockedReason.mergeWithMountGuards ||
+        RestoreBlockedReason.mergeWithMountLinks when local.isEmpty =>
+          l10n.restoreBlockedMergeMountsUnnamed,
+        RestoreBlockedReason.mergeWithMountGuards ||
+        RestoreBlockedReason.mergeWithMountLinks =>
+          l10n.restoreBlockedMergeMounts(names),
+      },
+      reason: error.reason,
+      profileIds: [for (final profile in local) profile.id],
+    );
   }
 
   Future<void> _restoreMitmModules() async {

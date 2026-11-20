@@ -1,3 +1,8 @@
+import 'dart:async';
+
+import 'package:drift/native.dart';
+import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
@@ -252,6 +257,119 @@ void main() {
       await tester.tap(find.byGlyph(AppGlyphs.eye));
       await tester.pumpAndSettle();
       expect(find.byGlyph(AppGlyphs.eyeOff), findsOneWidget);
+    });
+  });
+
+  group('restore blocked dialog', () {
+    late Database db;
+    const backupPage = 'backup page';
+
+    setUp(() async {
+      db = Database(NativeDatabase.memory());
+      database = db;
+      await db.profilesDao.putAll([
+        const Profile(
+          id: 1,
+          label: 'Target',
+          autoUpdateDuration: Duration.zero,
+        ).toCompanion(0),
+        const Profile(
+          id: 2,
+          label: 'Source',
+          autoUpdateDuration: Duration.zero,
+        ).toCompanion(1),
+      ]);
+      final mount = await db.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [2],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      await db.mountsDao.settle(1, mount.version);
+    });
+
+    tearDown(() => db.close());
+
+    Future<Object> snapshot() async => (
+      await db.profilesDao.query().get(),
+      await db.mountsDao.targets(),
+    ).toString();
+
+    Future<(Future<void>,)> show(
+      WidgetTester tester,
+      RestoreBlockedException blocked,
+    ) async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const TestApp(child: HostScaffold(body: SizedBox.shrink())),
+        ),
+      );
+      unawaited(
+        globalState.navigatorKey.currentState!.push(
+          PageRouteBuilder<void>(
+            pageBuilder: (_, _, _) => const Text(backupPage),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final shown = showRestoreBlocked(blocked, container.read);
+      await tester.pumpAndSettle();
+      return (shown,);
+    }
+
+    RestoreBlockedException merge() => RestoreBlockedException(
+      currentAppLocalizations.restoreBlockedMergeMounts('Target'),
+      reason: RestoreBlockedReason.mergeWithMountGuards,
+      profileIds: const [1],
+    );
+
+    testWidgets('viewing opens the profiles page and changes nothing', (
+      tester,
+    ) async {
+      final before = await tester.runAsync(snapshot);
+      final l10n = currentAppLocalizations;
+      final (shown,) = await show(tester, merge());
+
+      expect(find.text(l10n.restoreBlockedMergeMounts('Target')), findsOne);
+      expect(find.textContaining(l10n.delete), findsNothing);
+      await tester.tap(find.text(l10n.restoreBlockedViewProfiles));
+      await tester.pumpAndSettle();
+      await shown;
+
+      expect(container.read(currentPageLabelProvider), PageLabel.profiles);
+      expect(find.text(backupPage), findsNothing);
+      expect(await tester.runAsync(snapshot), before);
+    });
+
+    testWidgets('closing stays on the page', (tester) async {
+      final l10n = currentAppLocalizations;
+      final (shown,) = await show(tester, merge());
+
+      await tester.tap(find.text(l10n.close));
+      await tester.pumpAndSettle();
+      await shown;
+
+      expect(container.read(currentPageLabelProvider), PageLabel.dashboard);
+      expect(find.text(backupPage), findsOne);
+    });
+
+    testWidgets('offers only close when no conflicting profile is here', (
+      tester,
+    ) async {
+      final l10n = currentAppLocalizations;
+      await show(
+        tester,
+        RestoreBlockedException(
+          l10n.restoreBlockedMergeMountsUnnamed,
+          reason: RestoreBlockedReason.mergeWithMountGuards,
+        ),
+      );
+
+      expect(find.byType(TextButton), findsOne);
+      expect(find.text(l10n.close), findsOne);
+      expect(find.text(l10n.restoreBlockedViewProfiles), findsNothing);
     });
   });
 }

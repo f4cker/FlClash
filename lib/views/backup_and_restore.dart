@@ -81,14 +81,27 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
     );
   }
 
-  Future<void> _restore(RestoreOption option, BackupFetch fetch) {
+  Future<void> _restore(RestoreOption option, BackupFetch fetch) async {
     final appLocalizations = context.appLocalizations;
-    return _run(
+    RestoreBlockedException? blocked;
+    await _run(
       title: appLocalizations.restore,
       successMessage: appLocalizations.restoreSuccess,
-      task: () =>
-          ref.read(backupActionProvider.notifier).restore(option, fetch),
+      task: () async {
+        try {
+          return await ref
+              .read(backupActionProvider.notifier)
+              .restore(option, fetch);
+        } on RestoreBlockedException catch (e) {
+          if (e.reason == RestoreBlockedReason.mountPending) rethrow;
+          blocked = e;
+          return false;
+        }
+      },
     );
+    if (blocked case final blocked? when mounted) {
+      await showRestoreBlocked(blocked, ref.read);
+    }
   }
 
   Future<RestoreOption?> _pickRestoreOption() {
@@ -336,6 +349,45 @@ class _RestoreOptionsDialogState extends State<RestoreOptionsDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Viewing only opens the profiles page; nothing is changed from here.
+Future<void> showRestoreBlocked(
+  RestoreBlockedException blocked,
+  ProviderReader read,
+) async {
+  final view = await dialogs.showCommonDialog<bool>(
+    child: RestoreBlockedDialog(blocked: blocked),
+  );
+  if (view != true) return;
+  rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  read(currentPageLabelProvider.notifier).toProfiles();
+}
+
+class RestoreBlockedDialog extends StatelessWidget {
+  final RestoreBlockedException blocked;
+
+  const RestoreBlockedDialog({super.key, required this.blocked});
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return AlertDialog(
+      title: appLocalizations.restore,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(appLocalizations.close),
+        ),
+        if (blocked.profileIds.isNotEmpty)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(appLocalizations.restoreBlockedViewProfiles),
+          ),
+      ],
+      child: SelectableText(blocked.message),
     );
   }
 }

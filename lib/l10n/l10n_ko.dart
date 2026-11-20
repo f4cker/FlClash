@@ -1894,15 +1894,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreBlockedOverrideMounts =>
-      '이 기기의 프로필 중 구독을 마운트한 적이 있는 프로필이 있어(마운트를 해제해도 기록은 남습니다) ‘덮어쓰기’로 복원할 수 없습니다. 기존 데이터는 전혀 변경되지 않았습니다. 복원 방식을 ‘호환’으로 바꾼 뒤 다시 시도할 수 있습니다.';
+      '‘덮어쓰기’로 복원할 수 없습니다. 이 기기에 구독을 마운트한 적이 있는 프로필이 있으며, 마운트를 해제해도 관련 기록은 남습니다. 기존 데이터는 변경되지 않았습니다. ‘호환’으로 복원을 시도할 수 있지만 충돌이 있으면 복원되지 않을 수 있습니다.';
 
   @override
-  String get restoreBlockedMergeMounts =>
-      '백업의 일부 프로필이 이 기기에서 구독을 마운트한 적이 있거나 구독으로 마운트되어 있어 병합할 수 없습니다. 기존 데이터는 전혀 변경되지 않았습니다.';
+  String restoreBlockedMergeMounts(Object profileNames) {
+    return '‘호환’으로 복원할 수 없습니다. 다음 프로필이 충돌합니다: $profileNames. 마운트를 해제해도 이 제한은 해제되지 않으며, 기존 데이터는 변경되지 않았습니다.';
+  }
+
+  @override
+  String get restoreBlockedMergeMountsUnnamed =>
+      '‘호환’으로 복원할 수 없습니다. 백업의 프로필이 이 기기의 마운트 기록과 충돌합니다. 마운트를 해제해도 이 제한은 해제되지 않으며, 기존 데이터는 변경되지 않았습니다.';
 
   @override
   String get restoreBlockedMountPending =>
       '마운트 작업의 결과가 아직 확인되지 않아 지금은 복원할 수 없습니다. 기존 데이터는 전혀 변경되지 않았습니다. 마운트 상태가 확인된 뒤 다시 시도하세요.';
+
+  @override
+  String get restoreBlockedViewProfiles => '충돌하는 프로필 보기';
 
   @override
   String get pruneCache => '캐시 정리';

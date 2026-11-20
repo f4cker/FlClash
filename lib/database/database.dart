@@ -697,18 +697,27 @@ class Database extends _$Database {
             await profileMounts.count.getSingle() != 0) {
           throw RestoreBlockedError(
             RestoreBlockedReason.overrideWithMountGuards,
+            {
+              ...mountStates.keys,
+              for (final link in await profileMounts.select().get()) ...[
+                link.targetId,
+                link.sourceId,
+              ],
+            }.sorted((a, b) => a.compareTo(b)),
           );
         }
       } else {
+        final guarded = <int>{};
         for (final state in mountStates.values) {
           if (importedIds.contains(state.targetId) ||
               state.sourceIds.any(importedIds.contains)) {
-            throw RestoreBlockedError(
-              RestoreBlockedReason.mergeWithMountGuards,
+            guarded.addAll(
+              [state.targetId, ...state.sourceIds].where(importedIds.contains),
             );
           }
         }
         // Also reject inconsistent orphan links lacking a target guard.
+        final linked = <int>{};
         for (final id in importedIds) {
           final links =
               await (profileMounts.select()..where(
@@ -716,8 +725,20 @@ class Database extends _$Database {
                   ))
                   .get();
           if (links.isNotEmpty) {
-            throw RestoreBlockedError(RestoreBlockedReason.mergeWithMountLinks);
+            linked.add(id);
           }
+        }
+        if (guarded.isNotEmpty) {
+          throw RestoreBlockedError(
+            RestoreBlockedReason.mergeWithMountGuards,
+            {...guarded, ...linked}.sorted((a, b) => a.compareTo(b)),
+          );
+        }
+        if (linked.isNotEmpty) {
+          throw RestoreBlockedError(
+            RestoreBlockedReason.mergeWithMountLinks,
+            linked.sorted((a, b) => a.compareTo(b)),
+          );
         }
       }
       if (!write) return;

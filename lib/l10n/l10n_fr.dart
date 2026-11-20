@@ -1955,15 +1955,23 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreBlockedOverrideMounts =>
-      'Un profil de cet appareil a eu des abonnements montés (l’enregistrement subsiste après le démontage) : la sauvegarde ne peut donc pas être restaurée avec « Écraser ». Aucune donnée existante n’a été modifiée. Vous pouvez passer la stratégie de restauration à « Compatible » et réessayer.';
+      'Impossible de restaurer avec « Écraser ». Un profil de cet appareil a eu des abonnements montés, et l’enregistrement subsiste après le démontage. Aucune donnée existante n’a été modifiée. Vous pouvez essayer de restaurer avec « Compatible », mais cela peut encore échouer en cas de conflit.';
 
   @override
-  String get restoreBlockedMergeMounts =>
-      'Certains profils de la sauvegarde ont eu des abonnements montés sur cet appareil, ou sont montés comme abonnements : ils ne peuvent donc pas être fusionnés. Aucune donnée existante n’a été modifiée.';
+  String restoreBlockedMergeMounts(Object profileNames) {
+    return 'Impossible de restaurer avec « Compatible ». Ces profils sont en conflit : $profileNames. Le démontage ne lève pas cette restriction. Aucune donnée existante n’a été modifiée.';
+  }
+
+  @override
+  String get restoreBlockedMergeMountsUnnamed =>
+      'Impossible de restaurer avec « Compatible ». Des profils de la sauvegarde sont en conflit avec des enregistrements de montage de cet appareil. Le démontage ne lève pas cette restriction. Aucune donnée existante n’a été modifiée.';
 
   @override
   String get restoreBlockedMountPending =>
       'Le résultat d’une opération de montage n’est pas encore confirmé : la restauration est donc indisponible pour le moment. Aucune donnée existante n’a été modifiée. Réessayez une fois l’état du montage confirmé.';
+
+  @override
+  String get restoreBlockedViewProfiles => 'Voir les profils en conflit';
 
   @override
   String get pruneCache => 'Nettoyer le cache';

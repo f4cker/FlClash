@@ -18,7 +18,10 @@ enum RestoreBlockedReason {
 final class RestoreBlockedError extends StateError {
   final RestoreBlockedReason reason;
 
-  RestoreBlockedError(this.reason)
+  /// The profile ids the guard found in conflict, in id order.
+  final List<int> profileIds;
+
+  RestoreBlockedError(this.reason, [this.profileIds = const []])
     : super(switch (reason) {
         RestoreBlockedReason.mountPending =>
           'Cannot restore while a mount operation is pending',
@@ -29,6 +32,19 @@ final class RestoreBlockedError extends StateError {
         RestoreBlockedReason.mergeWithMountLinks =>
           'Cannot merge profiles with mount links',
       });
+}
+
+/// [profileIds] are the conflicting profiles that exist locally, the ones
+/// the dialog can point to.
+final class RestoreBlockedException extends MessageException {
+  final RestoreBlockedReason reason;
+  final List<int> profileIds;
+
+  const RestoreBlockedException(
+    super.message, {
+    required this.reason,
+    this.profileIds = const [],
+  });
 }
 
 final class AgeSecretKeyRequiredException implements Exception {

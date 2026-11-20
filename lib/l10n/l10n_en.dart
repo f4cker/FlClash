@@ -1935,15 +1935,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreBlockedOverrideMounts =>
-      'A profile on this device has had subscriptions mounted (the record stays after unmounting), so the backup can\'t be restored with “Override”. No existing data was changed. You can switch the restore strategy to “Compatible” and try again.';
+      'Can\'t restore with “Override”. A profile on this device has had subscriptions mounted, and the record stays after unmounting. No existing data was changed. You can try restoring with “Compatible”, but it may still fail if there are conflicts.';
 
   @override
-  String get restoreBlockedMergeMounts =>
-      'Some profiles in the backup have had subscriptions mounted on this device, or are mounted as subscriptions, so they can\'t be merged. No existing data was changed.';
+  String restoreBlockedMergeMounts(Object profileNames) {
+    return 'Can\'t restore with “Compatible”. These profiles conflict: $profileNames. Unmounting doesn\'t remove this restriction. No existing data was changed.';
+  }
+
+  @override
+  String get restoreBlockedMergeMountsUnnamed =>
+      'Can\'t restore with “Compatible”. Profiles in the backup conflict with mount records on this device. Unmounting doesn\'t remove this restriction. No existing data was changed.';
 
   @override
   String get restoreBlockedMountPending =>
       'A mount operation\'s result isn\'t confirmed yet, so restoring is unavailable for now. No existing data was changed. Try again once the mount status is confirmed.';
+
+  @override
+  String get restoreBlockedViewProfiles => 'View conflicting profiles';
 
   @override
   String get pruneCache => 'Prune cache';

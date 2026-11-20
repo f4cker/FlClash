@@ -1847,15 +1847,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreBlockedOverrideMounts =>
-      'この端末に、サブスクリプションをマウントしたことのあるプロファイルがあります（マウント解除後も記録は残ります）。そのため「上書き」で復元できません。既存のデータは一切変更されていません。復元方式を「互換」に変更してから再試行できます。';
+      '「上書き」で復元できません。この端末にはサブスクリプションをマウントしたことのあるプロファイルがあり、マウント解除後も関連する記録は残ります。既存のデータは変更されていません。「互換」で復元を試すこともできますが、競合がある場合は復元できないことがあります。';
 
   @override
-  String get restoreBlockedMergeMounts =>
-      'バックアップ内の一部のプロファイルは、この端末でサブスクリプションをマウントしたことがあるか、サブスクリプションとしてマウントされているため、統合できません。既存のデータは一切変更されていません。';
+  String restoreBlockedMergeMounts(Object profileNames) {
+    return '「互換」で復元できません。次のプロファイルが競合しています：$profileNames。マウントを解除してもこの制限は解除されません。既存のデータは変更されていません。';
+  }
+
+  @override
+  String get restoreBlockedMergeMountsUnnamed =>
+      '「互換」で復元できません。バックアップ内のプロファイルがこの端末のマウント記録と競合しています。マウントを解除してもこの制限は解除されません。既存のデータは変更されていません。';
 
   @override
   String get restoreBlockedMountPending =>
       'マウント操作の結果がまだ確認されていないため、現在は復元できません。既存のデータは一切変更されていません。マウントの状態が確認されてから再試行してください。';
+
+  @override
+  String get restoreBlockedViewProfiles => '競合しているプロファイルを表示';
 
   @override
   String get pruneCache => 'キャッシュを整理';
