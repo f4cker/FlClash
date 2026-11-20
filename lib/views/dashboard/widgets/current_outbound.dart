@@ -4,10 +4,8 @@ import 'dart:math' as math;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ipx_al.dart';
 import 'package:fl_clash/common/service_probe.dart';
-import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/ip_quality/labels.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:fl_clash/providers/ip_quality.dart';
 import 'package:fl_clash/providers/ipx_report.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -94,15 +92,10 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// the route moves, are not.
   var _opening = true;
 
-  /// Addresses whose report the card may ask ipx.al and the IP quality
-  /// sources about: the exit shown before any switch, and the address the
-  /// country badge was tapped on. Anything else shows only what is cached.
+  /// Addresses whose report the card may ask ipx.al for: the exit shown
+  /// before any switch, and the address the country badge was tapped on.
+  /// Anything else shows only what is cached.
   final _askable = <String>{};
-
-  /// What the IP quality sources said about an address, kept by the card so
-  /// that it holds no watcher a cached entry's expiry would refetch for.
-  final _qualities = <String, AsyncValue<IpQuality>>{};
-  final _qualityAsks = <String, ProviderSubscription<AsyncValue<IpQuality>>>{};
 
   @override
   void initState() {
@@ -137,9 +130,6 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     _probe
       ..unwatch(routedOutbound)
       ..unwatch(directOutbound);
-    for (final ask in _qualityAsks.values) {
-      ask.close();
-    }
     super.dispose();
   }
 
@@ -213,35 +203,6 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     return kept.info;
   }
 
-  /// Asks the IP quality sources about [ip] once, keeping the answer and
-  /// letting go of the entry as soon as it settles.
-  void _askQuality(String ip) {
-    // Checked again when sent: a switch since the build that asked for it
-    // takes the address out of [_askable].
-    if (!mounted || !_askable.contains(ip) || _qualityAsks.containsKey(ip)) {
-      return;
-    }
-    _qualityAsks[ip] = ref.listenManual(
-      ipQualityProvider(ip),
-      (_, next) => _onQuality(ip, next),
-      fireImmediately: true,
-    );
-    if (_qualities[ip] case final settled? when !settled.isLoading) {
-      _qualityAsks.remove(ip)?.close();
-    }
-  }
-
-  void _onQuality(String ip, AsyncValue<IpQuality> next) {
-    if (!mounted) {
-      return;
-    }
-    setState(() => _qualities[ip] = next);
-    if (!next.isLoading) {
-      // Closed once listenManual has handed the subscription back.
-      scheduleMicrotask(() => _qualityAsks.remove(ip)?.close());
-    }
-  }
-
   void _switch(bool toLocal) {
     setState(() {
       _switched = true;
@@ -277,12 +238,6 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
       if (ref.exists(ipxLookupProvider(ip)) &&
           ref.read(ipxLookupProvider(ip)).phase == IpxPhase.failed) {
         ref.read(ipxLookupProvider(ip).notifier).retry();
-      }
-      // Only a fallback already asked for: reading one would start it.
-      if (_qualities[ip]?.hasError ?? false) {
-        _qualities.remove(ip);
-        ref.invalidate(ipQualityProvider(ip));
-        _askQuality(ip);
       }
     }
     // The probe launches the lookup in a microtask of its own, queued
@@ -499,9 +454,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     );
   }
 
-  /// What ipx.al says about [info], or the IP quality sources when it has
-  /// nothing. Only an address in [_askable] is asked about; for any other
-  /// the card reads what is cached and otherwise says it is unknown.
+  /// What ipx.al says about [info]. Only an address in [_askable] is asked
+  /// about; for any other the card reads what is cached and otherwise says
+  /// it is not looked up.
   _IpFacts _factsOf(IpInfo info) {
     final ip = info.ip;
     final appLocalizations = context.appLocalizations;
@@ -562,49 +517,13 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         loading: true,
       );
     }
-    // No report: the IP quality sources stand in, as the detail sheet does,
-    // when they may be asked or the card already holds their answer. Their
-    // entry is never read here, nor watched: an expired or invalidated one
-    // would be fetched again by the read, unasked.
-    var fallback = _qualities[ip];
-    if (fallback == null && askable) {
-      fallback = const AsyncLoading();
-      if (!_qualityAsks.containsKey(ip)) {
-        scheduleMicrotask(() => _askQuality(ip));
-      }
-    }
-    if (fallback == null) {
-      return _IpFacts(
-        countryCode: country,
-        organization: briefNetwork,
-        loading: ipx.retrying,
-        reportFailed: !ipx.retrying,
-      );
-    }
-    final quality = fallback.value;
-    if (quality != null) {
-      return _IpFacts(
-        countryCode: country,
-        type: quality.type.label(context),
-        quality: (
-          '${appLocalizations.ipQualityShort} ${quality.level.label(context)}',
-          switch (quality.level) {
-            IpQualityLevel.good => DashboardChipTone.ok,
-            IpQualityLevel.normal => DashboardChipTone.idle,
-            IpQualityLevel.risky => DashboardChipTone.warn,
-          },
-        ),
-        organization:
-            briefNetwork ?? network(quality.organization, quality.asn),
-        loading: false,
-      );
-    }
+    // No report: the card says so and stands by what it has, as it did in
+    // beta 3; the IP quality sources are left to the detail sheet.
     return _IpFacts(
       countryCode: country,
       organization: briefNetwork,
-      loading: fallback.isLoading || ipx.retrying,
-      // The address is known; only the report about it is missing.
-      reportFailed: !fallback.isLoading && !ipx.retrying,
+      loading: ipx.retrying,
+      reportFailed: !ipx.retrying,
     );
   }
 }

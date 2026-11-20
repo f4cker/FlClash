@@ -175,7 +175,8 @@ void main() {
       expect(probe.asked..sort(), [routedOutbound, directOutbound]);
       expect(requests.ipx, isNotEmpty);
       expect(requests.ipx.where((url) => url.contains(_localIp)), isEmpty);
-      expect(requests.quality, [_exitIp]);
+      // The card never asks the IP quality sources, even with no report.
+      expect(requests.quality, isEmpty);
 
       Future<void> expectNoneSent(Future<void> Function() act) async {
         final asked = probe.asked.length;
@@ -208,15 +209,18 @@ void main() {
         }
       });
 
-      // The local exit's report asked for on its badge: that asks.
+      // The local exit's report asked for on its badge: that asks ipx.al,
+      // and still not the IP quality sources.
       await tapAddress();
       expect(_shown(tester), _localIp);
-      final quality = requests.quality.length;
+      final ipx = requests.ipx.length;
       await tester.tap(_badge());
       await _later(tester);
-      expect(requests.quality, hasLength(quality + 1));
+      expect(requests.ipx.length, greaterThan(ipx));
+      expect(requests.ipx.where((url) => url.contains(_localIp)), isNotEmpty);
+      expect(requests.quality, isEmpty);
 
-      // Now both have their reports in hand; switching still asks nothing.
+      // Now both have been asked about; switching still asks nothing.
       await expectNoneSent(() async {
         for (var i = 0; i < 6; i++) {
           await tapAddress();
@@ -243,6 +247,7 @@ void main() {
           await tapAddress();
         }
       });
+      expect(requests.quality, isEmpty);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 

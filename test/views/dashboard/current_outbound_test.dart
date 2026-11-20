@@ -239,20 +239,6 @@ class _FakeIpx extends IpxLookup {
   void retry() => retries++;
 }
 
-/// ipx.al still working on an address until the test says otherwise.
-class _SettlingIpx extends IpxLookup {
-  @override
-  IpxLookupState build(String ip) => const IpxLookupState();
-
-  @override
-  void reload() {}
-
-  @override
-  void retry() {}
-
-  void settle(IpxLookupState next) => state = next;
-}
-
 class _Running extends RunTime {
   @override
   int? build() => 1000;
@@ -633,19 +619,6 @@ void main() {
       expect(find.text('Check failed'), findsNothing);
     });
 
-    testWidgets('falls back to the IP quality sources without a report', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _ipApp(lookup: const IpxLookupState(phase: IpxPhase.failed)),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Residential'), findsOneWidget);
-      expect(find.text('Example Broadband'), findsOneWidget);
-    });
-
     testWidgets('shows the local address while Flash is not running', (
       tester,
     ) async {
@@ -970,10 +943,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // The exit the card opens on was looked up, as ever: ipx.al, then the
-      // IP quality sources once it had nothing.
+      // The exit the card opens on was looked up, as ever, on ipx.al alone:
+      // the IP quality sources are never asked from the card.
       expect(fetch.urls, hasLength(2));
-      expect(quality, [_ip]);
+      expect(quality, isEmpty);
       final container = _containerOf(tester);
       expect(container.exists(ipxLookupProvider(_localIp)), isFalse);
 
@@ -992,7 +965,7 @@ void main() {
       expect(find.text('—'), findsNothing);
       expect(_badgeEnabled(tester), isTrue);
       expect(fetch.urls, hasLength(2));
-      expect(quality, [_ip]);
+      expect(quality, isEmpty);
       expect(container.exists(ipxLookupProvider(_localIp)), isFalse);
       expect(container.exists(ipQualityProvider(_localIp)), isFalse);
 
@@ -1001,7 +974,7 @@ void main() {
       expect(find.text(_ip), findsOneWidget);
       expect(_badgeCode(tester), 'GB');
       expect(fetch.urls, hasLength(2));
-      expect(quality, [_ip]);
+      expect(quality, isEmpty);
       expect(probe.refreshed, isEmpty);
 
       for (var i = 0; i < 3; i++) {
@@ -1009,7 +982,7 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(fetch.urls, hasLength(2));
-      expect(quality, [_ip]);
+      expect(quality, isEmpty);
       expect(container.exists(ipxLookupProvider(_localIp)), isFalse);
       expect(probe.refreshed, isEmpty);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -1150,10 +1123,10 @@ void main() {
       });
     }
 
-    testWidgets('holds no IP quality entry an expiry would refetch', (
+    testWidgets('never asks the IP quality sources, not even from the badge', (
       tester,
     ) async {
-      var lookups = 0;
+      final lookups = <String>[];
       await tester.pumpWidget(
         TestApp(
           locale: const Locale('en'),
@@ -1168,15 +1141,8 @@ void main() {
             ipxLookupProvider(_ip).overrideWith(
               () => _FakeIpx(const IpxLookupState(phase: IpxPhase.failed)),
             ),
-            ipQualityProvider.overrideWith((ref, ip) async {
-              lookups++;
-              // As a stored answer does: kept, and refreshed on expiry.
-              ref.keepAlive();
-              final expiry = Timer(
-                const Duration(minutes: 1),
-                ref.invalidateSelf,
-              );
-              ref.onDispose(expiry.cancel);
+            ipQualityProvider.overrideWith((_, ip) async {
+              lookups.add(ip);
               return _residential;
             }),
           ],
@@ -1185,56 +1151,20 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
-      expect(find.text('Residential'), findsOneWidget);
-      expect(lookups, 1);
+      // ipx.al has no report: the card says so, as beta 3's did, and leaves
+      // the IP quality sources to the detail sheet.
+      expect(find.text('Couldn’t get the report'), findsOneWidget);
+      expect(find.text('Residential'), findsNothing);
+      expect(lookups, isEmpty);
 
+      // The badge asks ipx.al again, and nothing else.
+      await tester.tap(_badge());
+      await tester.pump();
+      expect(_FakeIpx.retries, 1);
       for (var i = 0; i < 3; i++) {
         await tester.pump(const Duration(minutes: 1));
       }
-      expect(lookups, 1);
-      expect(find.text('Residential'), findsOneWidget);
-    });
-
-    testWidgets('sends no IP quality ask a switch overtook', (tester) async {
-      final quality = <String>[];
-      await tester.pumpWidget(
-        TestApp(
-          locale: const Locale('en'),
-          overrides: [
-            profilesProvider.overrideWithValue(const [_profile]),
-            suspendProvider.overrideWithValue(false),
-            runTimeProvider.overrideWith(_Running.new),
-            routeTrackerProvider.overrideWithBuild((_, _) => _liveRoute),
-            outboundIpProbeProvider.overrideWith(
-              () => _RecordingIps(_fresh(_ip), _fresh(_localIp, country: 'HK')),
-            ),
-            ipxLookupProvider(_ip).overrideWith(_SettlingIpx.new),
-            ipxLookupProvider(
-              _localIp,
-            ).overrideWith(() => _FakeIpx(_localDone)),
-            ipQualityProvider.overrideWith((_, ip) {
-              quality.add(ip);
-              return Future.any(const []);
-            }),
-          ],
-          child: _card(),
-        ),
-      );
-      await tester.pump();
-      expect(quality, isEmpty);
-      final switchExit = tester.widget<PressRegion>(_ipRegion(_ip)).onTap!;
-
-      // ipx.al gives up on the exit: the build that sees it queues an ask
-      // of the IP quality sources, and the user switches before it is sent.
-      (_containerOf(tester).read(ipxLookupProvider(_ip).notifier)
-              as _SettlingIpx)
-          .settle(const IpxLookupState(phase: IpxPhase.failed));
-      tester.binding.addPostFrameCallback((_) => switchExit());
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text(_localIp), findsOneWidget);
-      expect(quality, isEmpty);
+      expect(lookups, isEmpty);
       expect(_containerOf(tester).exists(ipQualityProvider(_ip)), isFalse);
     });
 
