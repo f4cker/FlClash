@@ -1184,10 +1184,11 @@ class _RestoreResultViewState extends State<RestoreResultView> {
         ],
         if (unknown) ...[
           const SizedBox(height: 20),
-          // What is known is said on its own: the rows did commit.
+          // Only reached with the commit verified (committed == true):
+          // that is said first, on its own, and nothing more is claimed.
           _Callout(
-            lead: l10n.restoreResultUnknownItems,
-            note: l10n.restoreResultCommitKnown,
+            lead: l10n.restoreResultCommitKnown,
+            note: l10n.restoreResultUnknownItems,
           ),
         ],
       ],

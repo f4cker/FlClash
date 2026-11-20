@@ -2217,11 +2217,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreResultUnknownItems =>
-      'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+      'The pending items couldn\'t be read, so whether the remaining steps finished can\'t be confirmed yet.';
 
   @override
   String get restoreResultCommitKnown =>
-      'Known: this restore\'s data was committed to the database.';
+      'Confirmed: this restore\'s data was written to the database.';
 
   @override
   String get restoreResultNavigateOnly =>

@@ -3975,13 +3975,13 @@ abstract class AppLocalizations {
   /// No description provided for @restoreResultUnknownItems.
   ///
   /// In en, this message translates to:
-  /// **'The pending items couldn\'t be read, so this isn\'t treated as complete.'**
+  /// **'The pending items couldn\'t be read, so whether the remaining steps finished can\'t be confirmed yet.'**
   String get restoreResultUnknownItems;
 
   /// No description provided for @restoreResultCommitKnown.
   ///
   /// In en, this message translates to:
-  /// **'Known: this restore\'s data was committed to the database.'**
+  /// **'Confirmed: this restore\'s data was written to the database.'**
   String get restoreResultCommitKnown;
 
   /// No description provided for @restoreResultNavigateOnly.

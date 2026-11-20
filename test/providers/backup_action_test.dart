@@ -250,6 +250,58 @@ void main() {
       );
     });
 
+    test('a backup with only MITM modules asks first, saying they need '
+        'consent here; cancel writes nothing', () async {
+      final container = buildContainer();
+      final action = actionOf(container);
+      final local = MitmModule(
+        id: 88801,
+        name: 'Local',
+        enabled: true,
+        accepted: true,
+        lastUpdateTime: DateTime(2026),
+      );
+      await testDatabase.mitmModulesDao.putAll([local.toCompanion(0)]);
+      final data = MigrationData(
+        mitmModules: [
+          MitmModule(
+            id: 88802,
+            name: 'From backup',
+            enabled: true,
+            accepted: true,
+            lastUpdateTime: DateTime(2026),
+          ),
+        ],
+      );
+      final asked = <(bool, bool)>[];
+      var reachedPublish = false;
+      action.beforeRestorePublish = () async => reachedPublish = true;
+      final result = await action.applyRestore(
+        data,
+        RestoreOption.all,
+        confirm: (plan, {restoresMitm = false}) async {
+          asked.add((plan.isEmpty, restoresMitm));
+          return false;
+        },
+      );
+      expect(result, isNull);
+      expect(asked, [(true, true)], reason: 'asked once, before any write');
+      expect(reachedPublish, isFalse);
+      final rows = await testDatabase.mitmModulesDao.query().get();
+      expect(rows.map((m) => (m.id, m.enabled, m.accepted)), [
+        (88801, true, true),
+      ]);
+      expect(
+        Directory(RestoreJournal.rootOf(home.path)).existsSync()
+            ? Directory(
+                RestoreJournal.rootOf(home.path),
+              ).listSync().where((e) => basename(e.path) != 'quarantine')
+            : const [],
+        isEmpty,
+        reason: 'no journal was started',
+      );
+    });
+
     test('an override that removes relations needs confirmation; cancel '
         'writes nothing', () async {
       await testDatabase.profilesDao.putAll([

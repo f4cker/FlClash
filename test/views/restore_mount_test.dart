@@ -586,6 +586,24 @@ void main() {
       expect(find.text(line), findsNothing);
     });
 
+    testWidgets('a MITM-only restore shows the line with no mount changes, '
+        'and cancel pops false', (tester) async {
+      final popped = await pushSheet(
+        tester,
+        const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: false, mountsCarried: true),
+          restoresMitm: true,
+        ),
+      );
+      final l10n = currentAppLocalizations;
+      expect(find.text(l10n.restoreMitmReconsent), findsOne);
+      expect(find.text(l10n.restoreMountNoChanges), findsOne);
+      expect(find.byType(Checkbox), findsNothing);
+      await tester.tap(find.text(l10n.cancel));
+      await tester.pumpAndSettle();
+      expect(popped, [false]);
+    });
+
     testWidgets('an empty plan says no relation changes', (tester) async {
       await pushSheet(
         tester,
@@ -785,7 +803,7 @@ void main() {
       expect(find.text('后续步骤 · 1'), findsOne);
       expect(find.text('待检查配置 · 1'), findsOne);
       expect(find.text('所属配置：晨光配置'), findsOne);
-      expect(find.text('无法读取待处理项，不能视为完成。'), findsNothing);
+      expect(find.text('无法读取待处理项，暂不能确认后续处理是否完成。'), findsNothing);
       await shoot(tester, 'restore-result-partial-zh');
 
       await host(
@@ -798,10 +816,10 @@ void main() {
         locale: const Locale('zh'),
         size: const Size(860, 760),
       );
-      expect(find.text('无法读取待处理项，不能视为完成。'), findsOne);
+      expect(find.text('无法读取待处理项，暂不能确认后续处理是否完成。'), findsOne);
       expect(find.textContaining('待检查配置'), findsNothing);
       expect(
-        find.text('已确认：本次恢复的数据已提交到数据库。'),
+        find.text('已确认：本次恢复的数据已写入数据库。'),
         findsOne,
         reason: 'the known commit state is said on its own',
       );
@@ -812,6 +830,24 @@ void main() {
       );
       expect(find.text('恢复已完成。'), findsNothing);
       expect(find.textContaining('· 0'), findsNothing);
+    });
+
+    testWidgets('without a verified commit the commit line never shows', (
+      tester,
+    ) async {
+      for (final evidence in const [
+        RestoreEvidence(writeStarted: true),
+        RestoreEvidence(writeStarted: true, committed: false),
+      ]) {
+        await host(
+          tester,
+          () => RestoreResultView(evidence: evidence),
+          locale: const Locale('zh'),
+          size: const Size(860, 600),
+        );
+        expect(find.textContaining('已写入数据库'), findsNothing);
+        expect(find.textContaining('无法读取待处理项'), findsNothing);
+      }
     });
 
     testWidgets('nothing known at all still never reads as zero items or '
@@ -825,8 +861,16 @@ void main() {
         size: const Size(860, 600),
       );
       expect(find.text('数据已恢复，后续处理尚未完成。'), findsOne);
-      expect(find.text('无法读取待处理项，不能视为完成。'), findsOne);
-      expect(find.text('已确认：本次恢复的数据已提交到数据库。'), findsOne);
+      final known = find.text('已确认：本次恢复的数据已写入数据库。');
+      final unknown = find.text('无法读取待处理项，暂不能确认后续处理是否完成。');
+      expect(known, findsOne);
+      expect(unknown, findsOne);
+      expect(
+        tester.getTopLeft(known).dy,
+        lessThan(tester.getTopLeft(unknown).dy),
+        reason: 'the verified commit first, the unknown right after',
+      );
+      expect(find.text('恢复已完成。'), findsNothing);
       expect(find.textContaining('· 0'), findsNothing);
       expect(find.textContaining('0 项'), findsNothing);
     });
@@ -1139,6 +1183,19 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       await shoot(tester, 'restore-confirm-narrow-zh-200');
+    });
+
+    testWidgets('confirm MITM only zh', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: false, mountsCarried: true),
+          restoresMitm: true,
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 560),
+      );
+      await shoot(tester, 'restore-confirm-mitm-only-zh');
     });
 
     testWidgets('confirm empty zh', skip: !shots, (tester) async {

@@ -186,12 +186,12 @@ class BackupAction extends _$BackupAction {
     } on RestoreBlockedError catch (error, stack) {
       Error.throwWithStackTrace(await _restoreBlocked(error), stack);
     }
-    if (!preview.isEmpty) {
+    // MITM modules are written off until consented to here, which is said
+    // before the restore even when no mount changes.
+    final restoresMitm = data.mitmModules.isNotEmpty;
+    if (!preview.isEmpty || restoresMitm) {
       final accepted = switch (confirm) {
-        final confirm? => await confirm(
-          preview,
-          restoresMitm: data.mitmModules.isNotEmpty,
-        ),
+        final confirm? => await confirm(preview, restoresMitm: restoresMitm),
         null => !preview.hasLosses,
       };
       if (!accepted) return null;
