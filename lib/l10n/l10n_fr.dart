@@ -3483,9 +3483,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get binaryData => 'Données binaires';
 
   @override
-  String get httpBodyNotKept => 'Non enregistré faute de mémoire.';
-
-  @override
   String get httpBodyTruncated => 'Seul le début de ce corps a été enregistré.';
 
   @override

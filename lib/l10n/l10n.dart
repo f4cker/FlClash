@@ -6114,12 +6114,6 @@ abstract class AppLocalizations {
   /// **'Binary data'**
   String get binaryData;
 
-  /// No description provided for @httpBodyNotKept.
-  ///
-  /// In en, this message translates to:
-  /// **'Not recorded while memory was short.'**
-  String get httpBodyNotKept;
-
   /// No description provided for @httpBodyTruncated.
   ///
   /// In en, this message translates to:

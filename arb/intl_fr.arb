@@ -1099,7 +1099,6 @@
   "httpExportPrivate": "Une requête peut contenir des cookies, des jetons, des mots de passe et le contenu de formulaires. Vérifiez ce que vous partagez, et avec qui.",
   "mitmRuleCopiedForStash": "Ce module est une surcharge Stash : la règle a été copiée pour que vous l’ajoutiez à la main.",
   "binaryData": "Données binaires",
-  "httpBodyNotKept": "Non enregistré faute de mémoire.",
   "httpBodyTruncated": "Seul le début de ce corps a été enregistré.",
   "httpBodyUndecoded": "Impossible de décoder {encoding}, les données sont affichées telles qu’envoyées.",
   "mitmEnableTip": "Flash pourra lire tout ce qui est envoyé aux hôtes déchiffrés, cookies et mots de passe compris. N’activez cette option que pour les hôtes à réécrire.",

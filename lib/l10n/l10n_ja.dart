@@ -3289,9 +3289,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get binaryData => 'バイナリデータ';
 
   @override
-  String get httpBodyNotKept => 'メモリ不足のため記録されていません。';
-
-  @override
   String get httpBodyTruncated => 'このボディは先頭部分のみ記録されています。';
 
   @override

@@ -21,10 +21,15 @@ class MitmBodySection extends StatelessWidget {
   final String title;
   final MitmBodyContent content;
 
+  /// The body size the Core measured, or null where it measured none (the
+  /// body as it came, before a rewrite).
+  final int? measuredSize;
+
   const MitmBodySection({
     super.key,
     required this.title,
     required this.content,
+    this.measuredSize,
   });
 
   void _open(BuildContext context) {
@@ -54,9 +59,19 @@ class MitmBodySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     if (content.bytes.isEmpty) {
+      // The Core sends no reason with an empty body, so none is given: it
+      // says "no body" only where the Core measured the body as empty.
       return generateSection(
         title: title,
-        items: [ListItem(title: Text(appLocalizations.httpBodyNotKept))],
+        items: [
+          ListItem(
+            title: Text(
+              measuredSize == 0
+                  ? appLocalizations.mitmBodyEmpty
+                  : appLocalizations.httpRequestsNone,
+            ),
+          ),
+        ],
       );
     }
     final size = Text(

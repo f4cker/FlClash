@@ -1099,7 +1099,6 @@
   "httpExportPrivate": "リクエストには Cookie、トークン、パスワード、フォームの内容が含まれることがあります。共有する内容と相手を確認してください。",
   "mitmRuleCopiedForStash": "このモジュールは Stash のオーバーライドのため、ルールをコピーしました。手動で追加してください。",
   "binaryData": "バイナリデータ",
-  "httpBodyNotKept": "メモリ不足のため記録されていません。",
   "httpBodyTruncated": "このボディは先頭部分のみ記録されています。",
   "httpBodyUndecoded": "{encoding} をデコードできないため、送信時のままのデータを表示しています。",
   "mitmEnableTip": "オンにすると、Flash は復号するホストに送られるすべての内容（Cookie やパスワードを含む）を読み取れます。書き換えが必要なホストに限ってオンにしてください。",

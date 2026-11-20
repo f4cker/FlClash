@@ -3439,9 +3439,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get binaryData => 'Двоичные данные';
 
   @override
-  String get httpBodyNotKept => 'Не записано: не хватало памяти.';
-
-  @override
   String get httpBodyTruncated => 'Записано только начало тела.';
 
   @override

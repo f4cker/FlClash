@@ -3363,9 +3363,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get binaryData => '바이너리 데이터';
 
   @override
-  String get httpBodyNotKept => '메모리가 부족해 기록되지 않았습니다.';
-
-  @override
   String get httpBodyTruncated => '이 본문은 앞부분만 기록되었습니다.';
 
   @override

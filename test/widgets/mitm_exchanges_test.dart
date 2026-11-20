@@ -854,6 +854,62 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('a body the Core measured but sent back empty states no cause', (
+    tester,
+  ) async {
+    final l = currentAppLocalizations;
+    for (final body in const [MitmBody(), MitmBody(truncated: true)]) {
+      final detail = await openResponse(
+        tester,
+        contentType: 'text/plain',
+        body: body,
+      );
+
+      expect(
+        find.descendant(of: detail, matching: find.text(l.httpRequestsNone)),
+        findsOneWidget,
+      );
+      expect(find.text(l.mitmBodyEmpty), findsNothing);
+      expect(find.textContaining('memory'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets('an empty body says it has none only where the Core measured '
+      'it as zero', (tester) async {
+    final l = currentAppLocalizations;
+    final content = readMitmBody((
+      const MitmBody(),
+      'text/plain',
+      grpcOverLimitNote: null,
+    ));
+    for (final (measuredSize, shown, hidden) in [
+      (0, l.mitmBodyEmpty, l.httpRequestsNone),
+      (12, l.httpRequestsNone, l.mitmBodyEmpty),
+      (null, l.httpRequestsNone, l.mitmBodyEmpty),
+    ]) {
+      await tester.pumpWidget(
+        TestApp(
+          child: ListView(
+            children: [
+              MitmBodySection(
+                title: l.responseBody,
+                content: content,
+                measuredSize: measuredSize,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(shown), findsOneWidget, reason: '$measuredSize');
+      expect(find.text(hidden), findsNothing, reason: '$measuredSize');
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('a row in the list long-presses to the same menu', (
     tester,
   ) async {

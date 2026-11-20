@@ -438,8 +438,9 @@ class _MitmSideViewState extends ConsumerState<_MitmSideView> {
           )
         : null;
     final content = body?.value;
-    final kept =
-        content != null && (content.bytes.isNotEmpty || content.truncated);
+    // A body read back empty still gets its section, which says so without
+    // guessing why.
+    final kept = content != null;
     final bodyError = body != null && !body.hasValue && !body.retrying
         ? body.error
         : null;
@@ -499,7 +500,12 @@ class _MitmSideViewState extends ConsumerState<_MitmSideView> {
               title: bodyTitle,
               items: [ListItem(title: Text(appLocalizations.mitmBodyEmpty))],
             ),
-          if (kept) MitmBodySection(title: bodyTitle, content: content),
+          if (kept)
+            MitmBodySection(
+              title: bodyTitle,
+              content: content,
+              measuredSize: before && originalBody ? null : size,
+            ),
           if (bodyError != null)
             generateSection(
               title: bodyTitle,

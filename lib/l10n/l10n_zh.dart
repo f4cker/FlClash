@@ -3239,9 +3239,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get binaryData => '二进制数据';
 
   @override
-  String get httpBodyNotKept => '内存紧张时未记录这段内容。';
-
-  @override
   String get httpBodyTruncated => '只记录了这段内容的开头部分。';
 
   @override

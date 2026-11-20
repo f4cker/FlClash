@@ -1099,7 +1099,6 @@
   "httpExportPrivate": "요청에는 쿠키, 토큰, 비밀번호, 양식 내용이 담길 수 있습니다. 공유할 내용과 대상을 확인하세요.",
   "mitmRuleCopiedForStash": "이 모듈은 Stash 오버라이드이므로 규칙을 복사했습니다. 직접 추가하세요.",
   "binaryData": "바이너리 데이터",
-  "httpBodyNotKept": "메모리가 부족해 기록되지 않았습니다.",
   "httpBodyTruncated": "이 본문은 앞부분만 기록되었습니다.",
   "httpBodyUndecoded": "{encoding}을(를) 디코딩할 수 없어 전송된 그대로의 데이터를 표시합니다.",
   "mitmEnableTip": "켜면 Flash가 복호화되는 호스트로 보내는 모든 내용을 읽을 수 있습니다(쿠키와 비밀번호 포함). 재작성이 필요한 호스트에만 켜세요.",

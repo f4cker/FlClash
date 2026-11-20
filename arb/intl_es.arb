@@ -1099,7 +1099,6 @@
   "httpExportPrivate": "Una solicitud puede llevar cookies, tokens, contraseñas y contenido de formularios. Revisa qué compartes y con quién.",
   "mitmRuleCopiedForStash": "Este módulo es una sobrescritura de Stash, así que la regla se copió para que la añadas a mano.",
   "binaryData": "Datos binarios",
-  "httpBodyNotKept": "No se registró por falta de memoria.",
   "httpBodyTruncated": "Solo se registró el comienzo de este cuerpo.",
   "httpBodyUndecoded": "No se pudo decodificar {encoding}, así que se muestran los datos tal como se enviaron.",
   "mitmEnableTip": "Flash podrá leer todo lo que se envíe a los hosts descifrados, incluidas cookies y contraseñas. Actívalo solo para los hosts que quieras reescribir.",

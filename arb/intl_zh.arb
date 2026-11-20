@@ -1000,7 +1000,6 @@
   "httpExportPrivate": "请求里可能有 Cookie、令牌、密码和表单内容，分享前请确认内容和对象。",
   "mitmRuleCopiedForStash": "这个模块是 Stash 覆写，规则已复制，请手动添加。",
   "binaryData": "二进制数据",
-  "httpBodyNotKept": "内存紧张时未记录这段内容。",
   "httpBodyTruncated": "只记录了这段内容的开头部分。",
   "httpBodyUndecoded": "无法解码 {encoding}，显示的是传输时的原始数据。",
   "mitmEnableTip": "开启后，Flash 能读取发往被解密主机的全部内容，包括 Cookie 和密码。请只为需要改写的主机开启。",

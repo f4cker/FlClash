@@ -3445,9 +3445,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get binaryData => 'Binary data';
 
   @override
-  String get httpBodyNotKept => 'Not recorded while memory was short.';
-
-  @override
   String get httpBodyTruncated => 'Only the start of this body was recorded.';
 
   @override
