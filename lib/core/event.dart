@@ -143,7 +143,7 @@ class CoreEventManager {
                     ),
                   );
                 } catch (error) {
-                  commonPrint.log('Bad rewrite event: $error');
+                  commonPrint.log('Bad rewrite event (${error.runtimeType})');
                 }
               } else if (data is Map &&
                   data['id'] is String &&

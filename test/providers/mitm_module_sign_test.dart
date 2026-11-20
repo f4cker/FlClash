@@ -398,7 +398,7 @@ void main() {
       if (log.payload.contains('MITM: ')) log,
   ];
 
-  test('a refusal warns once per host, naming the host only', () async {
+  test('a refusal warns once per host, never naming it', () async {
     expect(await sign('a.example.com'), 'notListed');
     expect(await sign('a.example.com'), 'notListed');
     expect(await sign('b.example.com'), 'notListed');
@@ -407,9 +407,8 @@ void main() {
       LogLevel.warning,
       LogLevel.warning,
     ]);
-    expect(logs.first.payload, contains('a.example.com'));
-    expect(logs.last.payload, contains('b.example.com'));
     for (final log in logs) {
+      expect(log.payload, isNot(contains('example.com')));
       expect(log.payload, isNot(contains('BAU=')));
       expect(log.payload, isNot(contains('AQID')));
     }
@@ -424,7 +423,7 @@ void main() {
     expect(await sign('user.example.com'), isNull);
     final logs = mitmLogs();
     expect(logs.single.logLevel, LogLevel.debug);
-    expect(logs.single.payload, '[APP] MITM: decrypting user.example.com');
+    expect(logs.single.payload, '[APP] MITM: decrypting a listed host');
   });
 
   test('a host refused again after it signed warns again', () async {
@@ -562,7 +561,7 @@ client-source-address = %APPEND% 192.168.1.0/24
       final logs = mitmLogs();
       expect(logs.single.logLevel, LogLevel.warning);
       expect(logs.single.payload, contains('not ready'));
-      expect(logs.single.payload, contains('a.example.com'));
+      expect(logs.single.payload, isNot(contains('example.com')));
       expect(logs.single.payload, isNot(contains('not on the decryption')));
     });
 

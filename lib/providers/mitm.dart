@@ -313,6 +313,13 @@ Future<int> mitmIgnoredHostnames(Ref ref) async {
   return status.ignoredHostnames;
 }
 
+/// The stages [MitmSignAction.answer] passes, in order; a refusal skips those
+/// after it.
+enum MitmSignStage { received, trusted, hostnamesRead, signed, rechecked, sent }
+
+typedef MitmSignTimingHook =
+    void Function(int reqId, MitmSignStage stage, Duration sinceReceived);
+
 /// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
 /// decrypts (the user's hostnames, then the enabled modules', see
 /// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
@@ -336,9 +343,17 @@ class MitmSignAction extends _$MitmSignAction {
     if (!ref.mounted) return false;
     final store = ref.read(mitmTrustStoreProvider);
     if (store == null) return false;
-    final ca = await signer.certificate();
+    // The root and the check leaf go to the native queue in one round: two
+    // calls in a row there, one main-thread hop each way rather than two.
+    // The leaf is the check host's own, never the Core's, and unused when
+    // the root does not match.
+    final reading = signer.certificate();
+    final checkLeaf = signer.checkCertificate();
+    // Neither may fail unobserved once the other has ended the check.
+    unawaited(checkLeaf.then<void>((_) {}, onError: (_, _) {}));
+    final ca = await reading;
     if (ca == null || ca.fingerprint != fingerprint) return false;
-    final check = await store.check(ca, signer.checkCertificate);
+    final check = await store.check(ca, () => checkLeaf);
     if (check.trust != MitmTrust.ready) return false;
     final current = await signer.certificate();
     return current != null && current.fingerprint == fingerprint;
@@ -456,7 +471,7 @@ class MitmSignAction extends _$MitmSignAction {
     return MitmSignResult(error: after.modulesRead ? 'disabled' : 'notListed');
   }
 
-  // Each host is logged once until its answer changes, and only by name. A
+  // Each host is logged once until its answer changes, never by name. A
   // refusal is a warning, as the Core then lets the host through undecrypted;
   // a leaf only at the debug level the user picked.
   final _refusedLogged = <String>{};
@@ -471,14 +486,14 @@ class MitmSignAction extends _$MitmSignAction {
         // A module may list it: say so rather than that nothing does.
         if (_remember(_notReadyLogged, host)) {
           commonPrint.log(
-            'MITM: the module hostname list was not ready, so $host passes '
+            'MITM: the module hostname list was not ready, so a host passes '
             'through undecrypted for now',
             logLevel: LogLevel.warning,
           );
         }
       } else if (_remember(_refusedLogged, host)) {
         commonPrint.log(
-          'MITM: $host is not on the decryption list, so it passes through '
+          'MITM: a host is not on the decryption list, so it passes through '
           'undecrypted',
           logLevel: LogLevel.warning,
         );
@@ -488,7 +503,10 @@ class MitmSignAction extends _$MitmSignAction {
       _notReadyLogged.remove(host);
       if (ref.read(patchClashConfigProvider).logLevel == LogLevel.debug &&
           _remember(_signedLogged, host)) {
-        commonPrint.log('MITM: decrypting $host', logLevel: LogLevel.debug);
+        commonPrint.log(
+          'MITM: decrypting a listed host',
+          logLevel: LogLevel.debug,
+        );
       }
     }
   }
@@ -537,7 +555,20 @@ class MitmSignAction extends _$MitmSignAction {
     }
   }
 
+  /// Stage timing of [answer], for tests and investigation only: nothing is
+  /// installed in production. A record is the request's number, its stage and
+  /// the time since the request reached [answer]: no host, key or error.
+  @visibleForTesting
+  static MitmSignTimingHook? timing;
+
   Future<void> answer(MitmSignRequest request) async {
+    final hook = timing;
+    final arrived = hook == null ? null : (Stopwatch()..start());
+    void mark(MitmSignStage stage) {
+      if (hook != null) hook(request.reqId, stage, arrived!.elapsed);
+    }
+
+    mark(MitmSignStage.received);
     final mitm = ref.read(patchClashConfigProvider).mitm;
     final signer = ref.read(mitmSignerProvider);
     MitmSignResult result;
@@ -578,6 +609,7 @@ class MitmSignAction extends _$MitmSignAction {
         final trusted =
             fingerprint != null &&
             await _freshTrust(signer, fingerprint, remaining());
+        mark(MitmSignStage.trusted);
         if (!ref.mounted) return;
         final current = ref.read(patchClashConfigProvider).mitm;
         if (!trusted ||
@@ -586,6 +618,7 @@ class MitmSignAction extends _$MitmSignAction {
           result = const MitmSignResult(error: 'trustUnavailable');
         } else {
           final before = await _hostnames(current, remaining());
+          mark(MitmSignStage.hostnamesRead);
           if (!ref.mounted) return;
           result = await _signBounded(
             signer,
@@ -593,6 +626,7 @@ class MitmSignAction extends _$MitmSignAction {
             before.hostnames,
             remaining(),
           );
+          mark(MitmSignStage.signed);
           if (!ref.mounted) return;
           final checked = await _recheck(
             result,
@@ -600,6 +634,7 @@ class MitmSignAction extends _$MitmSignAction {
             fingerprint,
             remaining(),
           );
+          mark(MitmSignStage.rechecked);
           if (!ref.mounted) return;
           final modulesRead =
               before.modulesRead &&
@@ -609,7 +644,7 @@ class MitmSignAction extends _$MitmSignAction {
         }
       } catch (error) {
         commonPrint.log(
-          'Signing a MITM certificate failed: ${compactError(error)}',
+          'Signing a MITM certificate failed (${error.runtimeType})',
           logLevel: LogLevel.warning,
         );
         result = const MitmSignResult(error: 'signFailed');
@@ -631,9 +666,10 @@ class MitmSignAction extends _$MitmSignAction {
       await ref
           .read(coreHandlerProvider)
           .sendMitmSignResult(request.reqId, result);
+      mark(MitmSignStage.sent);
     } catch (error) {
       commonPrint.log(
-        'Answering a MITM signing request failed: ${compactError(error)}',
+        'Answering a MITM signing request failed (${error.runtimeType})',
         logLevel: coreFailureLogLevel(error),
       );
     }
@@ -864,7 +900,7 @@ Future<MitmBodyContent?> mitmBody(
       lossy: content.truncated,
     );
   } catch (error) {
-    commonPrint.log('Reading ${content.charset} failed: $error');
+    commonPrint.log('Reading ${content.charset} failed (${error.runtimeType})');
     return content;
   }
   if (utf8Bytes == null) {
