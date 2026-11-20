@@ -24,6 +24,11 @@ class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 const _channel = MethodChannel(MitmSigner.channelName);
 final _spki = Uint8List.fromList([1, 2, 3]);
 
+/// The SHA-256 fingerprint of the fake root `[6]` every fake sign returns:
+/// the app sends a leaf only with the root the user confirmed.
+const _rootFingerprint =
+    '67:58:6E:98:FA:D2:7D:A0:B9:96:8B:C0:39:A1:EF:34:C9:39:B9:B8:E5:23:A8:BE:F8:9D:47:86:08:C5:EC:F6';
+
 /// The macOS path a signing request takes once it reaches Dart, in real
 /// time: every MitmSigner call is a platform-channel round trip (a main
 /// thread hop each way) onto ONE serial native queue
@@ -73,7 +78,7 @@ class _NativeQueue {
       'coreIdentity' => 'verified',
       'certificate' => {
         'pem': 'PEM',
-        'fingerprint': 'AB:CD',
+        'fingerprint': _rootFingerprint,
         'subject': 'Test',
         'notBefore': 0,
         'notAfter': 4102444800000,
@@ -169,7 +174,7 @@ void main() {
       mitm: Mitm(
         enable: true,
         hostname: ['*.burst.example'],
-        trustedFingerprint: 'AB:CD',
+        trustedFingerprint: _rootFingerprint,
       ),
     );
   });

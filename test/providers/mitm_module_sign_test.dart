@@ -29,6 +29,11 @@ import 'package:riverpod/riverpod.dart';
 import '../helpers/app_paths.dart';
 import '../helpers/mitm_host_policy.dart';
 
+/// The SHA-256 fingerprint of the fake root `[6]` every fake sign returns:
+/// the app sends a leaf only with the root the user confirmed.
+const _rootFingerprint =
+    '67:58:6E:98:FA:D2:7D:A0:B9:96:8B:C0:39:A1:EF:34:C9:39:B9:B8:E5:23:A8:BE:F8:9D:47:86:08:C5:EC:F6';
+
 class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
 class _MockTrustStore extends Mock implements MitmTrustStore {}
@@ -77,7 +82,7 @@ void main() {
       mitm: Mitm(
         enable: enable,
         hostname: hostname,
-        trustedFingerprint: 'AB:CD',
+        trustedFingerprint: _rootFingerprint,
       ),
     );
   }
@@ -127,7 +132,7 @@ void main() {
             case 'certificate':
               return {
                 'pem': 'PEM',
-                'fingerprint': 'AB:CD',
+                'fingerprint': _rootFingerprint,
                 'subject': 'Test',
                 'notBefore': 0,
                 'notAfter': 4102444800000,

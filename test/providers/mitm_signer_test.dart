@@ -28,6 +28,11 @@ final _spki = Uint8List.fromList([1, 2, 3]);
 final _leaf = Uint8List.fromList([4, 5]);
 final _root = Uint8List.fromList([6]);
 
+/// The SHA-256 fingerprint of the fake root `[6]` every fake sign returns:
+/// the app sends a leaf only with the root the user confirmed.
+const _rootFingerprint =
+    '67:58:6E:98:FA:D2:7D:A0:B9:96:8B:C0:39:A1:EF:34:C9:39:B9:B8:E5:23:A8:BE:F8:9D:47:86:08:C5:EC:F6';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -55,7 +60,7 @@ void main() {
     'coreIdentity' => 'verified',
     'certificate' => {
       'pem': 'PEM',
-      'fingerprint': 'AB:CD',
+      'fingerprint': _rootFingerprint,
       'subject': 'Test',
       'notBefore': 0,
       'notAfter': 4102444800000,
@@ -107,7 +112,7 @@ void main() {
       mitm: Mitm(
         enable: true,
         hostname: ['api.example.com'],
-        trustedFingerprint: 'AB:CD',
+        trustedFingerprint: _rootFingerprint,
       ),
     );
   });
@@ -159,6 +164,29 @@ void main() {
   });
 
   test(
+    'a leaf signed under another root than the trusted one is not sent',
+    () async {
+      // A root regenerated after the trust check: the leaf chains to a CA the
+      // user has not confirmed, so the Core must not get it.
+      answer = (call) => call.method == 'sign'
+          ? {
+              'cert': _leaf,
+              'ca': Uint8List.fromList([9]),
+            }
+          : defaultAnswer(call);
+
+      await sign('api.example.com');
+
+      expect(calls.where((call) => call.method == 'sign'), hasLength(1));
+      expect(sent.single, {'reqId': 7, 'error': 'trustUnavailable'});
+      expect(
+        container.read(mitmCoreIdentityStateProvider).value,
+        isNot(MitmCoreIdentity.verified),
+      );
+    },
+  );
+
+  test(
     'slow trust and signing share one budget beyond the old core timeout',
     () async {
       when(() => trust.check(any(), any())).thenAnswer((_) async {
@@ -201,7 +229,7 @@ void main() {
       mitm: Mitm(
         enable: true,
         hostname: ['-api.example.com', '*.b.test'],
-        trustedFingerprint: 'AB:CD',
+        trustedFingerprint: _rootFingerprint,
       ),
     );
     answer = (call) =>
@@ -333,7 +361,7 @@ void main() {
     answer = (call) => switch (call.method) {
       'certificate' => {
         'pem': 'PEM',
-        'fingerprint': 'AB:CD',
+        'fingerprint': _rootFingerprint,
         'subject': 'Flash 本机解密证书（仅此 Mac）',
         'notBefore': 0,
         'notAfter': 1000,
@@ -341,7 +369,7 @@ void main() {
       _ => null,
     };
     final ca = await container.read(mitmCaProvider.future);
-    expect(ca?.fingerprint, 'AB:CD');
+    expect(ca?.fingerprint, _rootFingerprint);
     expect(
       ca?.notAfter,
       DateTime.fromMillisecondsSinceEpoch(1000, isUtc: true),
@@ -447,7 +475,7 @@ void main() {
   group('the macOS root', () {
     const certificate = {
       'pem': 'PEM',
-      'fingerprint': 'AB:CD',
+      'fingerprint': _rootFingerprint,
       'subject': 'Flash 本机解密证书（仅此 Mac）',
       'notBefore': 0,
       'notAfter': 1000,

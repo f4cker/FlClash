@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
 import 'package:fl_clash/common/mitm_protobuf.dart';
@@ -555,6 +556,19 @@ class MitmSignAction extends _$MitmSignAction {
     }
   }
 
+  /// Whether [result] came with the root whose SHA-256 fingerprint, in the
+  /// signer's colon-separated uppercase hex, is [fingerprint].
+  static bool _signedBy(MitmSignResult result, String fingerprint) {
+    final ca = result.ca;
+    if (ca == null) return false;
+    final digest = sha256
+        .convert(ca)
+        .bytes
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0').toUpperCase())
+        .join(':');
+    return digest == fingerprint;
+  }
+
   /// Stage timing of [answer], for tests and investigation only: nothing is
   /// installed in production. A record is the request's number, its stage and
   /// the time since the request reached [answer]: no host, key or error.
@@ -628,6 +642,11 @@ class MitmSignAction extends _$MitmSignAction {
           );
           mark(MitmSignStage.signed);
           if (!ref.mounted) return;
+          // The leaf must chain to the root the user confirmed: a root
+          // regenerated since the trust check has not been trusted yet.
+          if (result.cert != null && !_signedBy(result, fingerprint)) {
+            result = const MitmSignResult(error: 'trustUnavailable');
+          }
           final checked = await _recheck(
             result,
             before.hostnames,
