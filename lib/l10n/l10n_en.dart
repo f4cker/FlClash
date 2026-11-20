@@ -2339,7 +2339,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreActionNextLaunchUnconfirmed =>
-      'Whether this will be completed automatically the next time the app starts can\'t be confirmed.';
+      'The remaining steps aren\'t finished, and whether they\'ll continue automatically at the next launch can\'t be confirmed.';
 
   @override
   String get restoreActionRetry =>
@@ -2352,6 +2352,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get restoreRecoveryFailed =>
       'The last restore was interrupted and couldn\'t be processed at startup. Its record was kept and will be tried again the next time the app starts.';
+
+  @override
+  String get restoreRecoveryFailedUnconfirmed =>
+      'The restore wasn\'t completed. Whether its record was kept, and whether it will be tried again at the next launch, can\'t be confirmed.';
 
   @override
   String get restoreRecoveryMitmAllOff =>
@@ -2387,7 +2391,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreRecoveryCheckFailed =>
-      'Something went wrong while checking the restore. To be safe, all MITM modules are blocked from running while the app runs; this is handled again at the next launch.';
+      'Something went wrong while checking the restore. To be safe, all MITM modules are blocked from running while the app runs; the next launch will try to handle this again.';
 
   @override
   String get restoreRecoveryCheckFailedNoRetry =>

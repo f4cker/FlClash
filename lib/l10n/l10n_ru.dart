@@ -2338,7 +2338,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreActionNextLaunchUnconfirmed =>
-      'Подтвердить, что это будет автоматически завершено при следующем запуске приложения, не удаётся.';
+      'Оставшиеся шаги не завершены; подтвердить, что они автоматически продолжатся при следующем запуске, не удаётся.';
 
   @override
   String get restoreActionRetry =>
@@ -2351,6 +2351,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get restoreRecoveryFailed =>
       'Последнее восстановление было прервано и не обработано при запуске. Его запись сохранена, попытка повторится при следующем запуске приложения.';
+
+  @override
+  String get restoreRecoveryFailedUnconfirmed =>
+      'Восстановление не завершено. Подтвердить, что его запись сохранена и что попытка повторится при следующем запуске, не удаётся.';
 
   @override
   String get restoreRecoveryMitmAllOff =>
@@ -2386,7 +2390,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreRecoveryCheckFailed =>
-      'При проверке восстановления произошла ошибка. В целях безопасности запуск всех модулей MITM заблокирован, пока приложение работает; при следующем запуске это будет обработано снова.';
+      'При проверке восстановления произошла ошибка. В целях безопасности запуск всех модулей MITM заблокирован, пока приложение работает; при следующем запуске будет снова предпринята попытка это обработать.';
 
   @override
   String get restoreRecoveryCheckFailedNoRetry =>

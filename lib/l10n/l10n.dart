@@ -4155,7 +4155,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreActionNextLaunchUnconfirmed.
   ///
   /// In en, this message translates to:
-  /// **'Whether this will be completed automatically the next time the app starts can\'t be confirmed.'**
+  /// **'The remaining steps aren\'t finished, and whether they\'ll continue automatically at the next launch can\'t be confirmed.'**
   String get restoreActionNextLaunchUnconfirmed;
 
   /// No description provided for @restoreActionRetry.
@@ -4175,6 +4175,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The last restore was interrupted and couldn\'t be processed at startup. Its record was kept and will be tried again the next time the app starts.'**
   String get restoreRecoveryFailed;
+
+  /// No description provided for @restoreRecoveryFailedUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore wasn\'t completed. Whether its record was kept, and whether it will be tried again at the next launch, can\'t be confirmed.'**
+  String get restoreRecoveryFailedUnconfirmed;
 
   /// No description provided for @restoreRecoveryMitmAllOff.
   ///
@@ -4227,7 +4233,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreRecoveryCheckFailed.
   ///
   /// In en, this message translates to:
-  /// **'Something went wrong while checking the restore. To be safe, all MITM modules are blocked from running while the app runs; this is handled again at the next launch.'**
+  /// **'Something went wrong while checking the restore. To be safe, all MITM modules are blocked from running while the app runs; the next launch will try to handle this again.'**
   String get restoreRecoveryCheckFailed;
 
   /// No description provided for @restoreRecoveryCheckFailedNoRetry.

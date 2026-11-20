@@ -711,6 +711,15 @@ class Database extends _$Database {
     return row?.read<String>('fingerprint');
   }
 
+  /// Whether any restore committed and is not yet finalized.
+  Future<bool> hasRestoreCommit() async {
+    if (!await _hasRestoreCommits()) return false;
+    final rows = await customSelect(
+      'SELECT 1 FROM $restoreCommitsTable LIMIT 1',
+    ).get();
+    return rows.isNotEmpty;
+  }
+
   Future<void> clearRestoreCommit(int id) async {
     if (!await _hasRestoreCommits()) return;
     await customStatement('DELETE FROM $restoreCommitsTable WHERE id = ?', [

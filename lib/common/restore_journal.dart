@@ -644,6 +644,14 @@ class RestoreRecoveryReport {
   /// next launch.
   final bool mitmLockNotSaved;
 
+  /// For [RestoreRecoveryOutcome.failed]: the journal read back after the
+  /// failure, so it is said kept and retried.
+  final bool recordKept;
+
+  /// For [RestoreRecoveryOutcome.failed]: a restore is confirmed committed,
+  /// so its data may already be in place.
+  final bool commitKnown;
+
   /// Recovery as a whole failed and every module is stopped; with
   /// [recoveryErrorRetryKept], the next launch has a confirmed basis to
   /// handle it again.
@@ -665,6 +673,8 @@ class RestoreRecoveryReport {
     this.mitmLockKept = false,
     this.mitmLockKeptConfirmed = false,
     this.mitmLockNotSaved = false,
+    this.recordKept = false,
+    this.commitKnown = false,
     this.recoveryError = false,
     this.recoveryErrorRetryKept = false,
     this.mitmLockNotSavedRetryKept = false,
@@ -687,6 +697,8 @@ class RestoreRecoveryReport {
     bool? mitmLockKept,
     bool? mitmLockKeptConfirmed,
     bool? mitmLockNotSaved,
+    bool? recordKept,
+    bool? commitKnown,
     bool? recoveryError,
     bool? recoveryErrorRetryKept,
     bool? mitmLockNotSavedRetryKept,
@@ -704,6 +716,8 @@ class RestoreRecoveryReport {
     mitmLockKept: mitmLockKept ?? this.mitmLockKept,
     mitmLockKeptConfirmed: mitmLockKeptConfirmed ?? this.mitmLockKeptConfirmed,
     mitmLockNotSaved: mitmLockNotSaved ?? this.mitmLockNotSaved,
+    recordKept: recordKept ?? this.recordKept,
+    commitKnown: commitKnown ?? this.commitKnown,
     recoveryError: recoveryError ?? this.recoveryError,
     recoveryErrorRetryKept:
         recoveryErrorRetryKept ?? this.recoveryErrorRetryKept,
@@ -1139,6 +1153,27 @@ class RestoreRecovery {
     );
   }
 
+  /// Whether a restore is confirmed committed and not finalized; false
+  /// when that cannot be read.
+  Future<bool> _anyCommitKnown() async {
+    try {
+      return await _db().hasRestoreCommit();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Whether the journal [id] (any journal, without one) reads back as
+  /// pending now, after a failure: only then is it said kept for a retry.
+  Future<bool> _recordsReadBack([int? id]) async {
+    try {
+      final found = await RestoreJournal.pending(await _homeDirPath());
+      return id == null ? found.isNotEmpty : found.any((e) => e.$1 == id);
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Whether a journal the lock stands in for is confirmed still pending,
   /// for the next launch to handle again.
   Future<bool> _evidenceConfirmed() async {
@@ -1407,7 +1442,13 @@ class RestoreRecovery {
       // turned off before the lock goes, whatever the recheck finds.
       await _writeLock('journals unreadable', gate: true);
       _awaitingMitm.add(const _OwedMitm(-1, null));
-      reports.add(const RestoreRecoveryReport(RestoreRecoveryOutcome.failed));
+      reports.add(
+        RestoreRecoveryReport(
+          RestoreRecoveryOutcome.failed,
+          recordKept: await _recordsReadBack(),
+          commitKnown: await _anyCommitKnown(),
+        ),
+      );
       return;
     }
     for (final (id, journal) in found) {
@@ -1451,7 +1492,10 @@ class RestoreRecovery {
       holdMitm(id, journal?.mitmModules);
     }
     if (committed == null) {
-      return const RestoreRecoveryReport(RestoreRecoveryOutcome.failed);
+      return RestoreRecoveryReport(
+        RestoreRecoveryOutcome.failed,
+        recordKept: await _recordsReadBack(id),
+      );
     }
     return RestoreRecoveryReport(
       RestoreRecoveryOutcome.pending,
@@ -1899,7 +1943,12 @@ String restoreRecoveryMessage(
       l10n.restoreResultCommitKnown,
       l10n.restoreResultUnknownItems,
     ],
-    RestoreRecoveryOutcome.failed => [l10n.restoreRecoveryFailed],
+    RestoreRecoveryOutcome.failed => [
+      report.recordKept
+          ? l10n.restoreRecoveryFailed
+          : l10n.restoreRecoveryFailedUnconfirmed,
+      if (report.commitKnown) l10n.restoreResultCommitKnown,
+    ],
     RestoreRecoveryOutcome.mitmOnly => const <String>[],
   };
   return [

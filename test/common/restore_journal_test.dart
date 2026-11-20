@@ -930,6 +930,39 @@ void main() {
       expect(report.outcome, RestoreRecoveryOutcome.failed);
       expect(journals(), hasLength(1), reason: 'left in place, untouched');
       expect(quarantined(), isEmpty);
+      expect(report.recordKept, isTrue, reason: 'it reads back');
+      expect(report.commitKnown, isFalse);
+      final en = currentAppLocalizations;
+      final lines = restoreRecoveryMessage(report, en).split('\n');
+      expect(lines, contains(en.restoreRecoveryFailed));
+      expect(lines, isNot(contains(en.restoreRecoveryFailedUnconfirmed)));
+    });
+
+    test('a failure whose journal does not read back afterwards: never '
+        'said kept or retried, nor that the data is unchanged', () async {
+      final dir = Directory(join(RestoreJournal.rootOf(home.path), '79'))
+        ..createSync(recursive: true);
+      File(join(dir.path, 'journal.json')).writeAsStringSync('{not json');
+      var calls = 0;
+      final recovery = RestoreRecovery(
+        db: () {
+          // Gone by the time the failure is reported.
+          if (++calls > 1 && dir.existsSync()) dir.deleteSync(recursive: true);
+          throw StateError('database unavailable');
+        },
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+      await recovery.run();
+      final [report] = recovery.takeReports();
+      expect(report.outcome, RestoreRecoveryOutcome.failed);
+      expect(report.recordKept, isFalse);
+      expect(report.commitKnown, isFalse, reason: 'unknown, so not said');
+      final en = currentAppLocalizations;
+      final lines = restoreRecoveryMessage(report, en).split('\n');
+      expect(lines, contains(en.restoreRecoveryFailedUnconfirmed));
+      expect(lines, isNot(contains(en.restoreRecoveryFailed)));
+      expect(lines, isNot(contains(en.restoreRecoveryRolledBack)));
     });
 
     test('a recovery that fails at launch after the commit says the data '
@@ -1905,7 +1938,7 @@ void main() {
                 report,
                 lookupAppLocalizations(const Locale('zh')),
               ),
-              contains('无法确认下次启动应用时是否会自动继续完成。'),
+              contains('后续处理未完成，无法确认下次启动时是否会自动继续。'),
             );
           }
         });
@@ -2403,6 +2436,27 @@ void main() {
         expect(await lock(), (file: true, prefs: true));
         expect(first.reports.first.mitmAllOff, isTrue);
         expectNone(await reaching());
+        // The journals cannot be listed: never said kept; the commit is
+        // known from its marker, and said.
+        final failed = first.reports.first;
+        expect(failed.outcome, RestoreRecoveryOutcome.failed);
+        expect(failed.recordKept, isFalse);
+        expect(failed.commitKnown, isTrue);
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(failed, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryFailedUnconfirmed));
+        expect(lines, isNot(contains(en.restoreRecoveryFailed)));
+        expect(lines, contains(en.restoreResultCommitKnown));
+        expect(
+          restoreRecoveryMessage(
+            failed,
+            lookupAppLocalizations(const Locale('zh')),
+          ).split('\n'),
+          containsAll([
+            '恢复未完成，无法确认恢复记录是否保留，也无法确认下次启动时是否会再次尝试。',
+            '已确认：本次恢复的数据已写入数据库。',
+          ]),
+        );
 
         Process.runSync('chmod', ['755', root.path]);
         final second = await launch();
@@ -2442,7 +2496,7 @@ void main() {
           ).split('\n'),
           contains(
             '恢复检查出错。为安全起见，本次运行期间已阻止所有解密模块运行；'
-            '下次启动时会再次处理。',
+            '下次启动时会再次尝试处理。',
           ),
         );
 

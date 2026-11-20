@@ -2195,7 +2195,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreActionNextLaunch => '下次启动应用时会自动继续完成。';
 
   @override
-  String get restoreActionNextLaunchUnconfirmed => '无法确认下次启动应用时是否会自动继续完成。';
+  String get restoreActionNextLaunchUnconfirmed => '后续处理未完成，无法确认下次启动时是否会自动继续。';
 
   @override
   String get restoreActionRetry => '点“继续完成”可立即重试剩余步骤。';
@@ -2205,6 +2205,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRecoveryFailed => '上次恢复被中断，启动时未能处理。恢复记录已保留，下次启动时会再次尝试。';
+
+  @override
+  String get restoreRecoveryFailedUnconfirmed =>
+      '恢复未完成，无法确认恢复记录是否保留，也无法确认下次启动时是否会再次尝试。';
 
   @override
   String get restoreRecoveryMitmAllOff =>
@@ -2238,7 +2242,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRecoveryCheckFailed =>
-      '恢复检查出错。为安全起见，本次运行期间已阻止所有解密模块运行；下次启动时会再次处理。';
+      '恢复检查出错。为安全起见，本次运行期间已阻止所有解密模块运行；下次启动时会再次尝试处理。';
 
   @override
   String get restoreRecoveryCheckFailedNoRetry =>

@@ -2362,7 +2362,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreActionNextLaunchUnconfirmed =>
-      'Impossible de confirmer si cela sera terminé automatiquement au prochain démarrage de l’app.';
+      'Les étapes restantes ne sont pas terminées, et impossible de confirmer si elles reprendront automatiquement au prochain démarrage.';
 
   @override
   String get restoreActionRetry =>
@@ -2375,6 +2375,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get restoreRecoveryFailed =>
       'La dernière restauration a été interrompue et n’a pas pu être traitée au démarrage. Son journal a été conservé et sera repris au prochain démarrage de l’app.';
+
+  @override
+  String get restoreRecoveryFailedUnconfirmed =>
+      'La restauration n’a pas été terminée. Impossible de confirmer si son journal a été conservé, ni si elle sera retentée au prochain démarrage.';
 
   @override
   String get restoreRecoveryMitmAllOff =>
@@ -2410,7 +2414,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreRecoveryCheckFailed =>
-      'Une erreur s’est produite lors de la vérification de la restauration. Par sécurité, l’exécution de tous les modules MITM est bloquée tant que l’app est ouverte ; ce sera traité de nouveau au prochain démarrage.';
+      'Une erreur s’est produite lors de la vérification de la restauration. Par sécurité, l’exécution de tous les modules MITM est bloquée tant que l’app est ouverte ; une nouvelle tentative de traitement aura lieu au prochain démarrage.';
 
   @override
   String get restoreRecoveryCheckFailedNoRetry =>
