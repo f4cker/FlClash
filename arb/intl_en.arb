@@ -1062,10 +1062,10 @@
     }
   },
   "httpRequests": "HTTP requests",
-  "httpRequestsMissing": "Requests made before Record request content was on, or since cleared, are not listed.",
+  "httpRequestsMissing": "Some requests on this connection may have been made before “Record request content” was on, or since cleared; those are not listed.",
   "httpRequestCleared": "This request is no longer kept",
   "httpCaptureOff": "Record request content is off",
-  "httpRequestsNotRecorded": "This request was decrypted, but its content was not recorded. With “Record request content” on, only matching requests made after that are recorded.",
+  "httpRequestsNotRecorded": "“Record request content” is currently off. Once on, only matching requests made after that are recorded.",
   "httpRequestsNone": "No records to show",
   "httpCaptureOpenSettings": "Go to Settings",
   "mitmBodyEmpty": "No body",

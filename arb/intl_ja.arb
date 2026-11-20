@@ -1062,10 +1062,10 @@
     }
   },
   "httpRequests": "HTTP リクエスト",
-  "httpRequestsMissing": "「リクエスト内容を記録」をオンにする前のリクエストや、消去済みのリクエストは表示されません。",
+  "httpRequestsMissing": "この接続には、「リクエスト内容を記録」をオンにする前に送信された、または消去済みのリクエストがある可能性があります。それらは表示されません。",
   "httpRequestCleared": "このリクエストの記録は消去されました",
   "httpCaptureOff": "リクエスト内容の記録はオフです",
-  "httpRequestsNotRecorded": "このリクエストは復号されましたが、内容は記録されていません。「リクエスト内容を記録」をオンにすると、その後の条件に合うリクエストのみが記録されます。",
+  "httpRequestsNotRecorded": "「リクエスト内容を記録」は現在オフです。オンにすると、その後の条件に合うリクエストのみが記録されます。",
   "httpRequestsNone": "表示できる記録はありません",
   "httpCaptureOpenSettings": "設定を開く",
   "mitmBodyEmpty": "本文なし",

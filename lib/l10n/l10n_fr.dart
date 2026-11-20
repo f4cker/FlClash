@@ -3365,7 +3365,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Les requêtes envoyées avant l’activation de « Enregistrer le contenu des requêtes », ou déjà effacées, ne sont pas listées.';
+      'Certaines requêtes de cette connexion ont peut-être été envoyées avant l’activation de « Enregistrer le contenu des requêtes », ou déjà effacées ; elles ne sont pas listées.';
 
   @override
   String get httpRequestCleared =>
@@ -3377,7 +3377,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get httpRequestsNotRecorded =>
-      'Cette requête a été déchiffrée, mais son contenu n’a pas été enregistré. Une fois « Enregistrer le contenu des requêtes » activé, seules les requêtes concernées envoyées ensuite sont enregistrées.';
+      '« Enregistrer le contenu des requêtes » est actuellement désactivé. Une fois activé, seules les requêtes concernées envoyées ensuite sont enregistrées.';
 
   @override
   String get httpRequestsNone => 'Aucun enregistrement à afficher';

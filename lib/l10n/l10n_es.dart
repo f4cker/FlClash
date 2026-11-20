@@ -3364,7 +3364,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Las solicitudes enviadas antes de activar «Registrar contenido de solicitudes», o ya borradas, no aparecen.';
+      'Puede que algunas solicitudes de esta conexión se enviaran antes de activar «Registrar contenido de solicitudes» o ya se hayan borrado; esas no aparecen.';
 
   @override
   String get httpRequestCleared =>
@@ -3376,7 +3376,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get httpRequestsNotRecorded =>
-      'Esta solicitud se descifró, pero su contenido no se registró. Al activar «Registrar contenido de solicitudes», solo se registran las solicitudes posteriores que cumplan las condiciones.';
+      '«Registrar contenido de solicitudes» está desactivado en este momento. Al activarlo, solo se registran las solicitudes posteriores que cumplan las condiciones.';
 
   @override
   String get httpRequestsNone => 'No hay registros para mostrar';

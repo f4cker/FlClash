@@ -3174,7 +3174,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      '「リクエスト内容を記録」をオンにする前のリクエストや、消去済みのリクエストは表示されません。';
+      'この接続には、「リクエスト内容を記録」をオンにする前に送信された、または消去済みのリクエストがある可能性があります。それらは表示されません。';
 
   @override
   String get httpRequestCleared => 'このリクエストの記録は消去されました';
@@ -3184,7 +3184,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get httpRequestsNotRecorded =>
-      'このリクエストは復号されましたが、内容は記録されていません。「リクエスト内容を記録」をオンにすると、その後の条件に合うリクエストのみが記録されます。';
+      '「リクエスト内容を記録」は現在オフです。オンにすると、その後の条件に合うリクエストのみが記録されます。';
 
   @override
   String get httpRequestsNone => '表示できる記録はありません';

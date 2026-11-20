@@ -5895,7 +5895,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpRequestsMissing.
   ///
   /// In en, this message translates to:
-  /// **'Requests made before Record request content was on, or since cleared, are not listed.'**
+  /// **'Some requests on this connection may have been made before “Record request content” was on, or since cleared; those are not listed.'**
   String get httpRequestsMissing;
 
   /// No description provided for @httpRequestCleared.
@@ -5913,7 +5913,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpRequestsNotRecorded.
   ///
   /// In en, this message translates to:
-  /// **'This request was decrypted, but its content was not recorded. With “Record request content” on, only matching requests made after that are recorded.'**
+  /// **'“Record request content” is currently off. Once on, only matching requests made after that are recorded.'**
   String get httpRequestsNotRecorded;
 
   /// No description provided for @httpRequestsNone.

@@ -3330,7 +3330,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Requests made before Record request content was on, or since cleared, are not listed.';
+      'Some requests on this connection may have been made before “Record request content” was on, or since cleared; those are not listed.';
 
   @override
   String get httpRequestCleared => 'This request is no longer kept';
@@ -3340,7 +3340,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get httpRequestsNotRecorded =>
-      'This request was decrypted, but its content was not recorded. With “Record request content” on, only matching requests made after that are recorded.';
+      '“Record request content” is currently off. Once on, only matching requests made after that are recorded.';
 
   @override
   String get httpRequestsNone => 'No records to show';

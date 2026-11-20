@@ -3248,7 +3248,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      '‘요청 내용 기록’을 켜기 전에 보냈거나 이미 지워진 요청은 표시되지 않습니다.';
+      '이 연결에는 ‘요청 내용 기록’을 켜기 전에 보냈거나 이미 지워진 요청이 있을 수 있으며, 그런 요청은 표시되지 않습니다.';
 
   @override
   String get httpRequestCleared => '이 요청의 기록은 지워졌습니다';
@@ -3258,7 +3258,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get httpRequestsNotRecorded =>
-      '이 요청은 복호화되었지만 내용은 기록되지 않았습니다. ‘요청 내용 기록’을 켜면 그 이후 조건에 맞는 요청만 기록됩니다.';
+      '‘요청 내용 기록’이 현재 꺼져 있습니다. 켜면 그 이후 조건에 맞는 요청만 기록됩니다.';
 
   @override
   String get httpRequestsNone => '볼 수 있는 기록이 없습니다';

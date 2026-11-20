@@ -1062,10 +1062,10 @@
     }
   },
   "httpRequests": "Solicitudes HTTP",
-  "httpRequestsMissing": "Las solicitudes enviadas antes de activar «Registrar contenido de solicitudes», o ya borradas, no aparecen.",
+  "httpRequestsMissing": "Puede que algunas solicitudes de esta conexión se enviaran antes de activar «Registrar contenido de solicitudes» o ya se hayan borrado; esas no aparecen.",
   "httpRequestCleared": "El registro de esta solicitud se ha borrado",
   "httpCaptureOff": "Registrar contenido de solicitudes está desactivado",
-  "httpRequestsNotRecorded": "Esta solicitud se descifró, pero su contenido no se registró. Al activar «Registrar contenido de solicitudes», solo se registran las solicitudes posteriores que cumplan las condiciones.",
+  "httpRequestsNotRecorded": "«Registrar contenido de solicitudes» está desactivado en este momento. Al activarlo, solo se registran las solicitudes posteriores que cumplan las condiciones.",
   "httpRequestsNone": "No hay registros para mostrar",
   "httpCaptureOpenSettings": "Ir a Ajustes",
   "mitmBodyEmpty": "Sin cuerpo",

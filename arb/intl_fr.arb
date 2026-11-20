@@ -1062,10 +1062,10 @@
     }
   },
   "httpRequests": "Requêtes HTTP",
-  "httpRequestsMissing": "Les requêtes envoyées avant l’activation de « Enregistrer le contenu des requêtes », ou déjà effacées, ne sont pas listées.",
+  "httpRequestsMissing": "Certaines requêtes de cette connexion ont peut-être été envoyées avant l’activation de « Enregistrer le contenu des requêtes », ou déjà effacées ; elles ne sont pas listées.",
   "httpRequestCleared": "L'enregistrement de cette requête a été effacé",
   "httpCaptureOff": "Enregistrer le contenu des requêtes est désactivé",
-  "httpRequestsNotRecorded": "Cette requête a été déchiffrée, mais son contenu n’a pas été enregistré. Une fois « Enregistrer le contenu des requêtes » activé, seules les requêtes concernées envoyées ensuite sont enregistrées.",
+  "httpRequestsNotRecorded": "« Enregistrer le contenu des requêtes » est actuellement désactivé. Une fois activé, seules les requêtes concernées envoyées ensuite sont enregistrées.",
   "httpRequestsNone": "Aucun enregistrement à afficher",
   "httpCaptureOpenSettings": "Ouvrir les réglages",
   "mitmBodyEmpty": "Aucun corps",

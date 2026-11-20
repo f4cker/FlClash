@@ -3128,7 +3128,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get httpRequests => 'HTTP 请求';
 
   @override
-  String get httpRequestsMissing => '开启“记录请求内容”前发出或已被清除的请求不在列表中。';
+  String get httpRequestsMissing => '此连接中可能有请求在开启“记录请求内容”前发出或已被清除，这些请求不会显示。';
 
   @override
   String get httpRequestCleared => '这条请求的记录已清除';
@@ -3137,8 +3137,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get httpCaptureOff => '记录请求内容未开启';
 
   @override
-  String get httpRequestsNotRecorded =>
-      '此请求已解密，但未记录内容。开启“记录请求内容”后，只会记录之后符合条件的请求。';
+  String get httpRequestsNotRecorded => '“记录请求内容”当前未开启。开启后只会记录之后符合条件的请求。';
 
   @override
   String get httpRequestsNone => '没有可查看的记录';
