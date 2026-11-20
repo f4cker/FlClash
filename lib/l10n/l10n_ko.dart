@@ -1913,6 +1913,37 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restoreBlockedViewProfiles => '프로필 열기';
 
   @override
+  String get restoreRecoveryRolledBack =>
+      '지난 복원이 데이터를 저장하기 전에 중단되어 취소했습니다. 기존 데이터는 변경되지 않았습니다.';
+
+  @override
+  String restoreRecoveryRolledBackPartly(Object files) {
+    return '지난 복원이 데이터를 저장하기 전에 중단되어 취소했습니다. 다음 파일은 중단 후 변경되어 그대로 두었습니다: $files';
+  }
+
+  @override
+  String get restoreRecoveryCompleted =>
+      '지난 복원은 이미 데이터를 저장했습니다. 남은 단계는 시작할 때 완료했습니다.';
+
+  @override
+  String restoreRecoveryIncomplete(Object steps) {
+    return '지난 복원은 이미 데이터를 저장했지만, 다음 남은 단계는 안전하게 완료할 수 없어 건너뛰었습니다: $steps. 그사이 다른 버전의 앱을 실행한 경우 이런 일이 생길 수 있습니다. 필요하면 백업을 다시 복원하세요.';
+  }
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      '지난 복원이 중단되었고 복원 기록을 읽을 수 없어 자동으로 아무 작업도 하지 않았습니다. 데이터가 이상하면 백업을 다시 복원하세요.';
+
+  @override
+  String get restoreStepCaches => '오래된 규칙 캐시 정리';
+
+  @override
+  String get restoreStepSettings => '백업의 설정 적용';
+
+  @override
+  String get restoreStepMitm => 'MITM 모듈 다시 확인';
+
+  @override
   String get pruneCache => '캐시 정리';
 
   @override

@@ -6,6 +6,7 @@ import 'package:fl_clash/common/boot_record.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/launch.dart';
 import 'package:fl_clash/common/migration.dart';
+import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/common/tray.dart';
 import 'package:fl_clash/common/window.dart';
 import 'package:fl_clash/database/database.dart';
@@ -94,6 +95,9 @@ class Bootstrap {
   ) async {
     await _claimDataDirectory();
     globalState.packageInfo = await PackageInfo.fromPlatform();
+    // Before the settings are read: a restore that committed may still owe
+    // them, and one that did not must take its files back first.
+    await _recoverInterruptedRestore();
     final storedConfig = await preferences.getConfigMap();
     _resetMixedPort = unusableMixedPort(storedConfig?['patchClashConfig']);
     var config = await migration.run();
@@ -210,6 +214,7 @@ class Bootstrap {
       return;
     }
     await _showCrashRecoveryTip();
+    await _finishRestoreRecovery();
     if (_resetMixedPort case final value?) {
       dialogs.showMixedPortReset(
         value,
@@ -252,6 +257,35 @@ class Bootstrap {
     unawaited(_container.read(mitmModulesActionProvider.notifier).autoUpdate());
     await bootGuard.markRunning();
     unawaited(_container.read(locationPermissionsProvider.notifier).refresh());
+  }
+
+  Future<void> _recoverInterruptedRestore() async {
+    try {
+      await restoreRecovery.run();
+    } catch (error) {
+      commonPrint.log(
+        'restore recovery failed: $error',
+        logLevel: LogLevel.error,
+      );
+    }
+  }
+
+  Future<void> _finishRestoreRecovery() async {
+    if (restoreRecovery.needsMitm) {
+      final action = _container.read(mitmModulesActionProvider.notifier);
+      await restoreRecovery.finish(() async {
+        await action.recheckConsent();
+        await action.clean();
+      });
+    }
+    for (final report in restoreRecovery.takeReports()) {
+      await dialogs.showAlert(
+        title: currentAppLocalizations.tip,
+        message: TextSpan(
+          text: restoreRecoveryMessage(report, currentAppLocalizations),
+        ),
+      );
+    }
   }
 
   Future<void> _showCrashRecoveryTip() async {

@@ -1950,6 +1950,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get restoreBlockedViewProfiles => 'Открыть профили';
 
   @override
+  String get restoreRecoveryRolledBack =>
+      'Последнее восстановление было прервано до сохранения каких-либо данных, поэтому оно отменено. Существующие данные не изменены.';
+
+  @override
+  String restoreRecoveryRolledBackPartly(Object files) {
+    return 'Последнее восстановление было прервано до сохранения каких-либо данных, поэтому оно отменено. Эти файлы изменились после прерывания и оставлены как есть: $files';
+  }
+
+  @override
+  String get restoreRecoveryCompleted =>
+      'Последнее восстановление уже сохранило данные. Оставшиеся шаги выполнены при запуске.';
+
+  @override
+  String restoreRecoveryIncomplete(Object steps) {
+    return 'Последнее восстановление уже сохранило данные, но эти оставшиеся шаги нельзя было безопасно выполнить, и они пропущены: $steps. Так бывает, если в промежутке запускалась другая версия приложения. При необходимости восстановите резервную копию ещё раз.';
+  }
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      'Последнее восстановление было прервано, а его журнал не удалось прочитать, поэтому ничего не сделано автоматически. Если данные выглядят неверно, восстановите резервную копию ещё раз.';
+
+  @override
+  String get restoreStepCaches => 'очистка старых кэшей правил';
+
+  @override
+  String get restoreStepSettings => 'применение настроек из резервной копии';
+
+  @override
+  String get restoreStepMitm => 'повторная проверка модулей MITM';
+
+  @override
   String get pruneCache => 'Очистить кэш';
 
   @override

@@ -3588,6 +3588,54 @@ abstract class AppLocalizations {
   /// **'Open Profiles'**
   String get restoreBlockedViewProfiles;
 
+  /// No description provided for @restoreRecoveryRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore was interrupted before it saved any data, so it was undone. Your existing data was not changed.'**
+  String get restoreRecoveryRolledBack;
+
+  /// No description provided for @restoreRecoveryRolledBackPartly.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore was interrupted before it saved any data, so it was undone. These files were changed after the interruption and were left as they are: {files}'**
+  String restoreRecoveryRolledBackPartly(Object files);
+
+  /// No description provided for @restoreRecoveryCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore had already saved its data. The remaining steps were completed at startup.'**
+  String get restoreRecoveryCompleted;
+
+  /// No description provided for @restoreRecoveryIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore had already saved its data, but these remaining steps couldn\'t be completed safely and were skipped: {steps}. This can happen when another version of the app ran in between. Restore the backup again if you need them.'**
+  String restoreRecoveryIncomplete(Object steps);
+
+  /// No description provided for @restoreRecoveryUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore was interrupted and its record couldn\'t be read, so nothing was done automatically. If your data looks wrong, restore the backup again.'**
+  String get restoreRecoveryUnreadable;
+
+  /// No description provided for @restoreStepCaches.
+  ///
+  /// In en, this message translates to:
+  /// **'clearing old rule caches'**
+  String get restoreStepCaches;
+
+  /// No description provided for @restoreStepSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'applying the backup\'s settings'**
+  String get restoreStepSettings;
+
+  /// No description provided for @restoreStepMitm.
+  ///
+  /// In en, this message translates to:
+  /// **'rechecking MITM modules'**
+  String get restoreStepMitm;
+
   /// No description provided for @pruneCache.
   ///
   /// In en, this message translates to:

@@ -1866,6 +1866,37 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreBlockedViewProfiles => 'プロファイルを開く';
 
   @override
+  String get restoreRecoveryRolledBack =>
+      '前回の復元はデータを保存する前に中断されたため、取り消しました。既存のデータは変更されていません。';
+
+  @override
+  String restoreRecoveryRolledBackPartly(Object files) {
+    return '前回の復元はデータを保存する前に中断されたため、取り消しました。次のファイルは中断後に変更されていたため、そのまま残しました：$files';
+  }
+
+  @override
+  String get restoreRecoveryCompleted =>
+      '前回の復元はすでにデータを保存していました。残りの手順は起動時に完了しました。';
+
+  @override
+  String restoreRecoveryIncomplete(Object steps) {
+    return '前回の復元はすでにデータを保存していましたが、次の残りの手順は安全に完了できないためスキップしました：$steps。途中で別のバージョンのアプリを実行した場合に起こることがあります。必要な場合はバックアップをもう一度復元してください。';
+  }
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      '前回の復元は中断され、その記録を読み取れなかったため、自動では何も行いませんでした。データがおかしい場合はバックアップをもう一度復元してください。';
+
+  @override
+  String get restoreStepCaches => '古いルールキャッシュの削除';
+
+  @override
+  String get restoreStepSettings => 'バックアップの設定の適用';
+
+  @override
+  String get restoreStepMitm => 'MITM モジュールの再確認';
+
+  @override
   String get pruneCache => 'キャッシュを整理';
 
   @override

@@ -1954,6 +1954,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreBlockedViewProfiles => 'Open Profiles';
 
   @override
+  String get restoreRecoveryRolledBack =>
+      'The last restore was interrupted before it saved any data, so it was undone. Your existing data was not changed.';
+
+  @override
+  String restoreRecoveryRolledBackPartly(Object files) {
+    return 'The last restore was interrupted before it saved any data, so it was undone. These files were changed after the interruption and were left as they are: $files';
+  }
+
+  @override
+  String get restoreRecoveryCompleted =>
+      'The last restore had already saved its data. The remaining steps were completed at startup.';
+
+  @override
+  String restoreRecoveryIncomplete(Object steps) {
+    return 'The last restore had already saved its data, but these remaining steps couldn\'t be completed safely and were skipped: $steps. This can happen when another version of the app ran in between. Restore the backup again if you need them.';
+  }
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      'The last restore was interrupted and its record couldn\'t be read, so nothing was done automatically. If your data looks wrong, restore the backup again.';
+
+  @override
+  String get restoreStepCaches => 'clearing old rule caches';
+
+  @override
+  String get restoreStepSettings => 'applying the backup\'s settings';
+
+  @override
+  String get restoreStepMitm => 'rechecking MITM modules';
+
+  @override
   String get pruneCache => 'Prune cache';
 
   @override

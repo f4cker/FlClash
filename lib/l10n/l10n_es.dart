@@ -1974,6 +1974,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String get restoreBlockedViewProfiles => 'Abrir perfiles';
 
   @override
+  String get restoreRecoveryRolledBack =>
+      'La última restauración se interrumpió antes de guardar ningún dato, así que se deshizo. Tus datos existentes no se modificaron.';
+
+  @override
+  String restoreRecoveryRolledBackPartly(Object files) {
+    return 'La última restauración se interrumpió antes de guardar ningún dato, así que se deshizo. Estos archivos cambiaron después de la interrupción y se dejaron como estaban: $files';
+  }
+
+  @override
+  String get restoreRecoveryCompleted =>
+      'La última restauración ya había guardado sus datos. Los pasos restantes se completaron al iniciar.';
+
+  @override
+  String restoreRecoveryIncomplete(Object steps) {
+    return 'La última restauración ya había guardado sus datos, pero estos pasos restantes no se pudieron completar de forma segura y se omitieron: $steps. Puede ocurrir si otra versión de la app se ejecutó entretanto. Vuelve a restaurar la copia si los necesitas.';
+  }
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      'La última restauración se interrumpió y no se pudo leer su registro, así que no se hizo nada automáticamente. Si tus datos parecen incorrectos, vuelve a restaurar la copia.';
+
+  @override
+  String get restoreStepCaches => 'limpiar las cachés de reglas antiguas';
+
+  @override
+  String get restoreStepSettings => 'aplicar los ajustes de la copia';
+
+  @override
+  String get restoreStepMitm => 'volver a comprobar los módulos MITM';
+
+  @override
   String get pruneCache => 'Depurar caché';
 
   @override

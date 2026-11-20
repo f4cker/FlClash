@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -122,6 +123,8 @@ void main() {
     setUp(() {
       staging = Directory.systemTemp.createTempSync('flclash-staging-');
       addTearDown(() => staging.deleteSync(recursive: true));
+      final journals = Directory(RestoreJournal.rootOf(home.path));
+      if (journals.existsSync()) journals.deleteSync(recursive: true);
     });
 
     Future<File> liveProfile(int id) async =>
@@ -134,9 +137,11 @@ void main() {
           ..createSync(recursive: true)
           ..writeAsStringSync('from backup');
 
-    // Publication first saves the file it replaces here, so this shows that
-    // no live file was overwritten, even briefly and then put back.
-    bool published() => Directory(join(staging.path, 'replaced')).existsSync();
+    // Publication first opens a journal, which keeps the files it replaces,
+    // so this shows that no live file was overwritten, even briefly and then
+    // put back.
+    bool published() =>
+        Directory(RestoreJournal.rootOf(home.path)).existsSync();
 
     Future<MountTargetState> pendingMount(int targetId, List<int> sources) =>
         testDatabase.mountsDao.save(

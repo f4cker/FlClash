@@ -14,6 +14,18 @@ class BackupAction extends _$BackupAction {
   @visibleForTesting
   Future<void> Function()? afterRestoreCommit;
 
+  /// A backup never carries another restore's commit marker.
+  static Future<void> _dropRestoreCommits(String snapshotPath) async {
+    final snapshot = Database(NativeDatabase(File(snapshotPath)));
+    try {
+      await snapshot.customStatement(
+        'DROP TABLE IF EXISTS ${Database.restoreCommitsTable}',
+      );
+    } finally {
+      await snapshot.close();
+    }
+  }
+
   /// Runs once the database guards accepted a restore, under the mount fence
   /// and before any staged file is published.
   @visibleForTesting
@@ -72,6 +84,7 @@ class BackupAction extends _$BackupAction {
   Future<String> _createArchive(String workDir) async {
     final databaseSnapshotPath = join(workDir, backupDatabaseName);
     await database.customStatement('VACUUM INTO ?', [databaseSnapshotPath]);
+    await _dropRestoreCommits(databaseSnapshotPath);
     final entries = await BackupEntries.ofDatabaseSnapshot(
       databaseSnapshotPath,
     );
@@ -86,6 +99,24 @@ class BackupAction extends _$BackupAction {
       entries: entries,
     ));
     return archivePath;
+  }
+
+  /// Called at each [RestoreCheckpoint]; a test throws [RestoreCrash] here
+  /// to stop the restore as a crash would.
+  @visibleForTesting
+  Future<void> Function(RestoreCheckpoint point)? onRestoreCheckpoint;
+
+  Future<void> _checkpoint(RestoreCheckpoint point) async {
+    await onRestoreCheckpoint?.call(point);
+  }
+
+  static String? get _appBuild {
+    try {
+      final info = globalState.packageInfo;
+      return '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      return null;
+    }
   }
 
   @visibleForTesting
@@ -106,13 +137,18 @@ class BackupAction extends _$BackupAction {
               final isOverride =
                   ref.read(appSettingProvider).restoreStrategy ==
                   RestoreStrategy.override;
+              final homeDirPath = await appPath.homeDirPath;
               final restoredSets = await compute(reserveRestoredAddedCaches, (
-                await appPath.homeDirPath,
+                homeDirPath,
                 data.addedRuleSets,
               ));
               final previous = await database.clashProvidersDao.query().get();
-              Future<void> writeRows({required bool checkOnly}) =>
-                  (checkOnly ? database.checkRestore : database.restore)(
+              Config? restoredConfig;
+              String? committedFingerprint;
+              late final RestoreJournal journal;
+              Future<String?> writeRows({required bool checkOnly}) async {
+                if (checkOnly) {
+                  await database.checkRestore(
                     data.profiles,
                     data.scripts,
                     data.rules,
@@ -125,6 +161,24 @@ class BackupAction extends _$BackupAction {
                     addedRuleSets: restoredSets,
                     isOverride: isOverride,
                   );
+                  return null;
+                }
+                return database.restore(
+                  data.profiles,
+                  data.scripts,
+                  data.rules,
+                  data.disabledRules,
+                  data.proxyGroups,
+                  clashProviders: data.clashProviders,
+                  customProxies: data.customProxies,
+                  proxyDialers: data.proxyDialers,
+                  mitmModules: data.mitmModules,
+                  addedRuleSets: restoredSets,
+                  isOverride: isOverride,
+                  commitId: journal.id,
+                );
+              }
+
               // Staged files replace live ones a mount apply may be reading,
               // so none is published before the guards pass, and no mount
               // operation starts between that check and the commit.
@@ -133,13 +187,72 @@ class BackupAction extends _$BackupAction {
                   () async {
                     await writeRows(checkOnly: true);
                     await beforeRestorePublish?.call();
-                    final putBack = stagingDirPath == null
-                        ? null
-                        : await _copyStagedFiles(data, stagingDirPath);
+                    if (config != null) {
+                      final accessControlProps =
+                          config.vpnProps.accessControlProps.hasPackages
+                          ? config.vpnProps.accessControlProps
+                          : ref.read(vpnSettingProvider).accessControlProps;
+                      restoredConfig = config.copyWith(
+                        davProps:
+                            config.davProps ?? ref.read(davSettingProvider),
+                        vpnProps: config.vpnProps.copyWith(
+                          accessControlProps: accessControlProps,
+                        ),
+                      );
+                    }
+                    journal = await RestoreJournal.create(
+                      homeDirPath: homeDirPath,
+                      id: snowflake.id,
+                      config: switch (restoredConfig) {
+                        final value? =>
+                          json.decode(json.encode(value))
+                              as Map<String, Object?>,
+                        null => null,
+                      },
+                      previousProviderFiles: [
+                        for (final provider in previous) provider.fileName,
+                      ],
+                      restoredLocalProviderFiles: [
+                        for (final provider in data.clashProviders)
+                          if (!provider.isRemote) provider.fileName,
+                      ],
+                      appBuild: _appBuild,
+                    );
                     try {
-                      await writeRows(checkOnly: false);
+                      await _checkpoint(RestoreCheckpoint.prepared);
+                      if (stagingDirPath != null) {
+                        await _publishStagedFiles(
+                          journal,
+                          data,
+                          stagingDirPath,
+                        );
+                      }
+                      await journal.advance(
+                        RestorePhase.published,
+                        prefsBefore: await storedConfigHash(preferences),
+                      );
+                      await _checkpoint(RestoreCheckpoint.published);
+                      committedFingerprint = await writeRows(checkOnly: false);
+                    } on RestoreCrash {
+                      rethrow;
                     } catch (_) {
-                      await putBack?.call();
+                      // Nothing committed: the rows rolled back, so the
+                      // files go back too. If that fails, the journal stays
+                      // for the next launch.
+                      try {
+                        final kept = await journal.rollBack();
+                        if (kept.isNotEmpty) {
+                          commonPrint.log(
+                            'restore rollback left changed files: $kept',
+                            logLevel: LogLevel.warning,
+                          );
+                        }
+                      } catch (error) {
+                        commonPrint.log(
+                          'restore rollback failed: $error',
+                          logLevel: LogLevel.error,
+                        );
+                      }
                       rethrow;
                     }
                   },
@@ -150,25 +263,32 @@ class BackupAction extends _$BackupAction {
               }
               // Keep both restore lanes until all dependent publication and
               // cleanup completes; a later restore must not overtake these.
+              // A failure leaves the journal for the next launch to finish.
               try {
+                await journal.advance(
+                  RestorePhase.committed,
+                  dbFingerprint: committedFingerprint,
+                );
+                await _checkpoint(RestoreCheckpoint.committed);
                 await afterRestoreCommit?.call();
-                await _clearReplacedProviderCaches(previous);
-                await _clearOutdatedCompiledRuleSets(data.clashProviders);
-                if (config != null) {
-                  final accessControlProps =
-                      config.vpnProps.accessControlProps.hasPackages
-                      ? config.vpnProps.accessControlProps
-                      : ref.read(vpnSettingProvider).accessControlProps;
-                  writeConfig(
-                    ref,
-                    config.copyWith(
-                      davProps: config.davProps ?? ref.read(davSettingProvider),
-                      vpnProps: config.vpnProps.copyWith(
-                        accessControlProps: accessControlProps,
-                      ),
-                    ),
-                  );
+                await journal.clearCaches(database);
+                await journal.advance(RestorePhase.cachesCleared);
+                await _checkpoint(RestoreCheckpoint.cachesCleared);
+                if (restoredConfig case final value?) {
+                  writeConfig(ref, value);
+                  // Saved now rather than debounced: until this lands, a
+                  // crash would leave the committed rows with old settings.
+                  debouncer.cancel(FunctionTag.savePreferences);
+                  await _checkpoint(RestoreCheckpoint.configWritten);
+                  if (!await preferences.saveConfig(ref.read(configProvider))) {
+                    throw StateError('saving the restored settings failed');
+                  }
                 }
+                await journal.advance(
+                  RestorePhase.configSaved,
+                  dbFingerprint: await database.restoreFingerprint(),
+                );
+                await _checkpoint(RestoreCheckpoint.configSaved);
                 if (config != null) {
                   if (unusableMixedPort(configMap?['patchClashConfig'])
                       case final value?) {
@@ -178,7 +298,20 @@ class BackupAction extends _$BackupAction {
                     );
                   }
                 }
-                await _restoreMitmModules();
+                final mitm = ref.read(mitmModulesActionProvider.notifier);
+                await mitm.recheckConsent();
+                await mitm.clean();
+                await journal.advance(
+                  RestorePhase.mitmDone,
+                  dbFingerprint: await database.restoreFingerprint(),
+                );
+                await _checkpoint(RestoreCheckpoint.mitmDone);
+                await journal.finish(database);
+                if (ref.mounted) {
+                  unawaited(mitm.autoUpdate());
+                }
+              } on RestoreCrash {
+                rethrow;
               } catch (error, stack) {
                 Error.throwWithStackTrace(
                   MessageException(
@@ -222,79 +355,20 @@ class BackupAction extends _$BackupAction {
     );
   }
 
-  Future<void> _restoreMitmModules() async {
-    final action = ref.read(mitmModulesActionProvider.notifier);
-    await action.recheckConsent();
-    await action.clean();
-    if (ref.mounted) {
-      unawaited(action.autoUpdate());
-    }
-  }
-
-  /// The files go in before the rows that name them, so the returned callback
-  /// is how a restore whose rows fail takes them back out.
-  Future<Future<void> Function()> _copyStagedFiles(
+  /// Each file is journaled before it is overwritten, so a crash at any
+  /// point can put it back.
+  Future<void> _publishStagedFiles(
+    RestoreJournal journal,
     MigrationData data,
     String stagingDirPath,
   ) async {
-    final homeDirPath = await appPath.homeDirPath;
-    final replacedDirPath = join(stagingDirPath, 'replaced');
-    final copied = <String, bool>{};
-    Future<void> putBack() async {
-      for (final MapEntry(key: entry, value: replaced) in copied.entries) {
-        final target = BackupEntries.resolve(homeDirPath, entry);
-        if (replaced) {
-          await File(
-            BackupEntries.resolve(replacedDirPath, entry),
-          ).safeCopy(target);
-        } else {
-          await File(target).safeDelete();
-        }
-      }
-    }
-
-    try {
-      for (final entry in BackupEntries.ofData(data).toSet()) {
-        final staged = File(BackupEntries.resolve(stagingDirPath, entry));
-        if (!await staged.exists()) {
-          continue;
-        }
-        final target = File(BackupEntries.resolve(homeDirPath, entry));
-        final replaced = await target.exists();
-        if (replaced) {
-          await target.safeCopy(BackupEntries.resolve(replacedDirPath, entry));
-        }
-        copied[entry] = replaced;
-        await staged.safeCopy(target.path);
-      }
-    } catch (_) {
-      await putBack();
-      rethrow;
-    }
-    return putBack;
-  }
-
-  Future<void> _clearReplacedProviderCaches(
-    List<ClashProvider> previousProviders,
-  ) async {
-    final kept = (await database.clashProvidersDao.fileNames().get()).toSet();
-    for (final provider in previousProviders) {
-      if (kept.contains(provider.fileName)) {
+    for (final entry in BackupEntries.ofData(data).toSet()) {
+      final staged = File(BackupEntries.resolve(stagingDirPath, entry));
+      if (!await staged.exists()) {
         continue;
       }
-      await File(await provider.path).safeDelete();
-      await File(await provider.compiledPath).safeDelete();
-    }
-  }
-
-  /// A restored source outdates the mrs compiled from the one it replaced.
-  Future<void> _clearOutdatedCompiledRuleSets(
-    List<ClashProvider> restored,
-  ) async {
-    for (final provider in restored) {
-      if (!provider.isRemote) {
-        await File(await provider.compiledPath).safeDelete();
-      }
+      await journal.publish(entry, staged);
+      await _checkpoint(RestoreCheckpoint.filePublished);
     }
   }
 }

@@ -12,12 +12,14 @@ import 'package:ffi/ffi.dart';
 
 import 'package:crypto/crypto.dart' show sha256;
 import 'package:dio/dio.dart' show CancelToken, DioException, DioExceptionType;
+import 'package:drift/native.dart' show NativeDatabase;
 import 'package:fl_clash/common/added_rule_edit.dart';
 import 'package:fl_clash/common/app_data.dart';
 import 'package:fl_clash/common/boot_guard.dart';
 import 'package:fl_clash/common/composition_review.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/restored_added_cache.dart';
+import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/features/mitm/script_actions.dart';
 import 'package:fl_clash/core/core.dart';

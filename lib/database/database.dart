@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart' show Digest, sha256;
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
@@ -548,22 +549,27 @@ class Database extends _$Database {
     List<MitmModule> mitmModules = const [],
     List<AddedRuleSet> addedRuleSets = const [],
     bool isOverride = false,
-  }) => _restore(
-    profiles,
-    scripts,
-    rules,
-    disabledRules,
-    proxyGroups,
-    clashProviders: clashProviders,
-    customProxies: customProxies,
-    proxyDialers: proxyDialers,
-    mitmModules: mitmModules,
-    addedRuleSets: addedRuleSets,
-    isOverride: isOverride,
-    write: false,
-  );
+  }) async {
+    await _restore(
+      profiles,
+      scripts,
+      rules,
+      disabledRules,
+      proxyGroups,
+      clashProviders: clashProviders,
+      customProxies: customProxies,
+      proxyDialers: proxyDialers,
+      mitmModules: mitmModules,
+      addedRuleSets: addedRuleSets,
+      isOverride: isOverride,
+      write: false,
+    );
+  }
 
-  Future<void> restore(
+  /// With a [commitId], the transaction also records that restore in
+  /// [restoreCommitsTable] and returns [restoreFingerprint] as committed, so
+  /// a journal can tell after a crash whether these rows were written.
+  Future<String?> restore(
     List<Profile> profiles,
     List<Script> scripts,
     List<Rule> rules,
@@ -575,6 +581,7 @@ class Database extends _$Database {
     List<MitmModule> mitmModules = const [],
     List<AddedRuleSet> addedRuleSets = const [],
     bool isOverride = false,
+    int? commitId,
   }) => _restore(
     profiles,
     scripts,
@@ -588,9 +595,106 @@ class Database extends _$Database {
     addedRuleSets: addedRuleSets,
     isOverride: isOverride,
     write: true,
+    commitId: commitId,
   );
 
-  Future<void> _restore(
+  /// Runs last inside a writing restore's transaction; a throw rolls it back.
+  @visibleForTesting
+  Future<void> Function()? beforeRestoreCommit;
+
+  /// Not part of the drift schema: schemaVersion stays put, so a build that
+  /// predates the restore journal opens, uses and backs up this database
+  /// unchanged. It is created on the first journaled restore, holds a row
+  /// only while that restore is unfinished, and backups leave it out.
+  static const restoreCommitsTable = 'restore_commits';
+
+  /// The tables a restore writes. Caches and status rows that change in the
+  /// background are left out, so the fingerprint only moves when restored
+  /// data does.
+  static const _fingerprintTables = [
+    'profiles',
+    'scripts',
+    'rules',
+    'disabled_rules',
+    'proxy_groups',
+    'clash_providers',
+    'custom_proxies',
+    'proxy_dialers',
+    'mitm_modules',
+    'added_rule_sets',
+    'profile_mounts',
+    'mount_targets',
+  ];
+
+  /// A digest of every row a restore writes. Recovery compares it with the
+  /// one recorded at commit: a mismatch means something, such as an older
+  /// build, changed the data since, and nothing is rolled forward over it.
+  Future<String> restoreFingerprint() async {
+    final output = _DigestSink();
+    final input = sha256.startChunkedConversion(output);
+    for (final table in _fingerprintTables) {
+      input.add(utf8.encode('#$table\n'));
+      final rows = await customSelect(
+        'SELECT * FROM "$table" ORDER BY rowid',
+      ).get();
+      for (final row in rows) {
+        input.add(
+          utf8.encode(
+            '${json.encode(row.data, toEncodable: _fingerprintValue)}\n',
+          ),
+        );
+      }
+    }
+    input.close();
+    return output.value.toString();
+  }
+
+  static Object? _fingerprintValue(Object? value) =>
+      value is List<int> ? base64.encode(value) : value.toString();
+
+  Future<bool> _hasRestoreCommits() async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable.withString(restoreCommitsTable)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  Future<String> _markRestoreCommit(int id) async {
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS $restoreCommitsTable ('
+      'id INTEGER NOT NULL PRIMARY KEY, '
+      'created_at INTEGER NOT NULL, '
+      "fingerprint TEXT NOT NULL DEFAULT '')",
+    );
+    final fingerprint = await restoreFingerprint();
+    await customStatement(
+      'INSERT OR REPLACE INTO $restoreCommitsTable '
+      '(id, created_at, fingerprint) VALUES (?, ?, ?)',
+      [id, DateTime.now().millisecondsSinceEpoch, fingerprint],
+    );
+    return fingerprint;
+  }
+
+  /// The fingerprint recorded when restore [id] committed, or null when that
+  /// restore never committed (or has been finalized).
+  Future<String?> restoreCommit(int id) async {
+    if (!await _hasRestoreCommits()) return null;
+    final row = await customSelect(
+      'SELECT fingerprint FROM $restoreCommitsTable WHERE id = ?',
+      variables: [Variable.withInt(id)],
+    ).getSingleOrNull();
+    return row?.read<String>('fingerprint');
+  }
+
+  Future<void> clearRestoreCommit(int id) async {
+    if (!await _hasRestoreCommits()) return;
+    await customStatement('DELETE FROM $restoreCommitsTable WHERE id = ?', [
+      id,
+    ]);
+  }
+
+  Future<String?> _restore(
     List<Profile> profiles,
     List<Script> scripts,
     List<Rule> rules,
@@ -603,6 +707,7 @@ class Database extends _$Database {
     required List<AddedRuleSet> addedRuleSets,
     required bool isOverride,
     required bool write,
+    int? commitId,
   }) async {
     final isEmpty =
         profiles.isEmpty &&
@@ -615,6 +720,14 @@ class Database extends _$Database {
         proxyDialers.isEmpty &&
         mitmModules.isEmpty &&
         addedRuleSets.isEmpty;
+    String? fingerprint;
+    Future<void> commit() async {
+      if (commitId != null) {
+        fingerprint = await _markRestoreCommit(commitId);
+      }
+      await beforeRestoreCommit?.call();
+    }
+
     await transaction(() async {
       // Even settings-only restores can change the active profile while an
       // unresolved mount operation is still applying.
@@ -622,7 +735,10 @@ class Database extends _$Database {
       if (mountStates.values.any((state) => state.pending != null)) {
         throw RestoreBlockedError(RestoreBlockedReason.mountPending);
       }
-      if (isEmpty) return;
+      if (isEmpty) {
+        if (write) await commit();
+        return;
+      }
       if (!isOverride && addedRuleSets.isNotEmpty) {
         final existing = await addedRuleSetsDao.queryAll().get();
         final ids = {for (final set in existing) set.id: set};
@@ -779,7 +895,9 @@ class Database extends _$Database {
         addedRuleSetsDao.putAllWithBatch(b, addedRuleSets);
       });
       await _purgeOrphans();
+      await commit();
     });
+    return fingerprint;
   }
 
   Future<void> deleteProfile(int profileId) {
@@ -939,6 +1057,18 @@ extension JoinedSelectStatementExt<T extends HasResultSet, D>
     addColumns([countExp]);
     return map((row) => row.read(countExp)!);
   }
+}
+
+class _DigestSink implements Sink<Digest> {
+  Digest? _value;
+
+  Digest get value => _value!;
+
+  @override
+  void add(Digest data) => _value = data;
+
+  @override
+  void close() {}
 }
 
 Database _database = Database();

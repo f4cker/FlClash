@@ -1843,6 +1843,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreBlockedViewProfiles => '打开配置页';
 
   @override
+  String get restoreRecoveryRolledBack => '上次恢复被中断，尚未写入任何数据，已撤销。现有数据未改动。';
+
+  @override
+  String restoreRecoveryRolledBackPartly(Object files) {
+    return '上次恢复被中断，尚未写入数据，已撤销。以下文件在中断后被改动过，已保留现状：$files';
+  }
+
+  @override
+  String get restoreRecoveryCompleted => '上次恢复已写入数据，剩余步骤已在启动时完成。';
+
+  @override
+  String restoreRecoveryIncomplete(Object steps) {
+    return '上次恢复已写入数据，但以下剩余步骤无法安全完成，已跳过：$steps。中途运行过其他版本的应用时可能出现这种情况。如有需要，请重新恢复备份。';
+  }
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      '上次恢复被中断，且恢复记录无法读取，未做任何自动处理。如数据异常，请重新恢复备份。';
+
+  @override
+  String get restoreStepCaches => '清理旧的规则缓存';
+
+  @override
+  String get restoreStepSettings => '应用备份中的设置';
+
+  @override
+  String get restoreStepMitm => '重新检查 MITM 模块';
+
+  @override
   String get pruneCache => '修剪缓存';
 
   @override

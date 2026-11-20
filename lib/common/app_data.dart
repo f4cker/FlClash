@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 
@@ -17,4 +18,8 @@ Future<void> clearAppData() async {
   }
   await File(await appPath.databasePath).safeDelete(recursive: true);
   await Directory(await appPath.profilesPath).safeDelete(recursive: true);
+  // Its marker went with the database; the files it names are not undone.
+  await Directory(
+    RestoreJournal.rootOf(await appPath.homeDirPath),
+  ).safeDelete(recursive: true);
 }
