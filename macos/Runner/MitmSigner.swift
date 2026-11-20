@@ -54,8 +54,24 @@ enum MitmSignError: String, Error {
     case signFailed
 }
 
+/// What one sign was told about the Core ("verified", "none" or
+/// "failed:<stage>") with its result: each sign carries its own, so
+/// concurrent signs never read another's.
+struct MitmSignOutcome {
+    let result: Result<(leaf: Data, ca: Data), MitmSignError>
+    let identity: String
+}
+
 /// Signs leaves for the Core from {host, SPKI} alone, after checking who asks
-/// and that the user listed the host. Not thread-safe: callers use one queue.
+/// and that the user listed the host.
+///
+/// Thread model: safe to call from several threads. Keychain reads and the
+/// ECDSA of a leaf run outside `lock`; the root, its key, the leaf cache and
+/// `generation` change only under it. Every sign re-reads the root from the
+/// store (no root cache), signs with that snapshot, and refuses with .noRoot
+/// when the root it read was replaced or removed before it finished.
+/// generate() and delete() hold `lock` throughout; MitmSignerDispatcher also
+/// runs them alone, with no sign in flight.
 final class MitmSigner {
     /// The trust check's own host, signed for the app and never for the Core.
     static let checkHost = "mitm-check.flclash.invalid"
@@ -63,14 +79,24 @@ final class MitmSigner {
     /// A cached leaf is issued again once less than this is left of it.
     static let leafRenewal: TimeInterval = 24 * 3600
 
+    private struct Snapshot {
+        let key: MitmCAKey
+        let root: MitmRootInfo
+        let generation: UInt64
+    }
+
     private let store: MitmCAStore
     private let coreIdentity: () -> String
     private let now: () -> Date
+    private let lock = NSLock()
     private var key: MitmCAKey?
     private var root: MitmRootInfo?
     private var leaves = [String: (der: Data, notAfter: Date)]()
-    /// What the last sign was told about the Core: "verified", "none" or "failed:<stage>".
-    private(set) var lastCoreIdentity = "none"
+    /// Moves whenever the root held here changes or goes.
+    private var generation: UInt64 = 0
+    /// Store reads are numbered; an older read never overwrites a newer one.
+    private var nextRead: UInt64 = 1
+    private var appliedRead: UInt64 = 0
 
     init(store: MitmCAStore, coreIdentity: @escaping () -> String, now: @escaping () -> Date = Date.init) {
         self.store = store
@@ -78,89 +104,236 @@ final class MitmSigner {
         self.now = now
     }
 
+    private func locked<T>(_ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
+
+    /// The root this signer holds, read from the store when it holds none.
     func certificate() throws -> MitmRootInfo? {
-        if let root { return root }
+        if let root = locked({ root }) { return root }
+        return try refresh()?.root
+    }
+
+    /// The key and root in the store, if they belong together. No lock held.
+    private func readStore() throws -> (key: MitmCAKey, root: MitmRootInfo)? {
         guard let key = try store.loadKey(), let der = try store.loadCertificate(),
               let point = try? MitmCertificateBuilder.p256Point(spki: try MitmRootReader.spki(of: der)),
               point == key.publicKeyX963 else { return nil }
         let validity = try MitmRootReader.validity(of: der)
-        self.key = key
-        root = MitmRootInfo(der: der, notBefore: validity.notBefore, notAfter: validity.notAfter)
-        return root
+        return (key, MitmRootInfo(der: der, notBefore: validity.notBefore, notAfter: validity.notAfter))
+    }
+
+    /// Reads the store and adopts what it found, unless a later read already
+    /// spoke: then this read stands only if it found the same root.
+    private func refresh() throws -> Snapshot? {
+        let ticket = locked { () -> UInt64 in
+            defer { nextRead += 1 }
+            return nextRead
+        }
+        let fresh = try readStore()
+        return locked { () -> Snapshot? in
+            if ticket < appliedRead {
+                guard let fresh, let key, let root, root.der == fresh.root.der else { return nil }
+                return Snapshot(key: key, root: root, generation: generation)
+            }
+            appliedRead = ticket
+            guard let fresh else {
+                if root != nil { generation &+= 1 }
+                key = nil
+                root = nil
+                leaves.removeAll()
+                return nil
+            }
+            if root?.der != fresh.root.der {
+                generation &+= 1
+                leaves.removeAll()
+            }
+            key = fresh.key
+            root = fresh.root
+            return Snapshot(key: fresh.key, root: fresh.root, generation: generation)
+        }
     }
 
     func generate() throws -> MitmRootInfo {
+        lock.lock()
+        defer { lock.unlock() }
         forget()
         _ = try store.deleteAll()
         let key = try store.createKey()
         let issued = now()
         let der = try MitmCertificateBuilder.root(key: key, now: issued)
         try store.saveCertificate(der)
-        self.key = key
-        root = MitmRootInfo(
+        let root = MitmRootInfo(
             der: der, notBefore: issued.addingTimeInterval(-MitmCertificateBuilder.backdate),
             notAfter: issued.addingTimeInterval(MitmCertificateBuilder.rootLifetime - MitmCertificateBuilder.backdate))
-        return root!
+        self.key = key
+        self.root = root
+        return root
     }
 
     func delete() throws {
-        forget()
-        let leftovers = try store.deleteAll()
+        let leftovers = try locked { () throws -> [Error] in
+            forget()
+            return try store.deleteAll()
+        }
         if !leftovers.isEmpty { throw MitmLeftovers(errors: leftovers) }
     }
 
+    /// Under `lock`: drops the root, and any read begun before now.
     private func forget() {
         key = nil
         root = nil
         leaves.removeAll()
+        generation &+= 1
+        appliedRead = nextRead
+        nextRead += 1
     }
 
     // A retained SecKey and root do not prove that either item is still in
     // the login keychain. Re-read both before every approval or trust probe.
     func refreshRoot() throws -> MitmRootInfo? {
-        let oldDER = root?.der
-        key = nil
-        root = nil
-        guard let fresh = try certificate() else {
-            leaves.removeAll()
-            return nil
-        }
-        if oldDER != fresh.der { leaves.removeAll() }
-        return fresh
+        try refresh()?.root
     }
 
     func sign(host rawHost: String, spki: Data, hostnames: [String]) -> Result<(leaf: Data, ca: Data), MitmSignError> {
-        lastCoreIdentity = coreIdentity()
-        guard lastCoreIdentity == "verified" else { return .failure(.coreIdentity) }
+        signReporting(host: rawHost, spki: spki, hostnames: hostnames).result
+    }
+
+    /// The Core's identity is checked on every sign, before anything else.
+    func signReporting(host rawHost: String, spki: Data, hostnames: [String]) -> MitmSignOutcome {
+        let identity = coreIdentity()
+        func outcome(_ result: Result<(leaf: Data, ca: Data), MitmSignError>) -> MitmSignOutcome {
+            MitmSignOutcome(result: result, identity: identity)
+        }
+        guard identity == "verified" else { return outcome(.failure(.coreIdentity)) }
         let host = MitmHostPolicy.normalize(rawHost)
-        guard host != Self.checkHost, MitmHostMatcher(hostnames).matches(host) else { return .failure(.notListed) }
-        guard (try? MitmCertificateBuilder.p256Point(spki: spki)) != nil else { return .failure(.badKey) }
-        guard (try? refreshRoot()) != nil else { return .failure(.noRoot) }
-        return issue(host: host, spki: spki)
+        guard host != Self.checkHost, MitmHostMatcher(hostnames).matches(host) else {
+            return outcome(.failure(.notListed))
+        }
+        guard (try? MitmCertificateBuilder.p256Point(spki: spki)) != nil else { return outcome(.failure(.badKey)) }
+        guard let snapshot = try? refresh() else { return outcome(.failure(.noRoot)) }
+        return outcome(issue(host: host, spki: spki, snapshot))
     }
 
     func checkCertificate() -> Result<(leaf: Data, ca: Data), MitmSignError> {
-        guard (try? refreshRoot()) != nil else { return .failure(.noRoot) }
+        guard let snapshot = try? refresh() else { return .failure(.noRoot) }
         let point = P256.Signing.PrivateKey().publicKey.x963Representation
-        return issue(host: Self.checkHost, spki: MitmCertificateBuilder.spki(x963: point))
+        return issue(host: Self.checkHost, spki: MitmCertificateBuilder.spki(x963: point), snapshot)
     }
 
-    private func issue(host: String, spki: Data) -> Result<(leaf: Data, ca: Data), MitmSignError> {
-        guard let root = try? certificate(), let key else { return .failure(.noRoot) }
+    /// Signs with the snapshot's key outside the lock, then keeps the leaf
+    /// only if the snapshot's root is still the one held.
+    private func issue(host: String, spki: Data, _ snapshot: Snapshot) -> Result<(leaf: Data, ca: Data), MitmSignError> {
+        let root = snapshot.root
         guard now() < root.notAfter else { return .failure(.rootExpired) }
         let cacheKey = host + "\n" + spki.base64EncodedString()
         let issued = now()
-        if let cached = leaves[cacheKey],
-           cached.notAfter.timeIntervalSince(issued) >= Self.leafRenewal || cached.notAfter >= root.notAfter {
-            return .success((cached.der, root.der))
+        var replaced = false
+        let hit = locked { () -> (der: Data, notAfter: Date)? in
+            guard generation == snapshot.generation else { replaced = true; return nil }
+            return leaves[cacheKey]
+        }
+        if replaced { return .failure(.noRoot) }
+        if let hit, hit.notAfter.timeIntervalSince(issued) >= Self.leafRenewal || hit.notAfter >= root.notAfter {
+            return .success((hit.der, root.der))
         }
         guard let leaf = try? MitmCertificateBuilder.leaf(
-            host: host, spki: spki, key: key, now: issued, notAfterLimit: root.notAfter) else {
+            host: host, spki: spki, key: snapshot.key, now: issued, notAfterLimit: root.notAfter) else {
             return .failure(.signFailed)
         }
-        if leaves.count >= Self.cacheLimit { leaves.removeAll() }
-        leaves[cacheKey] = (leaf, MitmCertificateBuilder.leafNotAfter(now: issued, limit: root.notAfter))
-        return .success((leaf, root.der))
+        return locked {
+            // Replaced or removed while this leaf was being signed: refuse it.
+            guard generation == snapshot.generation, self.root?.der == root.der else { return .failure(.noRoot) }
+            if leaves.count >= Self.cacheLimit { leaves.removeAll() }
+            leaves[cacheKey] = (leaf, MitmCertificateBuilder.leafNotAfter(now: issued, limit: root.notAfter))
+            return .success((leaf, root.der))
+        }
+    }
+}
+
+/// Shared/exclusive admission: any number of shared holders at once, or one
+/// exclusive holder alone. A waiting exclusive holder admits no new shared
+/// ones, so a generate or delete is never starved by a stream of signs.
+final class MitmSignerGate {
+    private let condition = NSCondition()
+    private var shared = 0
+    private var exclusive = false
+    private var exclusiveWaiting = 0
+
+    func withShared<T>(_ body: () throws -> T) rethrows -> T {
+        condition.lock()
+        while exclusive || exclusiveWaiting > 0 { condition.wait() }
+        shared += 1
+        condition.unlock()
+        defer {
+            condition.lock()
+            shared -= 1
+            if shared == 0 { condition.broadcast() }
+            condition.unlock()
+        }
+        return try body()
+    }
+
+    func withExclusive<T>(_ body: () throws -> T) rethrows -> T {
+        condition.lock()
+        exclusiveWaiting += 1
+        while exclusive || shared > 0 { condition.wait() }
+        exclusiveWaiting -= 1
+        exclusive = true
+        condition.unlock()
+        defer {
+            condition.lock()
+            exclusive = false
+            condition.broadcast()
+            condition.unlock()
+        }
+        return try body()
+    }
+}
+
+/// Where the signer channel's calls run, off the main thread:
+/// - sign: up to `signWidth` at once;
+/// - check (certificate, checkCertificate, coreIdentity, anything else): one
+///   at a time on a lane of their own, so they never queue behind signs;
+/// - barrier (generate, delete): alone. It waits for the signs and checks in
+///   flight, and none starts until it is done, so a root is never replaced
+///   or removed under a sign.
+/// Flutter-free, so the tests run it without the app.
+final class MitmSignerDispatcher {
+    enum Lane { case sign, check, barrier }
+
+    static let signWidth = 4
+
+    static func lane(for method: String) -> Lane {
+        switch method {
+        case "sign": return .sign
+        case "generate", "delete": return .barrier
+        default: return .check
+        }
+    }
+
+    private let gate = MitmSignerGate()
+    private let signs = OperationQueue()
+    private let checks = OperationQueue()
+    private let barriers = OperationQueue()
+
+    init(signWidth: Int = MitmSignerDispatcher.signWidth) {
+        for (queue, width, name) in [(signs, max(1, signWidth), "sign"), (checks, 1, "check"),
+                                     (barriers, 1, "barrier")] {
+            queue.name = "com.layoute.flash.mitm.signer." + name
+            queue.maxConcurrentOperationCount = width
+            queue.qualityOfService = .userInitiated
+        }
+    }
+
+    func run(_ lane: Lane, _ work: @escaping () -> Void) {
+        switch lane {
+        case .sign: signs.addOperation { [gate] in gate.withShared(work) }
+        case .check: checks.addOperation { [gate] in gate.withShared(work) }
+        case .barrier: barriers.addOperation { [gate] in gate.withExclusive(work) }
+        }
     }
 }
 

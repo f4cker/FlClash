@@ -2,11 +2,13 @@ import FlutterMacOS
 import Foundation
 
 /// The app's MITM root on the Flutter side: generate, read, delete, and sign
-/// a leaf the Core asks for. Work runs on one serial queue off the main thread.
+/// a leaf the Core asks for. Work runs off the main thread on the lanes of
+/// MitmSignerDispatcher: signs side by side, checks on their own lane, and
+/// generate/delete alone.
 final class MitmSignerChannel {
     private static var instance: MitmSignerChannel?
     private let channel: FlutterMethodChannel
-    private let queue = DispatchQueue(label: "com.layoute.flash.mitm.signer")
+    private let dispatcher = MitmSignerDispatcher()
     private let signer = MitmSigner(store: MitmKeychainStore(), coreIdentity: ManagedHelperChannel.coreIdentity)
 
     static func register(messenger: FlutterBinaryMessenger) {
@@ -18,7 +20,7 @@ final class MitmSignerChannel {
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else { result(nil); return }
             let arguments = call.arguments as? [String: Any] ?? [:]
-            self.queue.async {
+            self.dispatcher.run(MitmSignerDispatcher.lane(for: call.method)) {
                 let answer = self.handle(call.method, arguments)
                 DispatchQueue.main.async { result(answer) }
             }
@@ -63,9 +65,10 @@ final class MitmSignerChannel {
                   let hostnames = arguments["hostnames"] as? [String] else {
                 return ["error": MitmSignError.badKey.rawValue]
             }
-            var answer = Self.encode(signer.sign(host: host, spki: spki.data, hostnames: hostnames))
+            let outcome = signer.signReporting(host: host, spki: spki.data, hostnames: hostnames)
+            var answer = Self.encode(outcome.result)
             if answer["error"] as? String == MitmSignError.coreIdentity.rawValue {
-                answer["identity"] = signer.lastCoreIdentity
+                answer["identity"] = outcome.identity
             }
             return answer
         case "checkCertificate":

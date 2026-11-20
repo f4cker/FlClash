@@ -66,15 +66,63 @@ class MitmSignerTests(unittest.TestCase):
         signer = (RUNNER / 'MitmSigner.swift').read_text()
         body = signer[signer.index('func sign(host'):]
         body = body[:body.index('return issue(')]
-        self.assertLess(body.index('lastCoreIdentity == "verified"'), body.index('MitmHostMatcher'))
+        self.assertLess(body.index('let identity = coreIdentity()'), body.index('identity == "verified"'))
+        self.assertLess(body.index('identity == "verified"'), body.index('MitmHostMatcher'))
         channel = (RUNNER / 'MitmSignerChannel.swift').read_text()
         self.assertIn('coreIdentity: ManagedHelperChannel.coreIdentity', channel)
 
+    def test_channel_runs_on_the_dispatcher_lanes(self):
+        channel = (RUNNER / 'MitmSignerChannel.swift').read_text()
+        self.assertIn('self.dispatcher.run(MitmSignerDispatcher.lane(for: call.method))', channel)
+        self.assertNotIn('DispatchQueue(label:', channel)
+        # Each sign reports the identity its own check got.
+        self.assertIn('answer["identity"] = outcome.identity', channel)
+        self.assertNotIn('lastCoreIdentity', channel + (RUNNER / 'MitmSigner.swift').read_text())
+
     @unittest.skipUnless(shutil.which('xcrun'), 'needs Xcode')
-    def test_xctest_suite_passes(self):
+    def test_channel_typechecks_against_a_flutter_stub(self):
+        # Compile-only: the app is never built or run, the keychain never opened.
+        stub = '\n'.join([
+            'import Foundation',
+            'public protocol FlutterBinaryMessenger: AnyObject {}',
+            'public typealias FlutterResult = (Any?) -> Void',
+            'public final class FlutterMethodCall { public let method = ""; public let arguments: Any? = nil }',
+            'public final class FlutterMethodChannel {',
+            '    public init(name: String, binaryMessenger: FlutterBinaryMessenger) {}',
+            '    public func setMethodCallHandler(_ handler: ((FlutterMethodCall, @escaping FlutterResult) -> Void)?) {}',
+            '}',
+            'public final class FlutterStandardTypedData {',
+            '    public let data: Data',
+            '    public init(bytes: Data) { data = bytes }',
+            '}',
+            'public final class FlutterError { public init(code: String, message: String?, details: Any?) {} }',
+            'public let FlutterMethodNotImplemented = NSObject()',
+        ])
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, 'FlutterMacOS.swift').write_text(stub)
+            Path(tmp, 'Helper.swift').write_text(
+                'enum ManagedHelperChannel { static func coreIdentity() -> String { "none" } }\n')
+            module = _xcrun('swiftc', '-emit-module', '-parse-as-library', '-module-name', 'FlutterMacOS',
+                            '-emit-module-path', str(Path(tmp, 'FlutterMacOS.swiftmodule')),
+                            str(Path(tmp, 'FlutterMacOS.swift')))
+            self.assertEqual(module.returncode, 0, module.stderr)
+            check = _xcrun('swiftc', '-typecheck', '-I', tmp,
+                           *[str(RUNNER / name) for name in SHARED + APP_ONLY], str(Path(tmp, 'Helper.swift')))
+            self.assertEqual(check.returncode, 0, check.stderr)
+
+    def _run_xctest(self, sanitize=False):
         platform = _xcrun('--show-sdk-platform-path').stdout.strip()
         if not platform:
             self.skipTest('no macOS SDK platform')
+        env = {'MITM_HOSTNAME_VECTORS': str(VECTORS), 'PATH': '/usr/bin:/bin'}
+        if sanitize:
+            # xcrun is SIP-protected and would drop DYLD_*: run xctest itself.
+            xctest = _xcrun('-f', 'xctest').stdout.strip()
+            toolchain = Path(_xcrun('-f', 'swiftc').stdout.strip()).parents[1]
+            runtime = sorted(toolchain.glob('lib/clang/*/lib/darwin/libclang_rt.tsan_osx_dynamic.dylib'))
+            if not xctest or not runtime:
+                self.skipTest('no Thread Sanitizer runtime')
+            env['DYLD_INSERT_LIBRARIES'] = str(runtime[-1])
         with tempfile.TemporaryDirectory() as tmp:
             bundle = Path(tmp) / 'MitmSignerTests.xctest'
             binary = bundle / 'Contents/MacOS/MitmSignerTests'
@@ -82,16 +130,30 @@ class MitmSignerTests(unittest.TestCase):
             frameworks = f'{platform}/Developer/Library/Frameworks'
             libraries = f'{platform}/Developer/usr/lib'
             build = _xcrun(
-                'swiftc', '-parse-as-library', '-emit-library', '-module-name', 'RunnerTests',
+                'swiftc', *(['-sanitize=thread'] if sanitize else []),
+                '-parse-as-library', '-emit-library', '-module-name', 'RunnerTests',
                 '-F', frameworks, '-I', libraries, '-L', libraries, '-framework', 'XCTest',
                 '-Xlinker', '-bundle', '-Xlinker', '-rpath', '-Xlinker', frameworks,
                 '-Xlinker', '-rpath', '-Xlinker', libraries,
                 *map(str, SOURCES), '-o', str(binary))
             self.assertEqual(build.returncode, 0, build.stderr)
-            env = {'MITM_HOSTNAME_VECTORS': str(VECTORS), 'PATH': '/usr/bin:/bin'}
-            run = _xcrun('xctest', str(bundle), env=env)
-            self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-            self.assertIn('with 0 failures', run.stderr + run.stdout)
+            if sanitize:
+                run = subprocess.run([xctest, str(bundle)], capture_output=True, text=True, env=env)
+            else:
+                run = _xcrun('xctest', str(bundle), env=env)
+            output = run.stdout + run.stderr
+            self.assertEqual(run.returncode, 0, output)
+            self.assertIn('with 0 failures', output)
+            self.assertIn('MitmSignerConcurrencyTests', output)
+            self.assertNotIn('ThreadSanitizer', output)
+
+    @unittest.skipUnless(shutil.which('xcrun'), 'needs Xcode')
+    def test_xctest_suite_passes(self):
+        self._run_xctest()
+
+    @unittest.skipUnless(shutil.which('xcrun'), 'needs Xcode')
+    def test_xctest_suite_passes_under_thread_sanitizer(self):
+        self._run_xctest(sanitize=True)
 
 
 if __name__ == '__main__':

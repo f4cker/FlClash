@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -48,31 +49,75 @@ class _Costs {
   final sendEach = const Duration(milliseconds: 3);
 }
 
+/// [width] 1 is the old native queue: every call on one serial queue.
+/// Above 1 it is MitmSignerDispatcher: up to [width] signs at once, and
+/// every other call on a serial lane of its own.
 class _NativeQueue {
-  _NativeQueue(this.costs);
+  _NativeQueue(this.costs, {this.width = 1, this.signDelay, this.signAnswer});
 
   final _Costs costs;
+  final int width;
+
+  /// Per-request sign cost, by host; [_Costs.sign] when null.
+  final Duration Function(String host)? signDelay;
+
+  /// Per-request sign reply, by host and call order; a leaf when null.
+  final Object? Function(String host, int order)? signAnswer;
   Future<void> _tail = Future.value();
+  int _signing = 0;
+  int signCalls = 0;
+  int maxSigning = 0;
+  final _signWaiters = Queue<Completer<void>>();
   final arrivals = <(String, Duration)>[];
   final clock = Stopwatch()..start();
 
-  Duration _cost(String method) => switch (method) {
+  Duration _cost(MethodCall call) => switch (call.method) {
     'coreIdentity' => costs.identity,
     'certificate' => costs.certRead,
     'checkCertificate' => costs.checkSign,
-    'sign' => costs.sign,
+    'sign' => signDelay?.call(_host(call)) ?? costs.sign,
     _ => Duration.zero,
   };
 
-  Future<Object?> call(MethodCall call) async {
-    await Future<void>.delayed(costs.hop);
-    arrivals.add((call.method, clock.elapsed));
+  static String _host(MethodCall call) =>
+      (call.arguments as Map<Object?, Object?>)['host']! as String;
+
+  Future<void> _serial(Future<void> Function() work) async {
     final done = Completer<void>();
     final previous = _tail;
     _tail = done.future;
     await previous;
-    await Future<void>.delayed(_cost(call.method));
+    await work();
     done.complete();
+  }
+
+  Future<void> _signLane(Future<void> Function() work) async {
+    if (_signing >= width) {
+      final turn = Completer<void>();
+      _signWaiters.add(turn);
+      await turn.future;
+    } else {
+      _signing++;
+    }
+    maxSigning = _signing > maxSigning ? _signing : maxSigning;
+    await work();
+    if (_signWaiters.isNotEmpty) {
+      _signWaiters.removeFirst().complete();
+    } else {
+      _signing--;
+    }
+  }
+
+  Future<Object?> call(MethodCall call) async {
+    await Future<void>.delayed(costs.hop);
+    arrivals.add((call.method, clock.elapsed));
+    final order = call.method == 'sign' ? signCalls++ : 0;
+    Future<void> work() => Future<void>.delayed(_cost(call));
+    if (width > 1 && call.method == 'sign') {
+      await _signLane(work);
+    } else {
+      await _serial(work);
+    }
     await Future<void>.delayed(costs.hop);
     return switch (call.method) {
       'coreIdentity' => 'verified',
@@ -84,10 +129,12 @@ class _NativeQueue {
         'notAfter': 4102444800000,
       },
       'checkCertificate' => 'leaf PEM',
-      'sign' => {
-        'cert': Uint8List.fromList([4]),
-        'ca': Uint8List.fromList([6]),
-      },
+      'sign' =>
+        signAnswer?.call(_host(call), order) ??
+            {
+              'cert': Uint8List.fromList([4]),
+              'ca': Uint8List.fromList([6]),
+            },
       _ => null,
     };
   }
@@ -138,7 +185,7 @@ void main() {
     MitmSignAction.timing = (reqId, stage, since) =>
         stages.add((reqId, stage, since));
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, native.call);
+        .setMockMethodCallHandler(_channel, (call) => native.call(call));
     final core = _MockCoreHandlerInterface();
     var sending = Future<void>.value();
     when(() => core.sendMitmSignResult(any(), any())).thenAnswer((call) {
@@ -296,5 +343,86 @@ void main() {
     sent.clear();
     await burst(1);
     expect(stages, isEmpty);
+  });
+
+  group('native signs side by side (MitmSignerDispatcher)', () {
+    test('four at a time: 12 signs take about 3 rounds, not 12', () async {
+      native = _NativeQueue(costs, width: 4);
+      await burst(12);
+      expect(sent.where((s) => s['cert'] != null), hasLength(12));
+      expect(store.checks, 1);
+      expect(native.maxSigning, 4);
+      final signed = all(MitmSignStage.signed);
+      expect(signed.last - signed.first, lessThan(costs.sign * 6));
+    });
+
+    test('replies out of order still answer their own request', () async {
+      // Earlier requests sign slowest, so replies come back reversed.
+      native = _NativeQueue(
+        costs,
+        width: 4,
+        signDelay: (host) => Duration(
+          milliseconds: 60 - 4 * int.parse(host.split('.').first.substring(1)),
+        ),
+        signAnswer: (host, _) => {
+          'cert': Uint8List.fromList(utf8.encode(host)),
+          'ca': Uint8List.fromList([6]),
+        },
+      );
+      await burst(12);
+      final order = [for (final s in sent) s['reqId']! as int];
+      expect(order, isNot(orderedEquals([for (var i = 1; i <= 12; i++) i])));
+      expect(sent, hasLength(12));
+      for (final s in sent) {
+        expect(
+          utf8.decode(base64.decode(s['cert']! as String)),
+          'h${s['reqId']}.burst.example',
+        );
+      }
+    });
+
+    test(
+      'a root gone mid-burst sends the error, and nothing else changes',
+      () async {
+        native = _NativeQueue(
+          costs,
+          width: 4,
+          signAnswer: (host, order) => order < 5
+              ? {
+                  'cert': Uint8List.fromList([4]),
+                  'ca': Uint8List.fromList([6]),
+                }
+              : {'error': 'noRoot'},
+        );
+        await container.read(mitmCoreIdentityStateProvider.future);
+        final identity = container.read(mitmCoreIdentityStateProvider).value;
+        await burst(12);
+        expect(sent, hasLength(12));
+        expect(sent.where((s) => s['cert'] != null), hasLength(5));
+        final refused = sent.where((s) => s['cert'] == null).toList();
+        expect(refused, hasLength(7));
+        for (final s in refused) {
+          expect(s, {'reqId': s['reqId'], 'error': 'noRoot'});
+        }
+        // The app neither pauses nor rechecks on its own: the Core decides
+        // on the error as before.
+        expect(store.checks, 1);
+        expect(native.arrivals.map((a) => a.$1).toSet(), {
+          'coreIdentity',
+          'certificate',
+          'checkCertificate',
+          'sign',
+        });
+        expect(container.read(mitmCoreIdentityStateProvider).value, identity);
+        expect(container.read(mitmCoreRefusedProvider), isFalse);
+      },
+    );
+
+    test('20 at once are still exactly 4 signBusy', () async {
+      native = _NativeQueue(costs, width: 4);
+      await burst(20);
+      expect(sent.where((s) => s['error'] == 'signBusy'), hasLength(4));
+      expect(sent.where((s) => s['cert'] != null), hasLength(16));
+    });
   });
 }
