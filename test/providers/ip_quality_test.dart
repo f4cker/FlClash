@@ -217,4 +217,43 @@ void main() {
 
     expect(adapter.requests, greaterThan(sent));
   });
+
+  // The status card holds no listener once an answer settles; these say why
+  // it keeps the answer itself rather than reading the entry again.
+  test('lets go of an expired entry nobody listens to', () async {
+    final adapter = _Adapter(succeed: true);
+    final container = build(adapter, maxAge: _maxAge);
+    final subscription = container.listen(provider, (_, _) {});
+    await container.read(provider.future);
+    subscription.close();
+    await pumpEventQueue();
+    expect(container.exists(provider), isTrue);
+    final sent = adapter.requests;
+
+    await Future<void>.delayed(_maxAge * 2);
+    await pumpEventQueue();
+
+    expect(container.exists(provider), isFalse);
+    expect(adapter.requests, sent);
+  });
+
+  test('a read of an invalidated entry nobody listens to asks again', () async {
+    final adapter = _Adapter(succeed: true);
+    final container = build(adapter);
+    final subscription = container.listen(provider, (_, _) {});
+    await container.read(provider.future);
+    subscription.close();
+    await pumpEventQueue();
+    final sent = adapter.requests;
+
+    container.invalidate(provider);
+    // Until it is let go, the entry still exists, and a read rebuilds it.
+    expect(container.exists(provider), isTrue);
+    container.read(provider);
+    final keep = container.listen(provider, (_, _) {});
+    await container.read(provider.future);
+    keep.close();
+
+    expect(adapter.requests, greaterThan(sent));
+  });
 }

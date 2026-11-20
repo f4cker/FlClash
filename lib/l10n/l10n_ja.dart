@@ -8656,5 +8656,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pendingQueryAction => '未照会。タップで照会';
 
   @override
+  String get regionUnknown => '地域不明';
+
+  @override
   String get queryFailedTapToRetry => '照会に失敗しました。タップで再試行';
 }

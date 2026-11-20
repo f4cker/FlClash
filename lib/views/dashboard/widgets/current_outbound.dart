@@ -85,6 +85,15 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// A retry asked for and not yet under way.
   var _requested = false;
 
+  /// The exit the badge was tapped on, until its lookup settles: its
+  /// lookup is announced.
+  String? _userAsked;
+
+  /// The exit the card opens a session on has not answered yet: its first
+  /// lookup is announced. Later lookups the probe starts on its own, as when
+  /// the route moves, are not.
+  var _opening = true;
+
   /// Addresses whose report the card may ask ipx.al and the IP quality
   /// sources about: the exit shown before any switch, and the address the
   /// country badge was tapped on. Anything else shows only what is cached.
@@ -114,9 +123,11 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         // A new session opens on the proxy exit, asked about unprompted.
         _wantsLocal = false;
         _switched = false;
+        _opening = true;
       } else {
         _kept.remove(routedOutbound);
       }
+      _settleAnnouncements(ref.read(outboundIpProbeProvider));
       _askDefault(ref.read(outboundIpProbeProvider));
     });
   }
@@ -143,7 +154,30 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         _kept.remove(target);
       }
     }
+    _settleAnnouncements(state);
     _askDefault(state);
+  }
+
+  /// Lets go of the lookups to announce once they have answered.
+  void _settleAnnouncements(RoutedProbeState<String, IpInfo> state) {
+    if (_opening) {
+      final target = ref.read(isStartProvider)
+          ? routedOutbound
+          : directOutbound;
+      final entry = state.entryOf(target);
+      final stamp = entry.stamp;
+      // Answered on the route in use: one left from before the session
+      // does not count.
+      if (!entry.isLoading &&
+          stamp != null &&
+          ref.read(routeTrackerProvider).isFresh(stamp)) {
+        _opening = false;
+      }
+    }
+    if (_userAsked case final asked?
+        when !_requested && !state.entryOf(asked).isLoading) {
+      _userAsked = null;
+    }
   }
 
   /// The exit the card opens on may have its report asked for unprompted,
@@ -163,8 +197,12 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// What [entry] shows: its value, the one it holds while its route is
   /// checked again, or after a failure the last one found on the same route.
   IpInfo? _infoOf(String target, ProbeEntry<IpInfo> entry, RouteState route) {
-    if (entry.displayValue case final info?) {
-      return info;
+    // A failure shows only what was found on its own route, never a value
+    // carried over from the one before.
+    if (entry.phase != ProbePhase.failed) {
+      if (entry.displayValue case final info?) {
+        return info;
+      }
     }
     final kept = _kept[target];
     if (!_erred(entry, route) ||
@@ -178,7 +216,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// Asks the IP quality sources about [ip] once, keeping the answer and
   /// letting go of the entry as soon as it settles.
   void _askQuality(String ip) {
-    if (!mounted || _qualityAsks.containsKey(ip)) {
+    // Checked again when sent: a switch since the build that asked for it
+    // takes the address out of [_askable].
+    if (!mounted || !_askable.contains(ip) || _qualityAsks.containsKey(ip)) {
       return;
     }
     _qualityAsks[ip] = ref.listenManual(
@@ -206,6 +246,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     setState(() {
       _switched = true;
       _wantsLocal = toLocal;
+      _opening = false;
       // A switch shows what is at hand and asks for nothing.
       _askable.clear();
     });
@@ -225,6 +266,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     }
     setState(() {
       _requested = true;
+      _userAsked = target;
       // The report of the address on show, and of it alone.
       if (ip != null) {
         _askable.add(ip);
@@ -248,7 +290,10 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     // on and nothing to wait for.
     scheduleMicrotask(() {
       if (mounted) {
-        setState(() => _requested = false);
+        setState(() {
+          _requested = false;
+          _settleAnnouncements(ref.read(outboundIpProbeProvider));
+        });
       }
     });
   }
@@ -393,6 +438,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         pending: pending,
                         still: still,
                         busy: busy,
+                        announceBusy: _opening || _userAsked == target,
                         facts: facts,
                         active: isStart,
                         metrics: metrics,
@@ -418,7 +464,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         enabled: !still,
                         child: _Cells(
                           organization: facts?.organization,
-                          hasAddress: info != null,
+                          // Running, an exit is always meant: what is not
+                          // known about it is unknown, not absent.
+                          known: info != null || isStart,
                           loading: info == null
                               ? !failed && !pending
                               : facts!.loading,
@@ -515,15 +563,10 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
       );
     }
     // No report: the IP quality sources stand in, as the detail sheet does,
-    // when they may be asked or already answered. Their entry is read, not
-    // watched: a watcher would have its expiry refetch it unasked.
+    // when they may be asked or the card already holds their answer. Their
+    // entry is never read here, nor watched: an expired or invalidated one
+    // would be fetched again by the read, unasked.
     var fallback = _qualities[ip];
-    if (fallback == null && ref.exists(ipQualityProvider(ip))) {
-      final cached = ref.read(ipQualityProvider(ip));
-      if (!cached.isLoading) {
-        fallback = cached;
-      }
-    }
     if (fallback == null && askable) {
       fallback = const AsyncLoading();
       if (!_qualityAsks.containsKey(ip)) {
@@ -690,6 +733,7 @@ class _ExitRow extends StatelessWidget {
     required this.pending,
     required this.still,
     required this.busy,
+    required this.announceBusy,
     required this.facts,
     required this.active,
     required this.metrics,
@@ -716,6 +760,10 @@ class _ExitRow extends StatelessWidget {
   /// Placeholders do not pulse: nothing is on its way.
   final bool still;
   final bool busy;
+
+  /// The lookup was asked for by the user or opens the session, so its
+  /// start is announced.
+  final bool announceBusy;
   final _IpFacts? facts;
   final bool active;
   final _OutboundMetrics metrics;
@@ -800,6 +848,7 @@ class _ExitRow extends StatelessWidget {
             box: badgeBox,
             active: active,
             checking: busy,
+            announceChecking: announceBusy,
             state: staleFailed
                 ? _BadgeState.stale
                 : failed
@@ -807,7 +856,6 @@ class _ExitRow extends StatelessWidget {
                 : pending || (facts?.pending ?? false)
                 ? _BadgeState.pending
                 : _BadgeState.known,
-            hasAddress: info != null,
             onRefresh: onRetry,
           ),
         ),
@@ -1028,8 +1076,8 @@ class _CountryBadge extends StatefulWidget {
     required this.box,
     required this.active,
     required this.checking,
+    required this.announceChecking,
     required this.state,
-    required this.hasAddress,
     required this.onRefresh,
   });
 
@@ -1040,10 +1088,11 @@ class _CountryBadge extends StatefulWidget {
   final double box;
   final bool active;
   final bool checking;
-  final _BadgeState state;
 
-  /// An address is shown, so a missing country is unknown, not yet to come.
-  final bool hasAddress;
+  /// Says so when [checking] starts; a lookup the probe starts on its own
+  /// goes by unannounced.
+  final bool announceChecking;
+  final _BadgeState state;
   final VoidCallback onRefresh;
 
   @override
@@ -1070,11 +1119,11 @@ class _CountryBadgeState extends State<_CountryBadge>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.checking != widget.checking) {
       _spin();
-      // Only the lookup's own course is announced: its start, and a failure
-      // at its end.
+      // Only the lookup's own course is announced: the start of one the
+      // user or the session's opening asked for, and a failure at its end.
       final appLocalizations = context.appLocalizations;
       final message = widget.checking
-          ? appLocalizations.statusQuerying
+          ? (widget.announceChecking ? appLocalizations.statusQuerying : null)
           : switch (widget.state) {
               _BadgeState.failed => appLocalizations.queryFailed,
               _BadgeState.stale => appLocalizations.queryFailedShowingLast,
@@ -1124,23 +1173,26 @@ class _CountryBadgeState extends State<_CountryBadge>
             _BadgeState.stale => appLocalizations.queryFailedShowingLast,
           };
     final separator = appLocalizations.semanticsSeparator;
+    // The globe stands in for a country, so it is never read as a global
+    // exit: it says the region is unknown, to the eye and to a screen reader.
+    final country = code?.toUpperCase() ?? '';
+    final globe = country.isEmpty;
     final color = Color.alphaBlend(
       foreground.withValues(alpha: enabled && _hovered ? 0.08 : 0),
       DashboardColors.of(context).tone2,
     );
     // The label below names the badge once; the tooltip is for the eye.
     return Tooltip(
-      message: name,
+      message: globe
+          ? [name, appLocalizations.regionUnknown].join(separator)
+          : name,
       excludeFromSemantics: true,
       child: Semantics(
         button: true,
         enabled: enabled,
         label: [
           name,
-          if (code != null && code.isNotEmpty)
-            code.toUpperCase()
-          else if (widget.hasAddress)
-            appLocalizations.unknown,
+          globe ? appLocalizations.regionUnknown : country,
           if (widget.checking) appLocalizations.statusQuerying,
         ].join(separator),
         onTap: enabled ? widget.onRefresh : null,
@@ -1174,14 +1226,14 @@ class _CountryBadgeState extends State<_CountryBadge>
                         ring: _focused ? focusRingSide(colorScheme) : null,
                         child: child,
                       ),
-                      child: code == null || code.isEmpty
+                      child: globe
                           ? GlyphIcon(
                               AppGlyphs.proxies,
                               size: size * 0.42,
                               color: foreground,
                             )
                           : Text(
-                              code.toUpperCase(),
+                              country,
                               maxLines: 1,
                               style: AppTextStyle.footnote
                                   .of(context, emphasized: true)
@@ -1246,7 +1298,7 @@ class _StaleMark extends StatelessWidget {
 class _Cells extends StatelessWidget {
   const _Cells({
     required this.organization,
-    required this.hasAddress,
+    required this.known,
     required this.loading,
     required this.active,
     required this.gap,
@@ -1254,8 +1306,8 @@ class _Cells extends StatelessWidget {
 
   final String? organization;
 
-  /// An address is shown, so a missing organization is unknown for it.
-  final bool hasAddress;
+  /// There is an exit to tell of, so a missing organization is unknown.
+  final bool known;
   final bool loading;
   final bool active;
   final double gap;
@@ -1278,7 +1330,7 @@ class _Cells extends StatelessWidget {
                 ? _CellText(organization)
                 : loading
                 ? SkeletonText(width: 96, style: _cellStyle(context))
-                : hasAddress
+                : known
                 ? _CellText(appLocalizations.unknown)
                 : const _Placeholder(),
           ),

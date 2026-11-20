@@ -8732,5 +8732,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pendingQueryAction => '조회 전, 탭하여 조회';
 
   @override
+  String get regionUnknown => '지역 알 수 없음';
+
+  @override
   String get queryFailedTapToRetry => '조회 실패, 탭하여 다시 시도';
 }

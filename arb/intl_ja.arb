@@ -3671,5 +3671,6 @@
   "queryFailedShowingLast": "照会に失敗しました。前回の結果を表示中。タップで再試行",
   "pendingQuery": "未照会",
   "pendingQueryAction": "未照会。タップで照会",
+  "regionUnknown": "地域不明",
   "queryFailedTapToRetry": "照会に失敗しました。タップで再試行"
 }

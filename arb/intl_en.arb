@@ -3730,5 +3730,6 @@
   "queryFailedShowingLast": "Lookup failed, showing the last result; tap to retry",
   "pendingQuery": "Not looked up",
   "pendingQueryAction": "Not looked up; tap to look up",
+  "regionUnknown": "Region unknown",
   "queryFailedTapToRetry": "Lookup failed; tap to retry"
 }

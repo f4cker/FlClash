@@ -8881,6 +8881,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get pendingQueryAction => 'Не запрошено; нажмите, чтобы запросить';
 
   @override
+  String get regionUnknown => 'Регион неизвестен';
+
+  @override
   String get queryFailedTapToRetry =>
       'Ошибка запроса; нажмите, чтобы повторить';
 }

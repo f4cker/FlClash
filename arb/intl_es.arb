@@ -3671,5 +3671,6 @@
   "queryFailedShowingLast": "Error de consulta; se muestra el último resultado. Toca para reintentar",
   "pendingQuery": "Sin consultar",
   "pendingQueryAction": "Sin consultar; toca para consultar",
+  "regionUnknown": "Región desconocida",
   "queryFailedTapToRetry": "Error de consulta; toca para reintentar"
 }

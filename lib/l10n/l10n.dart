@@ -14644,6 +14644,12 @@ abstract class AppLocalizations {
   /// **'Not looked up; tap to look up'**
   String get pendingQueryAction;
 
+  /// No description provided for @regionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Region unknown'**
+  String get regionUnknown;
+
   /// No description provided for @queryFailedTapToRetry.
   ///
   /// In en, this message translates to:

@@ -2445,5 +2445,6 @@
   "queryFailedShowingLast": "查询失败，显示上次结果；点击重试",
   "pendingQuery": "待查询",
   "pendingQueryAction": "待查询，点击查询",
+  "regionUnknown": "地区未知",
   "queryFailedTapToRetry": "查询失败，点击重试"
 }

@@ -8170,5 +8170,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pendingQueryAction => '待查询，点击查询';
 
   @override
+  String get regionUnknown => '地区未知';
+
+  @override
   String get queryFailedTapToRetry => '查询失败，点击重试';
 }

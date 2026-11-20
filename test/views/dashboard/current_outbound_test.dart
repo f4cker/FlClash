@@ -239,6 +239,20 @@ class _FakeIpx extends IpxLookup {
   void retry() => retries++;
 }
 
+/// ipx.al still working on an address until the test says otherwise.
+class _SettlingIpx extends IpxLookup {
+  @override
+  IpxLookupState build(String ip) => const IpxLookupState();
+
+  @override
+  void reload() {}
+
+  @override
+  void retry() {}
+
+  void settle(IpxLookupState next) => state = next;
+}
+
 class _Running extends RunTime {
   @override
   int? build() => 1000;
@@ -543,8 +557,19 @@ void main() {
       expect(find.text('Lookup failed'), findsOneWidget);
       expect(find.text('Tap the icon to retry'), findsOneWidget);
       expect(find.text('Not looked up'), findsNothing);
-      expect(_badgeTooltip(tester), 'Lookup failed; tap to retry');
-      expect(find.semantics.byLabel('Lookup failed; tap to retry'), findsOne);
+      // The globe in place of a country says the region is unknown, to the
+      // eye and to a screen reader: it is no global exit.
+      expect(
+        _badgeTooltip(tester),
+        'Lookup failed; tap to retry, Region unknown',
+      );
+      expect(
+        find.semantics.byLabel('Lookup failed; tap to retry, Region unknown'),
+        findsOne,
+      );
+      // Nothing is known of the exit's organization either; no dash stands in.
+      expect(find.text('Unknown'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
       semantics.dispose();
     });
 
@@ -562,8 +587,16 @@ void main() {
       expect(find.text('Lookup failed'), findsNothing);
       expect(find.text('Tap the icon to retry'), findsNothing);
       expect(find.byType(SkeletonPill), findsNothing);
-      expect(_badgeTooltip(tester), 'Not looked up; tap to look up');
-      expect(find.semantics.byLabel('Not looked up; tap to look up'), findsOne);
+      expect(
+        _badgeTooltip(tester),
+        'Not looked up; tap to look up, Region unknown',
+      );
+      expect(
+        find.semantics.byLabel('Not looked up; tap to look up, Region unknown'),
+        findsOne,
+      );
+      expect(find.text('Unknown'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
       expect(find.semantics.byLabel(RegExp('Lookup failed')), findsNothing);
       semantics.dispose();
     });
@@ -818,7 +851,10 @@ void main() {
       expect(find.text('TORSERVERS-NET'), findsNothing);
       expect(find.text('Lookup failed'), findsOneWidget);
       expect(_badgeCode(tester), isNull);
-      expect(_badgeTooltip(tester), 'Lookup failed; tap to retry');
+      expect(
+        _badgeTooltip(tester),
+        'Lookup failed; tap to retry, Region unknown',
+      );
 
       // Nor does a stale local address offer a switch.
       probe
@@ -1097,10 +1133,16 @@ void main() {
         expect(find.text(_localIp), findsOneWidget);
         // Never the proxy exit's: without one of its own, it is unknown.
         expect(_badgeCode(tester), code);
+        expect(
+          _badgeTooltip(tester),
+          code == null
+              ? 'Not looked up; tap to look up, Region unknown'
+              : 'Not looked up; tap to look up',
+        );
         expect(find.semantics.byLabel(RegExp('GB')), findsNothing);
         expect(
           find.semantics.byLabel(
-            'Not looked up; tap to look up, ${code ?? 'Unknown'}',
+            'Not looked up; tap to look up, ${code ?? 'Region unknown'}',
           ),
           findsOne,
         );
@@ -1151,6 +1193,199 @@ void main() {
       }
       expect(lookups, 1);
       expect(find.text('Residential'), findsOneWidget);
+    });
+
+    testWidgets('sends no IP quality ask a switch overtook', (tester) async {
+      final quality = <String>[];
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            profilesProvider.overrideWithValue(const [_profile]),
+            suspendProvider.overrideWithValue(false),
+            runTimeProvider.overrideWith(_Running.new),
+            routeTrackerProvider.overrideWithBuild((_, _) => _liveRoute),
+            outboundIpProbeProvider.overrideWith(
+              () => _RecordingIps(_fresh(_ip), _fresh(_localIp, country: 'HK')),
+            ),
+            ipxLookupProvider(_ip).overrideWith(_SettlingIpx.new),
+            ipxLookupProvider(
+              _localIp,
+            ).overrideWith(() => _FakeIpx(_localDone)),
+            ipQualityProvider.overrideWith((_, ip) {
+              quality.add(ip);
+              return Future.any(const []);
+            }),
+          ],
+          child: _card(),
+        ),
+      );
+      await tester.pump();
+      expect(quality, isEmpty);
+      final switchExit = tester.widget<PressRegion>(_ipRegion(_ip)).onTap!;
+
+      // ipx.al gives up on the exit: the build that sees it queues an ask
+      // of the IP quality sources, and the user switches before it is sent.
+      (_containerOf(tester).read(ipxLookupProvider(_ip).notifier)
+              as _SettlingIpx)
+          .settle(const IpxLookupState(phase: IpxPhase.failed));
+      tester.binding.addPostFrameCallback((_) => switchExit());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(_localIp), findsOneWidget);
+      expect(quality, isEmpty);
+      expect(_containerOf(tester).exists(ipQualityProvider(_ip)), isFalse);
+    });
+
+    testWidgets('never reads an IP quality entry it did not ask for', (
+      tester,
+    ) async {
+      final lookups = <String>[];
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            profilesProvider.overrideWithValue(const [_profile]),
+            suspendProvider.overrideWithValue(false),
+            runTimeProvider.overrideWith(_Running.new),
+            routeTrackerProvider.overrideWithBuild((_, _) => _liveRoute),
+            outboundIpProbeProvider.overrideWith(
+              () => _RecordingIps(_fresh(_ip), _fresh(_localIp, country: 'HK')),
+            ),
+            ipxLookupProvider(_ip).overrideWith(() => _FakeIpx(_done)),
+            ipxLookupProvider(_localIp).overrideWith(
+              () => _FakeIpx(const IpxLookupState(phase: IpxPhase.failed)),
+            ),
+            ipQualityProvider.overrideWith((ref, ip) async {
+              lookups.add(ip);
+              ref.keepAlive();
+              return _residential;
+            }),
+          ],
+          child: _card(),
+        ),
+      );
+      await tester.pump();
+      final container = _containerOf(tester);
+      // The detail sheet looked the local address up, and is still open
+      // in the background; then its entry is invalidated, as an expiry or a
+      // refresh does. Nothing listening wants it back yet.
+      container.read(ipxLookupProvider(_localIp));
+      final sheet = container.listen(ipQualityProvider(_localIp), (_, _) {});
+      await tester.pump();
+      expect(lookups, [_localIp]);
+      sheet.pause();
+      container.invalidate(ipQualityProvider(_localIp));
+      await tester.pump();
+      expect(container.exists(ipQualityProvider(_localIp)), isTrue);
+      expect(lookups, [_localIp]);
+
+      await tester.tap(find.text(_ip));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(_localIp), findsOneWidget);
+      // Reading the invalidated entry would have sent the lookup again.
+      expect(lookups, [_localIp]);
+      sheet.close();
+    });
+
+    testWidgets(
+      'announces only the lookups the user or the opening asked for',
+      (tester) async {
+        final probe = _ManualIps({});
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(_ipApp(probe: () => probe));
+        await tester.pump();
+        tester.takeAnnouncements();
+        List<String> said() =>
+            tester.takeAnnouncements().map((a) => a.message).toList();
+
+        // The session opens: its exit's first lookup is announced.
+        probe.settle(
+          routedOutbound,
+          const ProbeEntry(phase: ProbePhase.probing),
+        );
+        await tester.pump();
+        expect(said(), ['Looking up now']);
+        probe.settle(routedOutbound, _fresh(_ip));
+        await tester.pump();
+        expect(said(), isEmpty);
+
+        // The route moves and the probe checks the exit again on its own.
+        probe.settle(
+          routedOutbound,
+          const ProbeEntry(
+            phase: ProbePhase.probing,
+            previousValue: IpInfo(ip: _ip, countryCode: 'GB'),
+            stamp: _stamp,
+          ),
+        );
+        await tester.pump();
+        expect(said(), isEmpty);
+        probe.settle(routedOutbound, _fresh(_ip));
+        await tester.pump();
+        expect(said(), isEmpty);
+
+        // The badge asks.
+        await tester.tap(_badge());
+        await tester.pump();
+        expect(said(), ['Looking up now']);
+        probe.settle(routedOutbound, _fresh(_ip));
+        await tester.pump();
+        expect(said(), isEmpty);
+
+        // And a background check after it is quiet again.
+        probe.settle(
+          routedOutbound,
+          const ProbeEntry(
+            phase: ProbePhase.probing,
+            previousValue: IpInfo(ip: _ip, countryCode: 'GB'),
+            stamp: _stamp,
+          ),
+        );
+        await tester.pump();
+        expect(said(), isEmpty);
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('shows the last result of a failure only from its own route', (
+      tester,
+    ) async {
+      const movedRoute = RouteState(
+        coreEpoch: 1,
+        routeVersion: 2,
+        hostEpoch: 1,
+        proxied: true,
+        synced: true,
+        live: true,
+      );
+      // The lookup on the new route failed, still carrying the address the
+      // old route found.
+      await tester.pumpWidget(
+        _ipApp(
+          route: movedRoute,
+          exit: const ProbeEntry(
+            phase: ProbePhase.failed,
+            previousValue: IpInfo(ip: _ip, countryCode: 'GB'),
+            stamp: _movedStamp,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text(_ip), findsNothing);
+      expect(find.text('TORSERVERS-NET'), findsNothing);
+      expect(find.text('Lookup failed'), findsOneWidget);
+      expect(
+        _badgeTooltip(tester),
+        'Lookup failed; tap to retry, Region unknown',
+      );
+      expect(
+        find.descendant(of: _badge(), matching: find.byGlyph(AppGlyphs.error)),
+        findsNothing,
+      );
     });
 
     testWidgets('announces a lookup and its failure, nothing else', (

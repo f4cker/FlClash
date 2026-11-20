@@ -8937,6 +8937,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pendingQueryAction => 'Non recherché ; touchez pour rechercher';
 
   @override
+  String get regionUnknown => 'Région inconnue';
+
+  @override
   String get queryFailedTapToRetry =>
       'Échec de la recherche ; touchez pour réessayer';
 }

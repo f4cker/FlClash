@@ -8936,5 +8936,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pendingQueryAction => 'Sin consultar; toca para consultar';
 
   @override
+  String get regionUnknown => 'Región desconocida';
+
+  @override
   String get queryFailedTapToRetry => 'Error de consulta; toca para reintentar';
 }

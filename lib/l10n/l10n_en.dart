@@ -8878,5 +8878,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pendingQueryAction => 'Not looked up; tap to look up';
 
   @override
+  String get regionUnknown => 'Region unknown';
+
+  @override
   String get queryFailedTapToRetry => 'Lookup failed; tap to retry';
 }

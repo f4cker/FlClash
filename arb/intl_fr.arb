@@ -3671,5 +3671,6 @@
   "queryFailedShowingLast": "Échec de la recherche, dernier résultat affiché ; touchez pour réessayer",
   "pendingQuery": "Non recherché",
   "pendingQueryAction": "Non recherché ; touchez pour rechercher",
+  "regionUnknown": "Région inconnue",
   "queryFailedTapToRetry": "Échec de la recherche ; touchez pour réessayer"
 }
