@@ -1292,6 +1292,7 @@ void main() {
     Future<ProviderContainer> oldCrash(
       _Crash crash, {
       bool keepKey = false,
+      String? phase,
     }) async {
       final (:container, :staging, :data) = await fixture();
       await crashAt(
@@ -1312,10 +1313,74 @@ void main() {
         map['dbFingerprint'] = await database.restoreFingerprint();
       }
       if (!keepKey) expect(map.remove('mitmModules'), [_module.id]);
+      // The marker is gone, as after a finished restore or a cleared
+      // database, while the journal is still here.
+      if (phase != null) {
+        map['phase'] = phase;
+        await database.clearRestoreCommit(map['id'] as int);
+      }
       file.writeAsStringSync(jsonEncode(map));
       await relaunch();
       restoreRecovery.clearMitmHolds();
       return container;
+    }
+
+    for (final (phase, outcome) in [
+      ('finalizing', RestoreRecoveryOutcome.pending),
+      ('mitmDone', RestoreRecoveryOutcome.pending),
+      ('cachesCleared', RestoreRecoveryOutcome.incomplete),
+    ]) {
+      test(
+        'marker gone at $phase: turning every module off is still said',
+        () async {
+          await oldCrash(_Crash.afterCommit, phase: phase);
+          final reports = await recover();
+          expect(await states(), {41: (false, false), 50: (false, false)});
+          final report = reports.single;
+          expect(report.mitmAllOff, isTrue);
+          expect(report.outcome, outcome);
+          expect(
+            restoreRecoveryMessage(report, currentAppLocalizations),
+            contains(currentAppLocalizations.restoreRecoveryMitmAllOff),
+          );
+          expect(journals(), isEmpty);
+        },
+      );
+    }
+
+    for (final committedOff in [false, true]) {
+      test('a crash ${committedOff ? 'right after' : 'just before'} turning '
+          'them off commits is not taken for another writer', () async {
+        await oldCrash(_Crash.afterCommit);
+        final first =
+            RestoreRecovery(
+                db: () => database,
+                homeDirPath: () async => home.path,
+                store: () => preferences,
+              )
+              ..onMitmOff = (committed) async {
+                if (committed == committedOff) throw const RestoreCrash();
+              };
+        await first.run();
+        expect(
+          await states(),
+          committedOff
+              ? {41: (false, false), 50: (false, false)}
+              : {41: (true, true), 50: (true, true)},
+        );
+        expect(journals(), hasLength(1));
+        await relaunch();
+
+        final report = (await recover()).single;
+
+        expect(report.outcome, RestoreRecoveryOutcome.pending);
+        expect(report.skippedSteps, isEmpty, reason: 'no step skipped');
+        expect(report.followUp, isNot(RestoreFollowUp.restoreAgain));
+        expect(report.mitmAllOff, isTrue);
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(journals(), isEmpty);
+        expect(await markers(), isEmpty);
+      });
     }
 
     for (final crash in [

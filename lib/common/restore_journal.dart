@@ -181,6 +181,11 @@ class RestoreJournal {
   /// [Database.restoreFingerprint] after the latest step that wrote rows.
   String? dbFingerprint;
 
+  /// [dbFingerprint] from before turning every module off, which happens in
+  /// one transaction with recording the new one: a crash before that
+  /// transaction commits leaves the database here.
+  String? dbFingerprintBeforeMitmOff;
+
   /// [configHash] of the settings about to be saved, recorded before the
   /// save so a crash right after it is not mistaken for another writer.
   String? prefsTarget;
@@ -209,6 +214,7 @@ class RestoreJournal {
     required this.phase,
     this.prefsBefore,
     this.dbFingerprint,
+    this.dbFingerprintBeforeMitmOff,
     this.prefsTarget,
     this.mountTargets = const [],
     this.mitmModules,
@@ -301,6 +307,7 @@ class RestoreJournal {
     phase: RestorePhase.values.byName(json['phase'] as String),
     prefsBefore: json['prefsBefore'] as String?,
     dbFingerprint: json['dbFingerprint'] as String?,
+    dbFingerprintBeforeMitmOff: json['dbFingerprintBeforeMitmOff'] as String?,
     prefsTarget: json['prefsTarget'] as String?,
     mountTargets: [...?(json['mountTargets'] as List?)?.cast<int>()],
     mitmModules: (json['mitmModules'] as List?)?.cast<int>(),
@@ -318,6 +325,8 @@ class RestoreJournal {
     'entries': [for (final entry in entries) entry.toJson()],
     'prefsBefore': prefsBefore,
     'dbFingerprint': dbFingerprint,
+    if (dbFingerprintBeforeMitmOff != null)
+      'dbFingerprintBeforeMitmOff': dbFingerprintBeforeMitmOff,
     'prefsTarget': prefsTarget,
     'mountTargets': mountTargets,
     // Left out as it was read, so a later launch still knows the format.
@@ -339,12 +348,16 @@ class RestoreJournal {
     RestorePhase next, {
     String? prefsBefore,
     String? dbFingerprint,
+    String? dbFingerprintBeforeMitmOff,
     String? prefsTarget,
     List<int>? mountTargets,
   }) async {
     phase = next;
     if (prefsBefore != null) this.prefsBefore = prefsBefore;
     if (dbFingerprint != null) this.dbFingerprint = dbFingerprint;
+    if (dbFingerprintBeforeMitmOff != null) {
+      this.dbFingerprintBeforeMitmOff = dbFingerprintBeforeMitmOff;
+    }
     if (prefsTarget != null) this.prefsTarget = prefsTarget;
     if (mountTargets != null) this.mountTargets = mountTargets;
     await _write();
@@ -478,6 +491,13 @@ class RestoreJournal {
     await db.clearRestoreCommit(id);
     await discard();
   }
+
+  /// Whether [current] is the database this journal last recorded, before
+  /// or after turning every module off.
+  bool recorded(String current, String? committed) =>
+      current == (dbFingerprint ?? committed) ||
+      (dbFingerprintBeforeMitmOff != null &&
+          current == dbFingerprintBeforeMitmOff);
 
   /// Whether the MITM consent recheck is still owed.
   bool get owesMitm => phase.index < RestorePhase.mitmDone.index;
@@ -745,6 +765,11 @@ class RestoreRecovery {
   /// Old-format journals whose modules could not be turned off.
   final _mitmOffFailed = <int>{};
 
+  /// Called inside the transaction that turns every module off (false),
+  /// and once it committed (true); a test throws here to crash.
+  @visibleForTesting
+  Future<void> Function(bool committed)? onMitmOff;
+
   void _report(int id, RestoreRecoveryReport report) => reports.add(
     _mitmOffFailed.contains(id)
         ? report.withMitmAllOff(failed: true)
@@ -879,15 +904,28 @@ class RestoreRecovery {
       final followsCommit =
           committed != null &&
           journal.phase.index < RestorePhase.configSaved.index &&
-          await db.restoreFingerprint() == (journal.dbFingerprint ?? committed);
+          journal.recorded(await db.restoreFingerprint(), committed);
       try {
-        await db.mitmModulesDao.turnAllOff();
-        // Said only once every row reads off and declined.
-        for (final row in await db.mitmModulesDao.query().get()) {
-          if (row.enabled || row.accepted != false) {
-            throw StateError('module ${row.id} still on after turning off');
+        // The new fingerprint is recorded before this commits, keeping the
+        // old one too, so a crash at any point leaves a recorded database.
+        await db.transaction(() async {
+          final before = await db.restoreFingerprint();
+          await db.mitmModulesDao.turnAllOff();
+          // Said only once every row reads off and declined.
+          for (final row in await db.mitmModulesDao.query().get()) {
+            if (row.enabled || row.accepted != false) {
+              throw StateError('module ${row.id} still on after turning off');
+            }
           }
-        }
+          if (followsCommit) {
+            await journal.advance(
+              journal.phase,
+              dbFingerprint: await db.restoreFingerprint(),
+              dbFingerprintBeforeMitmOff: before,
+            );
+          }
+          await onMitmOff?.call(false);
+        });
       } catch (_) {
         // Every module stays held for this run; the journal stays, so the
         // next launch tries again.
@@ -896,12 +934,7 @@ class RestoreRecovery {
         rethrow;
       }
       _mitmAllOff.add(id);
-      if (followsCommit) {
-        await journal.advance(
-          journal.phase,
-          dbFingerprint: await db.restoreFingerprint(),
-        );
-      }
+      await onMitmOff?.call(true);
     }
     if (committed == null) {
       if (journal.phase.index <= RestorePhase.published.index) {
@@ -920,6 +953,13 @@ class RestoreRecovery {
       final remaining = journal.remainingSteps();
       if (journal.phase == RestorePhase.finalizing || remaining.isEmpty) {
         await journal.discard();
+        // Nothing else to say, except that every module was turned off.
+        if (_mitmAllOff.contains(id)) {
+          _report(
+            id,
+            const RestoreRecoveryReport(RestoreRecoveryOutcome.completed),
+          );
+        }
         return;
       }
       // The rows committed once but their marker is gone (the database was
@@ -946,8 +986,10 @@ class RestoreRecovery {
     // overwrites nothing anyone else wrote, so later writes don't stop it.
     if (journal.phase.index < RestorePhase.configSaved.index) {
       final store = _preferences();
-      final expected = journal.dbFingerprint ?? committed;
-      final dbUnchanged = await db.restoreFingerprint() == expected;
+      final dbUnchanged = journal.recorded(
+        await db.restoreFingerprint(),
+        committed,
+      );
       final prefs = await storedConfigHash(store);
       final settingsSaved =
           journal.config == null ||
