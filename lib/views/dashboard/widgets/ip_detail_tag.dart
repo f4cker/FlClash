@@ -46,7 +46,6 @@ class IpDetailTag extends StatefulWidget {
     required this.height,
     required this.semanticLabel,
     this.semanticHint,
-    this.tooltip,
     required this.onOpen,
   });
 
@@ -57,7 +56,6 @@ class IpDetailTag extends StatefulWidget {
   final double height;
   final String semanticLabel;
   final String? semanticHint;
-  final String? tooltip;
 
   /// Opens the detail and completes once it is closed; null turns the tag
   /// off.
@@ -160,7 +158,7 @@ class _IpDetailTagState extends State<IpDetailTag> {
         ],
       ),
     );
-    final Widget target = Semantics(
+    final target = Semantics(
       container: true,
       button: true,
       enabled: enabled,
@@ -195,9 +193,8 @@ class _IpDetailTagState extends State<IpDetailTag> {
         ),
       ),
     );
-    final tooltip = widget.tooltip;
-    if (!enabled || tooltip == null) return target;
-    return Tooltip(message: tooltip, excludeFromSemantics: true, child: target);
+    // No tooltip: the chevron says it opens, the label and hint say what.
+    return target;
   }
 }
 

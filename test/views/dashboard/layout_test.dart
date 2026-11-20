@@ -7,6 +7,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
+import 'package:fl_clash/views/dashboard/widgets/ip_detail_tag.dart';
 import 'package:fl_clash/views/dashboard/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -113,6 +114,7 @@ void main() {
     Size size, {
     SupportPlatform platform = SupportPlatform.MacOS,
     double textScale = 1,
+    Locale? locale,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -124,7 +126,10 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: TestApp(child: DashboardView(platform: platform)),
+        child: TestApp(
+          locale: locale,
+          child: DashboardView(platform: platform),
+        ),
       ),
     );
     await tester.pump();
@@ -137,6 +142,29 @@ void main() {
 
   Rect rectOf(WidgetTester tester, Type type) =>
       tester.getRect(find.byType(type).first);
+
+  /// The lines the status card's tags take: one unless they wrap.
+  int tagRunsOf(WidgetTester tester) {
+    final tags = find.byType(IpDetailTag);
+    return {
+      for (var i = 0; i < tags.evaluate().length; i++)
+        tester.getRect(tags.at(i)).top,
+    }.length.clamp(1, 1 << 20);
+  }
+
+  /// The status card holds [base] while its tags take one line, and grows
+  /// by a whole run (a 44 target and the gap above it) for each line they
+  /// wrap onto; never shorter, never otherwise taller.
+  void expectStatusHeight(WidgetTester tester, double base, {String? reason}) {
+    final runs = tagRunsOf(tester);
+    final height = rectOf(tester, CurrentOutboundCard).height;
+    expect(height, greaterThanOrEqualTo(base), reason: reason);
+    expect(
+      height,
+      base + (runs - 1) * (IpDetailTagStyle.minHit + IpDetailTagStyle.gap),
+      reason: '$reason, $runs line(s) of tags',
+    );
+  }
 
   double scrollExtentOf(WidgetTester tester) => tester
       .state<ScrollableState>(find.byType(Scrollable).first)
@@ -569,10 +597,13 @@ void main() {
     );
     globalState.container = container;
     for (final size in const [Size(1220, 824), Size(1000, 824)]) {
-      await pumpDashboard(tester, size);
+      // In Chinese the tags take one line even in the wide test font; the
+      // English ones wrap, as the next test has them.
+      await pumpDashboard(tester, size, locale: const Locale('zh'));
 
       final compact = size.width < 1040;
       final current = rectOf(tester, CurrentOutboundCard);
+      expect(tagRunsOf(tester), 1, reason: '$size');
       expect(current.height, compact ? 174 : 186, reason: '$size');
       expect(find.text('204.136.11.10'), findsOneWidget);
       // The organization cell, last on the card, keeps the bottom padding.
@@ -591,6 +622,74 @@ void main() {
       );
       expect(table.bottom, size.height - 24);
       expect(scrollExtentOf(tester), 0);
+      expect(tester.takeException(), isNull, reason: '$size');
+    }
+
+    await teardown(tester);
+  });
+
+  testWidgets('tags too long for one line grow the status card by a run, '
+      'never clipped, and the tables keep their minimum', (tester) async {
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(
+          () => TestProfiles(const [
+            Profile(id: 1, autoUpdateDuration: Duration.zero),
+          ]),
+        ),
+        runTimeProvider.overrideWith(_Running.new),
+        outboundIpProbeProvider.overrideWith(_Ips.new),
+        ipxLookupProvider('204.136.11.10').overrideWith(_Ipx.new),
+      ],
+    );
+    globalState.container = container;
+    for (final size in const [Size(1220, 824), Size(1000, 824)]) {
+      // The wide test font stands for a long translation.
+      await pumpDashboard(tester, size, locale: const Locale('en'));
+
+      final compact = size.width < 1040;
+      final base = compact ? 174.0 : 186.0;
+      expect(tagRunsOf(tester), 2, reason: '$size');
+      expectStatusHeight(tester, base, reason: '$size');
+      final current = rectOf(tester, CurrentOutboundCard);
+      expect(current.height, greaterThan(base), reason: '$size');
+      // Every tag whole, inside the card, its text unclipped.
+      for (final label in ['Data center', 'Quality Fair']) {
+        final tag = tester.getRect(find.text(label));
+        expect(current.contains(tag.topLeft), isTrue, reason: label);
+        expect(current.contains(tag.bottomRight), isTrue, reason: label);
+        // Nothing on the card clips it, as the desktop row once did.
+        expect(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.descendant(
+              of: find.byType(CurrentOutboundCard),
+              matching: find.byType(ClipRect),
+            ),
+          ),
+          findsNothing,
+          reason: label,
+        );
+      }
+      // The speed cards beside it follow its height.
+      for (var i = 0; i < find.byType(SpeedCard).evaluate().length; i++) {
+        final speed = tester.getRect(find.byType(SpeedCard).at(i));
+        expect(speed.height, current.height, reason: '$size');
+      }
+      final organization = tester.getRect(find.text('Sharktech'));
+      expect(current.bottom - organization.bottom, greaterThanOrEqualTo(20));
+      final table = rectOf(tester, ConnectionsTableCard);
+      expect(
+        table.height,
+        greaterThanOrEqualTo(
+          connectionsTableMinHeight(
+            compact ? DashboardDensity.compact : DashboardDensity.standard,
+            1,
+          ),
+        ),
+        reason: '$size',
+      );
       expect(tester.takeException(), isNull, reason: '$size');
     }
 

@@ -193,12 +193,6 @@ class _KnownIpDetail extends ConsumerWidget {
                   localizations.ipNotQueried,
                   style: AppTextStyle.headline.of(context),
                 ),
-                subtitle: Text(
-                  localizations.ipNotQueriedTip,
-                  style: AppTextStyle.footnote
-                      .of(context)
-                      .copyWith(color: secondary),
-                ),
               )
             else
               // A lookup asked for before failed: asking again is the
@@ -232,7 +226,18 @@ class _KnownIpDetail extends ConsumerWidget {
             ),
           ],
         ),
-        explanations,
+        if (ipx == null)
+          // What the card's badge fetches, said apart from the score: it
+          // asks no quality source.
+          IpxFootnote(
+            lines: [
+              localizations.ipFlagLookupNote,
+              localizations.ipTypeExplain,
+              localizations.ipQualityExplain,
+            ],
+          )
+        else
+          explanations,
         other,
       ],
     );

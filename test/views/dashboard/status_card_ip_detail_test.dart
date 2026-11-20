@@ -420,9 +420,20 @@ void main() {
     await _settle(tester);
     expect(_detail('Local public IP'), findsOneWidget);
     expect(find.text('Not queried yet'), findsWidgets);
+    // What the badge fetches is said once, below the basic information,
+    // not under the score: it names no quality source.
+    final note = find.textContaining(
+      'Select the country badge on the card to look up the exit IP',
+    );
+    expect(note, findsOneWidget);
+    final noteTop = tester.getRect(note).top;
+    final notQueried = find.text('Not queried yet');
+    for (var i = 0; i < notQueried.evaluate().length; i++) {
+      expect(noteTop, greaterThan(tester.getRect(notQueried.at(i)).bottom));
+    }
     expect(
-      find.textContaining('Opening the details does not look this IP up'),
-      findsOneWidget,
+      tester.getRect(note).top,
+      greaterThan(tester.getRect(find.text('Quality').last).bottom),
     );
     // Neither loading nor failed.
     expect(find.byType(SkeletonText), findsNothing);
@@ -533,6 +544,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('wrapped tags keep their 44 targets apart: the pills show '
+      'about 24 between them, not the 8 between targets', (tester) async {
+    final spy = _Spy();
+    // Narrow enough for the two tags to take a line each.
+    await tester.pumpWidget(
+      _app(spy, density: DashboardDensity.mobile, width: 380),
+    );
+    await _settle(tester);
+    final typeTarget = tester.getRect(_tagRegion('Data center'));
+    final qualityTarget = tester.getRect(_tagRegion('Quality Poor'));
+    expect(qualityTarget.top, greaterThan(typeTarget.top), reason: 'wraps');
+    // The targets: 44 high, 8 apart, never overlapping.
+    expect(typeTarget.height, IpDetailTagStyle.minHit);
+    expect(qualityTarget.top - typeTarget.bottom, IpDetailTagStyle.gap);
+    expect(typeTarget.overlaps(qualityTarget), isFalse);
+    // The pills, 28 high on a narrow card, sit at the top of their
+    // targets: 44 - 28 + 8 = 24 between them, as designed.
+    Rect pill(String label) => tester.getRect(
+      find
+          .ancestor(of: find.text(label), matching: find.byType(Container))
+          .first,
+    );
+    final typePill = pill('Data center');
+    final qualityPill = pill('Quality Poor');
+    expect(typePill.height, 28);
+    expect(qualityPill.top - typePill.bottom, 24);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('reads as two buttons, each naming the address; the chevron '
       'is not read', (tester) async {
     final spy = _Spy();
@@ -588,8 +628,60 @@ void main() {
     await tester.pumpWidget(_app(spy, hideIp: true));
     await _settle(tester);
     expect(find.semantics.byLabel('Data center, view IP details'), findsOne);
-    expect(find.semantics.byLabel(RegExp(RegExp.escape(_ip))), findsNothing);
+    expect(find.semantics.byLabel('Quality Poor, view IP details'), findsOne);
+    // Nowhere in what a screen reader is told: label, value, hint or
+    // tooltip, of the tags or of anything else on the card.
+    final said = <String>[];
+    void visit(SemanticsNode node) {
+      final data = node.getSemanticsData();
+      said.addAll([data.label, data.value, data.hint, data.tooltip]);
+      node.visitChildren((child) {
+        visit(child);
+        return true;
+      });
+    }
+
+    visit(
+      tester
+          .binding
+          .renderViews
+          .first
+          .owner!
+          .semanticsOwner!
+          .rootSemanticsNode!,
+    );
+    expect(said.where((text) => text.contains(_ip)), isEmpty);
+    expect(said.where((text) => text.contains(_localIp)), isEmpty);
     semantics.dispose();
+  });
+
+  testWidgets('the tags carry no tooltip, and hovering one shows none', (
+    tester,
+  ) async {
+    final strategy = FocusManager.instance.highlightStrategy;
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(() => FocusManager.instance.highlightStrategy = strategy);
+    final spy = _Spy();
+    await tester.pumpWidget(_app(spy));
+    await _settle(tester);
+    for (final label in ['Data center', 'Quality Poor']) {
+      expect(
+        find.ancestor(of: _tag(label), matching: find.byType(Tooltip)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: _tag(label), matching: find.byType(Tooltip)),
+        findsNothing,
+      );
+    }
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.text('Data center')));
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('Press to view exit IP details'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('two tab stops; Enter and Space open; Esc closes back to the '

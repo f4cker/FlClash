@@ -3823,7 +3823,7 @@
   "ipTagOpenDetailHint": "Muestra el tipo y la calidad ya conocidos; no realiza ninguna consulta",
   "ipTagNoIp": "Aún no hay IP que ver",
   "ipNotQueried": "Aún sin consultar",
-  "ipNotQueriedTip": "Abrir los detalles no consulta esta IP. Toca la bandera de la tarjeta para consultarla.",
-  "ipTypeExplain": "Tipo: la clase de red a la que pertenece la IP, como residencial, móvil, empresarial o centro de datos. Los sitios marcan más a menudo como proxy las IP de centros de datos.",
-  "ipQualityExplain": "Calidad: el nivel de la puntuación de ipx.al (0–100). Cuanto más alta, menos probable es que los sitios la verifiquen o bloqueen."
+  "ipFlagLookupNote": "Selecciona la bandera de la tarjeta para volver a consultar la IP de salida y el país. Si aún no hay informe o la última consulta falló, Flash también intentará obtener un informe de ipx.al.",
+  "ipTypeExplain": "Tipo: la clase de red a la que pertenece la IP, como residencial, móvil, empresarial o centro de datos.",
+  "ipQualityExplain": "Calidad: la categoría correspondiente a la puntuación de salud de ipx.al (0–100)."
 }

@@ -9469,14 +9469,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ipNotQueried => 'Pas encore recherchée';
 
   @override
-  String get ipNotQueriedTip =>
-      'Ouvrir les détails ne recherche pas cette IP. Touchez le drapeau de la carte pour la rechercher.';
+  String get ipFlagLookupNote =>
+      'Sélectionnez le drapeau de la carte pour rechercher à nouveau l’IP de sortie et le pays. S’il n’y a pas encore de rapport ou si la dernière recherche a échoué, Flash essaiera aussi d’obtenir un rapport ipx.al.';
 
   @override
   String get ipTypeExplain =>
-      'Type : la catégorie de réseau de l’IP, par exemple résidentiel, mobile, entreprise ou centre de données. Les sites repèrent plus souvent les IP de centres de données comme des proxys.';
+      'Type : la catégorie de réseau de l’IP, par exemple résidentiel, mobile, entreprise ou centre de données.';
 
   @override
   String get ipQualityExplain =>
-      'Qualité : la note du score ipx.al (0–100). Plus le score est élevé, moins les sites risquent de la vérifier ou de la bloquer.';
+      'Qualité : la catégorie correspondant au score de santé ipx.al (0–100).';
 }

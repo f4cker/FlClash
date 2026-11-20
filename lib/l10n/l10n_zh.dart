@@ -8658,11 +8658,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipNotQueried => '尚未查询';
 
   @override
-  String get ipNotQueriedTip => '打开详情不会查询此 IP。点按卡片上的国家标记即可查询。';
+  String get ipFlagLookupNote =>
+      '点击卡片上的国家标记，可重新查询出口 IP 和国家；如果尚无报告或上次查询失败，也会尝试获取 ipx.al 报告。';
 
   @override
-  String get ipTypeExplain => '类型：IP 所属网络的类别，如住宅、移动网络、商业或机房。机房 IP 更容易被网站识别为代理。';
+  String get ipTypeExplain => '类型：IP 所属网络的类别，如住宅、移动网络、商业或机房。';
 
   @override
-  String get ipQualityExplain => '质量：ipx.al 健康分（0–100）对应的等级，分数越高越不容易被网站验证或拦截。';
+  String get ipQualityExplain => '质量：ipx.al 健康分（0–100）对应的等级。';
 }

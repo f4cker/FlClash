@@ -7,6 +7,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/mitm_status.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'edit.dart';
@@ -266,47 +267,151 @@ class _DesktopDashboard extends StatelessWidget {
             gap * 3;
         final tablesFit = constraints.maxHeight >= rowsHeight + tablesHeight;
         final fills = constraints.maxHeight >= rowsHeight + summaryHeight;
+        // The rows take what they need, the status card more than reserved
+        // when its tags wrap; the last block fills what is left of the
+        // window, but never less than its minimum: rather than shrink it,
+        // the page scrolls.
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: fills ? constraints.maxHeight : null,
-            child: Padding(
-              padding: padding,
-              child: Column(
-                spacing: gap,
-                children: [
-                  ...rows,
-                  if (tablesFit)
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: gap,
-                        children: const [
-                          Expanded(
-                            flex: 3,
-                            child: RepaintBoundary(
-                              child: ConnectionsTableCard(),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: RepaintBoundary(child: ProxyGroupsCard()),
-                          ),
-                        ],
+          child: Padding(
+            padding: padding,
+            child: _FillLast(
+              gap: gap,
+              fill: fills && constraints.maxHeight.isFinite
+                  ? constraints.maxHeight - padding.vertical
+                  : null,
+              lastMin: tablesFit ? tablesHeight : summaryHeight,
+              children: [
+                ...rows,
+                if (tablesFit)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: gap,
+                    children: const [
+                      Expanded(
+                        flex: 3,
+                        child: RepaintBoundary(child: ConnectionsTableCard()),
                       ),
-                    )
-                  else if (fills)
-                    Expanded(child: summaries)
-                  else
-                    sized(summaryHeight, summaries),
-                ],
-              ),
+                      Expanded(
+                        flex: 2,
+                        child: RepaintBoundary(child: ProxyGroupsCard()),
+                      ),
+                    ],
+                  )
+                else
+                  summaries,
+              ],
             ),
           ),
         );
       },
     );
   }
+}
+
+/// A column whose children before the last take their own height, [gap]
+/// apart, and whose last fills up to [fill] in all, but never less than
+/// [lastMin]; without [fill] it is [lastMin] high.
+class _FillLast extends MultiChildRenderObjectWidget {
+  const _FillLast({
+    required this.gap,
+    required this.fill,
+    required this.lastMin,
+    required super.children,
+  });
+
+  final double gap;
+  final double? fill;
+  final double lastMin;
+
+  @override
+  _RenderFillLast createRenderObject(BuildContext context) =>
+      _RenderFillLast(gap: gap, fill: fill, lastMin: lastMin);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderFillLast renderObject) {
+    renderObject
+      ..gap = gap
+      ..fill = fill
+      ..lastMin = lastMin;
+  }
+}
+
+class _FillLastParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderFillLast extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _FillLastParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _FillLastParentData> {
+  _RenderFillLast({
+    required double gap,
+    required double? fill,
+    required double lastMin,
+  }) : _gap = gap,
+       _fill = fill,
+       _lastMin = lastMin;
+
+  double _gap;
+  set gap(double value) {
+    if (value == _gap) return;
+    _gap = value;
+    markNeedsLayout();
+  }
+
+  double? _fill;
+  set fill(double? value) {
+    if (value == _fill) return;
+    _fill = value;
+    markNeedsLayout();
+  }
+
+  double _lastMin;
+  set lastMin(double value) {
+    if (value == _lastMin) return;
+    _lastMin = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _FillLastParentData) {
+      child.parentData = _FillLastParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final width = constraints.maxWidth;
+    var y = 0.0;
+    var child = firstChild;
+    while (child != null) {
+      final data = child.parentData! as _FillLastParentData;
+      final last = child == lastChild;
+      if (child != firstChild) y += _gap;
+      if (last) {
+        final fill = _fill;
+        final height = math.max(_lastMin, fill == null ? 0.0 : fill - y);
+        child.layout(BoxConstraints.tightFor(width: width, height: height));
+      } else {
+        child.layout(
+          BoxConstraints.tightFor(width: width),
+          parentUsesSize: true,
+        );
+      }
+      data.offset = Offset(0, y);
+      y += last ? child.constraints.maxHeight : child.size.height;
+      child = data.nextSibling;
+    }
+    size = constraints.constrain(Size(width, y));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }
 
 class _MobileDashboard extends ConsumerWidget {

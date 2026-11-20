@@ -9162,13 +9162,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ipNotQueried => '未照会';
 
   @override
-  String get ipNotQueriedTip => '詳細を開いてもこの IP は照会されません。カードの国旗をタップすると照会します。';
+  String get ipFlagLookupNote =>
+      'カードの国旗を選ぶと、出口 IP と国を再照会します。レポートがまだない場合や前回の照会に失敗した場合は、ipx.al のレポート取得も試みます。';
 
   @override
-  String get ipTypeExplain =>
-      '種類：IP が属するネットワークの区分（住宅、モバイル、ビジネス、データセンターなど）。データセンターの IP はプロキシと判定されやすくなります。';
+  String get ipTypeExplain => '種類：IP が属するネットワークの区分（住宅、モバイル、ビジネス、データセンターなど）。';
 
   @override
-  String get ipQualityExplain =>
-      '品質：ipx.al ヘルススコア（0〜100）の等級。スコアが高いほど、サイトで確認やブロックを受けにくくなります。';
+  String get ipQualityExplain => '品質：ipx.al のヘルススコア（0〜100）に対応する等級。';
 }

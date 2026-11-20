@@ -9406,14 +9406,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipNotQueried => 'Not queried yet';
 
   @override
-  String get ipNotQueriedTip =>
-      'Opening the details does not look this IP up. Tap the country badge on the card to look it up.';
+  String get ipFlagLookupNote =>
+      'Select the country badge on the card to look up the exit IP and country again. If there is no report yet or the last lookup failed, Flash also tries to fetch an ipx.al report.';
 
   @override
   String get ipTypeExplain =>
-      'Type: the kind of network the IP belongs to, such as residential, mobile, business or data center. Sites flag data center IPs as proxies more often.';
+      'Type: the kind of network the IP belongs to, such as residential, mobile, business or data center.';
 
   @override
   String get ipQualityExplain =>
-      'Quality: the grade of the ipx.al health score (0–100). The higher the score, the less likely sites are to challenge or block it.';
+      'Quality: the grade corresponding to the ipx.al health score (0–100).';
 }

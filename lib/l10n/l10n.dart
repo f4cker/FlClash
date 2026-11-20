@@ -15436,22 +15436,22 @@ abstract class AppLocalizations {
   /// **'Not queried yet'**
   String get ipNotQueried;
 
-  /// No description provided for @ipNotQueriedTip.
+  /// No description provided for @ipFlagLookupNote.
   ///
   /// In en, this message translates to:
-  /// **'Opening the details does not look this IP up. Tap the country badge on the card to look it up.'**
-  String get ipNotQueriedTip;
+  /// **'Select the country badge on the card to look up the exit IP and country again. If there is no report yet or the last lookup failed, Flash also tries to fetch an ipx.al report.'**
+  String get ipFlagLookupNote;
 
   /// No description provided for @ipTypeExplain.
   ///
   /// In en, this message translates to:
-  /// **'Type: the kind of network the IP belongs to, such as residential, mobile, business or data center. Sites flag data center IPs as proxies more often.'**
+  /// **'Type: the kind of network the IP belongs to, such as residential, mobile, business or data center.'**
   String get ipTypeExplain;
 
   /// No description provided for @ipQualityExplain.
   ///
   /// In en, this message translates to:
-  /// **'Quality: the grade of the ipx.al health score (0–100). The higher the score, the less likely sites are to challenge or block it.'**
+  /// **'Quality: the grade corresponding to the ipx.al health score (0–100).'**
   String get ipQualityExplain;
 }
 

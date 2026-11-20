@@ -122,16 +122,21 @@ Widget _app(_CountingIps probe, _Requests requests) => TestApp(
       );
     }),
   ],
-  child: const HostScaffold(
+  child: HostScaffold(
     body: Align(
       alignment: Alignment.topLeft,
       child: SizedBox(
         width: 600,
-        height: 208,
-        child: DashboardDensityScope(
-          density: DashboardDensity.standard,
-          scale: 1,
-          child: CurrentOutboundCard(),
+        // As the dashboard's top row holds it: its content's height.
+        child: IntrinsicHeight(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 160),
+            child: const DashboardDensityScope(
+              density: DashboardDensity.standard,
+              scale: 1,
+              child: CurrentOutboundCard(),
+            ),
+          ),
         ),
       ),
     ),

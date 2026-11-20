@@ -3933,7 +3933,7 @@
   "ipTagOpenDetailHint": "Shows the type and quality already known; does not run a lookup",
   "ipTagNoIp": "No IP to view yet",
   "ipNotQueried": "Not queried yet",
-  "ipNotQueriedTip": "Opening the details does not look this IP up. Tap the country badge on the card to look it up.",
-  "ipTypeExplain": "Type: the kind of network the IP belongs to, such as residential, mobile, business or data center. Sites flag data center IPs as proxies more often.",
-  "ipQualityExplain": "Quality: the grade of the ipx.al health score (0–100). The higher the score, the less likely sites are to challenge or block it."
+  "ipFlagLookupNote": "Select the country badge on the card to look up the exit IP and country again. If there is no report yet or the last lookup failed, Flash also tries to fetch an ipx.al report.",
+  "ipTypeExplain": "Type: the kind of network the IP belongs to, such as residential, mobile, business or data center.",
+  "ipQualityExplain": "Quality: the grade corresponding to the ipx.al health score (0–100)."
 }

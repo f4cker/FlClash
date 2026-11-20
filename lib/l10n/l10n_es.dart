@@ -9466,14 +9466,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ipNotQueried => 'Aún sin consultar';
 
   @override
-  String get ipNotQueriedTip =>
-      'Abrir los detalles no consulta esta IP. Toca la bandera de la tarjeta para consultarla.';
+  String get ipFlagLookupNote =>
+      'Selecciona la bandera de la tarjeta para volver a consultar la IP de salida y el país. Si aún no hay informe o la última consulta falló, Flash también intentará obtener un informe de ipx.al.';
 
   @override
   String get ipTypeExplain =>
-      'Tipo: la clase de red a la que pertenece la IP, como residencial, móvil, empresarial o centro de datos. Los sitios marcan más a menudo como proxy las IP de centros de datos.';
+      'Tipo: la clase de red a la que pertenece la IP, como residencial, móvil, empresarial o centro de datos.';
 
   @override
   String get ipQualityExplain =>
-      'Calidad: el nivel de la puntuación de ipx.al (0–100). Cuanto más alta, menos probable es que los sitios la verifiquen o bloqueen.';
+      'Calidad: la categoría correspondiente a la puntuación de salud de ipx.al (0–100).';
 }

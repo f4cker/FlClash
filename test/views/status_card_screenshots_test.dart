@@ -23,6 +23,7 @@ import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/current_outbound.dart';
 import 'package:fl_clash/views/dashboard/widgets/ip_detail_tag.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -174,6 +175,15 @@ void main() {
       }
       await loader.load();
     }
+    // As on a Mac, for the shots that run as one: the system face for
+    // Latin and Cyrillic, PingFang SC (here Hiragino) behind it.
+    final system = FontLoader('.AppleSystemUIFont');
+    for (final face in _collectionFaces(
+      File('/System/Library/Fonts/HelveticaNeue.ttc').readAsBytesSync(),
+    )) {
+      system.addFont(Future.value(face));
+    }
+    await system.load();
     // The detail sheet's address is in the app's own monospaced face.
     final mono = FontLoader('JetBrainsMono')
       ..addFont(
@@ -213,6 +223,7 @@ void main() {
     double width = 574,
     DashboardDensity density = DashboardDensity.standard,
     double textScale = 1,
+    Locale locale = const Locale('zh', 'CN'),
   }) async {
     tester.view.physicalSize = view * 2;
     tester.view.devicePixelRatio = 2;
@@ -241,7 +252,7 @@ void main() {
           container: container,
           child: Consumer(
             builder: (context, ref, _) => TestApp(
-              locale: const Locale('zh', 'CN'),
+              locale: locale,
               includeNavigatorKey: false,
               theme: watchAppTheme(ref, Brightness.light),
               darkTheme: watchAppTheme(ref, Brightness.dark),
@@ -504,24 +515,61 @@ void main() {
     });
   }
 
-  for (final (name, density, view, width) in const [
-    ('desktop', DashboardDensity.standard, Size(780, 300), 740.0),
-    ('narrow', DashboardDensity.mobile, Size(380, 340), 340.0),
-  ]) {
-    testWidgets('tags-large-text-$name-light', skip: skip != null, (
-      tester,
-    ) async {
-      await pump(
+  for (final brightness in Brightness.values) {
+    final tone = brightness == Brightness.light ? 'light' : 'dark';
+    for (final (name, density, view, width) in const [
+      ('desktop', DashboardDensity.standard, Size(780, 300), 740.0),
+      ('narrow', DashboardDensity.mobile, Size(380, 340), 340.0),
+    ]) {
+      testWidgets('tags-large-text-$name-$tone', skip: skip != null, (
         tester,
-        brightness: Brightness.light,
-        entries: both,
-        view: view,
-        width: width,
-        density: density,
-        textScale: 1.3,
-      );
-      await capture(tester, 'tags-large-text-$name-light');
-    });
+      ) async {
+        await pump(
+          tester,
+          brightness: brightness,
+          entries: both,
+          view: view,
+          width: width,
+          density: density,
+          textScale: 1.3,
+        );
+        await capture(tester, 'tags-large-text-$name-$tone');
+      });
+    }
+
+    // The longest translations, on the compact desktop card (a 1000 wide
+    // window), local exit with its three chips: the card grows rather than
+    // cut a tag.
+    for (final language in ['fr', 'ru']) {
+      for (final local in [false, true]) {
+        final exit = local ? 'local' : 'proxy';
+        testWidgets('long-$language-$exit-$tone', skip: skip != null, (
+          tester,
+        ) async {
+          // As on a Mac, for its system face (see setUpAll).
+          debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+          addTearDown(() => debugDefaultTargetPlatformOverride = null);
+          await pump(
+            tester,
+            brightness: brightness,
+            entries: both,
+            view: const Size(510, 300),
+            width: 470,
+            density: DashboardDensity.compact,
+            locale: Locale(language),
+          );
+          if (local) {
+            ProviderScope.containerOf(
+              tester.element(find.byType(CurrentOutboundCard)),
+            ).read(ipxLookupProvider(_localIp));
+            await tester.tap(find.text(_exitIp));
+            await settle(tester);
+          }
+          expect(tester.takeException(), isNull);
+          await capture(tester, 'long-$language-$exit-$tone');
+        });
+      }
+    }
   }
 
   for (final (name, size) in const [

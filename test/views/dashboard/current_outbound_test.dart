@@ -75,11 +75,17 @@ Widget _card({DashboardDensity density = DashboardDensity.standard}) =>
         alignment: Alignment.topLeft,
         child: SizedBox(
           width: density.isDesktop ? 600 : 380,
-          height: density.isDesktop ? 208 : null,
-          child: DashboardDensityScope(
-            density: density,
-            scale: 1,
-            child: const CurrentOutboundCard(),
+          // As the dashboard's top row holds it: its content's height,
+          // which grows when the tags wrap.
+          child: IntrinsicHeight(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 160),
+              child: DashboardDensityScope(
+                density: density,
+                scale: 1,
+                child: const CurrentOutboundCard(),
+              ),
+            ),
           ),
         ),
       ),

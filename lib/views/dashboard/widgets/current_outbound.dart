@@ -1001,7 +1001,6 @@ class _IpChips extends ConsumerWidget {
           ? appLocalizations.ipTagOpenDetailHidden(label)
           : appLocalizations.ipTagOpenDetail(label, ip!),
       semanticHint: appLocalizations.ipTagOpenDetailHint,
-      tooltip: appLocalizations.exitIpOpenHint,
       onOpen: onOpenDetail,
     );
     final known = [
@@ -1046,37 +1045,13 @@ class _IpChips extends ConsumerWidget {
           ),
       ],
     );
-    final rowHeight = _tagRowHeight(large);
-    // A narrow (mobile) card grows to take the tags that wrap; a desktop
-    // card holds its height in the grid, so tags that do not fit on its one
-    // line wrap out of sight, as they did before.
-    if (large) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(minHeight: rowHeight),
-        child: wrap,
-      );
-    }
-    return SizedBox(
-      height: rowHeight,
-      child: ClipRect(clipper: const _RingRoomClipper(), child: wrap),
+    // Every card, desktop or narrow, grows to take the tags that wrap:
+    // none is clipped. At one line it keeps its height.
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: _tagRowHeight(large)),
+      child: wrap,
     );
   }
-}
-
-/// Clips what wraps below the row, but leaves a tag's focus ring room on
-/// its other sides.
-class _RingRoomClipper extends CustomClipper<Rect> {
-  const _RingRoomClipper();
-
-  static const _ring =
-      IpDetailTagStyle.focusRingWidth + IpDetailTagStyle.focusRingGap;
-
-  @override
-  Rect getClip(Size size) =>
-      Rect.fromLTRB(-_ring, -_ring, size.width + _ring, size.height);
-
-  @override
-  bool shouldReclip(_RingRoomClipper oldClipper) => false;
 }
 
 const _spinPeriod = Duration(milliseconds: 1500);
