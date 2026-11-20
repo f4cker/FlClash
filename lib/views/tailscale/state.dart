@@ -282,6 +282,10 @@ String? tailscaleAddressOf(TailscalePeer? peer) {
       addresses.firstOrNull;
 }
 
+/// The IPv4 address only; null without one, never an IPv6 in its place.
+String? tailscaleIpv4Of(TailscalePeer? peer) =>
+    peer?.addresses.firstWhereOrNull((address) => !address.contains(':'));
+
 String? tailscaleIpv6Of(TailscalePeer? peer) =>
     peer?.addresses.firstWhereOrNull((address) => address.contains(':'));
 

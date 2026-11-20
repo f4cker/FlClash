@@ -41,7 +41,8 @@ List<TailscaleAddressEntry> tailscaleAddressEntries(
     ),
     (label: appLocalizations.tsFullDnsName, value: dnsName),
     (label: 'IPv6', value: tailscaleIpv6Of(self)),
-    (label: 'IPv4', value: tailscaleAddressOf(self)),
+    // Strict: an IPv6-only device has no IPv4 to copy.
+    (label: 'IPv4', value: tailscaleIpv4Of(self)),
   ];
 }
 

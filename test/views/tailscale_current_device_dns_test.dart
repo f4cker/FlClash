@@ -236,6 +236,34 @@ void main() {
     expect(copied, isEmpty);
   });
 
+  testWidgets('an IPv6-only device disables IPv4, never copying IPv6 there', (
+    tester,
+  ) async {
+    await pumpCard(tester, status: _status(addresses: const [_ipv6]));
+    // The headline still shows the one address there is.
+    expect(find.text(_ipv6), findsOneWidget);
+    await openMenu(tester);
+
+    expect(find.text(_ipv6), findsNWidgets(2));
+    expect(find.text(_missing), findsOneWidget);
+    expect(
+      find.descendant(of: row('IPv4'), matching: find.text(_missing)),
+      findsOneWidget,
+    );
+    await tester.tap(row('IPv4'), warnIfMissed: false);
+    await tester.pump();
+    expect(copied, isEmpty);
+    await tester.tap(row('IPv6'));
+    expect(copied, [_ipv6]);
+  });
+
+  test('the strict IPv4 accessor has no IPv6 fallback', () {
+    final self = _status(addresses: const [_ipv6]).self;
+    expect(tailscaleIpv4Of(self), isNull);
+    expect(tailscaleAddressOf(self), _ipv6);
+    expect(tailscaleIpv4Of(_status().self), _ipv4);
+  });
+
   testWidgets('rows read as one button with category and full value', (
     tester,
   ) async {
