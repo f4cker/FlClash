@@ -470,7 +470,7 @@ class ProfilesAction extends _$ProfilesAction {
       );
       if (!isCurrent()) return null;
       if (fetched != null && await isMounted() && isCurrent()) {
-        await _recordSource(sourceId, null);
+        await _recordSource(sourceId, null, isCurrent);
       }
       if (!isCurrent()) return null;
       updated = fetched?.type == ProfileType.url;
@@ -489,6 +489,7 @@ class ProfilesAction extends _$ProfilesAction {
           unsupported
               ? MountSourceFailure.unsupported
               : MountSourceFailure.fetch,
+          isCurrent,
         );
       }
       rethrow;
@@ -500,7 +501,15 @@ class ProfilesAction extends _$ProfilesAction {
     }
   }
 
-  Future<void> _recordSource(int sourceId, MountSourceFailure? failure) async {
+  /// On the mount scheduler, which a restore holds from superseding this
+  /// update to its commit: the status lands before the restore's rows, or
+  /// not at all.
+  Future<void> _recordSource(
+    int sourceId,
+    MountSourceFailure? failure,
+    bool Function() isCurrent,
+  ) => ref.read(mountActionProvider.notifier).runExclusive(() async {
+    if (!isCurrent()) return;
     try {
       await database.mountsDao.recordSourceResult(
         sourceId,
@@ -513,7 +522,7 @@ class ProfilesAction extends _$ProfilesAction {
         logLevel: LogLevel.warning,
       );
     }
-  }
+  });
 
   Future<void> addProfileFormFile() async {
     final platformFile = await globalState.safeRun(picker.pickerFile);
