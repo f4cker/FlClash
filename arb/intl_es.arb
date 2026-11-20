@@ -653,7 +653,7 @@
   "restoreMountTagInvalid": "No se escribe",
   "restoreMountCheckNote": "Bloqueado hasta volver a comprobarlo; no se aplica nada automáticamente.",
   "restoreMountNoChanges": "No cambia ninguna relación de montaje.",
-  "restoreMountAcknowledge": "Entiendo la pérdida de las {removals} eliminaciones y {replacements} sustituciones indicadas arriba y quiero hacer estos cambios.",
+  "restoreMountAcknowledge": "Entiendo las {removals} eliminaciones y {replacements} sustituciones de relaciones de montaje indicadas arriba y quiero hacer estos cambios.",
   "restoreCancelWritesNothing": "Cancelar no escribe nada",
   "restoreMountConfirmOverride": "Restaurar y sobrescribir",
   "restoreMountConfirmMerge": "Restaurar y sustituir",

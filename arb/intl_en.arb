@@ -663,7 +663,7 @@
   "restoreMountTagInvalid": "Not written",
   "restoreMountCheckNote": "Locked until checked again; nothing is applied automatically.",
   "restoreMountNoChanges": "No mount relations change.",
-  "restoreMountAcknowledge": "I understand the loss from the {removals} removals and {replacements} replacements listed above, and want to make these changes.",
+  "restoreMountAcknowledge": "I understand the {removals} removals and {replacements} replacements of mount relations listed above, and want to make these changes.",
   "@restoreMountAcknowledge": {
     "placeholders": {
       "removals": {

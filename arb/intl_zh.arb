@@ -628,7 +628,7 @@
   "restoreMountTagInvalid": "不写入",
   "restoreMountCheckNote": "重新检查前保持锁定；不会自动应用。",
   "restoreMountNoChanges": "不涉及挂载关系变更。",
-  "restoreMountAcknowledge": "我已了解上列 {removals} 条移除、{replacements} 项替换造成的丢失，并确认执行这些更改。",
+  "restoreMountAcknowledge": "我已了解上列挂载关系的 {removals} 条移除、{replacements} 项替换，并确认执行这些更改。",
   "restoreCancelWritesNothing": "取消不会写入数据",
   "restoreMountConfirmOverride": "恢复并覆盖",
   "restoreMountConfirmMerge": "恢复并替换",

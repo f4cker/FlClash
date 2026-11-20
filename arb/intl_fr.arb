@@ -653,7 +653,7 @@
   "restoreMountTagInvalid": "Non écrite",
   "restoreMountCheckNote": "Verrouillé jusqu’à une nouvelle vérification ; rien n’est appliqué automatiquement.",
   "restoreMountNoChanges": "Aucune relation de montage ne change.",
-  "restoreMountAcknowledge": "Je comprends la perte due aux {removals} suppressions et {replacements} remplacements listés ci-dessus et je veux effectuer ces changements.",
+  "restoreMountAcknowledge": "Je comprends les {removals} suppressions et {replacements} remplacements de relations de montage listés ci-dessus et je veux effectuer ces changements.",
   "restoreCancelWritesNothing": "Annuler n’écrit rien",
   "restoreMountConfirmOverride": "Restaurer et écraser",
   "restoreMountConfirmMerge": "Restaurer et remplacer",

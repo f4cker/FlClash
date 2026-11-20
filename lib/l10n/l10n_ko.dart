@@ -2109,7 +2109,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return '위에 표시된 삭제 $removals개와 교체 $replacements개로 인한 손실을 이해했으며, 이 변경을 진행합니다.';
+    return '위에 표시된 마운트 관계의 삭제 $removals개와 교체 $replacements개를 이해했으며, 이 변경을 진행합니다.';
   }
 
   @override

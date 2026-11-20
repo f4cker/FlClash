@@ -653,7 +653,7 @@
   "restoreMountTagInvalid": "Не записывается",
   "restoreMountCheckNote": "Заблокировано до повторной проверки; ничего не применяется автоматически.",
   "restoreMountNoChanges": "Связи монтирования не меняются.",
-  "restoreMountAcknowledge": "Я понимаю потери от удалений ({removals}) и замен ({replacements}), указанных выше, и хочу внести эти изменения.",
+  "restoreMountAcknowledge": "Я понимаю удаления ({removals}) и замены ({replacements}) связей монтирования, указанные выше, и хочу внести эти изменения.",
   "restoreCancelWritesNothing": "Отмена ничего не записывает",
   "restoreMountConfirmOverride": "Восстановить с перезаписью",
   "restoreMountConfirmMerge": "Восстановить с заменой",

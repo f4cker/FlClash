@@ -2062,7 +2062,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return '上記の削除 $removals 件と置き換え $replacements 件による損失を理解したうえで、これらの変更を行います。';
+    return '上記のマウント関係の削除 $removals 件と置き換え $replacements 件を理解したうえで、これらの変更を行います。';
   }
 
   @override

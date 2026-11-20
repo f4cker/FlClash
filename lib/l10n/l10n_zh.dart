@@ -2033,7 +2033,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return '我已了解上列 $removals 条移除、$replacements 项替换造成的丢失，并确认执行这些更改。';
+    return '我已了解上列挂载关系的 $removals 条移除、$replacements 项替换，并确认执行这些更改。';
   }
 
   @override

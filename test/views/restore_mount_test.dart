@@ -869,6 +869,26 @@ void main() {
       });
     }
 
+    testWidgets('the acknowledgement names mount relations, and an override '
+        'without mount losses has no checkbox', (tester) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _overridePlan()),
+        locale: const Locale('zh'),
+        size: const Size(900, 1400),
+      );
+      expect(find.text('我已了解上列挂载关系的 2 条移除、0 项替换，并确认执行这些更改。'), findsOne);
+      await host(
+        tester,
+        () => const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: true, mountsCarried: true),
+          mitmModules: _mitm,
+        ),
+        locale: const Locale('zh'),
+      );
+      expect(find.byType(Checkbox), findsNothing);
+    });
+
     testWidgets('a compatible sheet keeps its mount callout', (tester) async {
       await host(
         tester,

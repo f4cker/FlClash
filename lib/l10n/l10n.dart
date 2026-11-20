@@ -3885,7 +3885,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreMountAcknowledge.
   ///
   /// In en, this message translates to:
-  /// **'I understand the loss from the {removals} removals and {replacements} replacements listed above, and want to make these changes.'**
+  /// **'I understand the {removals} removals and {replacements} replacements of mount relations listed above, and want to make these changes.'**
   String restoreMountAcknowledge(Object removals, Object replacements);
 
   /// No description provided for @restoreCancelWritesNothing.

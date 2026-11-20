@@ -653,7 +653,7 @@
   "restoreMountTagInvalid": "書き込まない",
   "restoreMountCheckNote": "再確認するまでロックされます。自動では適用されません。",
   "restoreMountNoChanges": "変わるマウントの関係はありません。",
-  "restoreMountAcknowledge": "上記の削除 {removals} 件と置き換え {replacements} 件による損失を理解したうえで、これらの変更を行います。",
+  "restoreMountAcknowledge": "上記のマウント関係の削除 {removals} 件と置き換え {replacements} 件を理解したうえで、これらの変更を行います。",
   "restoreCancelWritesNothing": "キャンセルすると何も書き込まれません",
   "restoreMountConfirmOverride": "復元して上書き",
   "restoreMountConfirmMerge": "復元して置き換え",

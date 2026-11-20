@@ -2180,7 +2180,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'Je comprends la perte due aux $removals suppressions et $replacements remplacements listés ci-dessus et je veux effectuer ces changements.';
+    return 'Je comprends les $removals suppressions et $replacements remplacements de relations de montage listés ci-dessus et je veux effectuer ces changements.';
   }
 
   @override

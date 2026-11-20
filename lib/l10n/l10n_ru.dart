@@ -2157,7 +2157,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'Я понимаю потери от удалений ($removals) и замен ($replacements), указанных выше, и хочу внести эти изменения.';
+    return 'Я понимаю удаления ($removals) и замены ($replacements) связей монтирования, указанные выше, и хочу внести эти изменения.';
   }
 
   @override

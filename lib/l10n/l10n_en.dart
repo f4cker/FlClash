@@ -2159,7 +2159,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'I understand the loss from the $removals removals and $replacements replacements listed above, and want to make these changes.';
+    return 'I understand the $removals removals and $replacements replacements of mount relations listed above, and want to make these changes.';
   }
 
   @override
