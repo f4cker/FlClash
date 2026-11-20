@@ -237,17 +237,10 @@ class TrackerTargetText extends StatelessWidget {
             ),
         ],
       ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
-    if (!hasMitmMarks(trackerInfo)) {
-      return target;
-    }
-    return Row(
-      spacing: MitmBadge.gap,
-      children: [
-        Flexible(child: target),
-        MitmBadgeIcon(trackerInfo),
-      ],
-    );
+    return MitmHostLine(trackerInfo: trackerInfo, host: target);
   }
 }
 

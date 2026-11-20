@@ -3225,15 +3225,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get httpsDecryption => 'HTTPS 복호화';
 
   @override
-  String get httpCapture => 'HTTP 캡처';
+  String get httpCapture => '요청 내용 기록';
 
   @override
   String get httpCaptureDesc =>
-      '호스트 이름에 나열한 호스트의 요청을 기록하며, 연결 세부 정보에서 볼 수 있습니다. 기록은 메모리에만 보관됩니다.';
+      '켠 후 복호화 조건에 맞는 요청의 내용을 기록하며, 활성화된 모듈의 호스트 이름도 포함됩니다. 내용은 메모리에만 보관됩니다.';
 
   @override
   String get httpCaptureNoHosts =>
-      '나열된 호스트가 없어 아무것도 기록되지 않습니다. MITM 페이지의 호스트 이름이나 연결 세부 정보에서 추가하세요.';
+      '복호화할 호스트가 없어 아무것도 복호화하거나 기록하지 않습니다. MITM 페이지의 호스트 이름에 추가하거나, 호스트 이름이 있는 모듈을 켜거나, 연결 세부 정보에서 추가하세요.';
 
   @override
   String get httpCaptureLimit => '최대 기록 수';
@@ -3247,13 +3247,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get httpRequests => 'HTTP 요청';
 
   @override
-  String get httpRequestsMissing => '캡처를 켜기 전에 보냈거나 이미 지워진 요청은 표시되지 않습니다.';
+  String get httpRequestsMissing =>
+      '‘요청 내용 기록’을 켜기 전에 보냈거나 이미 지워진 요청은 표시되지 않습니다.';
 
   @override
   String get httpRequestCleared => '이 요청의 기록은 지워졌습니다';
 
   @override
-  String get httpCaptureOff => '캡처가 꺼져 있습니다';
+  String get httpCaptureOff => '요청 내용 기록이 꺼져 있습니다';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      '이 요청은 복호화되었지만 내용은 기록되지 않았습니다. ‘요청 내용 기록’을 켜면 그 이후 조건에 맞는 요청만 기록됩니다.';
+
+  @override
+  String get httpRequestsNone => '볼 수 있는 기록이 없습니다';
+
+  @override
+  String get httpCaptureOpenSettings => '설정으로 이동';
+
+  @override
+  String get mitmBodyEmpty => '본문 없음';
 
   @override
   String get inProgress => '진행 중';
@@ -8230,7 +8244,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '루팅하지 않으면 사용자 인증서를 신뢰하는 앱(주로 브라우저)만 복호화할 수 있습니다. 루팅하면 모든 앱을 복호화할 수 있습니다.';
 
   @override
-  String get httpRequestsReadFailed => '요청을 읽을 수 없습니다';
+  String get httpRequestsReadFailed => '요청 기록을 읽을 수 없습니다';
 
   @override
   String get requestBodyReadFailed => '요청 본문을 읽을 수 없습니다';

@@ -227,6 +227,7 @@ class _ConnectionsTableCardState extends ConsumerState<ConnectionsTableCard>
   List<TrackerInfo> _requests = const [];
   List<DnsQuery> _queries = const [];
   Timer? _snapshot;
+  final _mitmOverlay = MitmStatusOverlay();
 
   @override
   bool get pollsConnections => _feed == DashboardFeed.connections;
@@ -235,10 +236,21 @@ class _ConnectionsTableCardState extends ConsumerState<ConnectionsTableCard>
   void initState() {
     super.initState();
     _takeSnapshot();
-    ref.listenManual(
-      requestsProvider.select((state) => state.revision),
-      (_, _) => _scheduleSnapshot(DashboardFeed.requests),
-    );
+    ref.listenManual(requestsProvider.select((state) => state.revision), (
+      _,
+      _,
+    ) {
+      if (_feed != DashboardFeed.connections) {
+        _scheduleSnapshot(DashboardFeed.requests);
+        return;
+      }
+      // The open connections take the Core's MITM reports from there too;
+      // only one that changes a row rebuilds the table.
+      final shown = _mitmOverlay.shown;
+      if (!identical(shown, _mitmOverlay.apply(connections, ref))) {
+        _scheduleSnapshot(DashboardFeed.connections);
+      }
+    });
     ref.listenManual(
       dnsQueriesProvider.select((state) => state.revision),
       (_, _) => _scheduleSnapshot(DashboardFeed.dns),
@@ -379,7 +391,7 @@ class _ConnectionsTableCardState extends ConsumerState<ConnectionsTableCard>
               DashboardFeed.connections => _Table<TrackerInfo>(
                 key: const ValueKey(DashboardFeed.connections),
                 tableId: 'dashboard.connections',
-                items: connections,
+                items: _mitmOverlay.apply(connections, ref),
                 rowHeight: rowHeight,
                 columnsOf: (width) => _connectionColumns(context, width),
               ),

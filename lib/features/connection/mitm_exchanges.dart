@@ -7,6 +7,8 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/mitm_status.dart'
+    show openMitmCaptureSettings;
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -97,27 +99,56 @@ class MitmExchangesView extends ConsumerWidget {
     final exchanges = list?.exchanges ?? const <MitmExchangeSummary>[];
     final since = list?.since;
     final missing = since != null && trackerInfo.start.isBefore(since);
+    // Only the Core's word that it is not recording says why nothing is
+    // here; otherwise the reason is not known and is not guessed.
+    final notRecorded = errorText == null && list?.capturing == false;
     return NullStatusSwitcher(
       isLoading: loading,
       isEmpty: exchanges.isEmpty,
       nullStatus: NullStatus(
         label: errorText != null
             ? appLocalizations.httpRequestsReadFailed
-            : list?.capturing == false
+            : notRecorded
             ? appLocalizations.httpCaptureOff
-            : missing
-            ? appLocalizations.httpRequestsMissing
-            : appLocalizations.nullTip(appLocalizations.httpRequests),
-        description: errorText,
-        action: errorText == null
-            ? null
-            : TonalButton(
+            : appLocalizations.httpRequestsNone,
+        description:
+            errorText ??
+            (notRecorded
+                ? appLocalizations.httpRequestsNotRecorded
+                : missing
+                ? appLocalizations.httpRequestsMissing
+                : null),
+        action: errorText != null
+            ? Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  // A retry shows the loading state in place of this one.
+                  RetryButton(
+                    busy: false,
+                    onRetry: () =>
+                        ref.invalidate(mitmExchangesProvider(trackerInfo.id)),
+                  ),
+                  TonalButton(
+                    size: TonalButtonSize.bar,
+                    glyph: AppGlyphs.copy,
+                    label: appLocalizations.copy,
+                    onPressed: () => _copyError(context, errorText),
+                  ),
+                ],
+              )
+            : notRecorded && mitmFeature
+            // Opens the switch; never turns it on.
+            ? TonalButton(
                 size: TonalButtonSize.bar,
-                glyph: AppGlyphs.copy,
-                label: appLocalizations.copy,
-                onPressed: () => _copyError(context, errorText),
-              ),
-        illustration: NullStatusIllustration.requests,
+                label: appLocalizations.httpCaptureOpenSettings,
+                onPressed: () => openMitmCaptureSettings(context),
+              )
+            : null,
+        illustration: errorText != null
+            ? NullStatusIllustration.error
+            : NullStatusIllustration.requests,
       ),
       child: CustomScrollView(
         slivers: [
@@ -394,6 +425,8 @@ class _MitmSideViewState extends ConsumerState<_MitmSideView> {
         ? appLocalizations.responseBody
         : appLocalizations.requestBody;
     final sending = size > 0 && exchange.pending;
+    // The Core measured an empty body; one still under way is not called so.
+    final noBody = size == 0 && !exchange.pending && !(before && originalBody);
     final body = (size > 0 || (before && originalBody)) && !exchange.pending
         ? ref.watch(
             mitmBodyProvider(
@@ -460,6 +493,11 @@ class _MitmSideViewState extends ConsumerState<_MitmSideView> {
             generateSection(
               title: bodyTitle,
               items: [ListItem(title: Text(appLocalizations.inProgress))],
+            ),
+          if (noBody)
+            generateSection(
+              title: bodyTitle,
+              items: [ListItem(title: Text(appLocalizations.mitmBodyEmpty))],
             ),
           if (kept) MitmBodySection(title: bodyTitle, content: content),
           if (bodyError != null)

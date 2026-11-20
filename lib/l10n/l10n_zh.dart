@@ -3107,14 +3107,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get httpsDecryption => 'HTTPS 解密';
 
   @override
-  String get httpCapture => '抓包';
+  String get httpCapture => '记录请求内容';
 
   @override
-  String get httpCaptureDesc => '记录“主机名”中列出的主机的请求，在连接详情中查看。记录只保存在内存中。';
+  String get httpCaptureDesc => '记录开启后符合解密条件的请求内容，包括已启用模块的主机名；内容仅保存在内存中。';
 
   @override
   String get httpCaptureNoHosts =>
-      '未列出任何主机，不会记录内容。请在 MITM 页的“主机名”中添加，或在连接详情中加入。';
+      '没有要解密的主机，因此不会解密，也不会记录内容。请在 MITM 页的“主机名”中添加，启用列有主机名的模块，或在连接详情中加入。';
 
   @override
   String get httpCaptureLimit => '最多记录条数';
@@ -3128,13 +3128,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get httpRequests => 'HTTP 请求';
 
   @override
-  String get httpRequestsMissing => '抓包开启前发出或已被清除的请求不在列表中。';
+  String get httpRequestsMissing => '开启“记录请求内容”前发出或已被清除的请求不在列表中。';
 
   @override
   String get httpRequestCleared => '这条请求的记录已清除';
 
   @override
-  String get httpCaptureOff => '抓包未开启';
+  String get httpCaptureOff => '记录请求内容未开启';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      '此请求已解密，但未记录内容。开启“记录请求内容”后，只会记录之后符合条件的请求。';
+
+  @override
+  String get httpRequestsNone => '没有可查看的记录';
+
+  @override
+  String get httpCaptureOpenSettings => '前往设置';
+
+  @override
+  String get mitmBodyEmpty => '无正文';
 
   @override
   String get inProgress => '进行中';
@@ -7677,7 +7690,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '未 root 时只能解密信任用户证书的应用，多为浏览器；root 后可解密所有应用。';
 
   @override
-  String get httpRequestsReadFailed => '无法读取请求';
+  String get httpRequestsReadFailed => '无法读取请求记录';
 
   @override
   String get requestBodyReadFailed => '无法读取请求体';

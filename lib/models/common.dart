@@ -157,6 +157,16 @@ List<TrackerInfo> trackerInfosOf(Object? data) {
 
 typedef RequestTraffic = ({int upload, int download});
 
+/// What the Core reported of a connection's decryption: the events that
+/// set [TrackerInfo.metadata]'s `mitm`, [TrackerInfo.mitmOutcome] and
+/// [TrackerInfo.mitmRewrite]. A connections snapshot carries none of it.
+typedef TrackerMitmStatus = ({
+  bool decrypted,
+  String outcome,
+  String pauseReason,
+  MitmConnectionRewrite? rewrite,
+});
+
 extension TrackerInfoExt on TrackerInfo {
   String get title {
     final host = metadata.host;
@@ -180,6 +190,48 @@ extension TrackerInfoExt on TrackerInfo {
       system.isAndroid ? metadata.process : processApps.processOf(metadata).key;
 
   String get ruleText => rulePayload.isNotEmpty ? '$rule($rulePayload)' : rule;
+
+  /// Null when the Core reported nothing of this connection's decryption.
+  TrackerMitmStatus? get mitmStatus {
+    if (!metadata.mitm && mitmOutcome.isEmpty && mitmRewrite == null) {
+      return null;
+    }
+    return (
+      decrypted: metadata.mitm,
+      outcome: mitmOutcome,
+      pauseReason: mitmPauseReason,
+      rewrite: mitmRewrite,
+    );
+  }
+
+  /// This connection with what the Core reported of it laid over: a
+  /// decryption stays reported, an outcome or rewrite replaces an older one.
+  /// The same object when [status] adds nothing.
+  TrackerInfo withMitmStatus(TrackerMitmStatus? status) {
+    if (status == null) {
+      return this;
+    }
+    final decrypted = metadata.mitm || status.decrypted;
+    final outcome = status.outcome.isNotEmpty ? status.outcome : mitmOutcome;
+    final pauseReason = status.outcome.isNotEmpty
+        ? status.pauseReason
+        : mitmPauseReason;
+    final rewrite = status.rewrite ?? mitmRewrite;
+    if (decrypted == metadata.mitm &&
+        outcome == mitmOutcome &&
+        pauseReason == mitmPauseReason &&
+        rewrite == mitmRewrite) {
+      return this;
+    }
+    return copyWith(
+      metadata: decrypted == metadata.mitm
+          ? metadata
+          : metadata.copyWith(mitm: decrypted),
+      mitmOutcome: outcome,
+      mitmPauseReason: pauseReason,
+      mitmRewrite: rewrite,
+    );
+  }
 
   List<String> get searchFields => [
     metadata.network,

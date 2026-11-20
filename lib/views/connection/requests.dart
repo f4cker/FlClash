@@ -343,11 +343,33 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
   var _succeeded = false;
   var _retrying = false;
 
+  /// The last snapshot read, before the Core's MITM reports are laid over.
+  List<TrackerInfo>? _snapshot;
+  final _mitmOverlay = MitmStatusOverlay();
+  Timer? _mitmRefresh;
+
   @override
   void initState() {
     super.initState();
     _scrollController =
         widget.scrollController ?? sheetScrollController(context);
+    // A report on an open connection marks its row in place, without
+    // waiting for the next read.
+    ref.listenManual(
+      requestsProvider.select((state) => state.revision),
+      (_, _) => _scheduleMitmRefresh(),
+    );
+  }
+
+  void _scheduleMitmRefresh() {
+    if (_snapshot == null) {
+      return;
+    }
+    _mitmRefresh ??= Timer(renderThrottleDuration, () {
+      _mitmRefresh = null;
+      if (!mounted) return;
+      updateWhenRouteSettled(() => _showSnapshot());
+    });
   }
 
   @override
@@ -455,7 +477,19 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     if (trackerInfos == null) {
       return;
     }
-    widget.listController.setTrackerInfos(trackerInfos);
+    _snapshot = trackerInfos;
+    ref.read(requestsProvider.notifier).retainMitmStatuses([
+      for (final info in trackerInfos) info.id,
+    ]);
+    _showSnapshot();
+  }
+
+  void _showSnapshot() {
+    final snapshot = _snapshot;
+    if (snapshot == null) {
+      return;
+    }
+    widget.listController.setTrackerInfos(_mitmOverlay.apply(snapshot, ref));
     widget.filters.offer(widget.listController.value.trackerInfos);
   }
 
@@ -492,6 +526,7 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
 
   @override
   void dispose() {
+    _mitmRefresh?.cancel();
     if (widget.scrollController == null) {
       _scrollController.dispose();
     }

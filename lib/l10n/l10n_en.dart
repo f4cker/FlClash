@@ -3307,15 +3307,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get httpsDecryption => 'HTTPS decryption';
 
   @override
-  String get httpCapture => 'HTTP capture';
+  String get httpCapture => 'Record request content';
 
   @override
   String get httpCaptureDesc =>
-      'Records requests to the hosts listed under Hostname, to view in connection details. Records stay in memory only.';
+      'Records the content of requests that match decryption once this is on, including hosts from enabled modules. Content stays in memory only.';
 
   @override
   String get httpCaptureNoHosts =>
-      'No host is listed, so nothing is recorded. Add hosts under Hostname on the MITM page, or from the details of a connection.';
+      'No host is set to be decrypted, so nothing is decrypted or recorded. Add hosts under Hostname on the MITM page, enable a module that lists hosts, or add one from the details of a connection.';
 
   @override
   String get httpCaptureLimit => 'Maximum records';
@@ -3330,13 +3330,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Requests made before capture was on, or since cleared, are not listed.';
+      'Requests made before Record request content was on, or since cleared, are not listed.';
 
   @override
   String get httpRequestCleared => 'This request is no longer kept';
 
   @override
-  String get httpCaptureOff => 'Capture is off';
+  String get httpCaptureOff => 'Record request content is off';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      'This request was decrypted, but its content was not recorded. With “Record request content” on, only matching requests made after that are recorded.';
+
+  @override
+  String get httpRequestsNone => 'No records to show';
+
+  @override
+  String get httpCaptureOpenSettings => 'Go to Settings';
+
+  @override
+  String get mitmBodyEmpty => 'No body';
 
   @override
   String get inProgress => 'In progress';
@@ -8359,7 +8372,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Without root, only apps that trust user certificates, mostly browsers, can be decrypted. With root, every app can.';
 
   @override
-  String get httpRequestsReadFailed => 'Couldn\'t read the requests';
+  String get httpRequestsReadFailed => 'Couldn\'t read the request records';
 
   @override
   String get requestBodyReadFailed => 'Couldn\'t read the request body';
