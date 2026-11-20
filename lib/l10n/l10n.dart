@@ -6846,12 +6846,6 @@ abstract class AppLocalizations {
   /// **'This device'**
   String get tsCurrentDevice;
 
-  /// No description provided for @tsNodeOf.
-  ///
-  /// In en, this message translates to:
-  /// **'Node {name}'**
-  String tsNodeOf(Object name);
-
   /// No description provided for @tsStatusOf.
   ///
   /// In en, this message translates to:
@@ -10565,6 +10559,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show all rules'**
   String get rulesShowAll;
+
+  /// No description provided for @rulesLocateTailscale.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules for this device'**
+  String get rulesLocateTailscale;
+
+  /// No description provided for @rulesLocateFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 related rule found} other{{count} related rules found}}'**
+  String rulesLocateFound(int count);
+
+  /// No description provided for @rulesLocateNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching rules found'**
+  String get rulesLocateNotFound;
+
+  /// No description provided for @rulesLocateMaybeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The current configuration may have changed.'**
+  String get rulesLocateMaybeChanged;
+
+  /// No description provided for @rulesLocateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t read rules'**
+  String get rulesLocateFailed;
+
+  /// No description provided for @rulesLocateLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading rules…'**
+  String get rulesLocateLoading;
+
+  /// No description provided for @rulesLocateShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all'**
+  String get rulesLocateShowAll;
+
+  /// No description provided for @rulesLocateTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Related rule'**
+  String get rulesLocateTag;
 
   /// No description provided for @ruleHitTag.
   ///

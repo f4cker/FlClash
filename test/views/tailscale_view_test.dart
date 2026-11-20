@@ -42,6 +42,7 @@ import 'package:prism_ui/prism_ui.dart'
         PressSurface,
         PopupMenuCard,
         SearchField,
+        showInSheet,
         Switch,
         TextButton,
         TonalButton,
@@ -442,6 +443,44 @@ void main() {
       ).thenAnswer((_) async => routes ?? const TailscaleRoutes(profileId: 42));
     }
 
+    /// The account sheet the rules card used to open; the card now
+    /// locates the rows on the rules page, so the sheet opens directly.
+    Future<void> openRulesSheet(WidgetTester tester) async {
+      const labels = {'m1': 'pat@example.test', 'm2': 'pat@work.test'};
+      unawaited(
+        showInSheet<void>(
+          tester.element(find.byType(TailscaleView)),
+          builder: (_) => TailscaleRulesView(
+            accounts: [
+              for (final MapEntry(:key, :value) in labels.entries)
+                (id: key, label: value, attached: true),
+            ],
+            labelOf: (owner) => labels[owner.id] ?? owner.id,
+            onAssign: (_) {},
+          ),
+        ),
+      );
+      await settle(tester);
+    }
+
+    testWidgets('前往规则 locates the managed rows on the rules page', (
+      tester,
+    ) async {
+      await seed(records);
+      serveAccounts(routes: tsConflictRoutes());
+      await pumpPanel(tester);
+      await tester.tap(find.text('前往规则'));
+      await settle(tester);
+
+      expect(
+        container.read(rulesLocateRequestProvider)?.source,
+        RulesLocateSource.tailscaleManaged,
+      );
+      expect(container.read(currentPageLabelProvider), PageLabel.rules);
+      expect(find.byType(TailscaleRulesView), findsNothing);
+      await teardownView(tester);
+    });
+
     testWidgets('the switcher lists every account and the add row', (
       tester,
     ) async {
@@ -585,8 +624,7 @@ void main() {
       );
       await pumpPanel(tester);
 
-      await tester.tap(find.text('前往规则'));
-      await settle(tester);
+      await openRulesSheet(tester);
 
       expect(find.text('pat@example.test'), findsWidgets);
       expect(find.text('网络域名：work-net.test.ts.net'), findsOneWidget);
@@ -619,8 +657,7 @@ void main() {
       await seed(records);
       serveAccounts(routes: tsConflictRoutes());
       await pumpPanel(tester);
-      await tester.tap(find.text('前往规则'));
-      await settle(tester);
+      await openRulesSheet(tester);
 
       expect(find.text('面板添加'), findsNothing);
       expect(find.text('已接入当前配置'), findsWidgets);
@@ -698,8 +735,7 @@ void main() {
       expect(find.textContaining('个设备地址'), findsNothing);
       expect(find.text('域名和地址信息待确认'), findsOneWidget);
       expect(find.byTooltip('规则说明'), findsOneWidget);
-      await tester.tap(find.text('前往规则'));
-      await settle(tester);
+      await openRulesSheet(tester);
       final sheet = find.byType(TailscaleRulesView);
       expect(sheet, findsOneWidget);
       Finder inSheet(String text) =>
@@ -1198,6 +1234,30 @@ void main() {
       expect(find.text('当前显示 4 台设备'), findsNothing);
       expect(find.textContaining('显示 4 / 4'), findsNothing);
       expect(find.text('显示当前节点可见的设备，不代表管理后台中的全部设备'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('the 当前设备 header names no node', (tester) async {
+      serve([tsConnectedNode], tsConnectedStatus());
+      await pumpPanel(tester);
+
+      final header = find.ancestor(
+        of: find.text('当前设备'),
+        matching: find.byType(DashboardCardHeader),
+      );
+      expect(header, findsOneWidget);
+      expect(
+        find.descendant(of: header, matching: find.textContaining('节点')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: header, matching: find.textContaining('·')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: header, matching: find.byType(DashboardChip)),
+        findsOneWidget,
+      );
       await teardownView(tester);
     });
 

@@ -1227,7 +1227,6 @@
   "fallbackFilterIpcidrDesc": "When Nameserver returns an IP in these ranges, the Fallback answer is used.",
   "fallbackFilterDomainDesc": "These domains are resolved by Fallback directly.",
   "tsCurrentDevice": "This device",
-  "tsNodeOf": "Node {name}",
   "tsStatusOf": "Status: {label}",
   "tsChooseNode": "Choose node",
   "tsRefresh": "Refresh",
@@ -2105,6 +2104,21 @@
   },
   "rulesContaining": "Matching rules {count}",
   "rulesShowAll": "Show all rules",
+  "rulesLocateTailscale": "Rules for this device",
+  "rulesLocateFound": "{count, plural, =1{1 related rule found} other{{count} related rules found}}",
+  "@rulesLocateFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rulesLocateNotFound": "No matching rules found",
+  "rulesLocateMaybeChanged": "The current configuration may have changed.",
+  "rulesLocateFailed": "Couldn’t read rules",
+  "rulesLocateLoading": "Reading rules…",
+  "rulesLocateShowAll": "Show all",
+  "rulesLocateTag": "Related rule",
   "ruleHitTag": "Matched",
   "ruleShadowedBy": "Rule #{index} matches first",
   "rulePassTag": "PASS, skipped",

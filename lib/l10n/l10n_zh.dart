@@ -3655,11 +3655,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsCurrentDevice => '当前设备';
 
   @override
-  String tsNodeOf(Object name) {
-    return '节点 $name';
-  }
-
-  @override
   String tsStatusOf(Object label) {
     return '状态：$label';
   }
@@ -5743,6 +5738,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rulesShowAll => '显示全部规则';
+
+  @override
+  String get rulesLocateTailscale => '当前设备的规则';
+
+  @override
+  String rulesLocateFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已找到 $count 条关联规则',
+      one: '已找到 1 条关联规则',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rulesLocateNotFound => '未找到对应规则';
+
+  @override
+  String get rulesLocateMaybeChanged => '当前配置可能已变化。';
+
+  @override
+  String get rulesLocateFailed => '无法读取规则';
+
+  @override
+  String get rulesLocateLoading => '正在读取规则…';
+
+  @override
+  String get rulesLocateShowAll => '显示全部';
+
+  @override
+  String get rulesLocateTag => '关联规则';
 
   @override
   String get ruleHitTag => '命中';
