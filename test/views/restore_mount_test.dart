@@ -869,15 +869,59 @@ void main() {
       });
     }
 
-    testWidgets('the acknowledgement names mount relations, and an override '
+    // Only a conflict, replaced by the backup: nothing removed.
+    RestoreMountPlan replaceOnlyPlan() => planRestoreMounts(
+      isOverride: false,
+      localTargets: {
+        10: const MountTargetState(targetId: 10, sourceIds: [11], version: 1),
+      },
+      localProfiles: [_file(10, '晨光配置'), _sub(11, '海岸订阅'), _sub(12, '山岚订阅')],
+      backupProfiles: [_file(10, '晨光配置'), _sub(12, '山岚订阅')],
+      backupTargets: {
+        10: const MountTargetState(targetId: 10, sourceIds: [12], version: 2),
+      },
+    );
+
+    test('the acknowledgement names only the non-zero parts', () {
+      final zh = lookupAppLocalizations(const Locale('zh'));
+      final removalsOnly = _overridePlan();
+      final both = _mergePlan();
+      final replaceOnly = replaceOnlyPlan();
+      expect(
+        (removalsOnly.removalCount, removalsOnly.replacementCount),
+        (2, 0),
+      );
+      expect(both.removalCount, greaterThan(0));
+      expect(both.replacementCount, greaterThan(0));
+      expect((replaceOnly.removalCount, replaceOnly.replacementCount), (0, 1));
+      expect(
+        restoreAcknowledgeText(removalsOnly, zh),
+        '我已了解上列 2 条挂载关系将被移除，并确认继续。',
+      );
+      expect(restoreAcknowledgeText(replaceOnly, zh), '我已了解上列 1 项将被替换，并确认继续。');
+      expect(
+        restoreAcknowledgeText(both, zh),
+        '我已了解上列 ${both.removalCount} 条挂载关系将被移除、'
+        '${both.replacementCount} 项将被替换，并确认继续。',
+      );
+      expect(
+        () => restoreAcknowledgeText(
+          const RestoreMountPlan(isOverride: true, mountsCarried: true),
+          zh,
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    testWidgets('the sheet shows that acknowledgement, and an override '
         'without mount losses has no checkbox', (tester) async {
       await host(
         tester,
-        () => RestoreMountConfirmSheet(plan: _overridePlan()),
+        () => RestoreMountConfirmSheet(plan: replaceOnlyPlan()),
         locale: const Locale('zh'),
         size: const Size(900, 1400),
       );
-      expect(find.text('我已了解上列挂载关系的 2 条移除、0 项替换，并确认执行这些更改。'), findsOne);
+      expect(find.text('我已了解上列 1 项将被替换，并确认继续。'), findsOne);
       await host(
         tester,
         () => const RestoreMountConfirmSheet(

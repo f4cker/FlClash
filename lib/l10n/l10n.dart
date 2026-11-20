@@ -3885,8 +3885,20 @@ abstract class AppLocalizations {
   /// No description provided for @restoreMountAcknowledge.
   ///
   /// In en, this message translates to:
-  /// **'I understand the {removals} removals and {replacements} replacements of mount relations listed above, and want to make these changes.'**
+  /// **'I understand that the {removals} mount relations listed above will be removed and {replacements} items replaced, and want to continue.'**
   String restoreMountAcknowledge(Object removals, Object replacements);
+
+  /// No description provided for @restoreMountAcknowledgeRemovals.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand that the {removals} mount relations listed above will be removed, and want to continue.'**
+  String restoreMountAcknowledgeRemovals(Object removals);
+
+  /// No description provided for @restoreMountAcknowledgeReplacements.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand that the {replacements} items listed above will be replaced, and want to continue.'**
+  String restoreMountAcknowledgeReplacements(Object replacements);
 
   /// No description provided for @restoreCancelWritesNothing.
   ///
@@ -4167,8 +4179,14 @@ abstract class AppLocalizations {
   /// No description provided for @restoreRecoveryMitmOffFailed.
   ///
   /// In en, this message translates to:
-  /// **'Which MITM modules the last restore involved can\'t be determined, and turning the MITM modules off failed. All MITM modules stay paused while the app runs, and turning them off is tried again at the next launch.'**
+  /// **'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off. All MITM modules stay paused while the app runs; turning them off is tried again at the next launch.'**
   String get restoreRecoveryMitmOffFailed;
+
+  /// No description provided for @restoreRecoveryMitmOffFailedUnheld.
+  ///
+  /// In en, this message translates to:
+  /// **'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off; some may still be running. Check each module\'s switch on the MITM modules page.'**
+  String get restoreRecoveryMitmOffFailedUnheld;
 
   /// No description provided for @restoreContinue.
   ///

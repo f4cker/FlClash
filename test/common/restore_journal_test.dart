@@ -7,6 +7,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -1436,6 +1437,35 @@ void main() {
       expect(await states(), {41: (false, false), 50: (true, true)});
     });
 
+    test('when the retry cannot be confirmed kept, it never says all are '
+        'paused or that the next launch tries again', () async {
+      await oldCrash(_Crash.afterCommit);
+      final [dir] = journals();
+      final recovery =
+          RestoreRecovery(
+              db: () => database,
+              homeDirPath: () async => home.path,
+              store: () => preferences,
+            )
+            ..onMitmOff = (committed) async {
+              if (!committed) {
+                dir.deleteSync(recursive: true);
+                throw StateError('disk');
+              }
+            };
+      await recovery.run();
+      final report = recovery.takeReports().single;
+
+      expect(report.mitmOffFailed, isTrue);
+      expect(report.mitmOffHeld, isFalse);
+      final en = currentAppLocalizations;
+      final message = restoreRecoveryMessage(report, en);
+      expect(message, contains(en.restoreRecoveryMitmOffFailedUnheld));
+      expect(message, isNot(contains(en.restoreRecoveryMitmOffFailed)));
+      expect(message, isNot(contains(en.restoreRecoveryMitmAllOff)));
+      expect(await states(), {41: (true, true), 50: (true, true)});
+    });
+
     for (final (name, trigger) in [
       (
         'the write fails',
@@ -1463,6 +1493,7 @@ void main() {
 
         expect(report.mitmAllOff, isFalse);
         expect(report.mitmOffFailed, isTrue);
+        expect(report.mitmOffHeld, isTrue, reason: 'hold and retry confirmed');
         expect(
           report.outcome,
           isNot(RestoreRecoveryOutcome.completed),
@@ -1471,7 +1502,18 @@ void main() {
         final en = currentAppLocalizations;
         final message = restoreRecoveryMessage(report, en);
         expect(message, contains(en.restoreRecoveryMitmOffFailed));
+        expect(message, isNot(contains(en.restoreRecoveryMitmOffFailedUnheld)));
         expect(message, isNot(contains(en.restoreRecoveryMitmAllOff)));
+        expect(
+          restoreRecoveryMessage(
+            report,
+            lookupAppLocalizations(const Locale('zh')),
+          ).split('\n'),
+          contains(
+            '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，'
+            '所有解密模块保持暂停；下次启动时会再次尝试关闭。',
+          ),
+        );
         for (final id in [41, 50, 999]) {
           expect(recovery.mitmHold.value.holds(id), isTrue, reason: '$id');
         }

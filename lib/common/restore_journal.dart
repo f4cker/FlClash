@@ -605,9 +605,13 @@ class RestoreRecoveryReport {
   /// could not be told.
   final bool mitmAllOff;
 
-  /// Turning every module off was needed but failed: all stay held for
-  /// this run, and the next launch tries again.
+  /// Turning every module off was needed but failed.
   final bool mitmOffFailed;
+
+  /// With [mitmOffFailed]: every module was confirmed held for this run,
+  /// and the journal (and its marker, if it had one) confirmed kept for the
+  /// next launch to try again.
+  final bool mitmOffHeld;
 
   const RestoreRecoveryReport(
     this.outcome, {
@@ -618,11 +622,15 @@ class RestoreRecoveryReport {
     this.followUp = RestoreFollowUp.none,
     this.mitmAllOff = false,
     this.mitmOffFailed = false,
+    this.mitmOffHeld = false,
   });
 
   /// With every module turned off the restore is never called finished:
   /// what ran before needs consent again here.
-  RestoreRecoveryReport withMitmAllOff({bool failed = false}) {
+  RestoreRecoveryReport withMitmAllOff({
+    bool failed = false,
+    bool held = false,
+  }) {
     final finished =
         outcome == RestoreRecoveryOutcome.completed ||
         (outcome == RestoreRecoveryOutcome.incomplete && skippedSteps.isEmpty);
@@ -635,6 +643,7 @@ class RestoreRecoveryReport {
       followUp: followUp,
       mitmAllOff: !failed,
       mitmOffFailed: failed,
+      mitmOffHeld: failed && held,
     );
   }
 
@@ -643,7 +652,7 @@ class RestoreRecoveryReport {
       'RestoreRecoveryReport($outcome, kept: $keptFiles, '
       'skipped: $skippedSteps, torn: $tornFiles, mounts: $pendingMounts, '
       'followUp: $followUp, mitmAllOff: $mitmAllOff, '
-      'mitmOffFailed: $mitmOffFailed)';
+      'mitmOffFailed: $mitmOffFailed, held: $mitmOffHeld)';
 }
 
 /// The restored mount targets among [targetIds] whose record is still
@@ -765,6 +774,34 @@ class RestoreRecovery {
   /// Old-format journals whose modules could not be turned off.
   final _mitmOffFailed = <int>{};
 
+  /// Of [_mitmOffFailed]: whether the journal had a commit marker then.
+  final _mitmOffMarked = <int, bool>{};
+
+  /// Of [_mitmOffFailed]: those confirmed held and kept for a retry.
+  final _mitmOffHeld = <int>{};
+
+  /// Whether every module is held for [id] right now, and its journal is
+  /// still there in the old format, with its marker if it had one.
+  Future<bool> _confirmOffRetry(int id, RestoreJournal journal) async {
+    try {
+      if (!_mitmHolds.containsKey(id) ||
+          _mitmHolds[id] != null ||
+          !mitmHold.value.all) {
+        return false;
+      }
+      final file = File(join(journal.dirPath, _journalFileName));
+      if (!await file.exists()) return false;
+      final map = json.decode(await file.readAsString()) as Map;
+      if (map['id'] != id || map.containsKey('mitmModules')) return false;
+      if (_mitmOffMarked[id] ?? false) {
+        if (await _db().restoreCommit(id) == null) return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Called inside the transaction that turns every module off (false),
   /// and once it committed (true); a test throws here to crash.
   @visibleForTesting
@@ -772,7 +809,7 @@ class RestoreRecovery {
 
   void _report(int id, RestoreRecoveryReport report) => reports.add(
     _mitmOffFailed.contains(id)
-        ? report.withMitmAllOff(failed: true)
+        ? report.withMitmAllOff(failed: true, held: _mitmOffHeld.contains(id))
         : _mitmAllOff.contains(id)
         ? report.withMitmAllOff()
         : report,
@@ -833,7 +870,13 @@ class RestoreRecovery {
           'restore recovery $id failed: $error\n$stack',
           logLevel: LogLevel.error,
         );
-        _report(id, await _failure(id, journal));
+        final report = await _failure(id, journal);
+        if (_mitmOffFailed.contains(id) &&
+            journal != null &&
+            await _confirmOffRetry(id, journal)) {
+          _mitmOffHeld.add(id);
+        }
+        _report(id, report);
       }
     }
   }
@@ -931,6 +974,7 @@ class RestoreRecovery {
         // next launch tries again.
         holdMitm(id, null);
         _mitmOffFailed.add(id);
+        _mitmOffMarked[id] = committed != null;
         rethrow;
       }
       _mitmAllOff.add(id);
@@ -1159,7 +1203,10 @@ class RestoreRecovery {
       );
       reports.add(
         _mitmOffFailed.isNotEmpty
-            ? report.withMitmAllOff(failed: true)
+            ? report.withMitmAllOff(
+                failed: true,
+                held: _mitmOffHeld.containsAll(_mitmOffFailed),
+              )
             : _mitmAllOff.isNotEmpty
             ? report.withMitmAllOff()
             : report,
@@ -1231,7 +1278,10 @@ String restoreRecoveryMessage(
   return [
     ...lines,
     if (report.mitmAllOff) l10n.restoreRecoveryMitmAllOff,
-    if (report.mitmOffFailed) l10n.restoreRecoveryMitmOffFailed,
+    if (report.mitmOffFailed)
+      report.mitmOffHeld
+          ? l10n.restoreRecoveryMitmOffFailed
+          : l10n.restoreRecoveryMitmOffFailedUnheld,
     if (report.pendingMounts.isNotEmpty)
       l10n.restorePendingMounts(report.pendingMounts.join(separator)),
     if (restoreFollowUpText(report.followUp, l10n) case final text

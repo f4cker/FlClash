@@ -2157,7 +2157,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'Я понимаю удаления ($removals) и замены ($replacements) связей монтирования, указанные выше, и хочу внести эти изменения.';
+    return 'Я понимаю, что указанные выше связи монтирования ($removals) будут удалены, а элементы ($replacements) заменены, и хочу продолжить.';
+  }
+
+  @override
+  String restoreMountAcknowledgeRemovals(Object removals) {
+    return 'Я понимаю, что указанные выше связи монтирования ($removals) будут удалены, и хочу продолжить.';
+  }
+
+  @override
+  String restoreMountAcknowledgeReplacements(Object replacements) {
+    return 'Я понимаю, что указанные выше элементы ($replacements) будут заменены, и хочу продолжить.';
   }
 
   @override
@@ -2344,7 +2354,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailed =>
-      'Не удаётся определить, каких модулей MITM касалось последнее восстановление, и выключить модули MITM не удалось. Пока приложение работает, все модули MITM приостановлены; при следующем запуске будет новая попытка их выключить.';
+      'Не удаётся определить, каких модулей MITM касалось последнее восстановление, и выключить все модули не удалось. Пока приложение работает, все модули MITM приостановлены; при следующем запуске будет новая попытка их выключить.';
+
+  @override
+  String get restoreRecoveryMitmOffFailedUnheld =>
+      'Не удаётся определить, каких модулей MITM касалось последнее восстановление, и выключить все модули не удалось; некоторые могут ещё работать. Проверьте переключатель каждого модуля на странице модулей MITM.';
 
   @override
   String get restoreContinue => 'Продолжить';

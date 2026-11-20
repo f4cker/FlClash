@@ -2033,7 +2033,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return '我已了解上列挂载关系的 $removals 条移除、$replacements 项替换，并确认执行这些更改。';
+    return '我已了解上列 $removals 条挂载关系将被移除、$replacements 项将被替换，并确认继续。';
+  }
+
+  @override
+  String restoreMountAcknowledgeRemovals(Object removals) {
+    return '我已了解上列 $removals 条挂载关系将被移除，并确认继续。';
+  }
+
+  @override
+  String restoreMountAcknowledgeReplacements(Object replacements) {
+    return '我已了解上列 $replacements 项将被替换，并确认继续。';
   }
 
   @override
@@ -2199,7 +2209,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailed =>
-      '无法确定上次恢复涉及哪些解密模块，且未能关闭解密模块。本次运行期间全部解密模块保持暂停，下次启动时会再次尝试关闭。';
+      '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，所有解密模块保持暂停；下次启动时会再次尝试关闭。';
+
+  @override
+  String get restoreRecoveryMitmOffFailedUnheld =>
+      '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块，部分模块可能仍在运行。请在解密模块页面检查各模块的开关。';
 
   @override
   String get restoreContinue => '继续完成';

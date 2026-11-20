@@ -2159,7 +2159,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'I understand the $removals removals and $replacements replacements of mount relations listed above, and want to make these changes.';
+    return 'I understand that the $removals mount relations listed above will be removed and $replacements items replaced, and want to continue.';
+  }
+
+  @override
+  String restoreMountAcknowledgeRemovals(Object removals) {
+    return 'I understand that the $removals mount relations listed above will be removed, and want to continue.';
+  }
+
+  @override
+  String restoreMountAcknowledgeReplacements(Object replacements) {
+    return 'I understand that the $replacements items listed above will be replaced, and want to continue.';
   }
 
   @override
@@ -2345,7 +2355,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailed =>
-      'Which MITM modules the last restore involved can\'t be determined, and turning the MITM modules off failed. All MITM modules stay paused while the app runs, and turning them off is tried again at the next launch.';
+      'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off. All MITM modules stay paused while the app runs; turning them off is tried again at the next launch.';
+
+  @override
+  String get restoreRecoveryMitmOffFailedUnheld =>
+      'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off; some may still be running. Check each module\'s switch on the MITM modules page.';
 
   @override
   String get restoreContinue => 'Continue';

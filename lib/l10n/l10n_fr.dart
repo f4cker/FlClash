@@ -2180,7 +2180,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'Je comprends les $removals suppressions et $replacements remplacements de relations de montage listés ci-dessus et je veux effectuer ces changements.';
+    return 'Je comprends que les $removals relations de montage listées ci-dessus seront supprimées et $replacements éléments remplacés, et je veux continuer.';
+  }
+
+  @override
+  String restoreMountAcknowledgeRemovals(Object removals) {
+    return 'Je comprends que les $removals relations de montage listées ci-dessus seront supprimées, et je veux continuer.';
+  }
+
+  @override
+  String restoreMountAcknowledgeReplacements(Object replacements) {
+    return 'Je comprends que les $replacements éléments listés ci-dessus seront remplacés, et je veux continuer.';
   }
 
   @override
@@ -2368,7 +2378,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailed =>
-      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et leur désactivation a échoué. Tous les modules MITM restent en pause tant que l’app est ouverte ; la désactivation sera retentée au prochain démarrage.';
+      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et tous n’ont pas pu être désactivés. Tous les modules MITM restent en pause tant que l’app est ouverte ; la désactivation sera retentée au prochain démarrage.';
+
+  @override
+  String get restoreRecoveryMitmOffFailedUnheld =>
+      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et tous n’ont pas pu être désactivés ; certains peuvent encore s’exécuter. Vérifiez l’interrupteur de chaque module sur la page des modules MITM.';
 
   @override
   String get restoreContinue => 'Continuer';

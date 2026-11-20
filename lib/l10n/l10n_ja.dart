@@ -2062,7 +2062,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return '上記のマウント関係の削除 $removals 件と置き換え $replacements 件を理解したうえで、これらの変更を行います。';
+    return '上記の $removals 件のマウント関係が削除され、$replacements 件が置き換えられることを理解したうえで続行します。';
+  }
+
+  @override
+  String restoreMountAcknowledgeRemovals(Object removals) {
+    return '上記の $removals 件のマウント関係が削除されることを理解したうえで続行します。';
+  }
+
+  @override
+  String restoreMountAcknowledgeReplacements(Object replacements) {
+    return '上記の $replacements 件が置き換えられることを理解したうえで続行します。';
   }
 
   @override
@@ -2236,7 +2246,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailed =>
-      '前回の復元がどの復号モジュールに関係したか判別できず、復号モジュールをオフにできませんでした。アプリの実行中はすべての復号モジュールを一時停止し、次回の起動時にもう一度オフにします。';
+      '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。アプリの実行中はすべての復号モジュールを一時停止し、次回の起動時にもう一度オフにします。';
+
+  @override
+  String get restoreRecoveryMitmOffFailedUnheld =>
+      '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。一部のモジュールが実行中の可能性があります。復号モジュールの画面で各モジュールのスイッチを確認してください。';
 
   @override
   String get restoreContinue => '続行';

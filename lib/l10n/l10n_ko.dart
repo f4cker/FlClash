@@ -2109,7 +2109,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return '위에 표시된 마운트 관계의 삭제 $removals개와 교체 $replacements개를 이해했으며, 이 변경을 진행합니다.';
+    return '위에 표시된 마운트 관계 $removals개가 삭제되고 $replacements개 항목이 교체된다는 것을 이해했으며 계속합니다.';
+  }
+
+  @override
+  String restoreMountAcknowledgeRemovals(Object removals) {
+    return '위에 표시된 마운트 관계 $removals개가 삭제된다는 것을 이해했으며 계속합니다.';
+  }
+
+  @override
+  String restoreMountAcknowledgeReplacements(Object replacements) {
+    return '위에 표시된 $replacements개 항목이 교체된다는 것을 이해했으며 계속합니다.';
   }
 
   @override
@@ -2284,7 +2294,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailed =>
-      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 복호화 모듈을 끄지 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되며, 다음 실행 시 다시 끄기를 시도합니다.';
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되며, 다음 실행 시 다시 끄기를 시도합니다.';
+
+  @override
+  String get restoreRecoveryMitmOffFailedUnheld =>
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 일부 모듈이 아직 실행 중일 수 있습니다. 복호화 모듈 페이지에서 각 모듈의 스위치를 확인하세요.';
 
   @override
   String get restoreContinue => '계속';

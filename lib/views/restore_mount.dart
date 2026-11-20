@@ -649,6 +649,21 @@ List<Widget> _groupSlivers(
   ];
 }
 
+/// The acknowledgement for [plan]'s losses, naming only the non-zero
+/// parts. Shown only when it has losses.
+String restoreAcknowledgeText(RestoreMountPlan plan, AppLocalizations l10n) {
+  final removals = plan.removalCount;
+  final replacements = plan.replacementCount;
+  assert(removals > 0 || replacements > 0, 'no losses to acknowledge');
+  if (replacements == 0) {
+    return l10n.restoreMountAcknowledgeRemovals('$removals');
+  }
+  if (removals == 0) {
+    return l10n.restoreMountAcknowledgeReplacements('$replacements');
+  }
+  return l10n.restoreMountAcknowledge('$removals', '$replacements');
+}
+
 /// Asks before a restore changes mounts. Pops true only once the user
 /// confirmed; any other way out writes nothing.
 class RestoreMountConfirmSheet extends StatefulWidget {
@@ -758,14 +773,7 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.restoreMountAcknowledge(
-                        '${plan.removalCount}',
-                        '${plan.replacementCount}',
-                      ),
-                    ),
-                  ),
+                  Expanded(child: Text(restoreAcknowledgeText(plan, l10n))),
                 ],
               ),
             ),
