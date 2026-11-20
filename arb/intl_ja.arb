@@ -3668,5 +3668,8 @@
   "switchToProxyExit": "プロキシ出口に切り替え",
   "localExit": "ローカル出口",
   "statusQuerying": "照会しています",
-  "queryFailedShowingLast": "照会に失敗しました。前回の結果を表示中。タップで再試行"
+  "queryFailedShowingLast": "照会に失敗しました。前回の結果を表示中。タップで再試行",
+  "pendingQuery": "未照会",
+  "pendingQueryAction": "未照会。タップで照会",
+  "queryFailedTapToRetry": "照会に失敗しました。タップで再試行"
 }

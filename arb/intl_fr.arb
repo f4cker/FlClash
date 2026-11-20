@@ -3668,5 +3668,8 @@
   "switchToProxyExit": "Passer à la sortie du proxy",
   "localExit": "Sortie locale",
   "statusQuerying": "Recherche en cours",
-  "queryFailedShowingLast": "Échec de la recherche, dernier résultat affiché ; touchez pour réessayer"
+  "queryFailedShowingLast": "Échec de la recherche, dernier résultat affiché ; touchez pour réessayer",
+  "pendingQuery": "Non recherché",
+  "pendingQueryAction": "Non recherché ; touchez pour rechercher",
+  "queryFailedTapToRetry": "Échec de la recherche ; touchez pour réessayer"
 }

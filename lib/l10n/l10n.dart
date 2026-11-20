@@ -14631,6 +14631,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lookup failed, showing the last result; tap to retry'**
   String get queryFailedShowingLast;
+
+  /// No description provided for @pendingQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Not looked up'**
+  String get pendingQuery;
+
+  /// No description provided for @pendingQueryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Not looked up; tap to look up'**
+  String get pendingQueryAction;
+
+  /// No description provided for @queryFailedTapToRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Lookup failed; tap to retry'**
+  String get queryFailedTapToRetry;
 }
 
 class _AppLocalizationsDelegate

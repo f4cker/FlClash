@@ -8928,4 +8928,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get queryFailedShowingLast =>
       'Error de consulta; se muestra el último resultado. Toca para reintentar';
+
+  @override
+  String get pendingQuery => 'Sin consultar';
+
+  @override
+  String get pendingQueryAction => 'Sin consultar; toca para consultar';
+
+  @override
+  String get queryFailedTapToRetry => 'Error de consulta; toca para reintentar';
 }

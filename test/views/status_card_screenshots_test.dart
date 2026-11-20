@@ -70,6 +70,9 @@ List<ByteData> _collectionFaces(Uint8List bytes) {
 const _exitIp = '204.136.11.10';
 const _localIp = '58.152.33.18';
 
+/// The proxy exit after another node is picked.
+const _nextIp = '185.220.101.4';
+
 const _exitReport = IpxReport(
   ip: _exitIp,
   score: 62,
@@ -135,6 +138,15 @@ const _stamp = RouteStamp(
   proxied: true,
 );
 
+const _route = RouteState(
+  coreEpoch: 1,
+  routeVersion: 1,
+  hostEpoch: 1,
+  proxied: true,
+  synced: true,
+  live: true,
+);
+
 ProbeEntry<IpInfo> _fresh(String ip, String country) => ProbeEntry(
   phase: ProbePhase.fresh,
   value: IpInfo(ip: ip, countryCode: country),
@@ -196,8 +208,9 @@ void main() {
       ]),
       suspendProvider.overrideWithValue(false),
       if (running) runTimeProvider.overrideWith(_Running.new),
+      routeTrackerProvider.overrideWithBuild((_, _) => _route),
       outboundIpProbeProvider.overrideWith(() => ips),
-      for (final ip in [_exitIp, _localIp])
+      for (final ip in [_exitIp, _localIp, _nextIp])
         ipxLookupProvider(ip).overrideWith(_Ipx.new),
       ipQualityProvider.overrideWith((_, _) => Future.any(const [])),
     ];
@@ -279,6 +292,52 @@ void main() {
       await capture(tester, 'local-uncached-$tone');
     });
 
+    testWidgets('local-uncached-no-country-$tone', skip: skip != null, (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        entries: {
+          routedOutbound: _fresh(_exitIp, 'US'),
+          // The lookup found the address but no country for it.
+          directOutbound: _fresh(_localIp, ''),
+        },
+      );
+      await tester.tap(find.text(_exitIp));
+      await settle(tester);
+      await capture(tester, 'local-uncached-no-country-$tone');
+    });
+
+    testWidgets('pending-query-$tone', skip: skip != null, (tester) async {
+      final ips = await pump(tester, brightness: brightness, entries: both);
+      // Switched to the local exit, the proxy one moves to another node;
+      // back on it, its new address waits for the badge.
+      ProviderScope.containerOf(
+        tester.element(find.byType(CurrentOutboundCard)),
+      ).read(ipxLookupProvider(_localIp));
+      await tester.tap(find.text(_exitIp));
+      await settle(tester);
+      ips.settle(routedOutbound, _fresh(_nextIp, 'NL'));
+      await settle(tester);
+      await tester.tap(find.text(_localIp));
+      await settle(tester);
+      await capture(tester, 'pending-query-$tone');
+    });
+
+    testWidgets('pending-address-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        entries: {
+          // Failed with no lookup behind it: the route was lost, not asked.
+          routedOutbound: const ProbeEntry(phase: ProbePhase.failed),
+          directOutbound: _fresh(_localIp, 'HK'),
+        },
+      );
+      await capture(tester, 'pending-address-$tone');
+    });
+
     testWidgets('querying-$tone', skip: skip != null, (tester) async {
       await pump(
         tester,
@@ -326,7 +385,10 @@ void main() {
         tester,
         brightness: brightness,
         entries: {
-          routedOutbound: const ProbeEntry(phase: ProbePhase.failed),
+          routedOutbound: const ProbeEntry(
+            phase: ProbePhase.failed,
+            stamp: _stamp,
+          ),
           directOutbound: _fresh(_localIp, 'HK'),
         },
       );

@@ -8873,4 +8873,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get queryFailedShowingLast =>
       'Ошибка запроса, показан последний результат; нажмите, чтобы повторить';
+
+  @override
+  String get pendingQuery => 'Не запрошено';
+
+  @override
+  String get pendingQueryAction => 'Не запрошено; нажмите, чтобы запросить';
+
+  @override
+  String get queryFailedTapToRetry =>
+      'Ошибка запроса; нажмите, чтобы повторить';
 }

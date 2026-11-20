@@ -3727,5 +3727,8 @@
   "switchToProxyExit": "Switch to proxy exit",
   "localExit": "Local exit",
   "statusQuerying": "Looking up now",
-  "queryFailedShowingLast": "Lookup failed, showing the last result; tap to retry"
+  "queryFailedShowingLast": "Lookup failed, showing the last result; tap to retry",
+  "pendingQuery": "Not looked up",
+  "pendingQueryAction": "Not looked up; tap to look up",
+  "queryFailedTapToRetry": "Lookup failed; tap to retry"
 }

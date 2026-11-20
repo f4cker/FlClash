@@ -8929,4 +8929,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get queryFailedShowingLast =>
       'Échec de la recherche, dernier résultat affiché ; touchez pour réessayer';
+
+  @override
+  String get pendingQuery => 'Non recherché';
+
+  @override
+  String get pendingQueryAction => 'Non recherché ; touchez pour rechercher';
+
+  @override
+  String get queryFailedTapToRetry =>
+      'Échec de la recherche ; touchez pour réessayer';
 }

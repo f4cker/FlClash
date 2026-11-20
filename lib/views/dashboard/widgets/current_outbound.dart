@@ -44,6 +44,15 @@ bool _sameRoute(RouteStamp a, RouteStamp b) =>
     a.proxied == b.proxied &&
     a.routeVersion == b.routeVersion;
 
+/// A lookup that actually ran on the route in use and failed; a failure
+/// left from another route, or one no lookup stands behind, is no answer.
+bool _erred(ProbeEntry<IpInfo> entry, RouteState route) {
+  final stamp = entry.stamp;
+  return entry.phase == ProbePhase.failed &&
+      stamp != null &&
+      route.isFresh(stamp);
+}
+
 /// The address the card shows: the proxy's exit, or this device's own.
 enum StatusCardExit { proxy, local }
 
@@ -70,6 +79,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// The user switched to the local address.
   var _wantsLocal = false;
 
+  /// The user switched this session: from then on only the badge asks.
+  var _switched = false;
+
   /// A retry asked for and not yet under way.
   var _requested = false;
 
@@ -77,6 +89,11 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// sources about: the exit shown before any switch, and the address the
   /// country badge was tapped on. Anything else shows only what is cached.
   final _askable = <String>{};
+
+  /// What the IP quality sources said about an address, kept by the card so
+  /// that it holds no watcher a cached entry's expiry would refetch for.
+  final _qualities = <String, AsyncValue<IpQuality>>{};
+  final _qualityAsks = <String, ProviderSubscription<AsyncValue<IpQuality>>>{};
 
   @override
   void initState() {
@@ -94,8 +111,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         return;
       }
       if (next) {
-        // A new session opens on the proxy exit.
+        // A new session opens on the proxy exit, asked about unprompted.
         _wantsLocal = false;
+        _switched = false;
       } else {
         _kept.remove(routedOutbound);
       }
@@ -108,6 +126,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     _probe
       ..unwatch(routedOutbound)
       ..unwatch(directOutbound);
+    for (final ask in _qualityAsks.values) {
+      ask.close();
+    }
     super.dispose();
   }
 
@@ -126,39 +147,64 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   }
 
   /// The exit the card opens on may have its report asked for unprompted,
-  /// as long as no switch has put the other one on show.
+  /// until the user first switches this session.
   void _askDefault(RoutedProbeState<String, IpInfo> state) {
-    final isStart = ref.read(isStartProvider);
-    if (isStart &&
-        _wantsLocal &&
-        _infoOf(directOutbound, state.entryOf(directOutbound)) != null) {
+    if (_switched) {
       return;
     }
+    final isStart = ref.read(isStartProvider);
+    final route = ref.read(routeTrackerProvider);
     final target = isStart ? routedOutbound : directOutbound;
-    if (_infoOf(target, state.entryOf(target))?.ip case final ip?) {
+    if (_infoOf(target, state.entryOf(target), route)?.ip case final ip?) {
       _askable.add(ip);
     }
   }
 
   /// What [entry] shows: its value, the one it holds while its route is
   /// checked again, or after a failure the last one found on the same route.
-  IpInfo? _infoOf(String target, ProbeEntry<IpInfo> entry) {
+  IpInfo? _infoOf(String target, ProbeEntry<IpInfo> entry, RouteState route) {
     if (entry.displayValue case final info?) {
       return info;
     }
     final kept = _kept[target];
-    final stamp = entry.stamp;
-    if (entry.phase != ProbePhase.failed ||
+    if (!_erred(entry, route) ||
         kept == null ||
-        stamp == null ||
-        !_sameRoute(kept.stamp, stamp)) {
+        !_sameRoute(kept.stamp, entry.stamp!)) {
       return null;
     }
     return kept.info;
   }
 
+  /// Asks the IP quality sources about [ip] once, keeping the answer and
+  /// letting go of the entry as soon as it settles.
+  void _askQuality(String ip) {
+    if (!mounted || _qualityAsks.containsKey(ip)) {
+      return;
+    }
+    _qualityAsks[ip] = ref.listenManual(
+      ipQualityProvider(ip),
+      (_, next) => _onQuality(ip, next),
+      fireImmediately: true,
+    );
+    if (_qualities[ip] case final settled? when !settled.isLoading) {
+      _qualityAsks.remove(ip)?.close();
+    }
+  }
+
+  void _onQuality(String ip, AsyncValue<IpQuality> next) {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _qualities[ip] = next);
+    if (!next.isLoading) {
+      // Closed once listenManual has handed the subscription back.
+      scheduleMicrotask(() => _qualityAsks.remove(ip)?.close());
+    }
+  }
+
   void _switch(bool toLocal) {
     setState(() {
+      _switched = true;
       _wantsLocal = toLocal;
       // A switch shows what is at hand and asks for nothing.
       _askable.clear();
@@ -191,9 +237,10 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         ref.read(ipxLookupProvider(ip).notifier).retry();
       }
       // Only a fallback already asked for: reading one would start it.
-      if (ref.exists(ipQualityProvider(ip)) &&
-          ref.read(ipQualityProvider(ip)).hasError) {
+      if (_qualities[ip]?.hasError ?? false) {
+        _qualities.remove(ip);
         ref.invalidate(ipQualityProvider(ip));
+        _askQuality(ip);
       }
     }
     // The probe launches the lookup in a microtask of its own, queued
@@ -222,10 +269,11 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final localEntry = ref.watch(
       outboundIpProbeProvider.select((state) => state.entryOf(directOutbound)),
     );
+    final route = ref.watch(routeTrackerProvider);
     // While Flash is not running there is no proxy exit: the device's own
     // address is the one traffic leaves by.
-    final exitInfo = isStart ? _infoOf(routedOutbound, exitEntry) : null;
-    final localInfo = _infoOf(directOutbound, localEntry);
+    final exitInfo = isStart ? _infoOf(routedOutbound, exitEntry, route) : null;
+    final localInfo = _infoOf(directOutbound, localEntry, route);
     final shown = !isStart || (_wantsLocal && localInfo != null)
         ? StatusCardExit.local
         : StatusCardExit.proxy;
@@ -236,14 +284,15 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final other = local ? exitInfo : localInfo;
     final otherEntry = local ? exitEntry : localEntry;
     final busy = entry.isLoading || _requested;
-    final failed = entry.phase == ProbePhase.failed;
+    final failed = _erred(entry, route);
+    // A failure from another route, or with no lookup behind it, says
+    // nothing about this exit: it waits for a lookup.
+    final pending = info == null && entry.phase == ProbePhase.failed && !failed;
     // No live route (the Core is not connected, e.g. while the helper cannot
     // start it) and nothing out: no answer is coming, so the placeholders hold
     // still instead of pulsing, which would redraw the window every frame.
     final still =
-        info == null &&
-        entry.phase != ProbePhase.probing &&
-        !ref.watch(routeTrackerProvider.select((state) => state.live));
+        info == null && entry.phase != ProbePhase.probing && !route.live;
     final facts = info == null ? null : _factsOf(info);
     final metrics = _OutboundMetrics.of(density);
     final padding = metrics.padding.resolve(Directionality.of(context));
@@ -341,6 +390,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         marked: isStart && local,
                         failed: failed && info == null,
                         staleFailed: failed && info != null,
+                        pending: pending,
                         still: still,
                         busy: busy,
                         facts: facts,
@@ -368,7 +418,10 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         enabled: !still,
                         child: _Cells(
                           organization: facts?.organization,
-                          loading: info == null ? !failed : facts!.loading,
+                          hasAddress: info != null,
+                          loading: info == null
+                              ? !failed && !pending
+                              : facts!.loading,
                           active: isStart && !suspended,
                           gap: metrics.cellGap,
                         ),
@@ -406,9 +459,11 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final appLocalizations = context.appLocalizations;
     final askable = _askable.contains(ip);
     if (!askable && !ref.exists(ipxLookupProvider(ip))) {
+      // The country is the lookup's own answer for this very address.
       return _IpFacts(
         countryCode: info.countryCode.isNotEmpty ? info.countryCode : null,
         loading: false,
+        pending: true,
       );
     }
     final ipx = ref.watch(ipxLookupProvider(ip));
@@ -460,8 +515,22 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
       );
     }
     // No report: the IP quality sources stand in, as the detail sheet does,
-    // when they may be asked or already answered.
-    if (!askable && !ref.exists(ipQualityProvider(ip))) {
+    // when they may be asked or already answered. Their entry is read, not
+    // watched: a watcher would have its expiry refetch it unasked.
+    var fallback = _qualities[ip];
+    if (fallback == null && ref.exists(ipQualityProvider(ip))) {
+      final cached = ref.read(ipQualityProvider(ip));
+      if (!cached.isLoading) {
+        fallback = cached;
+      }
+    }
+    if (fallback == null && askable) {
+      fallback = const AsyncLoading();
+      if (!_qualityAsks.containsKey(ip)) {
+        scheduleMicrotask(() => _askQuality(ip));
+      }
+    }
+    if (fallback == null) {
       return _IpFacts(
         countryCode: country,
         organization: briefNetwork,
@@ -469,7 +538,6 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         reportFailed: !ipx.retrying,
       );
     }
-    final fallback = ref.watch(ipQualityProvider(ip));
     final quality = fallback.value;
     if (quality != null) {
       return _IpFacts(
@@ -509,7 +577,11 @@ class _IpFacts {
     this.organization,
     required this.loading,
     this.reportFailed = false,
+    this.pending = false,
   });
+
+  /// Nothing has been asked about this address yet.
+  final bool pending;
 
   final String? countryCode;
   final String? type;
@@ -615,6 +687,7 @@ class _ExitRow extends StatelessWidget {
     required this.marked,
     required this.failed,
     required this.staleFailed,
+    required this.pending,
     required this.still,
     required this.busy,
     required this.facts,
@@ -636,6 +709,9 @@ class _ExitRow extends StatelessWidget {
 
   /// The last lookup failed; what it found before stays.
   final bool staleFailed;
+
+  /// No lookup has answered for this exit on the route in use.
+  final bool pending;
 
   /// Placeholders do not pulse: nothing is on its way.
   final bool still;
@@ -676,6 +752,7 @@ class _ExitRow extends StatelessWidget {
             style: style,
             onSwitch: onSwitch,
             scoreLabel: facts?.scoreLabel,
+            pending: facts?.pending ?? false,
             padding: EdgeInsets.only(
               top: metrics.ipTop,
               bottom: metrics.ipBottom,
@@ -691,12 +768,18 @@ class _ExitRow extends StatelessWidget {
               height: lineHeight,
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: failed
+                child: failed || pending
                     ? Text(
-                        appLocalizations.serviceFailed,
+                        failed
+                            ? appLocalizations.queryFailed
+                            : appLocalizations.pendingQuery,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: style.copyWith(color: colorScheme.error),
+                        style: style.copyWith(
+                          color: failed
+                              ? colorScheme.error
+                              : colorScheme.onSurfaceVariant,
+                        ),
                       )
                     : TickerMode(
                         enabled: !still,
@@ -717,7 +800,14 @@ class _ExitRow extends StatelessWidget {
             box: badgeBox,
             active: active,
             checking: busy,
-            failed: staleFailed,
+            state: staleFailed
+                ? _BadgeState.stale
+                : failed
+                ? _BadgeState.failed
+                : pending || (facts?.pending ?? false)
+                ? _BadgeState.pending
+                : _BadgeState.known,
+            hasAddress: info != null,
             onRefresh: onRetry,
           ),
         ),
@@ -739,6 +829,8 @@ class _ExitRow extends StatelessWidget {
                     ),
                   ),
                 )
+              else if (pending)
+                SizedBox(height: chipHeight)
               else
                 TickerMode(
                   enabled: !still,
@@ -765,11 +857,15 @@ class _IpTarget extends ConsumerWidget {
     required this.style,
     required this.onSwitch,
     required this.scoreLabel,
+    required this.pending,
     required this.padding,
     required this.lineHeight,
   });
 
   final String ip;
+
+  /// Nothing has been asked about the address yet.
+  final bool pending;
   final StatusCardExit shown;
   final TextStyle style;
   final VoidCallback? onSwitch;
@@ -803,6 +899,7 @@ class _IpTarget extends ConsumerWidget {
         name,
         hidden ? appLocalizations.hideIp : ip,
         ?scoreLabel,
+        if (pending) appLocalizations.pendingQuery,
       ].join(appLocalizations.semanticsSeparator),
       hint: hint,
       onTap: onSwitch,
@@ -833,7 +930,10 @@ class _IpTarget extends ConsumerWidget {
     return Align(
       alignment: AlignmentDirectional.centerStart,
       widthFactor: 1,
-      child: hint == null ? target : Tooltip(message: hint, child: target),
+      // The hint is read out with the label; the tooltip is for the eye.
+      child: hint == null
+          ? target
+          : Tooltip(message: hint, excludeFromSemantics: true, child: target),
     );
   }
 }
@@ -891,6 +991,8 @@ class _IpChips extends StatelessWidget {
               DashboardChip(
                 label: facts?.reportFailed ?? false
                     ? appLocalizations.ipxNoResponse
+                    : facts?.pending ?? false
+                    ? appLocalizations.pendingQuery
                     : appLocalizations.ipTypeUnknown,
                 large: large,
               ),
@@ -903,6 +1005,20 @@ class _IpChips extends StatelessWidget {
 
 const _spinPeriod = Duration(milliseconds: 1500);
 
+/// What the badge knows of the shown exit.
+enum _BadgeState {
+  known,
+
+  /// Nothing has been asked about it on the route in use.
+  pending,
+
+  /// The lookup failed with nothing to show.
+  failed,
+
+  /// The lookup failed; the last result for this route stays shown.
+  stale,
+}
+
 /// The exit's country on a clover that looks the address up again when
 /// tapped and turns while it is being looked up.
 class _CountryBadge extends StatefulWidget {
@@ -912,7 +1028,8 @@ class _CountryBadge extends StatefulWidget {
     required this.box,
     required this.active,
     required this.checking,
-    required this.failed,
+    required this.state,
+    required this.hasAddress,
     required this.onRefresh,
   });
 
@@ -923,9 +1040,10 @@ class _CountryBadge extends StatefulWidget {
   final double box;
   final bool active;
   final bool checking;
+  final _BadgeState state;
 
-  /// The last lookup failed under an address still shown.
-  final bool failed;
+  /// An address is shown, so a missing country is unknown, not yet to come.
+  final bool hasAddress;
   final VoidCallback onRefresh;
 
   @override
@@ -952,6 +1070,19 @@ class _CountryBadgeState extends State<_CountryBadge>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.checking != widget.checking) {
       _spin();
+      // Only the lookup's own course is announced: its start, and a failure
+      // at its end.
+      final appLocalizations = context.appLocalizations;
+      final message = widget.checking
+          ? appLocalizations.statusQuerying
+          : switch (widget.state) {
+              _BadgeState.failed => appLocalizations.queryFailed,
+              _BadgeState.stale => appLocalizations.queryFailedShowingLast,
+              _BadgeState.known || _BadgeState.pending => null,
+            };
+      if (message != null) {
+        announceReadState(context, message);
+      }
     }
   }
 
@@ -983,10 +1114,15 @@ class _CountryBadgeState extends State<_CountryBadge>
     final enabled = !widget.checking;
     final size = widget.size;
     final code = widget.countryCode;
-    final stale = widget.failed && !widget.checking;
-    final name = stale
-        ? appLocalizations.queryFailedShowingLast
-        : appLocalizations.requery;
+    final stale = widget.state == _BadgeState.stale && !widget.checking;
+    final name = widget.checking
+        ? appLocalizations.requery
+        : switch (widget.state) {
+            _BadgeState.known => appLocalizations.requery,
+            _BadgeState.pending => appLocalizations.pendingQueryAction,
+            _BadgeState.failed => appLocalizations.queryFailedTapToRetry,
+            _BadgeState.stale => appLocalizations.queryFailedShowingLast,
+          };
     final separator = appLocalizations.semanticsSeparator;
     final color = Color.alphaBlend(
       foreground.withValues(alpha: enabled && _hovered ? 0.08 : 0),
@@ -999,10 +1135,12 @@ class _CountryBadgeState extends State<_CountryBadge>
       child: Semantics(
         button: true,
         enabled: enabled,
-        liveRegion: true,
         label: [
           name,
-          if (code != null && code.isNotEmpty) code.toUpperCase(),
+          if (code != null && code.isNotEmpty)
+            code.toUpperCase()
+          else if (widget.hasAddress)
+            appLocalizations.unknown,
           if (widget.checking) appLocalizations.statusQuerying,
         ].join(separator),
         onTap: enabled ? widget.onRefresh : null,
@@ -1108,12 +1246,16 @@ class _StaleMark extends StatelessWidget {
 class _Cells extends StatelessWidget {
   const _Cells({
     required this.organization,
+    required this.hasAddress,
     required this.loading,
     required this.active,
     required this.gap,
   });
 
   final String? organization;
+
+  /// An address is shown, so a missing organization is unknown for it.
+  final bool hasAddress;
   final bool loading;
   final bool active;
   final double gap;
@@ -1136,6 +1278,8 @@ class _Cells extends StatelessWidget {
                 ? _CellText(organization)
                 : loading
                 ? SkeletonText(width: 96, style: _cellStyle(context))
+                : hasAddress
+                ? _CellText(appLocalizations.unknown)
                 : const _Placeholder(),
           ),
         ),

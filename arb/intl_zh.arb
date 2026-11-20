@@ -2442,5 +2442,8 @@
   "switchToProxyExit": "切换到代理出口",
   "localExit": "本地出口",
   "statusQuerying": "正在查询",
-  "queryFailedShowingLast": "查询失败，显示上次结果；点击重试"
+  "queryFailedShowingLast": "查询失败，显示上次结果；点击重试",
+  "pendingQuery": "待查询",
+  "pendingQueryAction": "待查询，点击查询",
+  "queryFailedTapToRetry": "查询失败，点击重试"
 }

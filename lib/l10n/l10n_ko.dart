@@ -8724,4 +8724,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get queryFailedShowingLast => '조회 실패, 이전 결과 표시 중. 탭하여 다시 시도';
+
+  @override
+  String get pendingQuery => '조회 전';
+
+  @override
+  String get pendingQueryAction => '조회 전, 탭하여 조회';
+
+  @override
+  String get queryFailedTapToRetry => '조회 실패, 탭하여 다시 시도';
 }

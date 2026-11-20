@@ -153,6 +153,16 @@ ProbeEntry<IpInfo> _fresh(String ip, {String country = 'GB'}) => ProbeEntry(
   stamp: _stamp,
 );
 
+/// The route [_stamp] was taken on, still in use.
+const _liveRoute = RouteState(
+  coreEpoch: 1,
+  routeVersion: 1,
+  hostEpoch: 1,
+  proxied: true,
+  synced: true,
+  live: true,
+);
+
 const _failedHere = ProbeEntry<IpInfo>(phase: ProbePhase.failed, stamp: _stamp);
 
 class _RecordingIps extends OutboundIpProbe {
@@ -296,8 +306,7 @@ Widget _ipApp({
     overrides: [
       profilesProvider.overrideWithValue(const [_profile]),
       suspendProvider.overrideWithValue(false),
-      if (route != null)
-        routeTrackerProvider.overrideWithBuild((_, _) => route),
+      routeTrackerProvider.overrideWithBuild((_, _) => route ?? _liveRoute),
       if (running) runTimeProvider.overrideWith(_Running.new),
       if (hideIp) appSettingProvider.overrideWith(_Hidden.new),
       if (setup != null) setupActionProvider.overrideWith(setup),
@@ -337,6 +346,11 @@ bool _badgeEnabled(WidgetTester tester) => tester
     .enabled!;
 
 Finder _badgeRegion() => _badge();
+
+/// A tooltip by its message, which the semantics tree need not carry.
+Finder _tooltip(String message) => find.byWidgetPredicate(
+  (widget) => widget is Tooltip && widget.message == message,
+);
 
 String _badgeTooltip(WidgetTester tester) => tester
     .widget<Tooltip>(
@@ -522,13 +536,36 @@ void main() {
     testWidgets('says so in place of the address when the lookup fails', (
       tester,
     ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_ipApp(exit: _failedHere));
+      await tester.pump();
+
+      expect(find.text('Lookup failed'), findsOneWidget);
+      expect(find.text('Tap the icon to retry'), findsOneWidget);
+      expect(find.text('Not looked up'), findsNothing);
+      expect(_badgeTooltip(tester), 'Lookup failed; tap to retry');
+      expect(find.semantics.byLabel('Lookup failed; tap to retry'), findsOne);
+      semantics.dispose();
+    });
+
+    testWidgets('waits for a lookup where none has answered on this route', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      // Failed with no lookup behind it: the route was lost, not asked.
       await tester.pumpWidget(
         _ipApp(exit: const ProbeEntry(phase: ProbePhase.failed)),
       );
       await tester.pump();
 
-      expect(find.text('Check failed'), findsOneWidget);
-      expect(find.text('Tap the icon to retry'), findsOneWidget);
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(find.text('Lookup failed'), findsNothing);
+      expect(find.text('Tap the icon to retry'), findsNothing);
+      expect(find.byType(SkeletonPill), findsNothing);
+      expect(_badgeTooltip(tester), 'Not looked up; tap to look up');
+      expect(find.semantics.byLabel('Not looked up; tap to look up'), findsOne);
+      expect(find.semantics.byLabel(RegExp('Lookup failed')), findsNothing);
+      semantics.dispose();
     });
 
     testWidgets('tells a failed report apart from a failed lookup', (
@@ -587,7 +624,7 @@ void main() {
       expect(_badgeCode(tester), 'HK');
       // There is no proxy exit to switch to, so nothing says which it is.
       expect(find.text('Local exit'), findsNothing);
-      expect(find.byTooltip('Switch to proxy exit'), findsNothing);
+      expect(_tooltip('Switch to proxy exit'), findsNothing);
     });
   });
 
@@ -756,8 +793,8 @@ void main() {
       await tester.pumpWidget(_ipApp(probe: () => probe));
       await tester.pump();
 
-      // Another node was picked, and the lookup through it failed: the old
-      // node's address is not this exit's.
+      // A failure from a route the card is not on yet says nothing about
+      // this one: the exit waits for a lookup, and is not called failed.
       await tester.tap(_badge());
       await tester.pump();
       probe.settle(
@@ -766,9 +803,22 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text(_ip), findsNothing);
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(find.text('Lookup failed'), findsNothing);
+
+      // Another node was picked, and the lookup through it failed: the old
+      // node's address is not this exit's.
+      _containerOf(tester)
+          .read(routeTrackerProvider.notifier)
+          .applySnapshot(
+            const RouteSnapshot(coreEpoch: 1, routeVersion: 2, running: true),
+          );
+      await tester.pumpAndSettle();
+      expect(find.text(_ip), findsNothing);
       expect(find.text('TORSERVERS-NET'), findsNothing);
-      expect(find.text('Check failed'), findsOneWidget);
+      expect(find.text('Lookup failed'), findsOneWidget);
       expect(_badgeCode(tester), isNull);
+      expect(_badgeTooltip(tester), 'Lookup failed; tap to retry');
 
       // Nor does a stale local address offer a switch.
       probe
@@ -779,13 +829,14 @@ void main() {
         );
       await tester.pumpAndSettle();
       expect(find.text(_ip), findsOneWidget);
-      expect(find.byTooltip('Switch to local exit'), findsNothing);
+      expect(_tooltip('Switch to local exit'), findsNothing);
       expect(tester.widget<PressRegion>(_ipRegion(_ip)).onTap, isNull);
 
-      // A failure without a route to go by keeps nothing either.
+      // A failure without a route to go by keeps nothing, and waits.
       probe.settle(routedOutbound, const ProbeEntry(phase: ProbePhase.failed));
       await tester.pumpAndSettle();
-      expect(find.text('Check failed'), findsOneWidget);
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(find.text('Lookup failed'), findsNothing);
     });
 
     testWidgets('asks for the report of the shown address only', (
@@ -802,7 +853,8 @@ void main() {
       await tester.tap(find.text(_ip));
       await tester.pump();
       expect(_FakeIpx.built, [_ip]);
-      expect(find.text('Unknown type'), findsOneWidget);
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(_badgeTooltip(tester), 'Not looked up; tap to look up');
 
       await tester.tap(_badge());
       await tester.pump();
@@ -825,7 +877,7 @@ void main() {
       // The local exit's report was looked up before, from its badge.
       _containerOf(tester).read(ipxLookupProvider(_localIp));
 
-      expect(find.byTooltip('Switch to local exit'), findsOneWidget);
+      expect(_tooltip('Switch to local exit'), findsOneWidget);
       expect(find.semantics.byLabel('Exit IP, $_ip'), findsNothing);
       expect(find.semantics.byLabel(RegExp('^Exit IP, $_ip')), findsOne);
       await tester.tap(find.text(_ip));
@@ -840,7 +892,7 @@ void main() {
       expect(find.text('Data center'), findsNothing);
       expect(find.text('TORSERVERS-NET'), findsNothing);
       expect(find.text('Local exit'), findsOneWidget);
-      expect(find.byTooltip('Switch to proxy exit'), findsOneWidget);
+      expect(_tooltip('Switch to proxy exit'), findsOneWidget);
       expect(
         find.semantics.byLabel(RegExp('^Local public IP, $_localIp')),
         findsOne,
@@ -894,11 +946,14 @@ void main() {
       expect(find.text(_localIp), findsOneWidget);
       // Nothing cached about it: unknown, still, and nothing asked.
       expect(_badgeCode(tester), 'HK');
-      expect(find.text('Unknown type'), findsOneWidget);
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(find.text('Unknown type'), findsNothing);
       expect(find.text('Local exit'), findsOneWidget);
       expect(find.byType(SkeletonPill), findsNothing);
       expect(find.byType(SkeletonText), findsNothing);
-      expect(find.text('—'), findsOneWidget);
+      // Its organization is not known for this address.
+      expect(find.text('Unknown'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
       expect(_badgeEnabled(tester), isTrue);
       expect(fetch.urls, hasLength(2));
       expect(quality, [_ip]);
@@ -943,6 +998,206 @@ void main() {
       expect(find.text(_localIp), findsNothing);
     });
 
+    testWidgets('after a switch, asks nothing until the badge is tapped', (
+      tester,
+    ) async {
+      const nextIp = '198.51.100.7';
+      final fetch = _CountingFetch();
+      final probe = _ManualIps({
+        routedOutbound: _fresh(_ip),
+        directOutbound: _fresh(_localIp, country: 'HK'),
+      });
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            profilesProvider.overrideWithValue(const [_profile]),
+            suspendProvider.overrideWithValue(false),
+            runTimeProvider.overrideWith(_Running.new),
+            routeTrackerProvider.overrideWithBuild((_, _) => _liveRoute),
+            outboundIpProbeProvider.overrideWith(() => probe),
+            ipxFetchProvider.overrideWithValue(fetch.call),
+            ipQualityProvider.overrideWith((_, _) => Future.any(const [])),
+          ],
+          child: _card(),
+        ),
+      );
+      await tester.pump();
+      List<String> asked(String ip) =>
+          fetch.urls.where((url) => url.contains(ip)).toList();
+      // The exit the card opens on is asked about.
+      expect(asked(_ip), isNotEmpty);
+      final before = fetch.urls.length;
+
+      await tester.tap(find.text(_ip));
+      await tester.pump();
+      // While the local exit is shown, the proxy exit moves to a new node.
+      probe.settle(routedOutbound, _fresh(nextIp, country: 'NL'));
+      await tester.pump();
+      probe.settle(directOutbound, _fresh(_localIp, country: 'HK'));
+      await tester.pump();
+      expect(fetch.urls, hasLength(before));
+
+      await tester.tap(find.text(_localIp));
+      await tester.pump();
+      expect(find.text(nextIp), findsOneWidget);
+      expect(_badgeCode(tester), 'NL');
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(find.text('Unknown'), findsOneWidget);
+      expect(find.text('Lookup failed'), findsNothing);
+      expect(fetch.urls, hasLength(before));
+      expect(_containerOf(tester).exists(ipxLookupProvider(nextIp)), isFalse);
+
+      // A later check of the shown exit asks nothing either.
+      probe.settle(
+        routedOutbound,
+        const ProbeEntry(
+          phase: ProbePhase.probing,
+          previousValue: IpInfo(ip: nextIp, countryCode: 'NL'),
+        ),
+      );
+      await tester.pump();
+      probe.settle(routedOutbound, _fresh(nextIp, country: 'NL'));
+      await tester.pump();
+      expect(find.text('Not looked up'), findsOneWidget);
+      expect(fetch.urls, hasLength(before));
+
+      // The badge does.
+      await tester.tap(_badge());
+      await tester.pump();
+      expect(asked(nextIp), isNotEmpty);
+      final tapped = fetch.urls.length;
+
+      // A new session opens on the proxy exit and asks about it again.
+      final runTime = _containerOf(tester).read(runTimeProvider.notifier);
+      runTime.value = null;
+      await tester.pump();
+      const newSessionIp = '192.0.2.44';
+      probe.settle(routedOutbound, _fresh(newSessionIp, country: 'DE'));
+      runTime.value = 1000;
+      await tester.pump();
+      expect(find.text(newSessionIp), findsOneWidget);
+      expect(asked(newSessionIp), isNotEmpty);
+      expect(fetch.urls.length, greaterThan(tapped));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    for (final (country, code) in const [('HK', 'HK'), ('', null)]) {
+      testWidgets('takes the country from the shown address\'s own lookup '
+          '(${code ?? 'none'})', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          _ipApp(local: _fresh(_localIp, country: country)),
+        );
+        await tester.pump();
+        expect(_badgeCode(tester), 'GB');
+
+        await tester.tap(find.text(_ip));
+        await tester.pump();
+        expect(find.text(_localIp), findsOneWidget);
+        // Never the proxy exit's: without one of its own, it is unknown.
+        expect(_badgeCode(tester), code);
+        expect(find.semantics.byLabel(RegExp('GB')), findsNothing);
+        expect(
+          find.semantics.byLabel(
+            'Not looked up; tap to look up, ${code ?? 'Unknown'}',
+          ),
+          findsOne,
+        );
+        semantics.dispose();
+      });
+    }
+
+    testWidgets('holds no IP quality entry an expiry would refetch', (
+      tester,
+    ) async {
+      var lookups = 0;
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            profilesProvider.overrideWithValue(const [_profile]),
+            suspendProvider.overrideWithValue(false),
+            runTimeProvider.overrideWith(_Running.new),
+            routeTrackerProvider.overrideWithBuild((_, _) => _liveRoute),
+            outboundIpProbeProvider.overrideWith(
+              () => _RecordingIps(_fresh(_ip), _fresh(_localIp)),
+            ),
+            ipxLookupProvider(_ip).overrideWith(
+              () => _FakeIpx(const IpxLookupState(phase: IpxPhase.failed)),
+            ),
+            ipQualityProvider.overrideWith((ref, ip) async {
+              lookups++;
+              // As a stored answer does: kept, and refreshed on expiry.
+              ref.keepAlive();
+              final expiry = Timer(
+                const Duration(minutes: 1),
+                ref.invalidateSelf,
+              );
+              ref.onDispose(expiry.cancel);
+              return _residential;
+            }),
+          ],
+          child: _card(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Residential'), findsOneWidget);
+      expect(lookups, 1);
+
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(minutes: 1));
+      }
+      expect(lookups, 1);
+      expect(find.text('Residential'), findsOneWidget);
+    });
+
+    testWidgets('announces a lookup and its failure, nothing else', (
+      tester,
+    ) async {
+      final probe = _ManualIps({
+        routedOutbound: _fresh(_ip),
+        directOutbound: _fresh(_localIp, country: 'HK'),
+      });
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_ipApp(probe: () => probe));
+      await tester.pump();
+      tester.takeAnnouncements();
+
+      await tester.tap(find.text(_ip));
+      await tester.pump();
+      expect(tester.takeAnnouncements(), isEmpty);
+
+      await tester.tap(_badge());
+      await tester.pump();
+      expect(tester.takeAnnouncements().map((a) => a.message), [
+        'Looking up now',
+      ]);
+      probe.settle(
+        directOutbound,
+        const ProbeEntry(phase: ProbePhase.failed, stamp: _stamp),
+      );
+      await tester.pump();
+      expect(tester.takeAnnouncements().map((a) => a.message), [
+        'Lookup failed, showing the last result; tap to retry',
+      ]);
+      final badge = find.semantics.byLabel(RegExp('^Lookup failed'));
+      expect(
+        badge.evaluate().single.getSemanticsData().flagsCollection.isLiveRegion,
+        isFalse,
+      );
+      // The address names its switch once, as a hint, not again as a tooltip.
+      final address = find.semantics
+          .byLabel(RegExp('^Local public IP'))
+          .evaluate()
+          .single
+          .getSemanticsData();
+      expect(address.hint, 'Switch to proxy exit');
+      expect(address.tooltip, isEmpty);
+      semantics.dispose();
+    });
+
     for (final local in const [
       ProbeEntry<IpInfo>(phase: ProbePhase.probing),
       ProbeEntry<IpInfo>(phase: ProbePhase.failed),
@@ -956,7 +1211,7 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.byTooltip('Switch to local exit'), findsNothing);
+        expect(_tooltip('Switch to local exit'), findsNothing);
         expect(tester.widget<PressRegion>(_ipRegion(_ip)).onTap, isNull);
         await tester.tap(find.text(_ip));
         await tester.pump();

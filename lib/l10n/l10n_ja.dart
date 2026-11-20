@@ -8648,4 +8648,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get queryFailedShowingLast => '照会に失敗しました。前回の結果を表示中。タップで再試行';
+
+  @override
+  String get pendingQuery => '未照会';
+
+  @override
+  String get pendingQueryAction => '未照会。タップで照会';
+
+  @override
+  String get queryFailedTapToRetry => '照会に失敗しました。タップで再試行';
 }

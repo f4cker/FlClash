@@ -3668,5 +3668,8 @@
   "switchToProxyExit": "프록시 출구로 전환",
   "localExit": "로컬 출구",
   "statusQuerying": "조회하는 중",
-  "queryFailedShowingLast": "조회 실패, 이전 결과 표시 중. 탭하여 다시 시도"
+  "queryFailedShowingLast": "조회 실패, 이전 결과 표시 중. 탭하여 다시 시도",
+  "pendingQuery": "조회 전",
+  "pendingQueryAction": "조회 전, 탭하여 조회",
+  "queryFailedTapToRetry": "조회 실패, 탭하여 다시 시도"
 }

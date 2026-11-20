@@ -8870,4 +8870,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get queryFailedShowingLast =>
       'Lookup failed, showing the last result; tap to retry';
+
+  @override
+  String get pendingQuery => 'Not looked up';
+
+  @override
+  String get pendingQueryAction => 'Not looked up; tap to look up';
+
+  @override
+  String get queryFailedTapToRetry => 'Lookup failed; tap to retry';
 }

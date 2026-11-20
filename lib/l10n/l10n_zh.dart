@@ -8162,4 +8162,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queryFailedShowingLast => '查询失败，显示上次结果；点击重试';
+
+  @override
+  String get pendingQuery => '待查询';
+
+  @override
+  String get pendingQueryAction => '待查询，点击查询';
+
+  @override
+  String get queryFailedTapToRetry => '查询失败，点击重试';
 }

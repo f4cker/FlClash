@@ -3668,5 +3668,8 @@
   "switchToProxyExit": "Cambiar a la salida del proxy",
   "localExit": "Salida local",
   "statusQuerying": "Consultando ahora",
-  "queryFailedShowingLast": "Error de consulta; se muestra el último resultado. Toca para reintentar"
+  "queryFailedShowingLast": "Error de consulta; se muestra el último resultado. Toca para reintentar",
+  "pendingQuery": "Sin consultar",
+  "pendingQueryAction": "Sin consultar; toca para consultar",
+  "queryFailedTapToRetry": "Error de consulta; toca para reintentar"
 }
