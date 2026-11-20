@@ -1500,7 +1500,10 @@ class RestoreRecovery {
     return RestoreRecoveryReport(
       RestoreRecoveryOutcome.pending,
       skippedSteps: journal?.remainingSteps() ?? RestoreStep.values,
-      followUp: RestoreFollowUp.nextLaunch,
+      // Said only while the journal reads back for the next launch.
+      followUp: await _recordsReadBack(id)
+          ? RestoreFollowUp.nextLaunch
+          : RestoreFollowUp.nextLaunchUnconfirmed,
     );
   }
 
@@ -1711,10 +1714,13 @@ class RestoreRecovery {
       skippedSteps: failedSteps,
       tornFiles: torn,
       pendingMounts: mounts,
-      // A failed recheck is retried at the next launch; torn files are not.
-      followUp: torn.isEmpty
+      // A failed recheck is retried at the next launch, said only while its
+      // journal reads back; torn files are not.
+      followUp: torn.isNotEmpty
+          ? RestoreFollowUp.restoreAgain
+          : await _recordsReadBack(journal.id)
           ? RestoreFollowUp.nextLaunch
-          : RestoreFollowUp.restoreAgain,
+          : RestoreFollowUp.nextLaunchUnconfirmed,
     );
   }
 

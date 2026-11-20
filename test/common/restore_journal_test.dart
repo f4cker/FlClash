@@ -993,6 +993,37 @@ void main() {
       );
     });
 
+    test('a recovery that fails after the commit and loses its journal '
+        'never says the next launch continues', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterCaches,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await relaunch();
+
+      final reports = await recover(
+        store: _FailingSave(
+          preferences,
+          onSave: () {
+            for (final dir in journals()) {
+              dir.deleteSync(recursive: true);
+            }
+          },
+        ),
+      );
+
+      final [report] = reports;
+      expect(report.outcome, RestoreRecoveryOutcome.pending);
+      expect(report.followUp, RestoreFollowUp.nextLaunchUnconfirmed);
+      final en = currentAppLocalizations;
+      final message = restoreRecoveryMessage(report, en);
+      expect(message, contains(en.restoreActionNextLaunchUnconfirmed));
+      expect(message, isNot(contains(en.restoreActionNextLaunch)));
+    });
+
     test('at startup every owed step completes before background work '
         'starts, and reports come before any gate', () async {
       final (:container, :staging, :data) = await fixture();
@@ -1083,6 +1114,39 @@ void main() {
       expect(next.mitmHold.value.isEmpty, isTrue);
       expect(journals(), isEmpty);
       expect(await markers(), isEmpty);
+    });
+
+    test('a failing MITM step whose journal is gone afterwards never says '
+        'the next launch continues', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterPrefs,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await relaunch();
+      final recovery = RestoreRecovery(
+        db: () => database,
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+      await recovery.run();
+      final shown = <RestoreRecoveryReport>[];
+      await recovery.completeAtStartup(
+        mitm: () async {
+          for (final dir in journals()) {
+            dir.deleteSync(recursive: true);
+          }
+          throw StateError('mitm');
+        },
+        startBackgroundWork: () {},
+        show: (report) async => shown.add(report),
+      );
+      final [report] = shown;
+      expect(report.outcome, RestoreRecoveryOutcome.pending);
+      expect(report.skippedSteps, [RestoreStep.mitm]);
+      expect(report.followUp, RestoreFollowUp.nextLaunchUnconfirmed);
     });
 
     test(
@@ -1845,6 +1909,37 @@ void main() {
             isNot(contains(en.restoreRecoveryCompleted)),
           );
         }
+      });
+
+      test('two old-format journals, the first one\'s lock not saved: the '
+          'second turns nothing off either, even if its lock would save, so '
+          'no on/off state changes', () async {
+        await oldCrash(_Crash.afterCommit);
+        await twin();
+        final before = await states();
+        restoreRecovery.clearMitmHolds();
+        var failed = false;
+        var turnOffs = 0;
+        restoreRecovery
+          ..onMitmOff = (committed) async {
+            if (!committed) turnOffs++;
+          }
+          ..onLockStep = (copy, step) async {
+            // Only the first write of the file copy fails.
+            if (copy == MitmLockCopy.file && step == 'written' && !failed) {
+              failed = true;
+              throw StateError('file');
+            }
+          };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final reports = restoreRecovery.takeReports();
+        expect(failed, isTrue);
+        expect(turnOffs, 0);
+        expect(await states(), before);
+        expect(reports.first.mitmLockNotSaved, isTrue);
+        expect(reports.any((r) => r.mitmAllOff), isFalse);
+        expect(journals(), hasLength(2), reason: 'both kept for next launch');
       });
 
       test('A saves the lock durably, then B fails to rewrite it in the same '
@@ -2684,13 +2779,19 @@ void main() {
 class _FailingSave implements Preferences {
   final Preferences _inner;
 
-  _FailingSave(this._inner);
+  /// Runs as the save fails.
+  final void Function()? onSave;
+
+  _FailingSave(this._inner, {this.onSave});
 
   @override
   Future<Map<String, Object?>?> getConfigMap() => _inner.getConfigMap();
 
   @override
-  Future<bool> saveConfig(Config config) async => false;
+  Future<bool> saveConfig(Config config) async {
+    onSave?.call();
+    return false;
+  }
 
   @override
   Future<String?> readMitmSafetyLock() => _inner.readMitmSafetyLock();
