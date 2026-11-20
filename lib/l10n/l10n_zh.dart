@@ -8637,4 +8637,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queryFailedTapToRetry => '查询失败，点击重试';
+
+  @override
+  String ipTagOpenDetail(String tag, String ip) {
+    return '$tag，查看 $ip 的 IP 详情';
+  }
+
+  @override
+  String ipTagOpenDetailHidden(String tag) {
+    return '$tag，查看 IP 详情';
+  }
+
+  @override
+  String get ipTagOpenDetailHint => '显示已有的类型与质量信息，不会发起查询';
+
+  @override
+  String get ipTagNoIp => '暂无可查看的 IP';
+
+  @override
+  String get ipNotQueried => '尚未查询';
+
+  @override
+  String get ipNotQueriedTip => '打开详情不会查询此 IP。点按卡片上的国家标记即可查询。';
+
+  @override
+  String get ipTypeExplain => '类型：IP 所属网络的类别，如住宅、移动网络、商业或机房。机房 IP 更容易被网站识别为代理。';
+
+  @override
+  String get ipQualityExplain => '质量：ipx.al 健康分（0–100）对应的等级，分数越高越不容易被网站验证或拦截。';
 }

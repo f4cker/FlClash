@@ -9141,4 +9141,34 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get queryFailedTapToRetry => '照会に失敗しました。タップで再試行';
+
+  @override
+  String ipTagOpenDetail(String tag, String ip) {
+    return '$tag、$ip の IP 詳細を表示';
+  }
+
+  @override
+  String ipTagOpenDetailHidden(String tag) {
+    return '$tag、IP 詳細を表示';
+  }
+
+  @override
+  String get ipTagOpenDetailHint => '既知の種類と品質を表示します。照会は行いません';
+
+  @override
+  String get ipTagNoIp => '表示できる IP はまだありません';
+
+  @override
+  String get ipNotQueried => '未照会';
+
+  @override
+  String get ipNotQueriedTip => '詳細を開いてもこの IP は照会されません。カードの国旗をタップすると照会します。';
+
+  @override
+  String get ipTypeExplain =>
+      '種類：IP が属するネットワークの区分（住宅、モバイル、ビジネス、データセンターなど）。データセンターの IP はプロキシと判定されやすくなります。';
+
+  @override
+  String get ipQualityExplain =>
+      '品質：ipx.al ヘルススコア（0〜100）の等級。スコアが高いほど、サイトで確認やブロックを受けにくくなります。';
 }

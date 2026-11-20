@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ipx_al.dart';
 import 'package:fl_clash/common/service_probe.dart';
+import 'package:fl_clash/features/ip_quality/ip_quality_sheet.dart';
 import 'package:fl_clash/features/ip_quality/labels.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/ipx_report.dart';
@@ -19,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/shapes/shapes.dart';
 
 import 'card.dart';
+import 'ip_detail_tag.dart';
 
 const _builtinOutbounds = {'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'};
 
@@ -382,51 +384,64 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                           ),
                         ],
                       ),
-                      _ExitRow(
-                        info: info,
-                        shown: shown,
-                        // Only while running is there another exit to tell
-                        // this one apart from.
-                        marked: isStart && local,
-                        failed: failed && info == null,
-                        staleFailed: failed && info != null,
-                        pending: pending,
-                        still: still,
-                        busy: busy,
-                        announceBusy: _opening || _userAsked == target,
-                        facts: facts,
-                        active: isStart,
-                        metrics: metrics,
-                        large: !density.isDesktop,
-                        onRetry: () => _retry(
-                          target: target,
-                          ip: info?.ip,
+                      // The tags' targets reach below the row into the gap
+                      // and the cells' labels, which take no taps, so the
+                      // card keeps its height.
+                      HitOverhang(
+                        bottom:
+                            _tagRowHeight(!density.isDesktop) -
+                            _chipHeight(!density.isDesktop),
+                        child: _ExitRow(
+                          info: info,
+                          shown: shown,
+                          // Only while running is there another exit to tell
+                          // this one apart from.
+                          marked: isStart && local,
+                          failed: failed && info == null,
+                          staleFailed: failed && info != null,
+                          pending: pending,
+                          still: still,
                           busy: busy,
-                          missing: [
-                            // The other exit's address alone, not its report;
-                            // one already being looked up is left to it.
-                            if (other == null &&
-                                !otherEntry.isLoading &&
-                                (local ? isStart : true))
-                              local ? routedOutbound : directOutbound,
-                          ],
+                          announceBusy: _opening || _userAsked == target,
+                          facts: facts,
+                          active: isStart,
+                          metrics: metrics,
+                          large: !density.isDesktop,
+                          onRetry: () => _retry(
+                            target: target,
+                            ip: info?.ip,
+                            busy: busy,
+                            missing: [
+                              // The other exit's address alone, not its report;
+                              // one already being looked up is left to it.
+                              if (other == null &&
+                                  !otherEntry.isLoading &&
+                                  (local ? isStart : true))
+                                local ? routedOutbound : directOutbound,
+                            ],
+                          ),
+                          onSwitch: other == null
+                              ? null
+                              : () => _switch(!local),
                         ),
-                        onSwitch: other == null ? null : () => _switch(!local),
                       ),
                       SizedBox(height: metrics.cellsTop),
                       if (density.isDesktop) const Spacer(),
                       TickerMode(
                         enabled: !still,
-                        child: _Cells(
-                          organization: facts?.organization,
-                          // Running, an exit is always meant: what is not
-                          // known about it is unknown, not absent.
-                          known: info != null || isStart,
-                          loading: info == null
-                              ? !failed && !pending
-                              : facts!.loading,
-                          active: isStart && !suspended,
-                          gap: metrics.cellGap,
+                        // Plain text, under the reach of the tags' targets.
+                        child: IgnorePointer(
+                          child: _Cells(
+                            organization: facts?.organization,
+                            // Running, an exit is always meant: what is not
+                            // known about it is unknown, not absent.
+                            known: info != null || isStart,
+                            loading: info == null
+                                ? !failed && !pending
+                                : facts!.loading,
+                            active: isStart && !suspended,
+                            gap: metrics.cellGap,
+                          ),
                         ),
                       ),
                     ],
@@ -692,6 +707,23 @@ class _ExitRow extends StatelessWidget {
   /// Null while the other exit has no address.
   final VoidCallback? onSwitch;
 
+  /// The detail of the address shown when the tag was tapped, as far as
+  /// it is known: it switches nothing and asks nothing.
+  Future<void> _openDetail(BuildContext context, IpInfo info, _IpFacts? facts) {
+    final countryCode =
+        facts?.countryCode ??
+        (info.countryCode.isNotEmpty ? info.countryCode : null);
+    return showIpDetailSheet(
+      context,
+      ip: info.ip,
+      countryCode: countryCode,
+      title: switch (shown) {
+        StatusCardExit.proxy => context.appLocalizations.exitIp,
+        StatusCardExit.local => context.appLocalizations.localPublicIp,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
@@ -785,27 +817,37 @@ class _ExitRow extends StatelessWidget {
               ip,
               if (failed)
                 SizedBox(
-                  height: chipHeight,
+                  height: _tagRowHeight(large),
                   child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      appLocalizations.tapIconToRetry,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: DashboardText.label(context),
+                    alignment: AlignmentDirectional.topStart,
+                    child: SizedBox(
+                      height: chipHeight,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          appLocalizations.tapIconToRetry,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: DashboardText.label(context),
+                        ),
+                      ),
                     ),
                   ),
                 )
               else if (pending)
-                SizedBox(height: chipHeight)
+                SizedBox(height: _tagRowHeight(large))
               else
                 TickerMode(
                   enabled: !still,
                   child: _IpChips(
+                    ip: info?.ip,
                     facts: facts,
                     loading: info == null || facts!.loading,
                     marked: marked,
                     large: large,
+                    onOpenDetail: info == null
+                        ? null
+                        : () => _openDetail(context, info, facts),
                   ),
                 ),
             ],
@@ -907,67 +949,134 @@ class _IpTarget extends ConsumerWidget {
 
 double _chipHeight(bool large) => large ? 28 : 24;
 
+/// The row under the address: the tags' tap targets, at least 44 high.
+double _tagRowHeight(bool large) =>
+    math.max(_chipHeight(large), IpDetailTagStyle.minHit);
+
 const _chipSkeletonWidths = [48.0, 72.0];
 
-class _IpChips extends StatelessWidget {
+class _IpChips extends ConsumerWidget {
   const _IpChips({
+    required this.ip,
     required this.facts,
     required this.loading,
     required this.marked,
     required this.large,
+    required this.onOpenDetail,
   });
 
+  /// The address shown; null while there is none.
+  final String? ip;
   final _IpFacts? facts;
   final bool loading;
   final bool marked;
   final bool large;
 
+  /// Opens the shown address's detail; null while there is no address.
+  final Future<void> Function()? onOpenDetail;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
+    final hidden = ref.watch(
+      appSettingProvider.select((state) => state.hideIp),
+    );
     final facts = this.facts;
+    final ip = this.ip;
     final height = _chipHeight(large);
-    final known = [
-      if (facts?.type case final type?)
-        DashboardChip(label: type, large: large),
-      if (facts?.quality case (final label, final tone))
-        DashboardChip(label: label, tone: tone, large: large),
-    ];
-    // Chips that do not fit wrap onto a clipped second line; the details
-    // sheet still lists them all.
-    return SizedBox(
+    final onOpenDetail = ip == null ? null : this.onOpenDetail;
+    Widget tag(
+      String label, {
+      DashboardChipTone tone = DashboardChipTone.idle,
+    }) => IpDetailTag(
+      label: label,
+      tone: tone,
       height: height,
-      child: ClipRect(
-        child: Wrap(
-          spacing: 6,
-          runSpacing: height,
-          children: [
-            if (marked)
-              DashboardChip(
-                label: appLocalizations.localExit,
-                dot: true,
-                dotColor: context.colorScheme.primary,
-                large: large,
-              ),
-            if (known.isNotEmpty)
-              ...known
-            else if (loading)
-              for (final width in _chipSkeletonWidths)
-                SkeletonPill(width: width, height: height)
-            else
-              DashboardChip(
-                label: facts?.reportFailed ?? false
-                    ? appLocalizations.ipxNoResponse
-                    : facts?.pending ?? false
-                    ? appLocalizations.pendingQuery
-                    : appLocalizations.ipTypeUnknown,
-                large: large,
-              ),
-          ],
-        ),
-      ),
+      semanticLabel: onOpenDetail == null
+          ? [
+              label,
+              appLocalizations.ipTagNoIp,
+            ].join(appLocalizations.semanticsSeparator)
+          : hidden
+          ? appLocalizations.ipTagOpenDetailHidden(label)
+          : appLocalizations.ipTagOpenDetail(label, ip!),
+      semanticHint: appLocalizations.ipTagOpenDetailHint,
+      tooltip: appLocalizations.exitIpOpenHint,
+      onOpen: onOpenDetail,
+    );
+    final known = [
+      if (facts?.type case final type?) tag(type),
+      if (facts?.quality case (final label, final tone)) tag(label, tone: tone),
+    ];
+    // Every tag shows whole: those that do not fit wrap onto a line of
+    // their own, and the card grows to hold it.
+    final skeletons = [
+      for (final width in _chipSkeletonWidths)
+        SkeletonPill(width: width, height: height),
+    ];
+    final wrap = Wrap(
+      spacing: IpDetailTagStyle.gap,
+      runSpacing: IpDetailTagStyle.gap,
+      children: [
+        if (marked)
+          DashboardChip(
+            label: appLocalizations.localExit,
+            dot: true,
+            dotColor: context.colorScheme.primary,
+            large: large,
+          ),
+        if (known.isNotEmpty)
+          ...known
+        else if (loading)
+          if (ip == null)
+            Semantics(
+              container: true,
+              label: appLocalizations.ipTagNoIp,
+              child: Wrap(spacing: IpDetailTagStyle.gap, children: skeletons),
+            )
+          else
+            ...skeletons
+        else
+          tag(
+            facts?.reportFailed ?? false
+                ? appLocalizations.ipxNoResponse
+                : facts?.pending ?? false
+                ? appLocalizations.pendingQuery
+                : appLocalizations.ipTypeUnknown,
+          ),
+      ],
+    );
+    final rowHeight = _tagRowHeight(large);
+    // A narrow (mobile) card grows to take the tags that wrap; a desktop
+    // card holds its height in the grid, so tags that do not fit on its one
+    // line wrap out of sight, as they did before.
+    if (large) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(minHeight: rowHeight),
+        child: wrap,
+      );
+    }
+    return SizedBox(
+      height: rowHeight,
+      child: ClipRect(clipper: const _RingRoomClipper(), child: wrap),
     );
   }
+}
+
+/// Clips what wraps below the row, but leaves a tag's focus ring room on
+/// its other sides.
+class _RingRoomClipper extends CustomClipper<Rect> {
+  const _RingRoomClipper();
+
+  static const _ring =
+      IpDetailTagStyle.focusRingWidth + IpDetailTagStyle.focusRingGap;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(-_ring, -_ring, size.width + _ring, size.height);
+
+  @override
+  bool shouldReclip(_RingRoomClipper oldClipper) => false;
 }
 
 const _spinPeriod = Duration(milliseconds: 1500);

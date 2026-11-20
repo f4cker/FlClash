@@ -3817,5 +3817,13 @@
   "pendingQuery": "Non recherché",
   "pendingQueryAction": "Non recherché ; touchez pour rechercher",
   "regionUnknown": "Région inconnue",
-  "queryFailedTapToRetry": "Échec de la recherche ; touchez pour réessayer"
+  "queryFailedTapToRetry": "Échec de la recherche ; touchez pour réessayer",
+  "ipTagOpenDetail": "{tag}, voir les détails de l’IP {ip}",
+  "ipTagOpenDetailHidden": "{tag}, voir les détails de l’IP",
+  "ipTagOpenDetailHint": "Affiche le type et la qualité déjà connus ; ne lance aucune recherche",
+  "ipTagNoIp": "Aucune IP à afficher pour l’instant",
+  "ipNotQueried": "Pas encore recherchée",
+  "ipNotQueriedTip": "Ouvrir les détails ne recherche pas cette IP. Touchez le drapeau de la carte pour la rechercher.",
+  "ipTypeExplain": "Type : la catégorie de réseau de l’IP, par exemple résidentiel, mobile, entreprise ou centre de données. Les sites repèrent plus souvent les IP de centres de données comme des proxys.",
+  "ipQualityExplain": "Qualité : la note du score ipx.al (0–100). Plus le score est élevé, moins les sites risquent de la vérifier ou de la bloquer."
 }

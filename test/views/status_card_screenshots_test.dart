@@ -3,6 +3,7 @@
 //   STATUS_CARD_SCREENSHOTS=<dir> flutter test \
 //     test/views/status_card_screenshots_test.dart
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -21,6 +22,8 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/current_outbound.dart';
+import 'package:fl_clash/views/dashboard/widgets/ip_detail_tag.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -171,6 +174,16 @@ void main() {
       }
       await loader.load();
     }
+    // The detail sheet's address is in the app's own monospaced face.
+    final mono = FontLoader('JetBrainsMono')
+      ..addFont(
+        Future.value(
+          ByteData.sublistView(
+            File('assets/fonts/JetBrainsMono-Regular.ttf').readAsBytesSync(),
+          ),
+        ),
+      );
+    await mono.load();
     Directory(_outDir!).createSync(recursive: true);
   });
 
@@ -196,8 +209,12 @@ void main() {
     required Brightness brightness,
     required Map<String, ProbeEntry<IpInfo>> entries,
     bool running = true,
+    Size view = const Size(614, 226),
+    double width = 574,
+    DashboardDensity density = DashboardDensity.standard,
+    double textScale = 1,
   }) async {
-    tester.view.physicalSize = const Size(614, 226) * 2;
+    tester.view.physicalSize = view * 2;
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -236,15 +253,29 @@ void main() {
               child: HostScaffold(
                 body: Padding(
                   padding: const EdgeInsets.all(20),
-                  child: SizedBox(
-                    width: 574,
-                    child: IntrinsicHeight(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 160),
-                        child: const DashboardDensityScope(
-                          density: DashboardDensity.standard,
-                          scale: 1,
-                          child: CurrentOutboundCard(),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: width,
+                      child: IntrinsicHeight(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: 160 * textScale,
+                          ),
+                          child: Builder(
+                            builder: (context) => MediaQuery(
+                              data: MediaQuery.of(context).copyWith(
+                                textScaler: TextScaler.linear(textScale),
+                              ),
+                              child: DashboardDensityScope(
+                                density: density,
+                                // As the dashboard does: the card
+                                // grows with the text.
+                                scale: math.max(1, textScale),
+                                child: const CurrentOutboundCard(),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -398,6 +429,98 @@ void main() {
     testWidgets('not-running-$tone', skip: skip != null, (tester) async {
       await pump(tester, brightness: brightness, entries: both, running: false);
       await capture(tester, 'not-running-$tone');
+    });
+
+    // The type and quality tags that open the shown exit's IP detail.
+    testWidgets('tags-narrow-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        entries: both,
+        view: const Size(380, 300),
+        width: 340,
+        density: DashboardDensity.mobile,
+      );
+      await capture(tester, 'tags-narrow-$tone');
+    });
+
+    testWidgets('tags-hover-$tone', skip: skip != null, (tester) async {
+      await pump(tester, brightness: brightness, entries: both);
+      // As on a Mac, where a pointer hovers.
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      addTearDown(
+        () => FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic,
+      );
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(find.text('机房')));
+      await settle(tester);
+      await capture(tester, 'tags-hover-$tone');
+    });
+
+    testWidgets('tags-focus-$tone', skip: skip != null, (tester) async {
+      await pump(tester, brightness: brightness, entries: both);
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      addTearDown(
+        () => FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic,
+      );
+      Focus.of(tester.element(find.text('机房'))).requestFocus();
+      await settle(tester);
+      await capture(tester, 'tags-focus-$tone');
+    });
+
+    testWidgets('detail-sheet-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        entries: both,
+        view: const Size(614, 900),
+      );
+      await tester.tap(find.text('机房'));
+      await settle(tester);
+      await capture(tester, 'detail-sheet-$tone');
+    });
+
+    testWidgets('detail-sheet-not-queried-$tone', skip: skip != null, (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        entries: both,
+        view: const Size(614, 900),
+      );
+      // The local exit was never looked up: its detail has nothing yet.
+      await tester.tap(find.text(_exitIp));
+      await settle(tester);
+      await tester.tap(find.byType(IpDetailTag).first);
+      await settle(tester);
+      await capture(tester, 'detail-sheet-not-queried-$tone');
+    });
+  }
+
+  for (final (name, density, view, width) in const [
+    ('desktop', DashboardDensity.standard, Size(780, 300), 740.0),
+    ('narrow', DashboardDensity.mobile, Size(380, 340), 340.0),
+  ]) {
+    testWidgets('tags-large-text-$name-light', skip: skip != null, (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        brightness: Brightness.light,
+        entries: both,
+        view: view,
+        width: width,
+        density: density,
+        textScale: 1.3,
+      );
+      await capture(tester, 'tags-large-text-$name-light');
     });
   }
 

@@ -9447,4 +9447,36 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get queryFailedTapToRetry =>
       'Échec de la recherche ; touchez pour réessayer';
+
+  @override
+  String ipTagOpenDetail(String tag, String ip) {
+    return '$tag, voir les détails de l’IP $ip';
+  }
+
+  @override
+  String ipTagOpenDetailHidden(String tag) {
+    return '$tag, voir les détails de l’IP';
+  }
+
+  @override
+  String get ipTagOpenDetailHint =>
+      'Affiche le type et la qualité déjà connus ; ne lance aucune recherche';
+
+  @override
+  String get ipTagNoIp => 'Aucune IP à afficher pour l’instant';
+
+  @override
+  String get ipNotQueried => 'Pas encore recherchée';
+
+  @override
+  String get ipNotQueriedTip =>
+      'Ouvrir les détails ne recherche pas cette IP. Touchez le drapeau de la carte pour la rechercher.';
+
+  @override
+  String get ipTypeExplain =>
+      'Type : la catégorie de réseau de l’IP, par exemple résidentiel, mobile, entreprise ou centre de données. Les sites repèrent plus souvent les IP de centres de données comme des proxys.';
+
+  @override
+  String get ipQualityExplain =>
+      'Qualité : la note du score ipx.al (0–100). Plus le score est élevé, moins les sites risquent de la vérifier ou de la bloquer.';
 }

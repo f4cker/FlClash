@@ -26,12 +26,14 @@ class IpQualityText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final quality = ref.watch(ipQualityProvider(ip)).value;
+    // Plain, it has no use for the quality, and reading it would look the
+    // address up.
+    final quality = tinted ? ref.watch(ipQualityProvider(ip)).value : null;
     final hideIp = ref.watch(
       appSettingProvider.select((state) => state.hideIp),
     );
     final shownIp = hideIp ? _mask : ip;
-    final color = tinted ? quality?.level.color(context) : null;
+    final color = quality?.level.color(context);
     var style = this.style;
     if (hideIp) {
       style = (style ?? const TextStyle()).toJetBrainsMono;

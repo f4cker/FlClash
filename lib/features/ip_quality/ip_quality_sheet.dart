@@ -29,11 +29,39 @@ Future<void> showIpQualitySheet(
   );
 }
 
+/// The same detail for [ip], frozen at the call, as far as it is already
+/// known: opening it asks nothing of ipx.al or the IP quality sources, now
+/// or later. Whatever no lookup stands behind reads as not yet queried.
+Future<void> showIpDetailSheet(
+  BuildContext context, {
+  required String ip,
+  String? countryCode,
+  String? title,
+}) {
+  return showNestedSheet<void>(
+    context,
+    builder: (_) => _IpQualitySheet(
+      ip: ip,
+      countryCode: countryCode,
+      title: title,
+      viewOnly: true,
+    ),
+  );
+}
+
 class _IpQualitySheet extends ConsumerStatefulWidget {
-  const _IpQualitySheet({required this.ip, this.countryCode, this.title});
+  const _IpQualitySheet({
+    required this.ip,
+    this.countryCode,
+    this.title,
+    this.viewOnly = false,
+  });
 
   final String ip;
   final String? countryCode;
+
+  /// Shows what is known without asking for anything.
+  final bool viewOnly;
 
   /// Names whose address this is; a plain outbound IP otherwise.
   final String? title;
@@ -46,13 +74,21 @@ class _IpQualitySheetState extends ConsumerState<_IpQualitySheet> {
   @override
   void initState() {
     super.initState();
-    ref.read(ipxLookupProvider(widget.ip).notifier).reload();
+    if (!widget.viewOnly) {
+      ref.read(ipxLookupProvider(widget.ip).notifier).reload();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final ip = widget.ip;
     final localizations = context.appLocalizations;
+    if (widget.viewOnly) {
+      return Scaffold(
+        title: widget.title ?? localizations.outboundIp,
+        body: _KnownIpDetail(ip: ip, countryCode: widget.countryCode),
+      );
+    }
     final isLoading =
         ref.watch(ipQualityProvider(ip).select((result) => result.isLoading)) ||
         ref.watch(ipxLookupProvider(ip).select((state) => state.isLoading));
@@ -91,6 +127,114 @@ class _HideIpItem extends ConsumerWidget {
       title: Text(context.appLocalizations.hideIp),
       onPressed: () => update(!hideIp),
       trailing: Switch(value: hideIp, onChanged: update),
+    );
+  }
+}
+
+/// What is already known about [ip]: ipx.al's report if one was asked for,
+/// and otherwise that nothing was. It never reads the IP quality sources,
+/// whose entry would ask them again.
+class _KnownIpDetail extends ConsumerWidget {
+  const _KnownIpDetail({required this.ip, this.countryCode});
+
+  final String ip;
+  final String? countryCode;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final localizations = context.appLocalizations;
+    // Only a lookup that exists is read: reading one would start it.
+    final ipx = ref.exists(ipxLookupProvider(ip))
+        ? ref.watch(ipxLookupProvider(ip))
+        : null;
+    final padding = const EdgeInsets.symmetric(horizontal: 16).copyWith(
+      bottom: 20 + context.bottomInset,
+      top: context.contentTopPadding,
+    );
+    final secondary = context.colorScheme.onSurfaceVariant;
+    final explanations = IpxFootnote(
+      lines: [localizations.ipTypeExplain, localizations.ipQualityExplain],
+    );
+    final other = generateSection(
+      title: localizations.other,
+      items: const [_HideIpItem()],
+    );
+    if (ipx != null && ipx.phase != IpxPhase.failed) {
+      return ListView(
+        shrinkWrap: true,
+        padding: padding,
+        children: [
+          IpxReportSections(
+            ip: ip,
+            lookup: ipx,
+            countryCode: countryCode,
+            onOpenReport: () => dialogs.openUrl(ipxAlPageUrl(ip)),
+          ),
+          explanations,
+          other,
+        ],
+      );
+    }
+    final notQueried = Text(
+      localizations.ipNotQueried,
+      style: TextStyle(color: secondary),
+    );
+    final country = ipx?.brief?.countryCode ?? countryCode;
+    return ListView(
+      shrinkWrap: true,
+      padding: padding,
+      children: [
+        generateSection(
+          title: localizations.ipxScore,
+          items: [
+            if (ipx == null)
+              DecorationListItem(
+                title: Text(
+                  localizations.ipNotQueried,
+                  style: AppTextStyle.headline.of(context),
+                ),
+                subtitle: Text(
+                  localizations.ipNotQueriedTip,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(color: secondary),
+                ),
+              )
+            else
+              // A lookup asked for before failed: asking again is the
+              // user's own, never the opening's.
+              IpxFailedItem(
+                retrying: ipx.retrying,
+                onRetry: () => ref.read(ipxLookupProvider(ip).notifier).retry(),
+              ),
+          ],
+        ),
+        generateSection(
+          title: localizations.basicInfo,
+          items: [
+            IpxAddressRow(ip: ip),
+            DetailRow(
+              title: localizations.ipxLocation,
+              copyText: country,
+              value: country == null ? notQueried : Text(country),
+            ),
+            DetailRow(
+              title: localizations.ipType,
+              value: ipx == null
+                  ? notQueried
+                  : Text(localizations.ipxNoResponse),
+            ),
+            DetailRow(
+              title: localizations.ipQualityShort,
+              value: ipx == null
+                  ? notQueried
+                  : Text(localizations.ipxNoResponse),
+            ),
+          ],
+        ),
+        explanations,
+        other,
+      ],
     );
   }
 }

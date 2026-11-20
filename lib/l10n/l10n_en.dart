@@ -9384,4 +9384,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get queryFailedTapToRetry => 'Lookup failed; tap to retry';
+
+  @override
+  String ipTagOpenDetail(String tag, String ip) {
+    return '$tag, view IP details for $ip';
+  }
+
+  @override
+  String ipTagOpenDetailHidden(String tag) {
+    return '$tag, view IP details';
+  }
+
+  @override
+  String get ipTagOpenDetailHint =>
+      'Shows the type and quality already known; does not run a lookup';
+
+  @override
+  String get ipTagNoIp => 'No IP to view yet';
+
+  @override
+  String get ipNotQueried => 'Not queried yet';
+
+  @override
+  String get ipNotQueriedTip =>
+      'Opening the details does not look this IP up. Tap the country badge on the card to look it up.';
+
+  @override
+  String get ipTypeExplain =>
+      'Type: the kind of network the IP belongs to, such as residential, mobile, business or data center. Sites flag data center IPs as proxies more often.';
+
+  @override
+  String get ipQualityExplain =>
+      'Quality: the grade of the ipx.al health score (0–100). The higher the score, the less likely sites are to challenge or block it.';
 }

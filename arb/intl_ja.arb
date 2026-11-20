@@ -3817,5 +3817,13 @@
   "pendingQuery": "未照会",
   "pendingQueryAction": "未照会。タップで照会",
   "regionUnknown": "地域不明",
-  "queryFailedTapToRetry": "照会に失敗しました。タップで再試行"
+  "queryFailedTapToRetry": "照会に失敗しました。タップで再試行",
+  "ipTagOpenDetail": "{tag}、{ip} の IP 詳細を表示",
+  "ipTagOpenDetailHidden": "{tag}、IP 詳細を表示",
+  "ipTagOpenDetailHint": "既知の種類と品質を表示します。照会は行いません",
+  "ipTagNoIp": "表示できる IP はまだありません",
+  "ipNotQueried": "未照会",
+  "ipNotQueriedTip": "詳細を開いてもこの IP は照会されません。カードの国旗をタップすると照会します。",
+  "ipTypeExplain": "種類：IP が属するネットワークの区分（住宅、モバイル、ビジネス、データセンターなど）。データセンターの IP はプロキシと判定されやすくなります。",
+  "ipQualityExplain": "品質：ipx.al ヘルススコア（0〜100）の等級。スコアが高いほど、サイトで確認やブロックを受けにくくなります。"
 }

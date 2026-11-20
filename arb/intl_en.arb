@@ -3910,5 +3910,30 @@
   "pendingQuery": "Not looked up",
   "pendingQueryAction": "Not looked up; tap to look up",
   "regionUnknown": "Region unknown",
-  "queryFailedTapToRetry": "Lookup failed; tap to retry"
+  "queryFailedTapToRetry": "Lookup failed; tap to retry",
+  "ipTagOpenDetail": "{tag}, view IP details for {ip}",
+  "@ipTagOpenDetail": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      },
+      "ip": {
+        "type": "String"
+      }
+    }
+  },
+  "ipTagOpenDetailHidden": "{tag}, view IP details",
+  "@ipTagOpenDetailHidden": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "ipTagOpenDetailHint": "Shows the type and quality already known; does not run a lookup",
+  "ipTagNoIp": "No IP to view yet",
+  "ipNotQueried": "Not queried yet",
+  "ipNotQueriedTip": "Opening the details does not look this IP up. Tap the country badge on the card to look it up.",
+  "ipTypeExplain": "Type: the kind of network the IP belongs to, such as residential, mobile, business or data center. Sites flag data center IPs as proxies more often.",
+  "ipQualityExplain": "Quality: the grade of the ipx.al health score (0–100). The higher the score, the less likely sites are to challenge or block it."
 }

@@ -433,6 +433,24 @@ class DashboardConnectedButton extends StatelessWidget {
 
 enum DashboardChipTone { idle, ok, warn, error }
 
+/// A [DashboardChip]'s fill and ink in [tone].
+(Color, Color) dashboardChipColors(
+  BuildContext context,
+  DashboardChipTone tone,
+) {
+  final colorScheme = context.colorScheme;
+  final colors = DashboardColors.of(context);
+  return switch (tone) {
+    DashboardChipTone.idle => (colors.tone, colorScheme.onSurfaceVariant),
+    DashboardChipTone.ok => (colors.okContainer, colors.onOkContainer),
+    DashboardChipTone.warn => (colors.warnContainer, colors.onWarnContainer),
+    DashboardChipTone.error => (
+      colorScheme.errorContainer,
+      colorScheme.onErrorContainer,
+    ),
+  };
+}
+
 class DashboardChip extends StatelessWidget {
   const DashboardChip({
     super.key,
@@ -451,17 +469,7 @@ class DashboardChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.colorScheme;
-    final colors = DashboardColors.of(context);
-    final (background, foreground) = switch (tone) {
-      DashboardChipTone.idle => (colors.tone, colorScheme.onSurfaceVariant),
-      DashboardChipTone.ok => (colors.okContainer, colors.onOkContainer),
-      DashboardChipTone.warn => (colors.warnContainer, colors.onWarnContainer),
-      DashboardChipTone.error => (
-        colorScheme.errorContainer,
-        colorScheme.onErrorContainer,
-      ),
-    };
+    final (background, foreground) = dashboardChipColors(context, tone);
     return Container(
       height: large ? 28 : 24,
       padding: EdgeInsets.symmetric(horizontal: large ? 12 : 10),

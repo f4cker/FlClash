@@ -9218,4 +9218,35 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get queryFailedTapToRetry => '조회 실패, 탭하여 다시 시도';
+
+  @override
+  String ipTagOpenDetail(String tag, String ip) {
+    return '$tag, $ip의 IP 세부 정보 보기';
+  }
+
+  @override
+  String ipTagOpenDetailHidden(String tag) {
+    return '$tag, IP 세부 정보 보기';
+  }
+
+  @override
+  String get ipTagOpenDetailHint => '이미 알려진 유형과 품질을 표시하며 조회하지 않습니다';
+
+  @override
+  String get ipTagNoIp => '아직 볼 수 있는 IP가 없습니다';
+
+  @override
+  String get ipNotQueried => '아직 조회하지 않음';
+
+  @override
+  String get ipNotQueriedTip =>
+      '세부 정보를 열어도 이 IP를 조회하지 않습니다. 카드의 국기를 탭하면 조회합니다.';
+
+  @override
+  String get ipTypeExplain =>
+      '유형: IP가 속한 네트워크 종류(주거, 모바일, 비즈니스, 데이터 센터 등). 데이터 센터 IP는 사이트에서 프록시로 판별되기 쉽습니다.';
+
+  @override
+  String get ipQualityExplain =>
+      '품질: ipx.al 건강 점수(0–100)의 등급. 점수가 높을수록 사이트에서 확인 요청이나 차단을 덜 받습니다.';
 }

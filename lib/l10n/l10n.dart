@@ -15405,6 +15405,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lookup failed; tap to retry'**
   String get queryFailedTapToRetry;
+
+  /// No description provided for @ipTagOpenDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'{tag}, view IP details for {ip}'**
+  String ipTagOpenDetail(String tag, String ip);
+
+  /// No description provided for @ipTagOpenDetailHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'{tag}, view IP details'**
+  String ipTagOpenDetailHidden(String tag);
+
+  /// No description provided for @ipTagOpenDetailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows the type and quality already known; does not run a lookup'**
+  String get ipTagOpenDetailHint;
+
+  /// No description provided for @ipTagNoIp.
+  ///
+  /// In en, this message translates to:
+  /// **'No IP to view yet'**
+  String get ipTagNoIp;
+
+  /// No description provided for @ipNotQueried.
+  ///
+  /// In en, this message translates to:
+  /// **'Not queried yet'**
+  String get ipNotQueried;
+
+  /// No description provided for @ipNotQueriedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the details does not look this IP up. Tap the country badge on the card to look it up.'**
+  String get ipNotQueriedTip;
+
+  /// No description provided for @ipTypeExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Type: the kind of network the IP belongs to, such as residential, mobile, business or data center. Sites flag data center IPs as proxies more often.'**
+  String get ipTypeExplain;
+
+  /// No description provided for @ipQualityExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality: the grade of the ipx.al health score (0–100). The higher the score, the less likely sites are to challenge or block it.'**
+  String get ipQualityExplain;
 }
 
 class _AppLocalizationsDelegate

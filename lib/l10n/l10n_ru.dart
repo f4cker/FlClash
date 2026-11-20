@@ -9391,4 +9391,36 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get queryFailedTapToRetry =>
       'Ошибка запроса; нажмите, чтобы повторить';
+
+  @override
+  String ipTagOpenDetail(String tag, String ip) {
+    return '$tag, открыть сведения об IP $ip';
+  }
+
+  @override
+  String ipTagOpenDetailHidden(String tag) {
+    return '$tag, открыть сведения об IP';
+  }
+
+  @override
+  String get ipTagOpenDetailHint =>
+      'Показывает уже известные тип и качество; запрос не выполняется';
+
+  @override
+  String get ipTagNoIp => 'Пока нет IP для просмотра';
+
+  @override
+  String get ipNotQueried => 'Ещё не запрошено';
+
+  @override
+  String get ipNotQueriedTip =>
+      'Открытие сведений не запрашивает этот IP. Чтобы запросить его, нажмите флаг на карточке.';
+
+  @override
+  String get ipTypeExplain =>
+      'Тип: вид сети, к которой относится IP, например домашняя, мобильная, бизнес или дата-центр. IP дата-центров сайты чаще принимают за прокси.';
+
+  @override
+  String get ipQualityExplain =>
+      'Качество: класс оценки ipx.al (0–100). Чем выше оценка, тем реже сайты проверяют или блокируют IP.';
 }
