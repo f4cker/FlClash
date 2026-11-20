@@ -7938,6 +7938,12 @@ abstract class AppLocalizations {
   /// **'Read status again'**
   String get tsReadStatus;
 
+  /// No description provided for @tsReadingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading…'**
+  String get tsReadingStatus;
+
   /// No description provided for @tsLogout.
   ///
   /// In en, this message translates to:

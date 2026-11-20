@@ -1463,6 +1463,7 @@
   "tsRelogin": "Log in again",
   "tsReopenLogin": "Reopen login page",
   "tsReadStatus": "Read status again",
+  "tsReadingStatus": "Reading…",
   "tsLogout": "Log out of this node",
   "tsLoggingOut": "Logging out…",
   "tsLogoutTitle": "Log out of this Tailscale node?",

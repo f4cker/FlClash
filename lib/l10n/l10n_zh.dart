@@ -4295,6 +4295,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsReadStatus => '重新读取状态';
 
   @override
+  String get tsReadingStatus => '正在读取…';
+
+  @override
   String get tsLogout => '退出当前节点';
 
   @override

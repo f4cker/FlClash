@@ -1324,6 +1324,7 @@
   "tsRelogin": "重新登录",
   "tsReopenLogin": "重新打开登录页",
   "tsReadStatus": "重新读取状态",
+  "tsReadingStatus": "正在读取…",
   "tsLogout": "退出当前节点",
   "tsLoggingOut": "正在退出…",
   "tsLogoutTitle": "退出此 Tailscale 节点？",

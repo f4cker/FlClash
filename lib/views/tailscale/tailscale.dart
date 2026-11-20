@@ -68,6 +68,10 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   /// after that does the page offer 查看账号. Cleared once a node is listed
   /// or the Core leaves the applied config.
   int? _retriedProfile;
+
+  /// A read of the node list the user asked for runs; its button is busy
+  /// until the read ends, and only then.
+  bool _userReading = false;
   bool _preparingProfile = false;
   bool _adding = false;
   TailscaleNodeKey? _shownKey;
@@ -771,9 +775,16 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   Widget build(BuildContext context) {
     final coreStatus = ref.watch(coreStatusProvider);
     ref.watch(currentPageLabelProvider);
-    ref.listen(tailscaleNodesProvider, (_, next) {
+    ref.listen(tailscaleNodesProvider, (previous, next) {
       if (_retriedProfile != null && (next.value?.isNotEmpty ?? false)) {
         setState(() => _retriedProfile = null);
+      }
+      // The user's read ends with its first result. A failed one stays
+      // loading while it is retried, so a new error ends it too.
+      if (_userReading &&
+          (!next.isLoading ||
+              (next.hasError && !identical(next.error, previous?.error)))) {
+        setState(() => _userReading = false);
       }
     });
     ref.listen(settledConfigProfileProvider, (_, next) {
@@ -798,7 +809,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       if (error is CoreMethodException && error.isCoreUnavailable) {
         return _page(context, body: _coreStopped(context));
       }
-      return _page(context, body: _nodesFailed(context));
+      return _page(context, body: _nodesFailed(context, nodesValue));
     }
 
     if (nodes == null) {
@@ -1350,7 +1361,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final unconfirmed = failed || hasRecords;
     if (nodesValue.isLoading) {
       // A read the user asked for on 状态待确认 keeps it, button busy.
-      if (unconfirmed && profileId != null && profileId == _retriedProfile) {
+      if (unconfirmed && _userReading) {
         return _nodesUnavailable(
           context,
           profileId: profileId,
@@ -1409,10 +1420,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   }) {
     return _UnconfirmedStatus(
       reading: reading,
-      onRead: () {
-        setState(() => _retriedProfile = profileId);
-        ref.invalidate(tailscaleNodesProvider);
-      },
+      onRead: () => _readNodes(retriedProfile: profileId),
       manage: records == null || records.isEmpty
           ? null
           : _recordAccounts(context, records),
@@ -1514,17 +1522,32 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
   }
 
+  /// 重新读取状态 the user asked for: the node list is read again.
+  void _readNodes({int? retriedProfile}) {
+    setState(() {
+      _userReading = true;
+      if (retriedProfile != null) {
+        _retriedProfile = retriedProfile;
+      }
+    });
+    ref.invalidate(tailscaleNodesProvider);
+  }
+
   /// The node list itself could not be read: a state of its own, never the
   /// empty one.
-  Widget _nodesFailed(BuildContext context) {
+  Widget _nodesFailed(
+    BuildContext context,
+    AsyncValue<List<TailscaleNode>> nodesValue,
+  ) {
     final appLocalizations = context.appLocalizations;
     return NullStatus(
       illustration: NullStatusIllustration.error,
       label: appLocalizations.tsStateLoadFailed,
       description: appLocalizations.tsLoadFailedTip,
-      action: FilledButton(
-        onPressed: () => ref.invalidate(tailscaleNodesProvider),
-        child: Text(appLocalizations.tsReadStatus),
+      action: TailscaleReadStatusButton(
+        key: const ValueKey('ts-failed-read'),
+        reading: _userReading && nodesValue.isLoading,
+        onRead: _readNodes,
       ),
     );
   }
@@ -1656,22 +1679,10 @@ class _UnconfirmedStatus extends StatelessWidget {
                     .copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 24),
-              FilledButton(
-                // A button of its own while busy: disabling the one just
-                // pressed would update it in the middle of its build.
-                key: ValueKey(
-                  reading ? 'ts-unconfirmed-reading' : 'ts-unconfirmed-read',
-                ),
-                style: const ButtonStyle(minimumSize: Size(0, minButtonHeight)),
-                onPressed: reading ? null : onRead,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 8,
-                  children: [
-                    if (reading) tailscaleBusyIcon(context),
-                    Text(appLocalizations.tsReadStatus),
-                  ],
-                ),
+              TailscaleReadStatusButton(
+                key: const ValueKey('ts-unconfirmed-read'),
+                reading: reading,
+                onRead: onRead,
               ),
               if (manage case final manage?) ...[
                 const SizedBox(height: 8),
@@ -1747,6 +1758,58 @@ class _SignInStatus extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 重新读取状态, or 正在读取… with a spinner while the read runs.
+///
+/// Busy, it stays the same enabled button and ignores presses: a disabled
+/// one can't hold focus, so keyboard and screen reader focus would drop on
+/// every read. Its label is announced as a live region.
+class TailscaleReadStatusButton extends StatelessWidget {
+  const TailscaleReadStatusButton({
+    super.key,
+    required this.reading,
+    required this.onRead,
+  });
+
+  static const minHeight = 44.0;
+
+  final bool reading;
+  final VoidCallback onRead;
+
+  static void _ignore() {}
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return Semantics(
+      container: true,
+      liveRegion: reading,
+      child: FilledButton(
+        style: const ButtonStyle(minimumSize: Size(0, minHeight)),
+        onPressed: reading ? _ignore : onRead,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            if (reading)
+              ExcludeSemantics(
+                // On the button's fill, in its label color.
+                child: tailscaleBusyIcon(
+                  context,
+                  color: context.colorScheme.onPrimary,
+                ),
+              ),
+            Text(
+              reading
+                  ? appLocalizations.tsReadingStatus
+                  : appLocalizations.tsReadStatus,
+            ),
+          ],
         ),
       ),
     );

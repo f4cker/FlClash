@@ -1425,7 +1425,7 @@ void main() {
     for (var i = 0; i < 4; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(find.byKey(const ValueKey('ts-unconfirmed-reading')), findsOne);
+    expect(find.text('正在读取…'), findsOne);
     await shoot(tester, 'card-14-reading');
     pending.complete(const []);
     await settle(tester);

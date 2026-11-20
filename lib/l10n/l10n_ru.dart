@@ -4578,6 +4578,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tsReadStatus => 'Read status again';
 
   @override
+  String get tsReadingStatus => 'Reading…';
+
+  @override
   String get tsLogout => 'Log out of this node';
 
   @override

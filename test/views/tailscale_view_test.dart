@@ -2771,14 +2771,12 @@ void main() {
       // Not while the read runs.
       expect(manage, findsNothing);
       expect(find.text('已找到账号记录，但暂时无法读取节点状态。'), findsNothing);
-      // The read keeps 状态待确认 with a busy, disabled button.
+      // The read keeps 状态待确认 with a busy button.
       expect(find.text('状态待确认'), findsOneWidget);
       expect(find.text('正在启动…'), findsNothing);
-      final busy = find.byKey(const ValueKey('ts-unconfirmed-reading'));
-      expect(busy, findsOneWidget);
-      expect(tester.widget<FilledButton>(busy).onPressed, isNull);
+      expect(find.text('正在读取…'), findsOneWidget);
       expect(
-        find.descendant(of: busy, matching: find.byType(ActivityIndicator)),
+        find.descendant(of: read, matching: find.byType(ActivityIndicator)),
         findsOneWidget,
       );
       pending.complete(const []);
@@ -2806,6 +2804,179 @@ void main() {
           .style;
       expect(style?.color, context.colorScheme.primary);
       verifyNothingChanged();
+      await teardownView(tester);
+    });
+
+    FilledButton button(WidgetTester tester, Finder of) =>
+        tester.widget<FilledButton>(
+          find.descendant(of: of, matching: find.byType(FilledButton)),
+        );
+
+    bool focusedIn(Finder of) {
+      final focused = FocusManager.instance.primaryFocus?.context;
+      if (focused == null) return false;
+      return find
+          .descendant(
+            of: of,
+            matching: find.byElementPredicate((element) => element == focused),
+          )
+          .evaluate()
+          .isNotEmpty;
+    }
+
+    testWidgets('a busy read says 正在读取… to a screen reader, live', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpUnconfirmed(tester);
+      final pending = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+      expect(find.bySemanticsLabel('正在读取…'), findsNothing);
+      await tester.tap(read);
+      await settle(tester);
+
+      final node = tester.getSemantics(find.bySemanticsLabel('正在读取…'));
+      var live = false;
+      for (SemanticsNode? at = node; at != null; at = at.parent) {
+        if (at.getSemanticsData().flagsCollection.isLiveRegion) {
+          live = true;
+          break;
+        }
+      }
+      expect(live, isTrue);
+      expect(
+        node.getSemanticsData().flagsCollection.isButton ||
+            node.parent!.getSemanticsData().flagsCollection.isButton,
+        isTrue,
+      );
+      pending.complete(const []);
+      await settle(tester);
+      expect(find.bySemanticsLabel('正在读取…'), findsNothing);
+      expect(find.bySemanticsLabel('重新读取状态'), findsOneWidget);
+      handle.dispose();
+      await teardownView(tester);
+    });
+
+    testWidgets('a busy read ignores taps and keys, then reads again', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      var pending = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+      clearInteractions(core);
+      await tester.tap(read);
+      await settle(tester);
+      verify(() => core.getTailscaleNodes()).called(1);
+
+      await tester.tap(read);
+      await settle(tester);
+      FocusManager.instance.primaryFocus?.unfocus();
+      Focus.of(
+        tester.element(find.descendant(of: read, matching: find.text('正在读取…'))),
+      ).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await settle(tester);
+      verifyNever(() => core.getTailscaleNodes());
+
+      pending.complete(const []);
+      await settle(tester);
+      expect(find.text('正在读取…'), findsNothing);
+      expect(button(tester, read).onPressed, isNotNull);
+      pending = Completer<List<TailscaleNode>>();
+      await tester.tap(read);
+      await settle(tester);
+      verify(() => core.getTailscaleNodes()).called(1);
+      expect(find.text('正在读取…'), findsOneWidget);
+      pending.complete(const []);
+      await settle(tester);
+      verifyNothingChanged();
+      await teardownView(tester);
+    });
+
+    testWidgets('focus stays on the button as a read starts and ends', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      final pending = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+      Focus.of(
+        tester.element(
+          find.descendant(of: read, matching: find.text('重新读取状态')),
+        ),
+      ).requestFocus();
+      await tester.pump();
+      expect(focusedIn(read), isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await settle(tester);
+      expect(find.text('正在读取…'), findsOneWidget);
+      expect(focusedIn(read), isTrue);
+
+      pending.complete(const []);
+      await settle(tester);
+      expect(find.text('重新读取状态'), findsOneWidget);
+      expect(focusedIn(read), isTrue);
+      await teardownView(tester);
+    });
+
+    testWidgets('a read from 状态待确认 that fails is 状态加载失败, ready again', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      final failing = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => failing.future);
+      await tester.tap(read);
+      await settle(tester);
+      expect(find.text('正在读取…'), findsOneWidget);
+      failing.completeError(
+        const CoreMethodException(code: 'tailscale_failed', message: 'no'),
+      );
+      await settle(tester);
+
+      final again = find.byKey(const ValueKey('ts-failed-read'));
+      expect(find.text('状态加载失败'), findsOneWidget);
+      expect(find.text('登录 Tailscale'), findsNothing);
+      expect(
+        find.descendant(of: again, matching: find.text('重新读取状态')),
+        findsOneWidget,
+      );
+      expect(button(tester, again).onPressed, isNotNull);
+
+      // Its read is busy the same way, and once.
+      final pending = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+      clearInteractions(core);
+      await tester.tap(again);
+      await settle(tester);
+      expect(
+        find.descendant(of: again, matching: find.text('正在读取…')),
+        findsOneWidget,
+      );
+      await tester.tap(again);
+      await settle(tester);
+      verify(() => core.getTailscaleNodes()).called(1);
+      pending.complete(const []);
+      await settle(tester);
+      expect(find.text('状态待确认'), findsOneWidget);
+      verifyNothingChanged();
+      await teardownView(tester);
+    });
+
+    testWidgets('a reload nobody asked for after a read is not busy', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      await retry(tester);
+      expect(manage, findsOneWidget);
+      final pending = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+      container.invalidate(tailscaleNodesProvider);
+      await settle(tester);
+      expect(find.text('正在读取…'), findsNothing);
+      pending.complete(const []);
+      await settle(tester);
       await teardownView(tester);
     });
 
