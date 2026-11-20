@@ -270,7 +270,9 @@ func monitorMitmLiveness(ctx context.Context, runtime *mitmRuntime, host string,
 			return
 		}
 		if err != nil || leaf == nil {
-			mitmActive.pauseGlobal(runtime, "livenessUnavailable")
+			if _, published := mitmActive.pauseGlobal(runtime, "livenessUnavailable"); published {
+				mitmTime(0, 0, mitmStagePause, mitmResultLiveness)
+			}
 			return
 		}
 	}

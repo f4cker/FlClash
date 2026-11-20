@@ -77,7 +77,7 @@ func (x *mitmRewriteExchange) record(rule *mitmRewriteRule, phase, action, skip 
 	x.hits = append(x.hits, MitmRewriteHit{Rule: rule.id, Section: rule.section, Phase: phase, Action: action, Skipped: skip})
 	rule.stats.record(skip)
 	if skip != "" {
-		log.Debugln("[MITM] rewrite %s rule %s skipped for %s: %s", rule.section, rule.id, x.url, skip)
+		log.Debugln("[MITM] rewrite %s rule %s skipped: %s", rule.section, rule.id, skip)
 	}
 }
 

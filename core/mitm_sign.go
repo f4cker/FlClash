@@ -25,6 +25,8 @@ type MitmSignRequest struct {
 	SPKI []byte `json:"spki"`
 	// Absolute wall-clock deadline allows the app to subtract relay time.
 	DeadlineUnixMillis int64 `json:"deadlineUnixMillis,omitempty"`
+	// Stage timing only (mitm_timing.go); never sent.
+	timing uint64
 }
 
 type MitmSignResultParams struct {
@@ -43,6 +45,7 @@ type mitmSignPending struct {
 	host   string
 	spki   []byte
 	answer chan mitmSignAnswer
+	timing uint64
 }
 
 const mitmSignTimeout = 10 * time.Second
@@ -78,8 +81,9 @@ func requestMitmLeaf(ctx context.Context, host string, key crypto.PublicKey) (*x
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	request := &MitmSignRequest{ReqID: mitmSignSeq.Add(1), Host: host, SPKI: spki, DeadlineUnixMillis: deadline.UnixMilli()}
-	pending := &mitmSignPending{host: host, spki: spki, answer: make(chan mitmSignAnswer, 1)}
+	timing := mitmTimingIssue(ctx)
+	request := &MitmSignRequest{ReqID: mitmSignSeq.Add(1), Host: host, SPKI: spki, DeadlineUnixMillis: deadline.UnixMilli(), timing: timing}
+	pending := &mitmSignPending{host: host, spki: spki, answer: make(chan mitmSignAnswer, 1), timing: timing}
 	mitmSignMu.Lock()
 	if mitmState.Load() != runtime {
 		mitmSignMu.Unlock()
@@ -93,8 +97,10 @@ func requestMitmLeaf(ctx context.Context, host string, key crypto.PublicKey) (*x
 		mitmSignMu.Unlock()
 	}()
 	if !sendMitmSign(request) {
+		mitmTime(timing, request.ReqID, mitmStageRequestQueued, mitmResultDropped)
 		return nil, errMitmSignDropped
 	}
+	mitmTime(timing, request.ReqID, mitmStageRequestQueued, mitmResultOK)
 	select {
 	case result := <-pending.answer:
 		return result.leaf, result.err
@@ -113,6 +119,7 @@ func handleMitmSignResult(params MitmSignResultParams) bool {
 	if !found {
 		return false
 	}
+	mitmTime(pending.timing, params.ReqID, mitmStageReplyReceived, mitmResultNone)
 	var result mitmSignAnswer
 	switch {
 	case params.Error != "":
@@ -122,6 +129,7 @@ func handleMitmSignResult(params MitmSignResultParams) bool {
 	default:
 		result.leaf, result.err = checkMitmLeaf(params.Cert, params.CA, pending.host, pending.spki, mitmTrustedCA())
 	}
+	mitmTime(pending.timing, params.ReqID, mitmStageReplyChecked, mitmTimingResult(result.err))
 	pending.answer <- result
 	return true
 }

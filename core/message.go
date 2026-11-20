@@ -106,8 +106,13 @@ func runMessageBatcher(
 
 	var deadline <-chan time.Time
 	batch := make([]Message, 0, messageBatchSize)
+	// A MITM signing request holds a connection that waits at most
+	// mitmConnectionLeafWait: its batch goes as soon as nothing else is ready,
+	// not after the batch interval.
+	urgent := false
 
 	flush := func() {
+		urgent = false
 		if len(batch) == 0 {
 			return
 		}
@@ -121,6 +126,7 @@ func runMessageBatcher(
 		current := batch
 		batch = make([]Message, 0, messageBatchSize)
 		send(current)
+		mitmTimeBatch(current, mitmStageRequestWritten)
 	}
 	// A closed queue is set to nil so it never wins a select again.
 	take := func(queue *<-chan Message, message Message, open bool) bool {
@@ -133,6 +139,10 @@ func runMessageBatcher(
 			deadline = timer.C
 		}
 		batch = append(batch, message)
+		if message.Type == MitmSignMessage {
+			urgent = true
+			mitmTimeBatch(batch[len(batch)-1:], mitmStageRequestBatched)
+		}
 		if len(batch) >= messageBatchSize {
 			flush()
 		}
@@ -169,6 +179,11 @@ func runMessageBatcher(
 		default:
 		}
 
+		// Nothing state or priority is ready: a signing request goes now.
+		if urgent {
+			flush()
+		}
+
 		select {
 		case message, open := <-stateMessages:
 			take(&stateMessages, message, open)
@@ -201,4 +216,16 @@ func sendMessageBatch(messages []Message) {
 		return
 	}
 	deliverEvent(data)
+}
+
+// Stage timing only (mitm_timing.go): signing requests among messages.
+func mitmTimeBatch(messages []Message, stage mitmSignStage) {
+	if mitmSignTimer.Load() == nil {
+		return
+	}
+	for _, message := range messages {
+		if request, ok := message.Data.(*MitmSignRequest); ok && message.Type == MitmSignMessage {
+			mitmTime(request.timing, request.ReqID, stage, mitmResultNone)
+		}
+	}
 }

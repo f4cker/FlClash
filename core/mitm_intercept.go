@@ -135,6 +135,8 @@ type mitmLeafCall struct {
 	done chan struct{}
 	leaf *mitmLeaf
 	err  error
+	// Stage timing only (mitm_timing.go): the issuance's number, 0 when off.
+	timing uint64
 }
 
 // Concurrent requests for a host under one setup share one issuance.
@@ -247,14 +249,23 @@ func (cache *mitmLeafCache) fresh(ctx context.Context, host string) (*mitmLeaf, 
 	call := cache.inflight[key]
 	if call == nil {
 		call = &mitmLeafCall{done: make(chan struct{})}
+		if mitmSignTimer.Load() != nil {
+			call.timing = mitmSignIssueSeq.Add(1)
+		}
 		cache.inflight[key] = call
 		go cache.issue(key, host, call, cache.generation)
 	}
 	cache.mu.Unlock()
 	select {
 	case <-call.done:
+		if call.err == nil {
+			mitmTime(call.timing, 0, mitmStageWaiterServed, mitmResultOK)
+		} else {
+			mitmTime(call.timing, 0, mitmStageWaiterFailed, mitmTimingResult(call.err))
+		}
 		return call.leaf, call.err
 	case <-ctx.Done():
+		mitmTime(call.timing, 0, mitmStageWaiterExpired, mitmResultTimeout)
 		return nil, ctx.Err()
 	}
 }
@@ -268,16 +279,23 @@ func (cache *mitmLeafCache) issue(key mitmLeafKey, host string, call *mitmLeafCa
 	if issuer == nil {
 		issuer = issueMitmLeaf
 	}
+	if call.timing != 0 {
+		mitmTime(call.timing, 0, mitmStageIssueStart, mitmResultNone)
+		ctx = context.WithValue(ctx, mitmTimingIssueKey{}, call.timing)
+	}
 	call.leaf, call.err = issuer(ctx, host)
+	mitmTime(call.timing, 0, mitmStageIssueDone, mitmTimingResult(call.err))
 	cache.mu.Lock()
 	if cache.generation != generation {
 		call.leaf, call.err = nil, errMitmSetupChanged
 		cache.mu.Unlock()
+		mitmTime(call.timing, 0, mitmStageDroppedGeneration, mitmResultSetupChanged)
 		close(call.done)
 		return
 	}
 	delete(cache.inflight, key)
 	if call.err == nil && call.leaf != nil {
+		mitmTime(call.timing, 0, mitmStageAdopted, mitmResultOK)
 		cache.keep(key.runtime, host, call.leaf)
 		if cache.quicProof == nil || len(cache.quicProof) >= mitmLeafCacheMax {
 			cache.quicProof = make(map[mitmLeafKey]time.Time)
@@ -293,6 +311,7 @@ func issueMitmLeaf(ctx context.Context, host string) (*mitmLeaf, error) {
 	if err != nil {
 		return nil, err
 	}
+	mitmTime(mitmTimingIssue(ctx), 0, mitmStageKeyReady, mitmResultNone)
 	leaf, err := requestMitmLeaf(ctx, host, &key.PublicKey)
 	if err != nil {
 		return nil, err
@@ -396,7 +415,7 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 		switch refusal {
 		case "notListed", "badKey":
 			mitmActive.pauseHost(runtime, host, string(refusal))
-			log.Debugln("[MITM] %s passed through: the app refused it (%s)", host, string(refusal))
+			log.Debugln("[MITM] a listed host passed through: the app refused it (%s)", string(refusal))
 			return
 		}
 		reason = string(refusal)
@@ -412,6 +431,7 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 	if !published {
 		return
 	}
+	mitmTime(0, 0, mitmStagePause, mitmTimingPauseResult(reason))
 	// Each pause that begins or changes is logged; one that keeps extending
 	// is logged again at most every mitmPauseLogEvery.
 	now := time.Now()
@@ -419,8 +439,7 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 	if previous == nil || previous.reason != reason || now.After(previous.until) ||
 		now.UnixNano()-last >= int64(mitmPauseLogEvery) {
 		mitmPauseLoggedAt.Store(now.UnixNano())
-		log.Warnln("[MITM] decryption paused for %s, listed hosts pass through: %s (%s: %v)",
-			mitmPauseFor, reason, host, err)
+		log.Warnln("[MITM] decryption paused for %s, listed hosts pass through: %s", mitmPauseFor, reason)
 	}
 }
 
@@ -597,10 +616,10 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	if err := upstream.HandshakeContext(ctx); err != nil {
 		var verification *tls.CertificateVerificationError
 		if errors.As(err, &verification) {
-			log.Warnln("[MITM] %s: the site's certificate failed verification: %v", host, verification.Err)
+			log.Warnln("[MITM] the site's certificate failed verification")
 			return mitmOutcomeUpstreamCertificate
 		}
-		log.Warnln("[MITM] %s: TLS to the site failed: %v", host, err)
+		log.Warnln("[MITM] TLS to the site failed")
 		return mitmOutcomeUpstreamFailed
 	}
 	// Once the upstream handshake commits, close its TLS wrapper on exit.
@@ -609,7 +628,7 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	clientProtos := mitmClientProtos(clientALPN, negotiated)
 	if clientProtos == nil {
 		// The client offered h2 alone and the site does not speak it.
-		log.Warnln("[MITM] %s: the client speaks only HTTP/2 and the site does not", host)
+		log.Warnln("[MITM] the client speaks only HTTP/2 and the site does not")
 		return mitmOutcomeUpstreamFailed
 	}
 	clientIdle := &mitmIdleConn{Conn: client, timeout: mitmIdleTimeout}
@@ -621,10 +640,10 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	if err := server.HandshakeContext(ctx); err != nil {
 		var alert *net.OpError
 		if errors.As(err, &alert) && alert.Op == "remote error" {
-			log.Infoln("[MITM] %s: the client refused the decryption certificate: %v", host, err)
+			log.Infoln("[MITM] the client refused the decryption certificate")
 			return mitmOutcomeRefused
 		}
-		log.Debugln("[MITM] %s: TLS from the client failed: %v", host, err)
+		log.Debugln("[MITM] TLS from the client failed")
 		return mitmOutcomeClientFailed
 	}
 	// Closing the wrapper emits close_notify before the tunnel closes raw TCP.
@@ -632,7 +651,7 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	defer func() { clientIdle.closing.Store(true); _ = server.Close() }()
 	http2 := negotiated == mitmALPNHTTP2
 	if http2 && server.ConnectionState().NegotiatedProtocol != mitmALPNHTTP2 {
-		log.Debugln("[MITM] %s: the client did not take HTTP/2", host)
+		log.Debugln("[MITM] the client did not take HTTP/2")
 		return mitmOutcomeClientFailed
 	}
 	// The tracker exists by now; neither fallback nor a failed handshake may

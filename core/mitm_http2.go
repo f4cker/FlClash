@@ -98,7 +98,7 @@ func mitmHTTP2Proxy(client, upstream net.Conn, host string, allowed func() bool,
 	}
 	cc, err := transport.NewClientConn(watched)
 	if err != nil {
-		log.Warnln("[MITM] %s: HTTP/2 to the site failed: %v", host, err)
+		log.Warnln("[MITM] HTTP/2 to the site failed")
 		return err
 	}
 	defer cc.Close()
@@ -287,7 +287,7 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		result = err
 		if !h.cc.CanTakeNewRequest() {
-			log.Debugln("[MITM] %s: HTTP/2 to the site ended: %v", h.host, err)
+			log.Debugln("[MITM] HTTP/2 to the site ended")
 		}
 		panic(http.ErrAbortHandler)
 	}
