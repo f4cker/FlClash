@@ -59,6 +59,27 @@ class _Lookup {
   _Lookup(this.host, {this.port, this.metadata, this.record});
 }
 
+/// A locate the page shows: [listSerial] is the first list read that may
+/// answer it, so a list read before the ask never counts as its result.
+class _Locate {
+  final RulesLocateSource source;
+  final int listSerial;
+  bool ready = false;
+  Object? error;
+  bool focused = false;
+
+  _Locate(this.source, this.listSerial);
+}
+
+/// What the page showed before a locate, put back when it ends.
+typedef _Stash = ({
+  String text,
+  RuleSourceFilter source,
+  String? group,
+  double? offset,
+  double? savedOffset,
+});
+
 /// Whether an added rule decides the host now, as a lookup after adding
 /// it tells: it does, it does not, or the lookup cannot say.
 enum _AddedState { effective, notHit, unconfirmed }
@@ -96,6 +117,8 @@ class RulesView extends ConsumerStatefulWidget {
   static const queryingKey = ValueKey('rules-querying');
   static const addKey = ValueKey('rules-add');
   static const bannerKey = ValueKey('rules-banner');
+  static const locateKey = ValueKey('rules-locate');
+  static const locateShowAllKey = ValueKey('rules-locate-show-all');
 
   @override
   ConsumerState<RulesView> createState() => _RulesViewState();
@@ -107,6 +130,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
   late final ScrollController _scrollController;
   final _listStartKey = GlobalKey();
   final _targetRowKey = GlobalKey();
+  final _locateRowKey = GlobalKey();
+  final _locateFocus = FocusNode(debugLabel: 'rules-locate');
+
+  _Locate? _locate;
+  _Stash? _stash;
 
   RuleList? _list;
   Object? _listError;
@@ -161,6 +189,16 @@ class _RulesViewState extends ConsumerState<RulesView> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _takeAsk(ask));
       }
     }, fireImmediately: true);
+    ref.listenManual(rulesLocateRequestProvider, (_, ask) {
+      if (ask != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _takeLocate(ask));
+      }
+    }, fireImmediately: true);
+    ref.listenManual(shownPageLabelProvider, (previous, next) {
+      if (previous == PageLabel.rules && next != PageLabel.rules) {
+        _endLocate();
+      }
+    });
     ref.listenManual(appliedRuleSourcesStateProvider, (previous, next) {
       if (previous?.sources != next.sources ||
           previous?.profileId != next.profileId) {
@@ -197,6 +235,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
     _lookupTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
+    _locateFocus.dispose();
     super.dispose();
   }
 
@@ -233,6 +272,9 @@ class _RulesViewState extends ConsumerState<RulesView> {
       final list = await ref.read(coreHandlerProvider).listRules();
       if (!mounted || serial != _listSerial) return;
       final epochChanged = _list?.coreEpoch != list.coreEpoch;
+      final locate = _locate;
+      final answered =
+          locate != null && !locate.ready && serial >= locate.listSerial;
       setState(() {
         _list = list;
         _listError = null;
@@ -241,7 +283,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
           _pages.clear();
           _expanded.removeWhere((index) => index >= list.rules.length);
         }
+        if (answered) {
+          locate.ready = true;
+          locate.error = null;
+        }
       });
+      if (answered) _settleLocate(locate);
       final applied = ref.read(appliedRuleSourcesStateProvider);
       final aligned = alignRuleSources(
         list: list,
@@ -257,10 +304,15 @@ class _RulesViewState extends ConsumerState<RulesView> {
       if (_text.trim().isNotEmpty) unawaited(_runFilter(_text));
     } catch (error) {
       if (!mounted || serial != _listSerial) return;
+      final locate = _locate;
+      final answered =
+          locate != null && !locate.ready && serial >= locate.listSerial;
       setState(() {
         _listError = error;
         _listLoading = false;
+        if (answered) locate.error = error;
       });
+      if (answered) _settleLocate(locate);
     }
   }
 
@@ -277,6 +329,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
   // Search
 
   void _onChanged(String text) {
+    if (_locate != null) {
+      // Clearing the field the locate emptied changes nothing; typing is a
+      // new search that replaces both the locate and what it set aside.
+      if (text.trim().isEmpty) return;
+      _locate = null;
+      _stash = null;
+    }
     final wasEmpty = _text.trim().isEmpty;
     _text = text;
     _filterTimer?.cancel();
@@ -381,6 +440,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
   void _takeAsk(RulesLookupAsk ask) {
     if (!mounted) return;
     ref.read(rulesLookupRequestProvider.notifier).taken();
+    _locate = null;
+    _stash = null;
     _controller.text = ask.host;
     _text = ask.host;
     _lookupTimer?.cancel();
@@ -466,6 +527,117 @@ class _RulesViewState extends ConsumerState<RulesView> {
         lookup.loading = false;
       });
     }
+  }
+
+  // Locate
+
+  void _takeLocate(RulesLocateAsk ask) {
+    if (!mounted) return;
+    ref.read(rulesLocateRequestProvider.notifier).taken();
+    // A locate over a locate keeps what the user had before the first.
+    _stash ??= (
+      text: _text,
+      source: _source,
+      group: _group,
+      offset: _scrollController.hasClients ? _scrollController.offset : null,
+      savedOffset: _savedOffset,
+    );
+    _filterTimer?.cancel();
+    _lookupTimer?.cancel();
+    _filterSerial++;
+    _controller.text = '';
+    final locate = _Locate(ask.source, _listSerial + 1);
+    setState(() {
+      _text = '';
+      _filter = null;
+      _lookup = null;
+      _lookupSerial++;
+      _added = null;
+      _showAll = false;
+      _focusIndex = null;
+      _savedOffset = null;
+      _collapsed.clear();
+      _source = RuleSourceFilter.all;
+      _group = null;
+      _locate = locate;
+    });
+    if (!_coreRunning) {
+      setState(() => locate.error = const _CoreStopped());
+      _settleLocate(locate);
+      return;
+    }
+    _loadList();
+  }
+
+  void _retryLocate() {
+    final locate = _locate;
+    if (locate == null || !_coreRunning) return;
+    final next = _Locate(locate.source, _listSerial + 1)
+      ..focused = locate.focused;
+    setState(() => _locate = next);
+    _loadList();
+  }
+
+  /// The rows a locate shows: the ones the Core put first for a managed
+  /// Tailscale account, told only by the flag and prefix the Core reports.
+  List<int> _locatedIndexes(RuleList list) {
+    final end = list.managedPrefix.clamp(0, list.rules.length);
+    return [
+      for (var index = 0; index < end; index++)
+        if (list.rules[index].managed) index,
+    ];
+  }
+
+  /// Once a locate has its answer: the first row in view, and focus on the
+  /// strip the first time only, so a later refresh moves nothing.
+  void _settleLocate(_Locate locate) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _locate != locate) return;
+      if (locate.ready && _scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+        final row = _locateRowKey.currentContext;
+        if (row != null) {
+          Scrollable.ensureVisible(
+            row,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        }
+      }
+      if (!locate.focused) {
+        locate.focused = true;
+        _locateFocus.requestFocus();
+      }
+    });
+  }
+
+  /// Ends a locate and puts back the search and filters it set aside.
+  void _endLocate() {
+    if (_locate == null || !mounted) return;
+    final stash = _stash;
+    _stash = null;
+    _locateFocus.unfocus();
+    setState(() {
+      _locate = null;
+      if (stash != null) {
+        _source = stash.source;
+        _group = stash.group;
+      }
+    });
+    if (stash == null) return;
+    if (stash.text.trim().isNotEmpty) {
+      _controller.text = stash.text;
+      _onChanged(stash.text);
+      _savedOffset = stash.savedOffset;
+    }
+    final offset = stash.offset;
+    if (offset == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(
+          offset.clamp(0, _scrollController.position.maxScrollExtent),
+        );
+      }
+    });
   }
 
   // Rule sets
@@ -568,6 +740,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
     required List<RuleSource?>? sources,
   }) {
     final items = <RuleRowItem>[];
+    if (_locate case final locate?) {
+      if (!locate.ready) return items;
+      for (final index in _locatedIndexes(list)) {
+        items.add(RuleRowItem.rule(list.rules[index]));
+      }
+      return items;
+    }
     final lookup = _lookup?.result;
     if (_inLookup && !_showAll) {
       if (lookup == null) return items;
@@ -1261,8 +1440,21 @@ class _RulesViewState extends ConsumerState<RulesView> {
                   : appLocalizations.rulesModeDirect,
             ),
           ),
+        if (_locate case final locate?)
+          box(_buildLocateStrip(context, locate, list)),
         if (lookup != null) ..._buildLookupSlivers(context, lookup, box),
-        if (_listError case final error? when list == null)
+        if (_locate?.error case final error? when error is! _CoreStopped)
+          box(
+            RulesNotice(
+              tone: RuleTone.red,
+              glyph: AppGlyphs.error,
+              text: appLocalizations.rulesLoadFailed(_reasonOf(error)),
+              actionLabel: appLocalizations.retry,
+              onAction: _retryLocate,
+            ),
+          )
+        else if (_listError case final error?
+            when list == null && _locate == null)
           box(
             RulesNotice(
               tone: RuleTone.red,
@@ -1275,12 +1467,15 @@ class _RulesViewState extends ConsumerState<RulesView> {
         // A lookup with no answer yet shows its line, or its error, alone.
         if (lookup != null && lookup.result == null)
           const SliverToBoxAdapter()
+        else if (_locate?.error != null)
+          const SliverToBoxAdapter()
         else if (list != null) ...[
-          box(
-            _inLookup
-                ? _buildLookupChips(context)
-                : _buildFilterChips(context, list, sources),
-          ),
+          if (_locate == null)
+            box(
+              _inLookup
+                  ? _buildLookupChips(context)
+                  : _buildFilterChips(context, list, sources),
+            ),
           SliverToBoxAdapter(
             key: _listStartKey,
             child: const SizedBox(height: 12),
@@ -1300,6 +1495,91 @@ class _RulesViewState extends ConsumerState<RulesView> {
             ),
           ),
       ],
+    );
+  }
+
+  /// Where the rows come from and what the locate found, above the list;
+  /// it stays until Show all is pressed or the page is left.
+  Widget _buildLocateStrip(
+    BuildContext context,
+    _Locate locate,
+    RuleList? list,
+  ) {
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final fill = locateStripFill(colorScheme);
+    final style = AppTextStyle.footnote
+        .of(context)
+        .copyWith(color: colorScheme.onSurface);
+    final count = locate.ready && list != null
+        ? _locatedIndexes(list).length
+        : null;
+    final lines = [
+      if (locate.error != null)
+        appLocalizations.rulesLocateFailed
+      else if (count == null)
+        appLocalizations.rulesLocateLoading
+      else if (count > 0)
+        appLocalizations.rulesLocateFound(count)
+      else ...[
+        appLocalizations.rulesLocateNotFound,
+        appLocalizations.rulesLocateMaybeChanged,
+      ],
+    ];
+    final source = switch (locate.source) {
+      RulesLocateSource.tailscaleManaged =>
+        appLocalizations.rulesLocateTailscale,
+    };
+    return Focus(
+      focusNode: _locateFocus,
+      child: Container(
+        key: RulesView.locateKey,
+        padding: const EdgeInsets.all(12),
+        decoration: ShapeDecoration(
+          color: fill,
+          shape: RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 4,
+          children: [
+            Semantics(
+              container: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 2,
+                children: [
+                  Text(
+                    source,
+                    style: AppTextStyle.footnote
+                        .of(context, emphasized: true)
+                        .copyWith(color: colorScheme.onSurface),
+                  ),
+                  for (final line in lines) Text(line, style: style),
+                ],
+              ),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              child: TextButton(
+                key: RulesView.locateShowAllKey,
+                onPressed: _endLocate,
+                style: ButtonStyle.from(
+                  foregroundColor: locateLinkColor(colorScheme, fill),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  minimumSize: const Size(44, 44),
+                ),
+                child: Text(appLocalizations.rulesLocateShowAll),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1786,9 +2066,17 @@ class _RulesViewState extends ConsumerState<RulesView> {
                 ? -1
                 : own.indexWhere((rule) => rule.id == editable.rule.id);
             final number = index + 1;
+            final located = _locate != null;
             row = RuleRow(
               profile: _profileName,
-              key: index == highlighted ? _targetRowKey : ValueKey(index),
+              key: located && first
+                  ? _locateRowKey
+                  : index == highlighted
+                  ? _targetRowKey
+                  : ValueKey(index),
+              association: located
+                  ? context.appLocalizations.rulesLocateTag
+                  : null,
               rule: rule,
               hit: item.hit,
               winnerIndex: winner?.index,
@@ -1853,6 +2141,28 @@ class _RulesViewState extends ConsumerState<RulesView> {
       ),
     );
   }
+}
+
+/// The locate strip's fill: primary at 6% over the page.
+@visibleForTesting
+Color locateStripFill(ColorScheme colorScheme) => Color.alphaBlend(
+  colorScheme.primary.withValues(alpha: 0.06),
+  SurfaceLevel.page.colorOf(colorScheme),
+);
+
+/// Primary taken toward the text color until it reads at 4.5:1 on [fill]:
+/// in light themes primary alone falls short on its own 6% tint.
+@visibleForTesting
+Color locateLinkColor(ColorScheme colorScheme, Color fill) {
+  for (var step = 0; step <= 20; step++) {
+    final color = Color.lerp(
+      colorScheme.primary,
+      colorScheme.onSurface,
+      step / 20,
+    )!;
+    if (contrastRatio(color, fill) >= 4.5) return color;
+  }
+  return colorScheme.onSurface;
 }
 
 class _CoreStopped {

@@ -3937,11 +3937,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tsCurrentDevice => 'This device';
 
   @override
-  String tsNodeOf(Object name) {
-    return 'Node $name';
-  }
-
-  @override
   String tsStatusOf(Object label) {
     return 'Status: $label';
   }
@@ -6292,6 +6287,39 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get rulesShowAll => 'Show all rules';
+
+  @override
+  String get rulesLocateTailscale => 'Règles de cet appareil';
+
+  @override
+  String rulesLocateFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count règles associées trouvées',
+      one: '1 règle associée trouvée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rulesLocateNotFound => 'Aucune règle correspondante';
+
+  @override
+  String get rulesLocateMaybeChanged =>
+      'La configuration actuelle a peut-être changé.';
+
+  @override
+  String get rulesLocateFailed => 'Impossible de lire les règles';
+
+  @override
+  String get rulesLocateLoading => 'Lecture des règles…';
+
+  @override
+  String get rulesLocateShowAll => 'Tout afficher';
+
+  @override
+  String get rulesLocateTag => 'Règle associée';
 
   @override
   String get ruleHitTag => 'Matched';

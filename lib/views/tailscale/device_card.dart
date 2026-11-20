@@ -161,16 +161,6 @@ class TailscaleDeviceCard extends StatelessWidget {
               glyph: AppGlyphs.devices,
               title: appLocalizations.tsCurrentDevice,
               leading: [
-                Flexible(
-                  child: Text(
-                    '· ${appLocalizations.tsNodeOf(node.name)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyle.subheadline
-                        .of(context)
-                        .copyWith(color: context.colorScheme.onSurfaceVariant),
-                  ),
-                ),
                 if (_source case final source?) TailscaleTag(label: source),
                 Semantics(
                   label: appLocalizations.tsStatusOf(chipLabel),

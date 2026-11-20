@@ -19,7 +19,6 @@ import 'assign_dialog.dart';
 import 'device_card.dart';
 import 'device_list.dart';
 import 'exit_dialog.dart';
-import 'rules_view.dart';
 import 'settings_cards.dart' hide TailscaleTag;
 import 'state.dart';
 import 'widgets.dart';
@@ -725,38 +724,16 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     ref.read(currentPageLabelProvider.notifier).toProfiles();
   }
 
-  void _goToRules(List<TailscaleNode> nodes) {
-    final managed = nodes.where((node) => node.managed).toList();
-    if (managed.isEmpty) {
-      showInSheet<void>(context, builder: (_) => const AddedRulesView());
+  /// A managed node's rules are the rows the Core puts first, which the
+  /// rules page locates; a profile node's rules are the profile's own.
+  void _goToRules(TailscaleNode node) {
+    if (node.managed) {
+      ref
+          .read(rulesLocateRequestProvider.notifier)
+          .ask(RulesLocateSource.tailscaleManaged);
       return;
     }
-    showInSheet<void>(
-      context,
-      builder: (_) => TailscaleRulesView(
-        accounts: [
-          for (final node in managed)
-            (
-              id: node.managedId,
-              label: _ownerLabel(
-                TailscaleRouteOwner(
-                  kind: tailscaleOwnerManaged,
-                  id: node.managedId,
-                ),
-                nodes,
-              ).account,
-              attached: node.attached,
-            ),
-        ],
-        labelOf: (owner) => _ownerLabel(owner, nodes).account,
-        onAssign: (target) {
-          final routes = ref.read(tailscaleRoutesReportProvider).value;
-          if (routes != null) {
-            _chooseAccounts(routes, nodes, focus: target);
-          }
-        },
-      ),
-    );
+    showInSheet<void>(context, builder: (_) => const AddedRulesView());
   }
 
   void _showHelp() {
@@ -1067,7 +1044,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     List<TailscaleNode> nodes,
   ) {
     final appLocalizations = context.appLocalizations;
-    void onGoToRules() => _goToRules(nodes);
+    void onGoToRules() => _goToRules(node);
     if (!node.managed) {
       return TailscaleRulesCard(
         onGoToRules: onGoToRules,

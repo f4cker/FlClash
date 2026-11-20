@@ -191,6 +191,9 @@ class RuleRow extends StatelessWidget {
   /// Lit for a moment after the rule was saved.
   final bool flashing;
 
+  /// Names the row as one a locate went to, its only mark.
+  final String? association;
+
   bool get editable => onDelete != null;
 
   const RuleRow({
@@ -216,6 +219,7 @@ class RuleRow extends StatelessWidget {
     this.onMoveUp,
     this.onMoveDown,
     this.flashing = false,
+    this.association,
   });
 
   List<Widget> _setExtras(BuildContext context) {
@@ -266,12 +270,16 @@ class RuleRow extends StatelessWidget {
     final tag = hit == null ? null : hitTagOf(context, hit, winnerIndex);
     final target = _RuleTarget(target: rule.target, showNode: showNode);
     final number = rule.index + 1;
-    final semantics = appLocalizations.ruleRowSemantics(
-      number,
-      rule.text,
-      badge?.label ?? '',
-      ruleTargetLabel(context, rule.target),
-    );
+    final association = this.association;
+    final semantics = [
+      ?association,
+      appLocalizations.ruleRowSemantics(
+        number,
+        rule.text,
+        badge?.label ?? '',
+        ruleTargetLabel(context, rule.target),
+      ),
+    ].join(', ');
     final menuItems = editable
         ? [
             PopupMenuItem(
@@ -327,6 +335,7 @@ class RuleRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         RuleCode(ruleBodyOf(rule)),
+        if (association != null) RuleTag.primary(context, association),
         if (badge != null)
           RuleBadge(label: badge.label, tone: badge.tone, tooltip: badge.full),
         ..._setExtras(context),

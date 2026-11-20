@@ -1595,6 +1595,65 @@ abstract class _$RulesLookupRequest extends $Notifier<RulesLookupAsk?> {
   }
 }
 
+/// Opens the rules page showing only the rows of a source until dismissed.
+
+@ProviderFor(RulesLocateRequest)
+final rulesLocateRequestProvider = RulesLocateRequestProvider._();
+
+/// Opens the rules page showing only the rows of a source until dismissed.
+final class RulesLocateRequestProvider
+    extends $NotifierProvider<RulesLocateRequest, RulesLocateAsk?> {
+  /// Opens the rules page showing only the rows of a source until dismissed.
+  RulesLocateRequestProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'rulesLocateRequestProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$rulesLocateRequestHash();
+
+  @$internal
+  @override
+  RulesLocateRequest create() => RulesLocateRequest();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RulesLocateAsk? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RulesLocateAsk?>(value),
+    );
+  }
+}
+
+String _$rulesLocateRequestHash() =>
+    r'1cfa652adecbab2064530a2c770f3776dc0672fc';
+
+/// Opens the rules page showing only the rows of a source until dismissed.
+
+abstract class _$RulesLocateRequest extends $Notifier<RulesLocateAsk?> {
+  RulesLocateAsk? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<RulesLocateAsk?, RulesLocateAsk?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<RulesLocateAsk?, RulesLocateAsk?>,
+              RulesLocateAsk?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// A group the proxies page is asked to bring into view, unfolded and
 /// briefly marked.
 

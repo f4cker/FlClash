@@ -511,6 +511,33 @@ class RulesLookupRequest extends _$RulesLookupRequest
   }
 }
 
+enum RulesLocateSource {
+  tailscaleManaged,
+}
+
+typedef RulesLocateAsk = ({RulesLocateSource source, int serial});
+
+/// Opens the rules page showing only the rows of a source until dismissed.
+@Riverpod(keepAlive: true)
+class RulesLocateRequest extends _$RulesLocateRequest
+    with AutoDisposeNotifierMixin {
+  int _serial = 0;
+
+  @override
+  RulesLocateAsk? build() {
+    return null;
+  }
+
+  void ask(RulesLocateSource source) {
+    value = (source: source, serial: ++_serial);
+    ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.rules);
+  }
+
+  void taken() {
+    value = null;
+  }
+}
+
 /// A group the proxies page is asked to bring into view, unfolded and
 /// briefly marked.
 @Riverpod(keepAlive: true)
