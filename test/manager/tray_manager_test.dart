@@ -376,6 +376,11 @@ void main() {
         () => states.set('Proxy', const TrayGroupMenuState(confirmedName: 'B')),
         () => readFailure.set(true),
         () => testing.start('Proxy'),
+        () => unawaited(
+          container
+              .read(trayDelayTestAllPendingProvider.notifier)
+              .run(() => Completer<void>().future),
+        ),
       ]) {
         _RecordingSystemAction.updateTrayCount = 0;
         change();

@@ -86,6 +86,7 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
         _onMenuDataChanged(prev, next);
       });
       ref.listenManual(delayTestingGroupsProvider, _onMenuDataChanged);
+      ref.listenManual(trayDelayTestAllPendingProvider, _onMenuDataChanged);
       // PendingDelayTests publishes live map views. Earlier views already show
       // the new phases, so deep comparison would suppress running/finished
       // notifications. Its provider only publishes when a phase changes.

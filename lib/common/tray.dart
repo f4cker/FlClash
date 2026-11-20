@@ -370,6 +370,7 @@ class AppTray implements TrayPort {
     final delays = read(trayDelaysProvider);
     final pendingTests = read(pendingDelayTestsProvider);
     final testingGroups = read(delayTestingGroupsProvider);
+    final testingAll = read(trayDelayTestAllPendingProvider);
     final selectedMap = read(selectedMapProvider);
     final defaultTestUrl = read(patchClashConfigProvider).testUrl;
     final proxiesAction = read(proxiesActionProvider.notifier);
@@ -433,11 +434,18 @@ class AppTray implements TrayPort {
         ),
       TrayMenuAction(
         label: HotAction.delayTest.label,
-        detail: _shortcut(trayState, HotAction.delayTest),
-        enabled: !readFailed,
+        detail: testingAll
+            ? currentAppLocalizations.trayTesting
+            : _shortcut(trayState, HotAction.delayTest),
+        enabled: !readFailed && !testingAll,
+        keepsMenuOpen: true,
         onSelected: () {
           if (!isCurrentScope()) return;
-          _observe(proxiesAction.delayTestGroups(groups));
+          _observe(
+            read(
+              trayDelayTestAllPendingProvider.notifier,
+            ).run(() => proxiesAction.delayTestGroups(groups)),
+          );
         },
       ),
       const TrayMenuSeparator(),
@@ -657,7 +665,9 @@ class AppTray implements TrayPort {
       items: [
         TrayMenuAction(
           label: l10n.trayTestLatency,
+          detail: testing ? l10n.trayTesting : null,
           enabled: !readFailed && !testing && group.all.isNotEmpty,
+          keepsMenuOpen: true,
           onSelected: onTest,
         ),
         const TrayMenuSeparator(),

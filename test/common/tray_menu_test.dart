@@ -1561,6 +1561,84 @@ void main() {
     },
   );
 
+  test(
+    'latency tests keep the menu open and show their run in place',
+    () async {
+      final recorded = <String>[];
+      final release = Completer<void>();
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          currentProfileProvider.overrideWithValue(null),
+          proxiesActionProvider.overrideWith(
+            () => _RecordingProxiesAction(recorded, allGroups: release.future),
+          ),
+        ],
+      );
+      final l10n = currentAppLocalizations;
+      Future<void> refresh() => update(_trayState(groups: [_proxyGroup]));
+      TrayItem row(String label) =>
+          showCall()!.menu.firstWhere((item) => item.label == label);
+      await refresh();
+      expect(row(HotAction.delayTest.label).keepsMenuOpen, isTrue);
+      expect(row('Proxy').items.first.keepsMenuOpen, isTrue);
+      expect(row('Proxy').items.last.keepsMenuOpen, isFalse);
+      expect(row(l10n.show).keepsMenuOpen, isFalse);
+      expect(row(l10n.exit).keepsMenuOpen, isFalse);
+
+      await select(_item(showCall(), HotAction.delayTest.label));
+      expect(recorded, ['all-groups']);
+      await refresh();
+      final busy = _item(showCall(), HotAction.delayTest.label);
+      expect(busy['enabled'], isFalse);
+      expect(busy['detail'], l10n.trayTesting);
+      await select(busy);
+      expect(recorded, ['all-groups']);
+
+      release.complete();
+      await pumpEventQueue();
+      await refresh();
+      final idle = _item(showCall(), HotAction.delayTest.label);
+      expect(idle['enabled'], isTrue);
+      expect(idle.containsKey('detail'), isFalse);
+      await select(idle);
+      expect(recorded, ['all-groups', 'all-groups']);
+
+      container.read(delayTestingGroupsProvider.notifier).start('Proxy');
+      await refresh();
+      expect(children('Proxy').first['enabled'], isFalse);
+      expect(children('Proxy').first['detail'], l10n.trayTesting);
+      container.read(delayTestingGroupsProvider.notifier).stop('Proxy');
+      await refresh();
+      expect(children('Proxy').first.containsKey('detail'), isFalse);
+    },
+  );
+
+  test('the all-groups test runs once until it settles', () async {
+    final pending = container.read(trayDelayTestAllPendingProvider.notifier);
+    final release = Completer<void>();
+    var runs = 0;
+    Future<void> test() {
+      runs++;
+      return release.future;
+    }
+
+    final first = pending.run(test);
+    await pending.run(test);
+    expect(runs, 1);
+    expect(container.read(trayDelayTestAllPendingProvider), isTrue);
+    release.complete();
+    await first;
+    expect(container.read(trayDelayTestAllPendingProvider), isFalse);
+    await expectLater(
+      pending.run(() async => throw StateError('failed')),
+      throwsStateError,
+    );
+    expect(container.read(trayDelayTestAllPendingProvider), isFalse);
+    await pending.run(test);
+    expect(runs, 2);
+  });
+
   test('only selectable group classes activate members', () async {
     final recorded = <String>[];
     container.dispose();
@@ -1778,9 +1856,10 @@ void main() {
 }
 
 class _RecordingProxiesAction extends ProxiesAction {
-  _RecordingProxiesAction(this.recorded);
+  _RecordingProxiesAction(this.recorded, {this.allGroups});
 
   final List<String> recorded;
+  final Future<void>? allGroups;
 
   @override
   Future<void> changeProxyForTray({
@@ -1793,6 +1872,7 @@ class _RecordingProxiesAction extends ProxiesAction {
   @override
   Future<void> delayTestGroups(List<Group> groups) async {
     recorded.add('all-groups');
+    await allGroups;
   }
 
   @override

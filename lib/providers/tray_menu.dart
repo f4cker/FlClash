@@ -106,3 +106,23 @@ class TrayModeMenuStateNotifier extends Notifier<TrayModeMenuState> {
 
   void set(TrayModeMenuState value) => state = value;
 }
+
+final trayDelayTestAllPendingProvider =
+    NotifierProvider<TrayDelayTestAllPending, bool>(
+      TrayDelayTestAllPending.new,
+    );
+
+class TrayDelayTestAllPending extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  Future<void> run(Future<void> Function() test) async {
+    if (state) return;
+    state = true;
+    try {
+      await test();
+    } finally {
+      state = false;
+    }
+  }
+}
