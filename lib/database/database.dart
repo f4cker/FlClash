@@ -608,23 +608,24 @@ class Database extends _$Database {
   /// only while that restore is unfinished, and backups leave it out.
   static const restoreCommitsTable = 'restore_commits';
 
-  /// The tables a restore writes. Caches and status rows that change in the
-  /// background are left out, so the fingerprint only moves when restored
-  /// data does.
-  static const _fingerprintTables = [
-    'profiles',
-    'scripts',
-    'rules',
-    'disabled_rules',
-    'proxy_groups',
-    'clash_providers',
-    'custom_proxies',
-    'proxy_dialers',
-    'mitm_modules',
-    'added_rule_sets',
-    'profile_mounts',
-    'mount_targets',
-  ];
+  /// The tables a restore writes, by the columns read. Caches and status
+  /// rows that change in the background are left out, as is a mount
+  /// target's pending record: a readback settling it changes no restored
+  /// data, and every other mount write moves the version.
+  static const _fingerprintTables = {
+    'profiles': '*',
+    'scripts': '*',
+    'rules': '*',
+    'disabled_rules': '*',
+    'proxy_groups': '*',
+    'clash_providers': '*',
+    'custom_proxies': '*',
+    'proxy_dialers': '*',
+    'mitm_modules': '*',
+    'added_rule_sets': '*',
+    'profile_mounts': '*',
+    'mount_targets': 'target_id, "groups", version',
+  };
 
   /// A digest of every row a restore writes. Recovery compares it with the
   /// one recorded at commit: a mismatch means something, such as an older
@@ -632,10 +633,11 @@ class Database extends _$Database {
   Future<String> restoreFingerprint() async {
     final output = _DigestSink();
     final input = sha256.startChunkedConversion(output);
-    for (final table in _fingerprintTables) {
+    for (final MapEntry(key: table, value: columns)
+        in _fingerprintTables.entries) {
       input.add(utf8.encode('#$table\n'));
       final rows = await customSelect(
-        'SELECT * FROM "$table" ORDER BY rowid',
+        'SELECT $columns FROM "$table" ORDER BY rowid',
       ).get();
       for (final row in rows) {
         input.add(

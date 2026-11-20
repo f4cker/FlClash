@@ -97,6 +97,26 @@ abstract final class BackupEntries {
       !name.contains('/') &&
       !name.contains(r'\');
 
+  /// Whether [entry] has a shape [of] produces, so it resolves inside the
+  /// root it is joined to. A journal is read back from disk and is not
+  /// trusted further than that.
+  static bool isValid(String entry) {
+    final parts = entry.split('/');
+    if (!parts.every(_isResourceName)) return false;
+    return switch (parts) {
+      [profilesDirectoryName, final name] => _isIdFile(name, '.yaml'),
+      ['scripts', final name] => _isIdFile(name, '.js'),
+      [providersDirectoryName, rulesProviderDirectoryName, _] => true,
+      [mitmDirectoryName, mitmModulesDirectoryName, _] => true,
+      [mitmDirectoryName, mitmResourcesDirectoryName, _] => true,
+      _ => false,
+    };
+  }
+
+  static bool _isIdFile(String name, String extension) =>
+      name.endsWith(extension) &&
+      int.tryParse(name.substring(0, name.length - extension.length)) != null;
+
   static String resolve(String root, String entry) {
     return joinAll([root, ...posix.split(entry)]);
   }

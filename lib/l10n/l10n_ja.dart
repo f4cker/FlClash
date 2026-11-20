@@ -1879,11 +1879,6 @@ class AppLocalizationsJa extends AppLocalizations {
       '前回の復元はすでにデータを保存していました。残りの手順は起動時に完了しました。';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return '前回の復元はすでにデータを保存していましたが、次の残りの手順は安全に完了できないためスキップしました：$steps。途中で別のバージョンのアプリを実行した場合に起こることがあります。必要な場合はバックアップをもう一度復元してください。';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       '前回の復元は中断され、その記録を読み取れなかったため、自動では何も行いませんでした。データがおかしい場合はバックアップをもう一度復元してください。';
 
@@ -1895,6 +1890,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreStepMitm => 'MITM モジュールの再確認';
+
+  @override
+  String get restoreRestoredPending => 'データは復元されましたが、後続の処理はまだ完了していません。';
+
+  @override
+  String get restoreOldVersionSkipped =>
+      '以前のバージョンのアプリがデータを変更したため、復元の一部の手順をスキップしました。';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return '未完了：$steps。';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return 'スキップ：$steps。現在のデータはそのまま残しています。';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return '次のファイルがバックアップと一致しません：$files。';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return '次のプロファイルのマウントはまだ確認が必要です：$profiles。各プロファイルのマウント画面で「Read status again」を選んでください。';
+  }
+
+  @override
+  String get restoreActionNextLaunch => '次回アプリを起動したときに自動で続行します。';
+
+  @override
+  String get restoreActionRetry => '「続行」を選ぶと、残りの手順を今すぐ再試行します。';
+
+  @override
+  String get restoreActionRestoreAgain => 'これらの手順を完了するには、バックアップをもう一度復元してください。';
+
+  @override
+  String get restoreRecoveryFailed =>
+      '前回の復元は中断され、起動時に処理できませんでした。記録は残してあり、次回の起動時に再試行します。';
+
+  @override
+  String get restoreContinue => '続行';
 
   @override
   String get pruneCache => 'キャッシュを整理';

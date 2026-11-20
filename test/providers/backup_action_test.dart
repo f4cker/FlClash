@@ -458,10 +458,13 @@ void main() {
         RestoreOption.onlyProfiles,
       ),
       throwsA(
-        isA<MessageException>().having(
+        isA<RestorePartialException>().having(
           (e) => e.message,
           'message',
-          contains('database changes were committed'),
+          allOf(
+            contains('has been restored'),
+            isNot(contains('was not changed')),
+          ),
         ),
       ),
     );

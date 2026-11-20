@@ -271,55 +271,125 @@ class BackupAction extends _$BackupAction {
                 );
                 await _checkpoint(RestoreCheckpoint.committed);
                 await afterRestoreCommit?.call();
-                await journal.clearCaches(database);
-                await journal.advance(RestorePhase.cachesCleared);
-                await _checkpoint(RestoreCheckpoint.cachesCleared);
-                if (restoredConfig case final value?) {
-                  writeConfig(ref, value);
-                  // Saved now rather than debounced: until this lands, a
-                  // crash would leave the committed rows with old settings.
-                  debouncer.cancel(FunctionTag.savePreferences);
-                  await _checkpoint(RestoreCheckpoint.configWritten);
-                  if (!await preferences.saveConfig(ref.read(configProvider))) {
-                    throw StateError('saving the restored settings failed');
-                  }
-                }
-                await journal.advance(
-                  RestorePhase.configSaved,
-                  dbFingerprint: await database.restoreFingerprint(),
+                await _afterCommit(
+                  journal,
+                  restoredConfig: restoredConfig,
+                  mixedPort: config == null
+                      ? null
+                      : (configMap?['patchClashConfig'], config),
                 );
-                await _checkpoint(RestoreCheckpoint.configSaved);
-                if (config != null) {
-                  if (unusableMixedPort(configMap?['patchClashConfig'])
-                      case final value?) {
-                    dialogs.showMixedPortReset(
-                      value,
-                      config.patchClashConfig.mixedPort,
-                    );
-                  }
-                }
-                final mitm = ref.read(mitmModulesActionProvider.notifier);
-                await mitm.recheckConsent();
-                await mitm.clean();
-                await journal.advance(
-                  RestorePhase.mitmDone,
-                  dbFingerprint: await database.restoreFingerprint(),
-                );
-                await _checkpoint(RestoreCheckpoint.mitmDone);
-                await journal.finish(database);
-                if (ref.mounted) {
-                  unawaited(mitm.autoUpdate());
-                }
               } on RestoreCrash {
                 rethrow;
               } catch (error, stack) {
+                commonPrint.log(
+                  'restore step after commit failed: $error',
+                  logLevel: LogLevel.error,
+                );
                 Error.throwWithStackTrace(
-                  MessageException(
-                    'Restore partially completed: database changes were committed, '
-                    'but a later step failed. $error',
+                  RestorePartialException(
+                    _partialMessage(journal.remainingSteps()),
+                    steps: journal.remainingSteps(),
                   ),
                   stack,
                 );
+              }
+            },
+          ),
+        );
+  }
+
+  static String _partialMessage(List<RestoreStep> steps) =>
+      restoreRecoveryMessage(
+        RestoreRecoveryReport(
+          RestoreRecoveryOutcome.pending,
+          skippedSteps: steps,
+          followUp: RestoreFollowUp.retryNow,
+        ),
+        currentAppLocalizations,
+      );
+
+  /// Every step after the commit skips what the journal records as done,
+  /// so [resumeRestore] can run it again.
+  Future<void> _afterCommit(
+    RestoreJournal journal, {
+    required Config? restoredConfig,
+    (Object?, Config)? mixedPort,
+  }) async {
+    if (journal.phase.index < RestorePhase.cachesCleared.index) {
+      await journal.clearCaches(database);
+      await journal.advance(RestorePhase.cachesCleared);
+      await _checkpoint(RestoreCheckpoint.cachesCleared);
+    }
+    if (journal.phase.index < RestorePhase.configSaved.index) {
+      if (restoredConfig case final value?) {
+        writeConfig(ref, value);
+        // Saved now rather than debounced: until this lands, a crash would
+        // leave the committed rows with old settings.
+        debouncer.cancel(FunctionTag.savePreferences);
+        await _checkpoint(RestoreCheckpoint.configWritten);
+        final saving = ref.read(configProvider);
+        await journal.advance(journal.phase, prefsTarget: configHash(saving));
+        if (!await preferences.saveConfig(saving)) {
+          throw StateError('saving the restored settings failed');
+        }
+        await _checkpoint(RestoreCheckpoint.configStored);
+      }
+      await journal.advance(
+        RestorePhase.configSaved,
+        dbFingerprint: await database.restoreFingerprint(),
+      );
+      await _checkpoint(RestoreCheckpoint.configSaved);
+    }
+    if (mixedPort case (final patch, final config)) {
+      if (unusableMixedPort(patch) case final value?) {
+        dialogs.showMixedPortReset(value, config.patchClashConfig.mixedPort);
+      }
+    }
+    final mitm = ref.read(mitmModulesActionProvider.notifier);
+    if (journal.phase.index < RestorePhase.mitmDone.index) {
+      await mitm.recheckConsent();
+      await mitm.clean();
+      await journal.advance(
+        RestorePhase.mitmDone,
+        dbFingerprint: await database.restoreFingerprint(),
+      );
+      await _checkpoint(RestoreCheckpoint.mitmDone);
+    }
+    await journal.finish(database);
+    if (ref.mounted) {
+      unawaited(mitm.autoUpdate());
+    }
+  }
+
+  /// Runs what a restore committed in this session still owes, after a
+  /// step failed. Journals without a commit marker are left to the launch.
+  Future<void> resumeRestore() {
+    return ref
+        .read(addedRulesActionProvider.notifier)
+        .runRestoreInLane(
+          () => ref.read(setupActionProvider.notifier).runRestoreBeforeApply(
+            () async {
+              final home = await appPath.homeDirPath;
+              for (final (id, journal) in await RestoreJournal.pending(home)) {
+                if (journal == null) continue;
+                if (await database.restoreCommit(id) == null) continue;
+                try {
+                  await _afterCommit(
+                    journal,
+                    restoredConfig: switch (journal.config) {
+                      final map? => Config.fromJson(map),
+                      null => null,
+                    },
+                  );
+                } catch (error, stack) {
+                  Error.throwWithStackTrace(
+                    RestorePartialException(
+                      _partialMessage(journal.remainingSteps()),
+                      steps: journal.remainingSteps(),
+                    ),
+                    stack,
+                  );
+                }
               }
             },
           ),

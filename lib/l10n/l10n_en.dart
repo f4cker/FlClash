@@ -1967,11 +1967,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The last restore had already saved its data. The remaining steps were completed at startup.';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return 'The last restore had already saved its data, but these remaining steps couldn\'t be completed safely and were skipped: $steps. This can happen when another version of the app ran in between. Restore the backup again if you need them.';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       'The last restore was interrupted and its record couldn\'t be read, so nothing was done automatically. If your data looks wrong, restore the backup again.';
 
@@ -1983,6 +1978,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreStepMitm => 'rechecking MITM modules';
+
+  @override
+  String get restoreRestoredPending =>
+      'Your data has been restored, but follow-up processing isn\'t finished yet.';
+
+  @override
+  String get restoreOldVersionSkipped =>
+      'An older version of the app changed the data, so some restore steps were skipped.';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return 'Not finished: $steps.';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return 'Skipped: $steps. Your current data was kept as it is.';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return 'These files don\'t match the backup: $files.';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return 'Mounts of these profiles still need to be checked: $profiles. Open each profile\'s mount page and choose “Read status again”.';
+  }
+
+  @override
+  String get restoreActionNextLaunch =>
+      'They will be continued automatically the next time the app starts.';
+
+  @override
+  String get restoreActionRetry =>
+      'Choose “Continue” to try the remaining steps again now.';
+
+  @override
+  String get restoreActionRestoreAgain =>
+      'To complete these steps, restore the backup again.';
+
+  @override
+  String get restoreRecoveryFailed =>
+      'The last restore was interrupted and couldn\'t be processed at startup. Its record was kept and will be tried again the next time the app starts.';
+
+  @override
+  String get restoreContinue => 'Continue';
 
   @override
   String get pruneCache => 'Prune cache';

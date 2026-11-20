@@ -180,41 +180,25 @@ class Bootstrap {
   ProviderContainer get _container => globalState.container;
 
   Future<void> _initApp() async {
-    unawaited(_container.read(systemActionProvider.notifier).updateTray());
-    unawaited(
-      _container.read(profilesActionProvider.notifier).autoUpdateProfiles(),
-    );
-    unawaited(clearUpdateDownloads());
-    unawaited(macUpdater?.cleanup());
-    unawaited(_container.read(commonActionProvider.notifier).autoCheckUpdate());
-    if (system.isMacOS) {
-      unawaited(
-        globalState.safeRun(() async {
-          await autoLaunch?.refreshStatus((enabled) {
-            _container
-                .read(appSettingProvider.notifier)
-                .update((state) => state.copyWith(autoLaunch: enabled));
-          });
-        }),
-      );
-    } else {
-      unawaited(
-        autoLaunch?.updateStatus(
-          _container.read(appSettingProvider).autoLaunch,
+    await restoreRecovery.completeAtStartup(
+      mitm: () async {
+        final action = _container.read(mitmModulesActionProvider.notifier);
+        await action.recheckConsent();
+        await action.clean();
+      },
+      startBackgroundWork: _startBackgroundWork,
+      show: (report) => dialogs.showAlert(
+        title: currentAppLocalizations.tip,
+        message: TextSpan(
+          text: restoreRecoveryMessage(report, currentAppLocalizations),
         ),
-      );
-    }
-    if (!_container.read(appSettingProvider).silentLaunch) {
-      unawaited(window?.show());
-    } else {
-      unawaited(window?.hide());
-    }
+      ),
+    );
     await _handleFailedPreference();
     if (!await _handlerDisclaimer()) {
       return;
     }
     await _showCrashRecoveryTip();
-    await _finishRestoreRecovery();
     if (_resetMixedPort case final value?) {
       dialogs.showMixedPortReset(
         value,
@@ -259,6 +243,38 @@ class Bootstrap {
     unawaited(_container.read(locationPermissionsProvider.notifier).refresh());
   }
 
+  void _startBackgroundWork() {
+    unawaited(_container.read(systemActionProvider.notifier).updateTray());
+    unawaited(
+      _container.read(profilesActionProvider.notifier).autoUpdateProfiles(),
+    );
+    unawaited(clearUpdateDownloads());
+    unawaited(macUpdater?.cleanup());
+    unawaited(_container.read(commonActionProvider.notifier).autoCheckUpdate());
+    if (system.isMacOS) {
+      unawaited(
+        globalState.safeRun(() async {
+          await autoLaunch?.refreshStatus((enabled) {
+            _container
+                .read(appSettingProvider.notifier)
+                .update((state) => state.copyWith(autoLaunch: enabled));
+          });
+        }),
+      );
+    } else {
+      unawaited(
+        autoLaunch?.updateStatus(
+          _container.read(appSettingProvider).autoLaunch,
+        ),
+      );
+    }
+    if (!_container.read(appSettingProvider).silentLaunch) {
+      unawaited(window?.show());
+    } else {
+      unawaited(window?.hide());
+    }
+  }
+
   Future<void> _recoverInterruptedRestore() async {
     try {
       await restoreRecovery.run();
@@ -267,23 +283,8 @@ class Bootstrap {
         'restore recovery failed: $error',
         logLevel: LogLevel.error,
       );
-    }
-  }
-
-  Future<void> _finishRestoreRecovery() async {
-    if (restoreRecovery.needsMitm) {
-      final action = _container.read(mitmModulesActionProvider.notifier);
-      await restoreRecovery.finish(() async {
-        await action.recheckConsent();
-        await action.clean();
-      });
-    }
-    for (final report in restoreRecovery.takeReports()) {
-      await dialogs.showAlert(
-        title: currentAppLocalizations.tip,
-        message: TextSpan(
-          text: restoreRecoveryMessage(report, currentAppLocalizations),
-        ),
+      restoreRecovery.reports.add(
+        const RestoreRecoveryReport(RestoreRecoveryOutcome.failed),
       );
     }
   }

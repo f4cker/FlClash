@@ -3606,12 +3606,6 @@ abstract class AppLocalizations {
   /// **'The last restore had already saved its data. The remaining steps were completed at startup.'**
   String get restoreRecoveryCompleted;
 
-  /// No description provided for @restoreRecoveryIncomplete.
-  ///
-  /// In en, this message translates to:
-  /// **'The last restore had already saved its data, but these remaining steps couldn\'t be completed safely and were skipped: {steps}. This can happen when another version of the app ran in between. Restore the backup again if you need them.'**
-  String restoreRecoveryIncomplete(Object steps);
-
   /// No description provided for @restoreRecoveryUnreadable.
   ///
   /// In en, this message translates to:
@@ -3635,6 +3629,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'rechecking MITM modules'**
   String get restoreStepMitm;
+
+  /// No description provided for @restoreRestoredPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data has been restored, but follow-up processing isn\'t finished yet.'**
+  String get restoreRestoredPending;
+
+  /// No description provided for @restoreOldVersionSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'An older version of the app changed the data, so some restore steps were skipped.'**
+  String get restoreOldVersionSkipped;
+
+  /// No description provided for @restorePendingSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Not finished: {steps}.'**
+  String restorePendingSteps(Object steps);
+
+  /// No description provided for @restoreSkippedSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped: {steps}. Your current data was kept as it is.'**
+  String restoreSkippedSteps(Object steps);
+
+  /// No description provided for @restoreTornFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'These files don\'t match the backup: {files}.'**
+  String restoreTornFiles(Object files);
+
+  /// No description provided for @restorePendingMounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts of these profiles still need to be checked: {profiles}. Open each profile\'s mount page and choose “Read status again”.'**
+  String restorePendingMounts(Object profiles);
+
+  /// No description provided for @restoreActionNextLaunch.
+  ///
+  /// In en, this message translates to:
+  /// **'They will be continued automatically the next time the app starts.'**
+  String get restoreActionNextLaunch;
+
+  /// No description provided for @restoreActionRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose “Continue” to try the remaining steps again now.'**
+  String get restoreActionRetry;
+
+  /// No description provided for @restoreActionRestoreAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'To complete these steps, restore the backup again.'**
+  String get restoreActionRestoreAgain;
+
+  /// No description provided for @restoreRecoveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore was interrupted and couldn\'t be processed at startup. Its record was kept and will be tried again the next time the app starts.'**
+  String get restoreRecoveryFailed;
+
+  /// No description provided for @restoreContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get restoreContinue;
 
   /// No description provided for @pruneCache.
   ///

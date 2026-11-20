@@ -47,6 +47,14 @@ final class RestoreBlockedException extends MessageException {
   });
 }
 
+/// A restore whose rows committed but whose later [steps] did not all run.
+/// Its message never says the data is unchanged.
+final class RestorePartialException extends MessageException {
+  final List<Object> steps;
+
+  const RestorePartialException(super.message, {this.steps = const []});
+}
+
 final class AgeSecretKeyRequiredException implements Exception {
   const AgeSecretKeyRequiredException();
 }

@@ -1987,11 +1987,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'La última restauración ya había guardado sus datos. Los pasos restantes se completaron al iniciar.';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return 'La última restauración ya había guardado sus datos, pero estos pasos restantes no se pudieron completar de forma segura y se omitieron: $steps. Puede ocurrir si otra versión de la app se ejecutó entretanto. Vuelve a restaurar la copia si los necesitas.';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       'La última restauración se interrumpió y no se pudo leer su registro, así que no se hizo nada automáticamente. Si tus datos parecen incorrectos, vuelve a restaurar la copia.';
 
@@ -2003,6 +1998,53 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreStepMitm => 'volver a comprobar los módulos MITM';
+
+  @override
+  String get restoreRestoredPending =>
+      'Tus datos se han restaurado, pero el procesamiento posterior aún no ha terminado.';
+
+  @override
+  String get restoreOldVersionSkipped =>
+      'Una versión anterior de la app modificó los datos, así que se omitieron algunos pasos de la restauración.';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return 'Sin terminar: $steps.';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return 'Omitido: $steps. Tus datos actuales se mantuvieron tal cual.';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return 'Estos archivos no coinciden con la copia: $files.';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return 'Los montajes de estos perfiles aún deben comprobarse: $profiles. Abre la página de montaje de cada perfil y elige “Read status again”.';
+  }
+
+  @override
+  String get restoreActionNextLaunch =>
+      'Se continuarán automáticamente la próxima vez que se inicie la app.';
+
+  @override
+  String get restoreActionRetry =>
+      'Elige “Continuar” para volver a intentar ahora los pasos restantes.';
+
+  @override
+  String get restoreActionRestoreAgain =>
+      'Para completar estos pasos, vuelve a restaurar la copia.';
+
+  @override
+  String get restoreRecoveryFailed =>
+      'La última restauración se interrumpió y no se pudo procesar al iniciar. Su registro se conservó y se volverá a intentar la próxima vez que se inicie la app.';
+
+  @override
+  String get restoreContinue => 'Continuar';
 
   @override
   String get pruneCache => 'Depurar caché';

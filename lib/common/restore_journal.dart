@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' show sha256;
+import 'package:ffi/ffi.dart';
 import 'package:fl_clash/common/backup.dart';
 import 'package:fl_clash/common/file.dart';
 import 'package:fl_clash/common/path.dart';
@@ -44,6 +46,7 @@ enum RestoreCheckpoint {
   committed,
   cachesCleared,
   configWritten,
+  configStored,
   configSaved,
   mitmDone,
 }
@@ -72,7 +75,55 @@ Future<String?> fileSha256(File file) async {
 Future<String?> storedConfigHash(Preferences store) async {
   final map = await store.getConfigMap();
   if (map == null) return null;
-  return sha256.convert(utf8.encode(json.encode(map))).toString();
+  return _hashConfigMap(map);
+}
+
+/// What [storedConfigHash] reads once [config] has been saved.
+String configHash(Config config) =>
+    _hashConfigMap(json.decode(json.encode(config)) as Map<String, Object?>);
+
+String _hashConfigMap(Map<String, Object?> map) =>
+    sha256.convert(utf8.encode(json.encode(map))).toString();
+
+/// Flushes a directory's entries to disk, so a rename in it survives a power
+/// loss. Dart cannot open a directory, hence libc; Windows has no
+/// equivalent and relies on the rename alone.
+void syncDirectory(String path) {
+  if (Platform.isWindows) return;
+  final libc = DynamicLibrary.process();
+  final open = libc
+      .lookupFunction<
+        Int32 Function(Pointer<Utf8>, Int32),
+        int Function(Pointer<Utf8>, int)
+      >('open');
+  final fsync = libc.lookupFunction<Int32 Function(Int32), int Function(int)>(
+    'fsync',
+  );
+  final close = libc.lookupFunction<Int32 Function(Int32), int Function(int)>(
+    'close',
+  );
+  final name = path.toNativeUtf8();
+  final fd = open(name, 0);
+  calloc.free(name);
+  if (fd < 0) {
+    throw FileSystemException('Cannot open directory to sync', path);
+  }
+  try {
+    if (fsync(fd) != 0) {
+      throw FileSystemException('Cannot sync directory', path);
+    }
+  } finally {
+    close(fd);
+  }
+}
+
+Future<void> _syncFile(File file) async {
+  final handle = await file.open(mode: FileMode.append);
+  try {
+    await handle.flush();
+  } finally {
+    await handle.close();
+  }
 }
 
 class RestoreJournalEntry {
@@ -95,13 +146,18 @@ class RestoreJournalEntry {
     'restoredHash': restoredHash,
   };
 
-  static RestoreJournalEntry fromJson(Map<String, Object?> json) =>
-      RestoreJournalEntry(
-        entry: json['entry'] as String,
-        replaced: json['replaced'] as bool,
-        originalHash: json['originalHash'] as String?,
-        restoredHash: json['restoredHash'] as String,
-      );
+  static RestoreJournalEntry fromJson(Map<String, Object?> json) {
+    final entry = json['entry'] as String;
+    if (!BackupEntries.isValid(entry)) {
+      throw FormatException('restore journal entry out of bounds', entry);
+    }
+    return RestoreJournalEntry(
+      entry: entry,
+      replaced: json['replaced'] as bool,
+      originalHash: json['originalHash'] as String?,
+      restoredHash: json['restoredHash'] as String,
+    );
+  }
 }
 
 /// A write-ahead record of one restore, written atomically (temp file and
@@ -123,6 +179,13 @@ class RestoreJournal {
   /// [Database.restoreFingerprint] after the latest step that wrote rows.
   String? dbFingerprint;
 
+  /// [configHash] of the settings about to be saved, recorded before the
+  /// save so a crash right after it is not mistaken for another writer.
+  String? prefsTarget;
+
+  /// Mount targets the commit left with a pending record.
+  List<int> mountTargets;
+
   RestoreJournal._({
     required this.homeDirPath,
     required this.id,
@@ -135,6 +198,8 @@ class RestoreJournal {
     required this.phase,
     this.prefsBefore,
     this.dbFingerprint,
+    this.prefsTarget,
+    this.mountTargets = const [],
   });
 
   static String rootOf(String homeDirPath) =>
@@ -219,6 +284,8 @@ class RestoreJournal {
     phase: RestorePhase.values.byName(json['phase'] as String),
     prefsBefore: json['prefsBefore'] as String?,
     dbFingerprint: json['dbFingerprint'] as String?,
+    prefsTarget: json['prefsTarget'] as String?,
+    mountTargets: [...?(json['mountTargets'] as List?)?.cast<int>()],
   );
 
   Map<String, Object?> toJson() => {
@@ -232,24 +299,33 @@ class RestoreJournal {
     'entries': [for (final entry in entries) entry.toJson()],
     'prefsBefore': prefsBefore,
     'dbFingerprint': dbFingerprint,
+    'prefsTarget': prefsTarget,
+    'mountTargets': mountTargets,
   };
 
   Future<void> _write() async {
+    final created = !await Directory(dirPath).exists();
     await Directory(dirPath).create(recursive: true);
     final target = File(join(dirPath, _journalFileName));
     final temp = File('${target.path}.tmp');
     await temp.writeAsString(json.encode(toJson()), flush: true);
     await temp.rename(target.path);
+    syncDirectory(dirPath);
+    if (created) syncDirectory(rootOf(homeDirPath));
   }
 
   Future<void> advance(
     RestorePhase next, {
     String? prefsBefore,
     String? dbFingerprint,
+    String? prefsTarget,
+    List<int>? mountTargets,
   }) async {
     phase = next;
     if (prefsBefore != null) this.prefsBefore = prefsBefore;
     if (dbFingerprint != null) this.dbFingerprint = dbFingerprint;
+    if (prefsTarget != null) this.prefsTarget = prefsTarget;
+    if (mountTargets != null) this.mountTargets = mountTargets;
     await _write();
   }
 
@@ -279,8 +355,10 @@ class RestoreJournal {
   /// Puts back what [publish] replaced and removes what it added, but only
   /// where the live file still holds the restored bytes: a file changed
   /// since, for instance by an older build, is left alone and returned.
-  /// The journal is gone afterwards.
+  /// The journal is gone afterwards, set aside with its saved originals when
+  /// a file was left alone.
   Future<List<String>> rollBack() async {
+    await _clearCopyLeftovers();
     final kept = <String>[];
     for (final item in entries.reversed) {
       final live = File(BackupEntries.resolve(homeDirPath, item.entry));
@@ -303,21 +381,47 @@ class RestoreJournal {
           continue;
         }
         await live.delete();
+        syncDirectory(live.parent.path);
       }
     }
-    await discard();
+    if (kept.isEmpty) {
+      await discard();
+    } else {
+      await quarantine();
+    }
     return kept;
+  }
+
+  /// Published files that no longer hold the bytes the restore wrote, as a
+  /// write lost to a power cut leaves them.
+  Future<List<String>> tornFiles() async {
+    final torn = <String>[];
+    for (final item in entries) {
+      final live = File(BackupEntries.resolve(homeDirPath, item.entry));
+      if (await fileSha256(live) != item.restoredHash) torn.add(item.entry);
+    }
+    return torn;
+  }
+
+  /// A copy interrupted before its rename leaves its temp file behind.
+  Future<void> _clearCopyLeftovers() async {
+    for (final item in entries) {
+      final live = BackupEntries.resolve(homeDirPath, item.entry);
+      await File('$live$_copySuffix').safeDelete();
+    }
   }
 
   Future<void> discard() => Directory(dirPath).safeDelete(recursive: true);
 
   /// Kept for diagnosis rather than acted on; only the newest few stay.
-  Future<void> quarantine() async {
+  Future<void> quarantine() => _quarantine(homeDirPath, id);
+
+  static Future<void> _quarantine(String homeDirPath, int id) async {
     final root = join(rootOf(homeDirPath), _quarantineDirectoryName);
     await Directory(root).create(recursive: true);
     final target = Directory(join(root, '$id'));
     await target.safeDelete(recursive: true);
-    await Directory(dirPath).rename(target.path);
+    await Directory(join(rootOf(homeDirPath), '$id')).rename(target.path);
     final all =
         [
           await for (final entity in Directory(root).list(followLinks: false))
@@ -378,11 +482,17 @@ Future<void> clearRestoreCaches(
   }
 }
 
+const _copySuffix = '.restore-tmp';
+
+/// The bytes reach the disk before the rename, and the rename before this
+/// returns, so a commit that follows never outlives the file it describes.
 Future<void> _copy(File source, String targetPath) async {
   await Directory(dirname(targetPath)).create(recursive: true);
-  final temp = '$targetPath.restore-tmp';
-  await source.copy(temp);
-  await File(temp).rename(targetPath);
+  final temp = File('$targetPath$_copySuffix');
+  await source.copy(temp.path);
+  await _syncFile(temp);
+  await temp.rename(targetPath);
+  syncDirectory(dirname(targetPath));
 }
 
 enum RestoreRecoveryOutcome {
@@ -395,29 +505,71 @@ enum RestoreRecoveryOutcome {
   /// The database had committed; the remaining steps ran at launch.
   completed,
 
-  /// The database had committed, but data changed afterwards (or a step
-  /// failed), so the remaining steps were skipped.
+  /// The database had committed, but a later step is not done or a file
+  /// does not hold what was restored.
+  pending,
+
+  /// The database had committed, but data changed afterwards, so the
+  /// remaining steps were skipped.
   incomplete,
 
-  /// The journal could not be read; nothing was done automatically.
+  /// The journal could not be read and nothing had committed.
   unreadable,
+
+  /// Recovery itself failed before it could tell whether anything had
+  /// committed; the journal stays for the next launch.
+  failed,
 }
+
+/// What the user can do about a [RestoreRecoveryReport].
+enum RestoreFollowUp { none, nextLaunch, retryNow, restoreAgain }
 
 class RestoreRecoveryReport {
   final RestoreRecoveryOutcome outcome;
   final List<String> keptFiles;
+
+  /// For [RestoreRecoveryOutcome.incomplete], the steps skipped; for
+  /// [RestoreRecoveryOutcome.pending], the steps not yet done.
   final List<RestoreStep> skippedSteps;
+  final List<String> tornFiles;
+
+  /// Labels of restored mount targets still waiting for a readback.
+  final List<String> pendingMounts;
+  final RestoreFollowUp followUp;
 
   const RestoreRecoveryReport(
     this.outcome, {
     this.keptFiles = const [],
     this.skippedSteps = const [],
+    this.tornFiles = const [],
+    this.pendingMounts = const [],
+    this.followUp = RestoreFollowUp.none,
   });
 
   @override
   String toString() =>
       'RestoreRecoveryReport($outcome, kept: $keptFiles, '
-      'skipped: $skippedSteps)';
+      'skipped: $skippedSteps, torn: $tornFiles, mounts: $pendingMounts, '
+      'followUp: $followUp)';
+}
+
+/// The labels of [targetIds] whose mount record is still pending.
+Future<List<String>> pendingMountLabels(
+  Database db,
+  Iterable<int> targetIds,
+) async {
+  final ids = targetIds.toSet();
+  if (ids.isEmpty) return const [];
+  final targets = await db.mountsDao.targets();
+  final pending = {
+    for (final id in ids)
+      if (targets[id]?.pending != null) id,
+  };
+  if (pending.isEmpty) return const [];
+  return [
+    for (final profile in await db.profilesDao.query().get())
+      if (pending.contains(profile.id)) profile.realLabel,
+  ];
 }
 
 /// Finishes or undoes a restore the app did not live to complete. [run]
@@ -436,13 +588,23 @@ class RestoreRecovery {
        _homeDirPath = homeDirPath ?? (() => appPath.homeDirPath),
        _preferences = store ?? (() => preferences);
 
-  final _awaitingMitm = <RestoreJournal>[];
+  final _awaitingMitm = <(RestoreJournal, List<String>)>[];
   final reports = <RestoreRecoveryReport>[];
 
   bool get needsMitm => _awaitingMitm.isNotEmpty;
 
   Future<void> run() async {
-    final found = await RestoreJournal.pending(await _homeDirPath());
+    final List<(int, RestoreJournal?)> found;
+    try {
+      found = await RestoreJournal.pending(await _homeDirPath());
+    } catch (error) {
+      commonPrint.log(
+        'restore journals unreadable: $error',
+        logLevel: LogLevel.error,
+      );
+      reports.add(const RestoreRecoveryReport(RestoreRecoveryOutcome.failed));
+      return;
+    }
     for (final (id, journal) in found) {
       try {
         await _recover(id, journal);
@@ -452,30 +614,50 @@ class RestoreRecovery {
           'restore recovery $id failed: $error\n$stack',
           logLevel: LogLevel.error,
         );
+        reports.add(await _failure(id, journal));
       }
     }
+  }
+
+  Future<RestoreRecoveryReport> _failure(
+    int id,
+    RestoreJournal? journal,
+  ) async {
+    String? committed;
+    try {
+      committed = await _db().restoreCommit(id);
+    } catch (_) {
+      committed = null;
+    }
+    if (committed == null) {
+      return const RestoreRecoveryReport(RestoreRecoveryOutcome.failed);
+    }
+    return RestoreRecoveryReport(
+      RestoreRecoveryOutcome.pending,
+      skippedSteps: journal?.remainingSteps() ?? RestoreStep.values,
+      followUp: RestoreFollowUp.nextLaunch,
+    );
   }
 
   Future<void> _recover(int id, RestoreJournal? journal) async {
     final db = _db();
     final committed = await db.restoreCommit(id);
     if (journal == null) {
-      final dir = Directory(
-        join(RestoreJournal.rootOf(await _homeDirPath()), '$id'),
-      );
-      final quarantine = Directory(
-        join(
-          RestoreJournal.rootOf(await _homeDirPath()),
-          _quarantineDirectoryName,
-          '$id',
-        ),
-      );
-      await quarantine.parent.create(recursive: true);
-      await quarantine.safeDelete(recursive: true);
-      await dir.rename(quarantine.path);
-      if (committed != null) await db.clearRestoreCommit(id);
+      await RestoreJournal._quarantine(await _homeDirPath(), id);
+      if (committed == null) {
+        reports.add(
+          const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
+        );
+        return;
+      }
+      // Which steps ran is unknown; none can be redone without the record.
+      await db.clearRestoreCommit(id);
       reports.add(
-        const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
+        const RestoreRecoveryReport(
+          RestoreRecoveryOutcome.pending,
+          skippedSteps: RestoreStep.values,
+          followUp: RestoreFollowUp.restoreAgain,
+        ),
       );
       return;
     }
@@ -504,24 +686,28 @@ class RestoreRecovery {
         RestoreRecoveryReport(
           RestoreRecoveryOutcome.incomplete,
           skippedSteps: remaining,
+          followUp: RestoreFollowUp.restoreAgain,
         ),
       );
       return;
     }
+    await journal._clearCopyLeftovers();
     if (journal.phase == RestorePhase.finalizing) {
       await journal.finish(db);
-      reports.add(
-        const RestoreRecoveryReport(RestoreRecoveryOutcome.completed),
-      );
+      reports.add(await _finished(db, journal, const []));
       return;
     }
     final store = _preferences();
     final expected = journal.dbFingerprint ?? committed;
     final dbUnchanged = await db.restoreFingerprint() == expected;
-    final prefsUnchanged =
+    final prefs = await storedConfigHash(store);
+    final settingsSaved =
         journal.config == null ||
         journal.phase.index >= RestorePhase.configSaved.index ||
-        await storedConfigHash(store) == journal.prefsBefore;
+        (prefs != null &&
+            (prefs == journal.prefsTarget ||
+                prefs == configHash(Config.fromJson(journal.config!))));
+    final prefsUnchanged = settingsSaved || prefs == journal.prefsBefore;
     if (!dbUnchanged || !prefsUnchanged) {
       // Someone else ran on this data after the commit; rolling forward
       // would overwrite what they did.
@@ -532,17 +718,20 @@ class RestoreRecovery {
         RestoreRecoveryReport(
           RestoreRecoveryOutcome.incomplete,
           skippedSteps: remaining,
+          pendingMounts: await pendingMountLabels(db, journal.mountTargets),
+          followUp: RestoreFollowUp.restoreAgain,
         ),
       );
       return;
     }
+    final torn = await journal.tornFiles();
     if (journal.phase.index < RestorePhase.cachesCleared.index) {
       await journal.clearCaches(db);
       await journal.advance(RestorePhase.cachesCleared);
     }
     if (journal.phase.index < RestorePhase.configSaved.index) {
-      if (journal.config case final config?) {
-        if (!await store.saveConfig(Config.fromJson(config))) {
+      if (!settingsSaved) {
+        if (!await store.saveConfig(Config.fromJson(journal.config!))) {
           throw StateError('saving the restored settings failed');
         }
       }
@@ -552,22 +741,43 @@ class RestoreRecovery {
       );
     }
     if (journal.phase.index < RestorePhase.mitmDone.index) {
-      _awaitingMitm.add(journal);
+      _awaitingMitm.add((journal, torn));
       return;
     }
     await journal.finish(db);
-    reports.add(const RestoreRecoveryReport(RestoreRecoveryOutcome.completed));
+    reports.add(await _finished(db, journal, torn));
+  }
+
+  Future<RestoreRecoveryReport> _finished(
+    Database db,
+    RestoreJournal journal,
+    List<String> torn, {
+    List<RestoreStep> failedSteps = const [],
+  }) async {
+    final mounts = await pendingMountLabels(db, journal.mountTargets);
+    if (torn.isEmpty && failedSteps.isEmpty) {
+      return RestoreRecoveryReport(
+        RestoreRecoveryOutcome.completed,
+        pendingMounts: mounts,
+      );
+    }
+    return RestoreRecoveryReport(
+      RestoreRecoveryOutcome.pending,
+      skippedSteps: failedSteps,
+      tornFiles: torn,
+      pendingMounts: mounts,
+      followUp: RestoreFollowUp.restoreAgain,
+    );
   }
 
   /// Runs the MITM step [run] left, then removes the journal and marker. A
   /// failing step is reported rather than retried on every launch.
   Future<void> finish(Future<void> Function() mitm) async {
     final db = _db();
-    for (final journal in [..._awaitingMitm]) {
-      _awaitingMitm.remove(journal);
-      var outcome = const RestoreRecoveryReport(
-        RestoreRecoveryOutcome.completed,
-      );
+    for (final item in [..._awaitingMitm]) {
+      _awaitingMitm.remove(item);
+      final (journal, torn) = item;
+      var failed = const <RestoreStep>[];
       try {
         await mitm();
         await journal.advance(RestorePhase.mitmDone);
@@ -576,10 +786,7 @@ class RestoreRecovery {
           'restore recovery ${journal.id} mitm step failed: $error',
           logLevel: LogLevel.warning,
         );
-        outcome = const RestoreRecoveryReport(
-          RestoreRecoveryOutcome.incomplete,
-          skippedSteps: [RestoreStep.mitm],
-        );
+        failed = const [RestoreStep.mitm];
       }
       try {
         await journal.finish(db);
@@ -589,7 +796,36 @@ class RestoreRecovery {
           logLevel: LogLevel.warning,
         );
       }
-      reports.add(outcome);
+      reports.add(await _finished(db, journal, torn, failedSteps: failed));
+    }
+  }
+
+  /// The launch-time remainder: every step a recovery owes completes before
+  /// [startBackgroundWork] lets anything else write, and the reports are
+  /// shown before any gate that could end the launch early.
+  Future<void> completeAtStartup({
+    required Future<void> Function() mitm,
+    required void Function() startBackgroundWork,
+    required Future<void> Function(RestoreRecoveryReport report) show,
+  }) async {
+    try {
+      if (needsMitm) await finish(mitm);
+    } catch (error) {
+      commonPrint.log(
+        'restore recovery finish failed: $error',
+        logLevel: LogLevel.error,
+      );
+      reports.add(
+        const RestoreRecoveryReport(
+          RestoreRecoveryOutcome.pending,
+          skippedSteps: [RestoreStep.mitm],
+          followUp: RestoreFollowUp.restoreAgain,
+        ),
+      );
+    }
+    startBackgroundWork();
+    for (final report in takeReports()) {
+      await show(report);
     }
   }
 
@@ -601,28 +837,57 @@ class RestoreRecovery {
   }
 }
 
-/// Never says the data is unchanged once the restore had committed.
+String restoreStepLabel(RestoreStep step, AppLocalizations l10n) =>
+    switch (step) {
+      RestoreStep.caches => l10n.restoreStepCaches,
+      RestoreStep.settings => l10n.restoreStepSettings,
+      RestoreStep.mitm => l10n.restoreStepMitm,
+    };
+
+String restoreFollowUpText(RestoreFollowUp followUp, AppLocalizations l10n) =>
+    switch (followUp) {
+      RestoreFollowUp.none => '',
+      RestoreFollowUp.nextLaunch => l10n.restoreActionNextLaunch,
+      RestoreFollowUp.retryNow => l10n.restoreActionRetry,
+      RestoreFollowUp.restoreAgain => l10n.restoreActionRestoreAgain,
+    };
+
+/// Never says the data is unchanged once the restore had committed, and
+/// never calls a restore finished while a step or a mount is outstanding.
 String restoreRecoveryMessage(
   RestoreRecoveryReport report,
   AppLocalizations l10n,
 ) {
-  String step(RestoreStep step) => switch (step) {
-    RestoreStep.caches => l10n.restoreStepCaches,
-    RestoreStep.settings => l10n.restoreStepSettings,
-    RestoreStep.mitm => l10n.restoreStepMitm,
+  final separator = l10n.mountNameSeparator;
+  String steps() =>
+      report.skippedSteps.map((s) => restoreStepLabel(s, l10n)).join(separator);
+  final lines = switch (report.outcome) {
+    RestoreRecoveryOutcome.rolledBack => [l10n.restoreRecoveryRolledBack],
+    RestoreRecoveryOutcome.rolledBackPartly => [
+      l10n.restoreRecoveryRolledBackPartly(report.keptFiles.join(separator)),
+    ],
+    RestoreRecoveryOutcome.completed => [l10n.restoreRecoveryCompleted],
+    RestoreRecoveryOutcome.pending => [
+      l10n.restoreRestoredPending,
+      if (report.skippedSteps.isNotEmpty) l10n.restorePendingSteps(steps()),
+      if (report.tornFiles.isNotEmpty)
+        l10n.restoreTornFiles(report.tornFiles.join(separator)),
+    ],
+    RestoreRecoveryOutcome.incomplete => [
+      l10n.restoreOldVersionSkipped,
+      if (report.skippedSteps.isNotEmpty) l10n.restoreSkippedSteps(steps()),
+    ],
+    RestoreRecoveryOutcome.unreadable => [l10n.restoreRecoveryUnreadable],
+    RestoreRecoveryOutcome.failed => [l10n.restoreRecoveryFailed],
   };
-  return switch (report.outcome) {
-    RestoreRecoveryOutcome.rolledBack => l10n.restoreRecoveryRolledBack,
-    RestoreRecoveryOutcome.rolledBackPartly =>
-      l10n.restoreRecoveryRolledBackPartly(
-        report.keptFiles.join(l10n.mountNameSeparator),
-      ),
-    RestoreRecoveryOutcome.completed => l10n.restoreRecoveryCompleted,
-    RestoreRecoveryOutcome.incomplete => l10n.restoreRecoveryIncomplete(
-      report.skippedSteps.map(step).join(l10n.mountNameSeparator),
-    ),
-    RestoreRecoveryOutcome.unreadable => l10n.restoreRecoveryUnreadable,
-  };
+  return [
+    ...lines,
+    if (report.pendingMounts.isNotEmpty)
+      l10n.restorePendingMounts(report.pendingMounts.join(separator)),
+    if (restoreFollowUpText(report.followUp, l10n) case final text
+        when text.isNotEmpty)
+      text,
+  ].join('\n');
 }
 
 final restoreRecovery = RestoreRecovery();

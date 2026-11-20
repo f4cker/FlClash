@@ -1987,11 +1987,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'La dernière restauration avait déjà enregistré ses données. Les étapes restantes ont été terminées au démarrage.';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return 'La dernière restauration avait déjà enregistré ses données, mais ces étapes restantes n’ont pas pu être terminées en toute sécurité et ont été ignorées : $steps. Cela peut arriver si une autre version de l’app a été lancée entre-temps. Restaurez de nouveau la sauvegarde si vous en avez besoin.';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       'La dernière restauration a été interrompue et son journal est illisible : rien n’a été fait automatiquement. Si vos données semblent incorrectes, restaurez de nouveau la sauvegarde.';
 
@@ -2003,6 +1998,53 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreStepMitm => 'revérifier les modules MITM';
+
+  @override
+  String get restoreRestoredPending =>
+      'Vos données ont été restaurées, mais le traitement qui suit n’est pas encore terminé.';
+
+  @override
+  String get restoreOldVersionSkipped =>
+      'Une ancienne version de l’app a modifié les données : certaines étapes de la restauration ont donc été ignorées.';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return 'Non terminé : $steps.';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return 'Ignoré : $steps. Vos données actuelles ont été conservées telles quelles.';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return 'Ces fichiers ne correspondent pas à la sauvegarde : $files.';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return 'Les montages de ces profils doivent encore être vérifiés : $profiles. Ouvrez la page de montage de chaque profil et choisissez « Read status again ».';
+  }
+
+  @override
+  String get restoreActionNextLaunch =>
+      'Elles reprendront automatiquement au prochain démarrage de l’app.';
+
+  @override
+  String get restoreActionRetry =>
+      'Choisissez « Continuer » pour relancer maintenant les étapes restantes.';
+
+  @override
+  String get restoreActionRestoreAgain =>
+      'Pour terminer ces étapes, restaurez de nouveau la sauvegarde.';
+
+  @override
+  String get restoreRecoveryFailed =>
+      'La dernière restauration a été interrompue et n’a pas pu être traitée au démarrage. Son journal a été conservé et sera repris au prochain démarrage de l’app.';
+
+  @override
+  String get restoreContinue => 'Continuer';
 
   @override
   String get pruneCache => 'Nettoyer le cache';

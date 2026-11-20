@@ -1854,11 +1854,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreRecoveryCompleted => '上次恢复已写入数据，剩余步骤已在启动时完成。';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return '上次恢复已写入数据，但以下剩余步骤无法安全完成，已跳过：$steps。中途运行过其他版本的应用时可能出现这种情况。如有需要，请重新恢复备份。';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       '上次恢复被中断，且恢复记录无法读取，未做任何自动处理。如数据异常，请重新恢复备份。';
 
@@ -1870,6 +1865,47 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreStepMitm => '重新检查 MITM 模块';
+
+  @override
+  String get restoreRestoredPending => '数据已恢复，后续处理尚未完成。';
+
+  @override
+  String get restoreOldVersionSkipped => '检测到旧版本修改了数据，已跳过部分恢复步骤。';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return '尚未完成：$steps。';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return '已跳过：$steps。当前数据保持现状。';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return '以下文件与备份内容不一致：$files。';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return '以下配置的挂载仍需重新检查：$profiles。请打开对应配置的挂载页，点“重新读取状态”。';
+  }
+
+  @override
+  String get restoreActionNextLaunch => '下次启动应用时会自动继续完成。';
+
+  @override
+  String get restoreActionRetry => '点“继续完成”可立即重试剩余步骤。';
+
+  @override
+  String get restoreActionRestoreAgain => '如需完成这些步骤，请重新恢复备份。';
+
+  @override
+  String get restoreRecoveryFailed => '上次恢复被中断，启动时未能处理。恢复记录已保留，下次启动时会再次尝试。';
+
+  @override
+  String get restoreContinue => '继续完成';
 
   @override
   String get pruneCache => '修剪缓存';

@@ -1963,11 +1963,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Последнее восстановление уже сохранило данные. Оставшиеся шаги выполнены при запуске.';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return 'Последнее восстановление уже сохранило данные, но эти оставшиеся шаги нельзя было безопасно выполнить, и они пропущены: $steps. Так бывает, если в промежутке запускалась другая версия приложения. При необходимости восстановите резервную копию ещё раз.';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       'Последнее восстановление было прервано, а его журнал не удалось прочитать, поэтому ничего не сделано автоматически. Если данные выглядят неверно, восстановите резервную копию ещё раз.';
 
@@ -1979,6 +1974,53 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreStepMitm => 'повторная проверка модулей MITM';
+
+  @override
+  String get restoreRestoredPending =>
+      'Данные восстановлены, но последующая обработка ещё не завершена.';
+
+  @override
+  String get restoreOldVersionSkipped =>
+      'Более старая версия приложения изменила данные, поэтому некоторые шаги восстановления пропущены.';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return 'Не завершено: $steps.';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return 'Пропущено: $steps. Текущие данные оставлены как есть.';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return 'Эти файлы не совпадают с резервной копией: $files.';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return 'Монтирования этих профилей ещё нужно проверить: $profiles. Откройте страницу монтирования каждого профиля и выберите «Read status again».';
+  }
+
+  @override
+  String get restoreActionNextLaunch =>
+      'Они продолжатся автоматически при следующем запуске приложения.';
+
+  @override
+  String get restoreActionRetry =>
+      'Выберите «Продолжить», чтобы сейчас повторить оставшиеся шаги.';
+
+  @override
+  String get restoreActionRestoreAgain =>
+      'Чтобы выполнить эти шаги, восстановите резервную копию ещё раз.';
+
+  @override
+  String get restoreRecoveryFailed =>
+      'Последнее восстановление было прервано и не обработано при запуске. Его запись сохранена, попытка повторится при следующем запуске приложения.';
+
+  @override
+  String get restoreContinue => 'Продолжить';
 
   @override
   String get pruneCache => 'Очистить кэш';

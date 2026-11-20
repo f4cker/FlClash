@@ -30,6 +30,7 @@ enum _Crash {
   afterCommit,
   afterCaches,
   afterConfigWritten,
+  afterConfigStored,
   afterPrefs,
   afterMitm,
 }
@@ -164,6 +165,7 @@ void main() {
         (_Crash.afterCommit, RestoreCheckpoint.committed) => true,
         (_Crash.afterCaches, RestoreCheckpoint.cachesCleared) => true,
         (_Crash.afterConfigWritten, RestoreCheckpoint.configWritten) => true,
+        (_Crash.afterConfigStored, RestoreCheckpoint.configStored) => true,
         (_Crash.afterPrefs, RestoreCheckpoint.configSaved) => true,
         (_Crash.afterMitm, RestoreCheckpoint.mitmDone) => true,
         _ => false,
@@ -179,11 +181,14 @@ void main() {
     );
   }
 
-  Future<List<RestoreRecoveryReport>> recover({void Function()? mitm}) async {
+  Future<List<RestoreRecoveryReport>> recover({
+    void Function()? mitm,
+    Preferences? store,
+  }) async {
     final recovery = RestoreRecovery(
       db: () => database,
       homeDirPath: () async => home.path,
-      store: () => preferences,
+      store: () => store ?? preferences,
     );
     await recovery.run();
     if (recovery.needsMitm) {
@@ -298,10 +303,14 @@ void main() {
         stagingDirPath: staging.path,
       ),
       throwsA(
-        isA<MessageException>().having(
+        isA<RestorePartialException>().having(
           (e) => e.message,
           'message',
-          contains('database changes were committed'),
+          allOf(
+            contains('has been restored'),
+            contains('clearing old rule caches'),
+            isNot(contains('was not changed')),
+          ),
         ),
       ),
     );
@@ -358,6 +367,22 @@ void main() {
       });
       expect(await labels(), {1: 'Local A', 2: 'Local B'});
       expect(journals(), isEmpty);
+      final [id] = quarantined();
+      expect(
+        File(
+          BackupEntries.resolve(
+            join(
+              RestoreJournal.rootOf(home.path),
+              'quarantine',
+              id,
+              'replaced',
+            ),
+            BackupEntries.profile(1),
+          ),
+        ).readAsStringSync(),
+        'local-1',
+        reason: 'the original of a file left alone is kept',
+      );
       final message = restoreRecoveryMessage(
         reports.single,
         currentAppLocalizations,
@@ -410,7 +435,8 @@ void main() {
         reports.single,
         currentAppLocalizations,
       );
-      expect(message, contains('already saved its data'));
+      expect(message, contains('An older version of the app changed'));
+      expect(message, contains('clearing old rule caches'));
       expect(message, isNot(contains('was not changed')));
       await relaunch();
       expect(await recover(), isEmpty);
@@ -568,12 +594,8 @@ void main() {
     String of(RestoreRecoveryOutcome outcome) =>
         restoreRecoveryMessage(RestoreRecoveryReport(outcome), l10n);
     expect(of(RestoreRecoveryOutcome.rolledBack), contains('was not changed'));
-    for (final outcome in [
-      RestoreRecoveryOutcome.completed,
-      RestoreRecoveryOutcome.incomplete,
-      RestoreRecoveryOutcome.rolledBackPartly,
-      RestoreRecoveryOutcome.unreadable,
-    ]) {
+    for (final outcome in RestoreRecoveryOutcome.values) {
+      if (outcome == RestoreRecoveryOutcome.rolledBack) continue;
       expect(of(outcome), isNot(contains('was not changed')));
     }
     loadAppLocalizations(const Locale('zh'));
@@ -586,13 +608,278 @@ void main() {
       ),
       contains('现有数据未改动'),
     );
-    for (final outcome in [
-      RestoreRecoveryOutcome.completed,
-      RestoreRecoveryOutcome.incomplete,
-    ]) {
+    for (final outcome in RestoreRecoveryOutcome.values) {
+      if (outcome == RestoreRecoveryOutcome.rolledBack) continue;
       final text = restoreRecoveryMessage(RestoreRecoveryReport(outcome), zh);
-      expect(text, contains('已写入数据'));
       expect(text, isNot(contains('未改动')));
     }
+    final pending = restoreRecoveryMessage(
+      const RestoreRecoveryReport(
+        RestoreRecoveryOutcome.pending,
+        skippedSteps: [RestoreStep.settings],
+        pendingMounts: ['甲'],
+        followUp: RestoreFollowUp.nextLaunch,
+      ),
+      zh,
+    );
+    expect(pending, startsWith('数据已恢复，后续处理尚未完成。'));
+    expect(pending, contains('应用备份中的设置'));
+    expect(pending, contains('甲'));
+    expect(pending, contains('下次启动'));
+    final incomplete = restoreRecoveryMessage(
+      const RestoreRecoveryReport(
+        RestoreRecoveryOutcome.incomplete,
+        skippedSteps: [RestoreStep.mitm],
+        followUp: RestoreFollowUp.restoreAgain,
+      ),
+      zh,
+    );
+    expect(incomplete, startsWith('检测到旧版本修改了数据，已跳过部分恢复步骤。'));
+    expect(incomplete, contains('重新检查 MITM 模块'));
+    expect(incomplete, contains('重新恢复备份'));
   });
+
+  group('review fixes', () {
+    test('an unreadable journal whose restore committed says the data was '
+        'restored', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterCommit,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      final [dir] = journals();
+      File(join(dir.path, 'journal.json')).writeAsStringSync('{broken');
+      await relaunch();
+
+      final reports = await recover();
+
+      expect(reports.single.outcome, RestoreRecoveryOutcome.pending);
+      expect(reports.single.skippedSteps, RestoreStep.values);
+      expect(await markers(), isEmpty);
+      expect(journals(), isEmpty);
+      expect(quarantined(), hasLength(1));
+      final message = restoreRecoveryMessage(
+        reports.single,
+        currentAppLocalizations,
+      );
+      expect(message, contains('has been restored'));
+      expect(message, isNot(contains('nothing was done')));
+    });
+
+    test('a published file torn after the commit is reported, not called '
+        'complete', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterCommit,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await relaunch();
+      live(BackupEntries.profile(3)).writeAsStringSync('');
+
+      final reports = await recover();
+
+      expect(reports.single.outcome, RestoreRecoveryOutcome.pending);
+      expect(reports.single.tornFiles, [BackupEntries.profile(3)]);
+      expect(await storedProfileId(), 3, reason: 'the other steps still ran');
+      expect(journals(), isEmpty);
+      expect(
+        restoreRecoveryMessage(reports.single, currentAppLocalizations),
+        contains(BackupEntries.profile(3)),
+      );
+    });
+
+    test('a crash between saving the settings and recording it does not '
+        'count as another writer', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterConfigStored,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      final saved = await storedConfigHash(preferences);
+      await relaunch();
+
+      final reports = await recover();
+
+      expect(reports.single.outcome, RestoreRecoveryOutcome.completed);
+      expect(await storedConfigHash(preferences), saved);
+      expect(await storedProfileId(), 3);
+    });
+
+    test('a journal naming a path outside the data directory is never '
+        'acted on', () async {
+      final outside = File(join(home.parent.path, 'outside-${home.hashCode}'))
+        ..writeAsStringSync('keep');
+      addTearDown(() => outside.existsSync() ? outside.deleteSync() : null);
+      final dir = Directory(join(RestoreJournal.rootOf(home.path), '88'))
+        ..createSync(recursive: true);
+      File(join(dir.path, 'journal.json')).writeAsStringSync(
+        jsonEncode({
+          'id': 88,
+          'createdAt': 1,
+          'phase': 'published',
+          'previousProviderFiles': <String>[],
+          'restoredLocalProviderFiles': <String>[],
+          'entries': [
+            {
+              'entry': '../${basename(outside.path)}',
+              'replaced': false,
+              'originalHash': null,
+              'restoredHash': 'x',
+            },
+          ],
+        }),
+      );
+
+      final reports = await recover();
+
+      expect(reports.single.outcome, RestoreRecoveryOutcome.unreadable);
+      expect(outside.readAsStringSync(), 'keep');
+      expect(BackupEntries.isValid('profiles/1.yaml'), isTrue);
+      expect(BackupEntries.isValid('profiles/../x.yaml'), isFalse);
+      expect(BackupEntries.isValid('/etc/passwd'), isFalse);
+      expect(BackupEntries.isValid('mitm/resources/ca.key/..'), isFalse);
+    });
+
+    test('a copy interrupted before its rename leaves no temp file', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.midPublish,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      final leftover = File(
+        '${live(BackupEntries.profile(1)).path}.restore-tmp',
+      )..writeAsStringSync('partial');
+      await relaunch();
+
+      expect(
+        (await recover()).single.outcome,
+        RestoreRecoveryOutcome.rolledBack,
+      );
+      expect(leftover.existsSync(), isFalse);
+    });
+
+    test('unreadable journals keep only the newest few', () async {
+      for (var id = 1; id <= 5; id++) {
+        final dir = Directory(join(RestoreJournal.rootOf(home.path), '$id'))
+          ..createSync(recursive: true);
+        File(join(dir.path, 'journal.json')).writeAsStringSync('?');
+      }
+      await recover();
+      expect(quarantined()..sort(), ['3', '4', '5']);
+    });
+
+    test('a recovery that fails at launch after the commit says the data '
+        'was restored and keeps the journal', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterCaches,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await relaunch();
+
+      final reports = await recover(store: _FailingSave(preferences));
+
+      expect(reports.single.outcome, RestoreRecoveryOutcome.pending);
+      expect(reports.single.followUp, RestoreFollowUp.nextLaunch);
+      expect(reports.single.skippedSteps, contains(RestoreStep.settings));
+      expect(journals(), hasLength(1));
+      expect(await markers(), hasLength(1));
+      expect(
+        restoreRecoveryMessage(reports.single, currentAppLocalizations),
+        contains('has been restored'),
+      );
+      expect(
+        (await recover()).single.outcome,
+        RestoreRecoveryOutcome.completed,
+      );
+    });
+
+    test('at startup every owed step completes before background work '
+        'starts, and reports come before any gate', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterPrefs,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await relaunch();
+      final recovery = RestoreRecovery(
+        db: () => database,
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+      await recovery.run();
+      expect(recovery.needsMitm, isTrue);
+      final events = <String>[];
+      await recovery.completeAtStartup(
+        mitm: () async {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+          events.add('mitm');
+        },
+        startBackgroundWork: () async {
+          events.add('start');
+          expect(journals(), isEmpty, reason: 'recovery finished first');
+          expect(await markers(), isEmpty);
+        },
+        show: (report) async => events.add('show:${report.outcome.name}'),
+      );
+      expect(events, ['mitm', 'start', 'show:completed']);
+      // A launch that ends at the disclaimer afterwards leaves nothing owed.
+      await relaunch();
+      expect(await recover(), isEmpty);
+    });
+
+    test('a failing MITM step at startup is reported as pending', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterPrefs,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await relaunch();
+      final recovery = RestoreRecovery(
+        db: () => database,
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+      await recovery.run();
+      final shown = <RestoreRecoveryReport>[];
+      await recovery.completeAtStartup(
+        mitm: () async => throw StateError('mitm'),
+        startBackgroundWork: () {},
+        show: (report) async => shown.add(report),
+      );
+      expect(shown.single.outcome, RestoreRecoveryOutcome.pending);
+      expect(shown.single.skippedSteps, [RestoreStep.mitm]);
+      expect(journals(), isEmpty);
+    });
+  });
+}
+
+/// Saving settings fails, as a full disk would make it.
+class _FailingSave implements Preferences {
+  final Preferences _inner;
+
+  _FailingSave(this._inner);
+
+  @override
+  Future<Map<String, Object?>?> getConfigMap() => _inner.getConfigMap();
+
+  @override
+  Future<bool> saveConfig(Config config) async => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

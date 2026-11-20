@@ -1926,11 +1926,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '지난 복원은 이미 데이터를 저장했습니다. 남은 단계는 시작할 때 완료했습니다.';
 
   @override
-  String restoreRecoveryIncomplete(Object steps) {
-    return '지난 복원은 이미 데이터를 저장했지만, 다음 남은 단계는 안전하게 완료할 수 없어 건너뛰었습니다: $steps. 그사이 다른 버전의 앱을 실행한 경우 이런 일이 생길 수 있습니다. 필요하면 백업을 다시 복원하세요.';
-  }
-
-  @override
   String get restoreRecoveryUnreadable =>
       '지난 복원이 중단되었고 복원 기록을 읽을 수 없어 자동으로 아무 작업도 하지 않았습니다. 데이터가 이상하면 백업을 다시 복원하세요.';
 
@@ -1942,6 +1937,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreStepMitm => 'MITM 모듈 다시 확인';
+
+  @override
+  String get restoreRestoredPending => '데이터는 복원되었지만 후속 처리가 아직 완료되지 않았습니다.';
+
+  @override
+  String get restoreOldVersionSkipped =>
+      '이전 버전의 앱이 데이터를 변경해 일부 복원 단계를 건너뛰었습니다.';
+
+  @override
+  String restorePendingSteps(Object steps) {
+    return '완료되지 않음: $steps.';
+  }
+
+  @override
+  String restoreSkippedSteps(Object steps) {
+    return '건너뜀: $steps. 현재 데이터는 그대로 유지했습니다.';
+  }
+
+  @override
+  String restoreTornFiles(Object files) {
+    return '다음 파일이 백업과 일치하지 않습니다: $files.';
+  }
+
+  @override
+  String restorePendingMounts(Object profiles) {
+    return '다음 프로필의 마운트는 아직 확인이 필요합니다: $profiles. 각 프로필의 마운트 페이지에서 “Read status again”을 선택하세요.';
+  }
+
+  @override
+  String get restoreActionNextLaunch => '다음에 앱을 시작할 때 자동으로 이어서 진행합니다.';
+
+  @override
+  String get restoreActionRetry => '“계속”을 선택하면 남은 단계를 지금 다시 시도합니다.';
+
+  @override
+  String get restoreActionRestoreAgain => '이 단계를 완료하려면 백업을 다시 복원하세요.';
+
+  @override
+  String get restoreRecoveryFailed =>
+      '지난 복원이 중단되었고 시작할 때 처리하지 못했습니다. 복원 기록은 남겨 두었으며 다음에 앱을 시작할 때 다시 시도합니다.';
+
+  @override
+  String get restoreContinue => '계속';
 
   @override
   String get pruneCache => '캐시 정리';
