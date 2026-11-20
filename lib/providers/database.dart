@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -498,6 +499,25 @@ class MitmModules extends _$MitmModules
   ) {
     return listReadChanged(mitmModuleListEquality, previous, next);
   }
+}
+
+/// The MITM modules a restore holds off until their consent is rechecked
+/// on this device; every place that runs a module checks it.
+@Riverpod(keepAlive: true)
+class RestoreMitmHoldState extends _$RestoreMitmHoldState {
+  @override
+  RestoreMitmHold build() {
+    final hold = restoreRecovery.mitmHold;
+    void update() => state = hold.value;
+    hold.addListener(update);
+    ref.onDispose(() => hold.removeListener(update));
+    return hold.value;
+  }
+}
+
+extension MitmModuleHoldExt on MitmModule {
+  /// Turned on, and not held by a restore.
+  bool runsUnder(RestoreMitmHold hold) => enabled && !hold.holds(id);
 }
 
 @riverpod

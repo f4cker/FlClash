@@ -3900,12 +3900,6 @@ abstract class AppLocalizations {
   /// **'{count} items are still unfinished. Don\'t start another restore.'**
   String restoreResultLockedNote(Object count);
 
-  /// No description provided for @restoreResultPendingSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Still pending · {count}'**
-  String restoreResultPendingSection(Object count);
-
   /// No description provided for @restoreResultSkippedSection.
   ///
   /// In en, this message translates to:
@@ -3917,6 +3911,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The current data was kept as it is; skipped steps are not replayed.'**
   String get restoreResultSkippedNote;
+
+  /// No description provided for @restoreResultStepsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up steps · {count}'**
+  String restoreResultStepsSection(Object count);
+
+  /// No description provided for @restoreResultChecksSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles to check · {count}'**
+  String restoreResultChecksSection(Object count);
+
+  /// No description provided for @restoreMountTagPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Not done'**
+  String get restoreMountTagPending;
+
+  /// No description provided for @restoreMountTagSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get restoreMountTagSkipped;
+
+  /// No description provided for @restoreContinueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This retry didn\'t finish the remaining steps. What is still owed is listed below.'**
+  String get restoreContinueFailed;
+
+  /// No description provided for @restoreDataChangedSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'The data was changed after the restore, so some restore steps were skipped to keep those changes.'**
+  String get restoreDataChangedSkipped;
+
+  /// No description provided for @restoreRecoveryUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'The last restore was interrupted and its record couldn\'t be read. The database holds no commit from it; files such as profiles may have been partly replaced, which can\'t be checked, so nothing was done automatically. If your data looks wrong, restore the backup again.'**
+  String get restoreRecoveryUnreadable;
 
   /// No description provided for @restoreResultUnknownItems.
   ///
@@ -3978,12 +4014,6 @@ abstract class AppLocalizations {
   /// **'The last restore had already saved its data. The remaining steps were completed at startup.'**
   String get restoreRecoveryCompleted;
 
-  /// No description provided for @restoreRecoveryUnreadable.
-  ///
-  /// In en, this message translates to:
-  /// **'The last restore was interrupted and its record couldn\'t be read, so nothing was done automatically. If your data looks wrong, restore the backup again.'**
-  String get restoreRecoveryUnreadable;
-
   /// No description provided for @restoreStepCaches.
   ///
   /// In en, this message translates to:
@@ -4007,12 +4037,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your data has been restored, but follow-up processing isn\'t finished yet.'**
   String get restoreRestoredPending;
-
-  /// No description provided for @restoreOldVersionSkipped.
-  ///
-  /// In en, this message translates to:
-  /// **'An older version of the app changed the data, so some restore steps were skipped.'**
-  String get restoreOldVersionSkipped;
 
   /// No description provided for @restorePendingSteps.
   ///

@@ -406,6 +406,19 @@ class MitmModulesAction extends _$MitmModulesAction {
     }
   }
 
+  /// A restore's MITM step: [recheckConsent], then [clean]. The module list
+  /// is kept alive throughout, since nothing else may be watching it yet at
+  /// launch and a disposed list fails the step.
+  Future<void> recheckRestored() async {
+    final keep = ref.listen(mitmModulesProvider, (_, _) {});
+    try {
+      await recheckConsent();
+      await clean();
+    } finally {
+      keep.close();
+    }
+  }
+
   /// A restored row may have been judged against another device's files.
   Future<void> recheckConsent() async {
     for (final module in await database.mitmModulesDao.query().get()) {

@@ -192,7 +192,9 @@ class BackupAction extends _$BackupAction {
       if (!accepted) return null;
     }
     var plan = preview;
-    await ref
+    RestorePartialException? partial;
+    StackTrace? partialStack;
+    final lanes = ref
         .read(addedRulesActionProvider.notifier)
         .runRestoreInLane(
           () => ref.read(setupActionProvider.notifier).runRestoreBeforeApply(
@@ -297,8 +299,14 @@ class BackupAction extends _$BackupAction {
                       mountTargets: [
                         for (final write in preview.writes) write.targetId,
                       ],
+                      mitmModules: [
+                        for (final module in data.mitmModules) module.id,
+                      ],
                       appBuild: _appBuild,
                     );
+                    // Before the commit: the restored consent is another
+                    // device's until it is rechecked here.
+                    restoreRecovery.holdMitm(journal.id, journal.mitmModules);
                     try {
                       await _checkpoint(RestoreCheckpoint.prepared);
                       if (stagingDirPath != null) {
@@ -322,6 +330,7 @@ class BackupAction extends _$BackupAction {
                       // for the next launch.
                       try {
                         final kept = await journal.rollBack();
+                        restoreRecovery.releaseMitm(journal.id);
                         if (kept.isNotEmpty) {
                           commonPrint.log(
                             'restore rollback left changed files: $kept',
@@ -377,14 +386,55 @@ class BackupAction extends _$BackupAction {
             },
           ),
         );
+    try {
+      await lanes;
+    } on RestorePartialException catch (error, stack) {
+      partial = error;
+      partialStack = stack;
+    }
     // Outside both lanes: settling takes the mount scheduler only.
-    final still = await ref.read(mountActionProvider.notifier).settleRestored([
-      for (final write in plan.writes) write.targetId,
-    ]);
-    return RestoreMountResult(plan, [
-      for (final target in plan.pendingCheck)
-        if (still.contains(target.id)) target,
-    ]);
+    List<RestoreMountProfile>? pending;
+    try {
+      final still = await ref.read(mountActionProvider.notifier).settleRestored(
+        [for (final write in plan.writes) write.targetId],
+      );
+      pending = [
+        for (final target in plan.pendingCheck)
+          if (still.contains(target.id)) target,
+      ];
+    } catch (error) {
+      // Unknown, never empty: a partial result then says it can't tell.
+      if (partial == null) rethrow;
+      commonPrint.log(
+        'restored mounts unreadable: $error',
+        logLevel: LogLevel.warning,
+      );
+    }
+    if (partial != null) {
+      Error.throwWithStackTrace(
+        partial.withPendingChecks(pending),
+        partialStack!,
+      );
+    }
+    return RestoreMountResult(plan, pending!);
+  }
+
+  /// The restored targets among [targetIds] still pending once settled;
+  /// null when that can't be read.
+  Future<List<RestoreMountProfile>?> _stillPending(Set<int> targetIds) async {
+    if (targetIds.isEmpty) return const [];
+    try {
+      final still = await ref
+          .read(mountActionProvider.notifier)
+          .settleRestored(targetIds);
+      return await pendingMountProfiles(database, still);
+    } catch (error) {
+      commonPrint.log(
+        'restored mounts unreadable: $error',
+        logLevel: LogLevel.warning,
+      );
+      return null;
+    }
   }
 
   /// Downloads and mount operations already under way for anything the
@@ -455,14 +505,14 @@ class BackupAction extends _$BackupAction {
     }
     final mitm = ref.read(mitmModulesActionProvider.notifier);
     if (journal.phase.index < RestorePhase.mitmDone.index) {
-      await mitm.recheckConsent();
-      await mitm.clean();
+      await mitm.recheckRestored();
       await journal.advance(
         RestorePhase.mitmDone,
         dbFingerprint: await database.restoreFingerprint(),
       );
       await _checkpoint(RestoreCheckpoint.mitmDone);
     }
+    restoreRecovery.releaseMitm(journal.id);
     await journal.finish(database);
     if (ref.mounted) {
       unawaited(mitm.autoUpdate());
@@ -471,8 +521,12 @@ class BackupAction extends _$BackupAction {
 
   /// Runs what a restore committed in this session still owes, after a
   /// step failed. Journals without a commit marker are left to the launch.
-  Future<void> resumeRestore() {
-    return ref
+  /// Returns the restored targets still to check; null when unknown.
+  Future<List<RestoreMountProfile>?> resumeRestore() async {
+    final targets = <int>{};
+    RestorePartialException? partial;
+    StackTrace? partialStack;
+    final lanes = ref
         .read(addedRulesActionProvider.notifier)
         .runRestoreInLane(
           () => ref.read(setupActionProvider.notifier).runRestoreBeforeApply(
@@ -481,6 +535,7 @@ class BackupAction extends _$BackupAction {
               for (final (id, journal) in await RestoreJournal.pending(home)) {
                 if (journal == null) continue;
                 if (await database.restoreCommit(id) == null) continue;
+                targets.addAll(journal.mountTargets);
                 try {
                   await _afterCommit(
                     journal,
@@ -502,6 +557,20 @@ class BackupAction extends _$BackupAction {
             },
           ),
         );
+    try {
+      await lanes;
+    } on RestorePartialException catch (error, stack) {
+      partial = error;
+      partialStack = stack;
+    }
+    final pending = await _stillPending(targets);
+    if (partial != null) {
+      Error.throwWithStackTrace(
+        partial.withPendingChecks(pending),
+        partialStack!,
+      );
+    }
+    return pending;
   }
 
   /// An id without a local profile row is left out rather than guessed.

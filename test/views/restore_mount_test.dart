@@ -17,6 +17,7 @@ import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/ui.dart';
+import 'package:fl_clash/views/backup_and_restore.dart';
 import 'package:fl_clash/views/restore_mount.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -257,7 +258,7 @@ void main() {
     test('groups and reason ids follow the plan', () {
       final l10n = lookupAppLocalizations(const Locale('zh'));
       final rows = restoreMountRows(_mergePlan(), l10n);
-      expect(rows[RestoreMountGroup.replace]!.single.owner.label, '晨光配置');
+      expect(rows[RestoreMountGroup.replace]!.single.owner!.label, '晨光配置');
       expect(rows[RestoreMountGroup.replace]!.single.note, contains('旧海岸订阅'));
       expect(
         {for (final r in rows[RestoreMountGroup.remove]!) r.reasonId},
@@ -484,7 +485,8 @@ void main() {
       );
       expect(
         restoreResultTitle(RestoreResultKind.foreignSkipped, zh),
-        '检测到旧版本修改了数据，已跳过部分恢复步骤。',
+        '恢复后数据又被修改过，为保留这些修改，已跳过部分恢复步骤。',
+        reason: 'it no longer blames an older version that may not exist',
       );
     });
 
@@ -501,17 +503,160 @@ void main() {
             pendingChecks: [RestoreMountProfile(1, label: '晨光配置')],
           ),
           onOpenProfiles: () {},
-          onContinue: () async {},
+          onContinue: () async => const RestoreEvidence(),
         ),
         locale: const Locale('zh'),
         size: const Size(860, 760),
       );
       final l10n = currentAppLocalizations;
       expect(find.text('数据已恢复，后续处理尚未完成。'), findsOne);
-      expect(find.text(l10n.restoreResultPendingSection('2')), findsOne);
       expect(find.text(l10n.restoreContinue), findsNothing);
       expect(find.text(l10n.restoreBlockedViewProfiles), findsOne);
       await shoot(tester, 'restore-result-locked-zh');
+    });
+
+    testWidgets('steps and profiles are two groups with their own counts; '
+        'a step never reads as a profile', (tester) async {
+      await host(
+        tester,
+        () => const RestoreResultView(
+          evidence: RestoreEvidence(
+            writeStarted: true,
+            committed: true,
+            pendingSteps: [RestoreStep.settings, RestoreStep.mitm],
+            skippedSteps: [RestoreStep.caches],
+            pendingChecks: [RestoreMountProfile(1, label: '晨光配置')],
+          ),
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 900),
+      );
+      expect(find.text('后续步骤 · 2'), findsOne);
+      expect(find.text('待检查配置 · 1'), findsOne);
+      expect(find.text('已跳过的步骤 · 1'), findsOne);
+      expect(find.text('重新检查 MITM 模块'), findsOne);
+      expect(find.text('应用备份中的设置'), findsOne);
+      expect(find.text('清理旧的规则缓存'), findsOne);
+      expect(find.text('所属配置：晨光配置'), findsOne);
+      expect(find.textContaining('所属配置：重新检查'), findsNothing);
+      expect(find.textContaining('所属配置：应用'), findsNothing);
+      expect(find.textContaining('所属配置：清理'), findsNothing);
+      expect(find.text('当前仍有 3 项未完成。不要再次发起恢复。'), findsOne);
+      expect(find.text('未完成'), findsNWidgets(2));
+      expect(find.text('已跳过'), findsOne);
+      expect(find.text('待检查'), findsOne);
+    });
+
+    testWidgets('a partial failure lists the profiles still to check, and '
+        'says so when they are unknown', (tester) async {
+      await host(
+        tester,
+        () => RestoreResultView(
+          evidence: restorePartialEvidence(
+            const RestorePartialException(
+              'x',
+              steps: [RestoreStep.mitm],
+              pendingChecks: [RestoreMountProfile(7, label: '晨光配置')],
+            ),
+          ),
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 760),
+      );
+      expect(find.text('数据已恢复，后续处理尚未完成。'), findsOne);
+      expect(find.text('后续步骤 · 1'), findsOne);
+      expect(find.text('待检查配置 · 1'), findsOne);
+      expect(find.text('所属配置：晨光配置'), findsOne);
+      expect(find.text('无法读取待处理项，不能视为完成。'), findsNothing);
+      await shoot(tester, 'restore-result-partial-zh');
+
+      await host(
+        tester,
+        () => RestoreResultView(
+          evidence: restorePartialEvidence(
+            const RestorePartialException('x', steps: [RestoreStep.mitm]),
+          ),
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 760),
+      );
+      expect(find.text('无法读取待处理项，不能视为完成。'), findsOne);
+      expect(find.textContaining('待检查配置'), findsNothing);
+    });
+
+    RestoreEvidence partial({List<RestoreMountProfile> checks = const []}) =>
+        RestoreEvidence(
+          writeStarted: true,
+          committed: true,
+          pendingSteps: const [RestoreStep.mitm],
+          skippedSteps: const [],
+          pendingChecks: checks,
+          canContinue: true,
+        );
+
+    testWidgets('continue shows what is known afterwards', (tester) async {
+      var calls = 0;
+      final done = Completer<RestoreEvidence>();
+      await host(
+        tester,
+        () => RestoreResultView(
+          evidence: partial(),
+          onContinue: () {
+            calls++;
+            return done.future;
+          },
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 760),
+      );
+      final l10n = currentAppLocalizations;
+      await tester.tap(find.text(l10n.restoreContinue));
+      await tester.pump();
+      await tester.tap(find.text(l10n.restoreContinue));
+      await tester.pump();
+      expect(calls, 1, reason: 'a running continue cannot start twice');
+      done.complete(
+        const RestoreEvidence.committed(
+          pendingChecks: [RestoreMountProfile(1, label: '晨光配置')],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.restoreResultNeedsCheck), findsOne);
+      expect(find.textContaining('后续步骤'), findsNothing);
+      expect(find.text('待检查配置 · 1'), findsOne);
+      expect(find.text(l10n.restoreContinue), findsNothing);
+      expect(find.text(l10n.restoreContinueFailed), findsNothing);
+    });
+
+    testWidgets('a continue that fails or throws says so and can be tried '
+        'again', (tester) async {
+      var calls = 0;
+      await host(
+        tester,
+        () => RestoreResultView(
+          evidence: partial(),
+          onContinue: () async {
+            calls++;
+            if (calls == 1) throw StateError('boom');
+            return partial(checks: const [RestoreMountProfile(2, label: 'B')]);
+          },
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 760),
+      );
+      final l10n = currentAppLocalizations;
+      await tester.tap(find.text(l10n.restoreContinue));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.restoreContinueFailed), findsOne);
+      expect(find.text('数据已恢复，后续处理尚未完成。'), findsOne);
+      expect(find.text('后续步骤 · 1'), findsOne);
+      await tester.tap(find.text(l10n.restoreContinue));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      expect(find.text(l10n.restoreContinueFailed), findsOne);
+      expect(find.text('待检查配置 · 1'), findsOne);
+      await shoot(tester, 'restore-result-continue-failed-zh');
     });
   });
 

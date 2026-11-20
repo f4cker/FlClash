@@ -949,9 +949,10 @@ Future<List<({String name, MitmModuleContent content})>> enabledMitmModules(
       ))) {
     return const [];
   }
+  final hold = ref.watch(restoreMitmHoldStateProvider);
   final modules = await ref.watch(mitmModulesProvider.future);
   final contents = <({String name, MitmModuleContent content})>[];
-  for (final module in modules.where((module) => module.enabled)) {
+  for (final module in modules.where((module) => module.runsUnder(hold))) {
     try {
       final content = await ref.watch(
         mitmModuleContentProvider(module.id).future,

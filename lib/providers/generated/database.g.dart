@@ -474,6 +474,69 @@ abstract class _$MitmModules extends $StreamNotifier<List<MitmModule>> {
   }
 }
 
+/// The MITM modules a restore holds off until their consent is rechecked
+/// on this device; every place that runs a module checks it.
+
+@ProviderFor(RestoreMitmHoldState)
+final restoreMitmHoldStateProvider = RestoreMitmHoldStateProvider._();
+
+/// The MITM modules a restore holds off until their consent is rechecked
+/// on this device; every place that runs a module checks it.
+final class RestoreMitmHoldStateProvider
+    extends $NotifierProvider<RestoreMitmHoldState, RestoreMitmHold> {
+  /// The MITM modules a restore holds off until their consent is rechecked
+  /// on this device; every place that runs a module checks it.
+  RestoreMitmHoldStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'restoreMitmHoldStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$restoreMitmHoldStateHash();
+
+  @$internal
+  @override
+  RestoreMitmHoldState create() => RestoreMitmHoldState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RestoreMitmHold value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RestoreMitmHold>(value),
+    );
+  }
+}
+
+String _$restoreMitmHoldStateHash() =>
+    r'51b007a017f38442590b5cc4c120c6ecc5c4a11f';
+
+/// The MITM modules a restore holds off until their consent is rechecked
+/// on this device; every place that runs a module checks it.
+
+abstract class _$RestoreMitmHoldState extends $Notifier<RestoreMitmHold> {
+  RestoreMitmHold build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<RestoreMitmHold, RestoreMitmHold>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<RestoreMitmHold, RestoreMitmHold>,
+              RestoreMitmHold,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(ClashProviders)
 final clashProvidersProvider = ClashProvidersProvider._();
 

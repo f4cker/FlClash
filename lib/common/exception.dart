@@ -1,3 +1,5 @@
+import 'package:fl_clash/common/restore_mount_plan.dart';
+
 final class MessageException implements Exception {
   final String message;
 
@@ -54,7 +56,19 @@ final class RestoreBlockedException extends MessageException {
 final class RestorePartialException extends MessageException {
   final List<Object> steps;
 
-  const RestorePartialException(super.message, {this.steps = const []});
+  /// The restored mount targets still to check; null when not known, which
+  /// never counts as none.
+  final List<RestoreMountProfile>? pendingChecks;
+
+  const RestorePartialException(
+    super.message, {
+    this.steps = const [],
+    this.pendingChecks,
+  });
+
+  RestorePartialException withPendingChecks(
+    List<RestoreMountProfile>? checks,
+  ) => RestorePartialException(message, steps: steps, pendingChecks: checks);
 }
 
 final class AgeSecretKeyRequiredException implements Exception {

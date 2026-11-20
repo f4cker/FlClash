@@ -139,6 +139,9 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
           )
       ? ref.watch(mitmModulesProvider.future)
       : null;
+  final mitmHold = mitmModules == null
+      ? RestoreMitmHold.none
+      : ref.watch(restoreMitmHoldStateProvider);
   List<ProxyGroup> proxyGroups = [];
   List<Rule> rules = [];
   List<Rule> addedRules = [];
@@ -178,7 +181,7 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
     mounts: mounts,
     mitmModules: mitmModules == null
         ? const []
-        : await mitmRoutingSources(await mitmModules),
+        : await mitmRoutingSources(await mitmModules, hold: mitmHold),
     clashProviders: clashProviders,
     profileProviders: profileProviders,
     appProxies: appProxies,
@@ -209,12 +212,13 @@ String _mountSourceStamp(List<Profile> profiles) => json.encode([
 
 /// A module not yet downloaded adds nothing until it is.
 Future<List<MitmModuleSource>> mitmRoutingSources(
-  Iterable<MitmModule> modules,
-) async {
+  Iterable<MitmModule> modules, {
+  RestoreMitmHold hold = RestoreMitmHold.none,
+}) async {
   final directory = await appPath.mitmModulesDirPath;
   final sources = <MitmModuleSource>[];
   for (final module in modules) {
-    if (!module.enabled || !module.rulesEnabled) {
+    if (!module.runsUnder(hold) || !module.rulesEnabled) {
       continue;
     }
     final file = File(join(directory, module.fileName));

@@ -2035,17 +2035,38 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String restoreResultPendingSection(Object count) {
-    return '实际待处理项 · $count';
-  }
-
-  @override
   String restoreResultSkippedSection(Object count) {
     return '已跳过的步骤 · $count';
   }
 
   @override
   String get restoreResultSkippedNote => '当前数据保持现状；跳过的步骤不会重放。';
+
+  @override
+  String restoreResultStepsSection(Object count) {
+    return '后续步骤 · $count';
+  }
+
+  @override
+  String restoreResultChecksSection(Object count) {
+    return '待检查配置 · $count';
+  }
+
+  @override
+  String get restoreMountTagPending => '未完成';
+
+  @override
+  String get restoreMountTagSkipped => '已跳过';
+
+  @override
+  String get restoreContinueFailed => '本次重试未能完成剩余步骤，仍未完成的项目见下方。';
+
+  @override
+  String get restoreDataChangedSkipped => '恢复后数据又被修改过，为保留这些修改，已跳过部分恢复步骤。';
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      '上次恢复被中断，且恢复记录无法读取。数据库中没有这次恢复的提交记录；配置文件等可能已被部分替换，无法确认，因此未做任何自动处理。如数据异常，请重新恢复备份。';
 
   @override
   String get restoreResultUnknownItems => '无法读取待处理项，不能视为完成。';
@@ -2082,10 +2103,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreRecoveryCompleted => '上次恢复已写入数据，剩余步骤已在启动时完成。';
 
   @override
-  String get restoreRecoveryUnreadable =>
-      '上次恢复被中断，且恢复记录无法读取，未做任何自动处理。如数据异常，请重新恢复备份。';
-
-  @override
   String get restoreStepCaches => '清理旧的规则缓存';
 
   @override
@@ -2096,9 +2113,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRestoredPending => '数据已恢复，后续处理尚未完成。';
-
-  @override
-  String get restoreOldVersionSkipped => '检测到旧版本修改了数据，已跳过部分恢复步骤。';
 
   @override
   String restorePendingSteps(Object steps) {

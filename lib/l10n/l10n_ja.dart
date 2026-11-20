@@ -2077,11 +2077,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String restoreResultPendingSection(Object count) {
-    return 'Still pending · $count';
-  }
-
-  @override
   String restoreResultSkippedSection(Object count) {
     return 'Skipped steps · $count';
   }
@@ -2089,6 +2084,34 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get restoreResultSkippedNote =>
       'The current data was kept as it is; skipped steps are not replayed.';
+
+  @override
+  String restoreResultStepsSection(Object count) {
+    return '残りの手順 · $count';
+  }
+
+  @override
+  String restoreResultChecksSection(Object count) {
+    return '確認が必要なプロファイル · $count';
+  }
+
+  @override
+  String get restoreMountTagPending => '未完了';
+
+  @override
+  String get restoreMountTagSkipped => 'スキップ';
+
+  @override
+  String get restoreContinueFailed =>
+      '今回の再試行では残りの手順を完了できませんでした。未完了の項目は下に表示しています。';
+
+  @override
+  String get restoreDataChangedSkipped =>
+      '復元後にデータが変更されたため、その変更を残すよう復元の一部の手順をスキップしました。';
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      '前回の復元は中断され、その記録を読み取れませんでした。データベースにはこの復元のコミット記録がありません。プロファイルなどのファイルは一部置き換えられている可能性があり、確認できないため、自動では何も行いませんでした。データがおかしい場合はバックアップをもう一度復元してください。';
 
   @override
   String get restoreResultUnknownItems =>
@@ -2130,10 +2153,6 @@ class AppLocalizationsJa extends AppLocalizations {
       '前回の復元はすでにデータを保存していました。残りの手順は起動時に完了しました。';
 
   @override
-  String get restoreRecoveryUnreadable =>
-      '前回の復元は中断され、その記録を読み取れなかったため、自動では何も行いませんでした。データがおかしい場合はバックアップをもう一度復元してください。';
-
-  @override
   String get restoreStepCaches => '古いルールキャッシュの削除';
 
   @override
@@ -2144,10 +2163,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreRestoredPending => 'データは復元されましたが、後続の処理はまだ完了していません。';
-
-  @override
-  String get restoreOldVersionSkipped =>
-      '以前のバージョンのアプリがデータを変更したため、復元の一部の手順をスキップしました。';
 
   @override
   String restorePendingSteps(Object steps) {

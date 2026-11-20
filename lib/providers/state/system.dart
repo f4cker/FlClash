@@ -154,9 +154,10 @@ Future<MitmModuleRules> enabledMitmModuleRules(Ref ref) async {
   if (!mitmModulesFeature) {
     return MitmModuleRules.empty;
   }
+  final hold = ref.watch(restoreMitmHoldStateProvider);
   final modules = [
     for (final module in await ref.watch(mitmModulesProvider.future))
-      if (module.enabled) module,
+      if (module.runsUnder(hold)) module,
   ];
   if (modules.isEmpty) {
     return MitmModuleRules.empty;

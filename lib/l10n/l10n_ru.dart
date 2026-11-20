@@ -2161,11 +2161,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String restoreResultPendingSection(Object count) {
-    return 'Still pending · $count';
-  }
-
-  @override
   String restoreResultSkippedSection(Object count) {
     return 'Skipped steps · $count';
   }
@@ -2173,6 +2168,34 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get restoreResultSkippedNote =>
       'The current data was kept as it is; skipped steps are not replayed.';
+
+  @override
+  String restoreResultStepsSection(Object count) {
+    return 'Оставшиеся шаги · $count';
+  }
+
+  @override
+  String restoreResultChecksSection(Object count) {
+    return 'Профили для проверки · $count';
+  }
+
+  @override
+  String get restoreMountTagPending => 'Не выполнено';
+
+  @override
+  String get restoreMountTagSkipped => 'Пропущено';
+
+  @override
+  String get restoreContinueFailed =>
+      'Повторная попытка не завершила оставшиеся шаги. Что осталось, указано ниже.';
+
+  @override
+  String get restoreDataChangedSkipped =>
+      'После восстановления данные изменились, поэтому некоторые шаги пропущены, чтобы сохранить эти изменения.';
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      'Последнее восстановление было прервано, а его журнал не удалось прочитать. В базе данных нет его фиксации; файлы, например профили, могли быть частично заменены, и это нельзя проверить, поэтому ничего не сделано автоматически. Если данные выглядят неверно, восстановите резервную копию ещё раз.';
 
   @override
   String get restoreResultUnknownItems =>
@@ -2214,10 +2237,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Последнее восстановление уже сохранило данные. Оставшиеся шаги выполнены при запуске.';
 
   @override
-  String get restoreRecoveryUnreadable =>
-      'Последнее восстановление было прервано, а его журнал не удалось прочитать, поэтому ничего не сделано автоматически. Если данные выглядят неверно, восстановите резервную копию ещё раз.';
-
-  @override
   String get restoreStepCaches => 'очистка старых кэшей правил';
 
   @override
@@ -2229,10 +2248,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get restoreRestoredPending =>
       'Данные восстановлены, но последующая обработка ещё не завершена.';
-
-  @override
-  String get restoreOldVersionSkipped =>
-      'Более старая версия приложения изменила данные, поэтому некоторые шаги восстановления пропущены.';
 
   @override
   String restorePendingSteps(Object steps) {

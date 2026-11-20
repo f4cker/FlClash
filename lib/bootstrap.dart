@@ -181,11 +181,8 @@ class Bootstrap {
 
   Future<void> _initApp() async {
     await restoreRecovery.completeAtStartup(
-      mitm: () async {
-        final action = _container.read(mitmModulesActionProvider.notifier);
-        await action.recheckConsent();
-        await action.clean();
-      },
+      mitm: () =>
+          _container.read(mitmModulesActionProvider.notifier).recheckRestored(),
       startBackgroundWork: _startBackgroundWork,
       show: (report) => dialogs.showAlert(
         title: currentAppLocalizations.tip,

@@ -10,6 +10,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/database.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
@@ -20,6 +21,15 @@ import '../helpers/preferences.dart';
 
 Profile _profile(int id, String label) =>
     Profile(id: id, label: label, autoUpdateDuration: Duration.zero);
+
+/// Consented to on the device the backup came from.
+final _module = MitmModule(
+  id: 41,
+  name: 'Restored module',
+  enabled: true,
+  accepted: true,
+  lastUpdateTime: DateTime(2026),
+);
 
 /// Where a test stops the restore, as a crash would.
 enum _Crash {
@@ -58,6 +68,7 @@ void main() {
 
   setUp(() async {
     await mockPreferences({'version': 1});
+    restoreRecovery.clearMitmHolds();
     home = Directory.systemTemp.createTempSync('flash-restore-journal-');
     await useAppPaths(home);
     dbFile = File(join(home.path, 'database.sqlite'));
@@ -146,6 +157,7 @@ void main() {
       data: MigrationData(
         configMap: configMap,
         profiles: [_profile(1, 'Backup A'), _profile(3, 'Backup C')],
+        mitmModules: [_module],
       ),
     );
   }
@@ -413,9 +425,8 @@ void main() {
       expect(reports.single.skippedSteps, [
         RestoreStep.caches,
         RestoreStep.settings,
-        RestoreStep.mitm,
       ]);
-      expect(mitmRuns, 0);
+      expect(mitmRuns, 1, reason: 'the consent recheck overwrites nothing');
       expect(await labels(), {
         1: 'Backup A',
         3: 'Backup C',
@@ -435,7 +446,8 @@ void main() {
         reports.single,
         currentAppLocalizations,
       );
-      expect(message, contains('An older version of the app changed'));
+      expect(message, contains('The data was changed after the restore'));
+      expect(message, isNot(contains('older version')));
       expect(message, contains('clearing old rule caches'));
       expect(message, isNot(contains('was not changed')));
       await relaunch();
@@ -459,17 +471,15 @@ void main() {
       final reports = await recover();
 
       expect(reports.single.outcome, RestoreRecoveryOutcome.incomplete);
-      expect(reports.single.skippedSteps, [
-        RestoreStep.settings,
-        RestoreStep.mitm,
-      ]);
+      expect(reports.single.skippedSteps, [RestoreStep.settings]);
       expect(await storedProfileId(), 2);
       expect(await markers(), isEmpty);
       expect(journals(), isEmpty);
     });
 
     test(
-      'settings already saved: only the remaining steps are guarded',
+      'settings already saved: later writes, by this build or another, '
+      'do not stop the MITM recheck and are not blamed on an older one',
       () async {
         final (:container, :staging, :data) = await fixture();
         await crashAt(
@@ -486,10 +496,12 @@ void main() {
 
         final reports = await recover(mitm: () => mitmRuns++);
 
-        expect(reports.single.outcome, RestoreRecoveryOutcome.incomplete);
-        expect(reports.single.skippedSteps, [RestoreStep.mitm]);
-        expect(mitmRuns, 0);
+        expect(reports.single.outcome, RestoreRecoveryOutcome.completed);
+        expect(mitmRuns, 1);
         expect(await storedProfileId(), 3);
+        expect(await labels(), containsPair(9, 'Made in old build'));
+        expect(journals(), isEmpty);
+        expect(await markers(), isEmpty);
       },
     );
 
@@ -634,7 +646,15 @@ void main() {
       ),
       zh,
     );
-    expect(incomplete, startsWith('检测到旧版本修改了数据，已跳过部分恢复步骤。'));
+    expect(incomplete, startsWith('恢复后数据又被修改过，为保留这些修改，已跳过部分恢复步骤。'));
+    expect(incomplete, isNot(contains('旧版本')));
+    expect(
+      restoreRecoveryMessage(
+        const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
+        zh,
+      ),
+      allOf(contains('没有这次恢复的提交记录'), contains('可能已被部分替换')),
+    );
     expect(incomplete, contains('重新检查 MITM 模块'));
     expect(incomplete, contains('重新恢复备份'));
   });
@@ -840,7 +860,8 @@ void main() {
       expect(await recover(), isEmpty);
     });
 
-    test('a failing MITM step at startup is reported as pending', () async {
+    test('a failing MITM step at startup stays owed and holds the restored '
+        'modules until the next launch rechecks them', () async {
       final (:container, :staging, :data) = await fixture();
       await crashAt(
         _Crash.afterPrefs,
@@ -863,7 +884,163 @@ void main() {
       );
       expect(shown.single.outcome, RestoreRecoveryOutcome.pending);
       expect(shown.single.skippedSteps, [RestoreStep.mitm]);
+      expect(shown.single.followUp, RestoreFollowUp.nextLaunch);
+      expect(journals(), hasLength(1), reason: 'never finalized');
+      expect(await markers(), hasLength(1));
+      expect(recovery.mitmHold.value.holds(_module.id), isTrue);
+      expect(recovery.mitmHold.value.holds(999), isFalse);
+      expect(
+        restoreRecoveryMessage(shown.single, currentAppLocalizations),
+        allOf(contains('has been restored'), contains('next time')),
+      );
+
+      // The app is used meanwhile; that does not stop the retry.
+      await database.profilesDao.putAll([_profile(9, 'Later').toCompanion(9)]);
+      await relaunch();
+      final next = RestoreRecovery(
+        db: () => database,
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+      await next.run();
+      expect(next.mitmHold.value.holds(_module.id), isTrue);
+      var retried = 0;
+      await next.finish(() async => retried++);
+      expect(retried, 1);
+      expect(
+        next.takeReports().single.outcome,
+        RestoreRecoveryOutcome.completed,
+      );
+      expect(next.mitmHold.value.isEmpty, isTrue);
       expect(journals(), isEmpty);
+      expect(await markers(), isEmpty);
+    });
+
+    test('restored module rows carry the other device\'s consent as-is, '
+        'so they stay held until rechecked here', () async {
+      final (:container, :staging, :data) = await fixture();
+      final action = container.read(backupActionProvider.notifier);
+      action.afterRestoreCommit = () async => throw StateError('injected');
+      await expectLater(
+        action.applyRestore(
+          data,
+          RestoreOption.all,
+          stagingDirPath: staging.path,
+        ),
+        throwsA(isA<RestorePartialException>()),
+      );
+      final [row] = await database.mitmModulesDao.query().get();
+      expect(row.enabled, isTrue);
+      expect(row.asksConsent, isFalse);
+      expect(row.accepted, isTrue);
+      expect(row.runsUnder(RestoreMitmHold.none), isTrue);
+      final hold = container.read(restoreMitmHoldStateProvider);
+      expect(hold.holds(_module.id), isTrue);
+      expect(row.runsUnder(hold), isFalse);
+      final [dir] = journals();
+      expect(
+        jsonDecode(File(join(dir.path, 'journal.json')).readAsStringSync())
+            as Map,
+        containsPair('mitmModules', [_module.id]),
+      );
+    });
+
+    test('an uninterrupted restore holds its modules only until the '
+        'recheck', () async {
+      final (:container, :staging, :data) = await fixture();
+      final action = container.read(backupActionProvider.notifier);
+      final seen = <bool>[];
+      action.onRestoreCheckpoint = (point) async {
+        if (point == RestoreCheckpoint.committed ||
+            point == RestoreCheckpoint.configSaved) {
+          seen.add(restoreRecovery.mitmHold.value.holds(_module.id));
+        }
+      };
+      await action.applyRestore(
+        data,
+        RestoreOption.all,
+        stagingDirPath: staging.path,
+      );
+      expect(seen, [true, true]);
+      expect(
+        container.read(restoreMitmHoldStateProvider).holds(_module.id),
+        isFalse,
+      );
+    });
+
+    test('a pre-commit failure releases the hold', () async {
+      final (:container, :staging, :data) = await fixture();
+      database.beforeRestoreCommit = () async => throw StateError('rows');
+      await expectLater(
+        container
+            .read(backupActionProvider.notifier)
+            .applyRestore(
+              data,
+              RestoreOption.all,
+              stagingDirPath: staging.path,
+            ),
+        throwsA(isA<StateError>()),
+      );
+      expect(restoreRecovery.mitmHold.value.holds(_module.id), isFalse);
+    });
+
+    test('a partial failure lists the targets to check; continuing finishes '
+        'the steps, lifts the hold and says what is left', () async {
+      final (:container, :staging, :data) = await fixture();
+      final action = container.read(backupActionProvider.notifier);
+      action.afterRestoreCommit = () async => throw StateError('injected');
+      RestorePartialException? partial;
+      try {
+        await action.applyRestore(
+          data,
+          RestoreOption.all,
+          stagingDirPath: staging.path,
+        );
+      } on RestorePartialException catch (error) {
+        partial = error;
+      }
+      expect(partial!.steps, RestoreStep.values);
+      expect(partial.pendingChecks, isEmpty, reason: 'known, and none');
+      expect(restoreRecovery.mitmHold.value.holds(_module.id), isTrue);
+
+      action.afterRestoreCommit = null;
+      expect(await action.resumeRestore(), isEmpty);
+      expect(restoreRecovery.mitmHold.value.isEmpty, isTrue);
+      expect(journals(), isEmpty);
+      expect(await markers(), isEmpty);
+      expect(await storedProfileId(), 3);
+      // What the recheck leaves: the file is not on this device, so the
+      // module now asks for consent; the other fields are as restored.
+      final [row] = await database.mitmModulesDao.query().get();
+      expect(row.asksConsent, isTrue);
+      expect((row.enabled, row.accepted), (true, true));
+    });
+
+    test('launch runs the recovery before any gate and wires the recheck '
+        'that keeps the module list alive', () {
+      final source = File('lib/bootstrap.dart').readAsStringSync();
+      final body = source.substring(source.indexOf('Future<void> _initApp()'));
+      final recovery = body.indexOf('restoreRecovery.completeAtStartup(');
+      expect(recovery, greaterThan(0));
+      expect(recovery, lessThan(body.indexOf('_handleFailedPreference()')));
+      expect(recovery, lessThan(body.indexOf('_handlerDisclaimer()')));
+      expect(recovery, lessThan(body.indexOf('startCore()')));
+      expect(
+        body.substring(recovery, body.indexOf('startBackgroundWork:')),
+        contains('recheckRestored()'),
+      );
+    });
+
+    test('a journal from before modules were recorded holds them all', () {
+      final hold = RestoreMitmHold.of([null]);
+      expect(hold.holds(1), isTrue);
+      expect(
+        RestoreMitmHold.of([
+          [1],
+        ]).holds(2),
+        isFalse,
+      );
+      expect(RestoreMitmHold.of(const []).isEmpty, isTrue);
     });
   });
 }

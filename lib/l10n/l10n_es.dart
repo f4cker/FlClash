@@ -2185,11 +2185,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String restoreResultPendingSection(Object count) {
-    return 'Still pending · $count';
-  }
-
-  @override
   String restoreResultSkippedSection(Object count) {
     return 'Skipped steps · $count';
   }
@@ -2197,6 +2192,34 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get restoreResultSkippedNote =>
       'The current data was kept as it is; skipped steps are not replayed.';
+
+  @override
+  String restoreResultStepsSection(Object count) {
+    return 'Pasos pendientes · $count';
+  }
+
+  @override
+  String restoreResultChecksSection(Object count) {
+    return 'Perfiles por comprobar · $count';
+  }
+
+  @override
+  String get restoreMountTagPending => 'Sin hacer';
+
+  @override
+  String get restoreMountTagSkipped => 'Omitido';
+
+  @override
+  String get restoreContinueFailed =>
+      'Este reintento no terminó los pasos restantes. Lo que falta aparece abajo.';
+
+  @override
+  String get restoreDataChangedSkipped =>
+      'Los datos cambiaron después de la restauración, así que se omitieron algunos pasos para conservar esos cambios.';
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      'La última restauración se interrumpió y no se pudo leer su registro. La base de datos no tiene ninguna confirmación suya; archivos como los perfiles pueden haberse reemplazado en parte, lo que no se puede comprobar, así que no se hizo nada automáticamente. Si tus datos parecen incorrectos, vuelve a restaurar la copia.';
 
   @override
   String get restoreResultUnknownItems =>
@@ -2238,10 +2261,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'La última restauración ya había guardado sus datos. Los pasos restantes se completaron al iniciar.';
 
   @override
-  String get restoreRecoveryUnreadable =>
-      'La última restauración se interrumpió y no se pudo leer su registro, así que no se hizo nada automáticamente. Si tus datos parecen incorrectos, vuelve a restaurar la copia.';
-
-  @override
   String get restoreStepCaches => 'limpiar las cachés de reglas antiguas';
 
   @override
@@ -2253,10 +2272,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get restoreRestoredPending =>
       'Tus datos se han restaurado, pero el procesamiento posterior aún no ha terminado.';
-
-  @override
-  String get restoreOldVersionSkipped =>
-      'Una versión anterior de la app modificó los datos, así que se omitieron algunos pasos de la restauración.';
 
   @override
   String restorePendingSteps(Object steps) {

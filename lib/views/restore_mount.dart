@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:fl_clash/common/print.dart';
 import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/common/restore_result.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
@@ -144,7 +146,13 @@ enum RestoreMountGroup { remove, replace, keep, check, invalid }
 /// the same data.
 class RestoreMountRow {
   final RestoreMountGroup group;
-  final RestoreMountProfile owner;
+
+  /// The profile the row is about; null for a restore step, which is shown
+  /// by its [title] alone and never as a profile.
+  final RestoreMountProfile? owner;
+
+  /// Set for a step row.
+  final String? title;
   final String source;
   final String? note;
 
@@ -154,12 +162,21 @@ class RestoreMountRow {
 
   const RestoreMountRow({
     required this.group,
-    required this.owner,
+    required RestoreMountProfile this.owner,
     required this.source,
     required this.tag,
     this.note,
     this.reasonId,
-  });
+  }) : title = null;
+
+  const RestoreMountRow.step({
+    required this.group,
+    required String this.title,
+    required this.tag,
+  }) : owner = null,
+       source = '',
+       note = null,
+       reasonId = null;
 }
 
 /// Groups the plan for the list: remove, replace, keep, then to check, and
@@ -505,10 +522,12 @@ List<Widget> _groupSlivers(
           final details = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.restoreMountOwner(restoreProfileName(row.owner, l10n)),
-                style: _group(context, p),
-              ),
+              Text(switch (row.owner) {
+                final owner? => l10n.restoreMountOwner(
+                  restoreProfileName(owner, l10n),
+                ),
+                null => row.title ?? '',
+              }, style: _group(context, p)),
               if (row.source.isNotEmpty)
                 Text(
                   row.group == RestoreMountGroup.replace
@@ -924,7 +943,7 @@ class RestorePendingRefusal extends StatelessWidget {
       ],
       slivers: (_) => _groupSlivers(
         context,
-        l10n.restoreResultPendingSection('${profiles.length}'),
+        l10n.restoreResultChecksSection('${profiles.length}'),
         [
           for (final profile in profiles)
             RestoreMountRow(
@@ -956,7 +975,7 @@ String restoreResultTitle(RestoreResultKind kind, AppLocalizations l10n) =>
       RestoreResultKind.rolledBack => l10n.restoreResultRolledBack,
       RestoreResultKind.rollbackUnverified => l10n.restoreResultUnverified,
       RestoreResultKind.committedLocked => l10n.restoreRestoredPending,
-      RestoreResultKind.foreignSkipped => l10n.restoreOldVersionSkipped,
+      RestoreResultKind.foreignSkipped => l10n.restoreDataChangedSkipped,
       RestoreResultKind.completed => l10n.restoreResultCompleted,
       RestoreResultKind.needsCheck => l10n.restoreResultNeedsCheck,
       RestoreResultKind.refusedPending => l10n.restoreResultRefused,
@@ -970,7 +989,9 @@ class RestoreResultView extends StatefulWidget {
   final VoidCallback? onOpenProfiles;
 
   /// Runs the remaining steps, when this session really can.
-  final Future<void> Function()? onContinue;
+  /// Returns what is known afterwards, which the view then shows. It
+  /// should not throw; if it does, the evidence shown stays as it was.
+  final Future<RestoreEvidence> Function()? onContinue;
 
   const RestoreResultView({
     super.key,
@@ -985,28 +1006,69 @@ class RestoreResultView extends StatefulWidget {
 
 class _RestoreResultViewState extends State<RestoreResultView> {
   final _titleFocus = FocusNode();
+  late RestoreEvidence _evidence = widget.evidence;
   bool _continuing = false;
+
+  /// The latest attempt to continue did not finish the remaining steps.
+  bool _continueFailed = false;
 
   @override
   void initState() {
     super.initState();
+    _announce();
+  }
+
+  @override
+  void didUpdateWidget(RestoreResultView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.evidence, oldWidget.evidence)) {
+      _evidence = widget.evidence;
+      _continueFailed = false;
+    }
+  }
+
+  void _announce({String? extra}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      final title = restoreResultTitle(widget.evidence.kind, l10n);
+      final title = restoreResultTitle(_evidence.kind, l10n);
       // A major failure is said once, firmly, with focus on the title.
-      if (widget.evidence.isMajorFailure) _titleFocus.requestFocus();
+      if (_evidence.isMajorFailure) _titleFocus.requestFocus();
       unawaited(
         SemanticsService.sendAnnouncement(
           View.of(context),
-          title,
+          [?extra, title].join('\n'),
           Directionality.of(context),
-          assertiveness: widget.evidence.isMajorFailure
+          assertiveness: _evidence.isMajorFailure || extra != null
               ? Assertiveness.assertive
               : Assertiveness.polite,
         ),
       );
     });
+  }
+
+  Future<void> _continue(Future<RestoreEvidence> Function() run) async {
+    setState(() => _continuing = true);
+    RestoreEvidence? next;
+    try {
+      next = await run();
+    } catch (error) {
+      commonPrint.log(
+        'restore continue failed: $error',
+        logLevel: LogLevel.warning,
+      );
+    }
+    if (!mounted) return;
+    final failed =
+        next == null || next.kind == RestoreResultKind.committedLocked;
+    setState(() {
+      _continuing = false;
+      if (next != null) _evidence = next;
+      _continueFailed = failed;
+    });
+    _announce(
+      extra: failed ? AppLocalizations.of(context).restoreContinueFailed : null,
+    );
   }
 
   @override
@@ -1017,7 +1079,7 @@ class _RestoreResultViewState extends State<RestoreResultView> {
 
   @override
   Widget build(BuildContext context) {
-    final evidence = widget.evidence;
+    final evidence = _evidence;
     final kind = evidence.kind;
     final l10n = AppLocalizations.of(context);
     final p = _Palette.of(context);
@@ -1029,14 +1091,15 @@ class _RestoreResultViewState extends State<RestoreResultView> {
     final unknown =
         committed &&
         (pendingSteps == null || skippedSteps == null || checks == null);
-    final pendingRows = <RestoreMountRow>[
+    final stepRows = <RestoreMountRow>[
       for (final step in pendingSteps ?? const <RestoreStep>[])
-        RestoreMountRow(
+        RestoreMountRow.step(
           group: RestoreMountGroup.check,
-          owner: RestoreMountProfile(-1, label: restoreStepLabel(step, l10n)),
-          source: '',
-          tag: l10n.restoreMountTagCheck,
+          title: restoreStepLabel(step, l10n),
+          tag: l10n.restoreMountTagPending,
         ),
+    ];
+    final checkRows = <RestoreMountRow>[
       for (final profile in checks ?? const <RestoreMountProfile>[])
         RestoreMountRow(
           group: RestoreMountGroup.check,
@@ -1048,11 +1111,10 @@ class _RestoreResultViewState extends State<RestoreResultView> {
     ];
     final skippedRows = <RestoreMountRow>[
       for (final step in skippedSteps ?? const <RestoreStep>[])
-        RestoreMountRow(
+        RestoreMountRow.step(
           group: RestoreMountGroup.remove,
-          owner: RestoreMountProfile(-1, label: restoreStepLabel(step, l10n)),
-          source: '',
-          tag: l10n.restoreMountTagInvalid,
+          title: restoreStepLabel(step, l10n),
+          tag: l10n.restoreMountTagSkipped,
         ),
     ];
     final lines = <String>[
@@ -1078,9 +1140,17 @@ class _RestoreResultViewState extends State<RestoreResultView> {
           lines: lines,
           titleFocus: _titleFocus,
         ),
-        if (locked && pendingRows.isNotEmpty) ...[
+        if (_continueFailed) ...[
           const SizedBox(height: 20),
-          _Callout(lead: l10n.restoreResultLockedNote('${pendingRows.length}')),
+          _Callout(lead: l10n.restoreContinueFailed),
+        ],
+        if (locked && stepRows.length + checkRows.length > 0) ...[
+          const SizedBox(height: 20),
+          _Callout(
+            lead: l10n.restoreResultLockedNote(
+              '${stepRows.length + checkRows.length}',
+            ),
+          ),
         ],
         if (unknown) ...[
           const SizedBox(height: 20),
@@ -1090,8 +1160,13 @@ class _RestoreResultViewState extends State<RestoreResultView> {
       slivers: (_) => [
         ..._groupSlivers(
           context,
-          l10n.restoreResultPendingSection('${pendingRows.length}'),
-          pendingRows,
+          l10n.restoreResultStepsSection('${stepRows.length}'),
+          stepRows,
+        ),
+        ..._groupSlivers(
+          context,
+          l10n.restoreResultChecksSection('${checkRows.length}'),
+          checkRows,
         ),
         ..._groupSlivers(
           context,
@@ -1123,16 +1198,7 @@ class _RestoreResultViewState extends State<RestoreResultView> {
               // See RestoreRecheckButton: never disable a pressed button
               // in place.
               key: ValueKey(_continuing),
-              onPressed: _continuing
-                  ? null
-                  : () async {
-                      setState(() => _continuing = true);
-                      try {
-                        await run();
-                      } finally {
-                        if (mounted) setState(() => _continuing = false);
-                      }
-                    },
+              onPressed: _continuing ? null : () => _continue(run),
               child: Text(l10n.restoreContinue),
             ),
           if (committed && widget.onOpenProfiles != null)

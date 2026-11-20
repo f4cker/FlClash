@@ -10,10 +10,12 @@ import 'package:fl_clash/common/file.dart';
 import 'package:fl_clash/common/path.dart';
 import 'package:fl_clash/common/preferences.dart';
 import 'package:fl_clash/common/print.dart';
+import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/foundation.dart' show ValueNotifier, visibleForTesting;
 import 'package:path/path.dart';
 
 /// Lives in the home directory, not the temp one, so it survives a crash and
@@ -186,6 +188,11 @@ class RestoreJournal {
   /// Mount targets the commit left with a pending record.
   List<int> mountTargets;
 
+  /// The MITM modules the restore writes, held off until their consent is
+  /// rechecked here. Null (a journal from before this was recorded) holds
+  /// every module.
+  final List<int>? mitmModules;
+
   RestoreJournal._({
     required this.homeDirPath,
     required this.id,
@@ -200,6 +207,7 @@ class RestoreJournal {
     this.dbFingerprint,
     this.prefsTarget,
     this.mountTargets = const [],
+    this.mitmModules,
   });
 
   static String rootOf(String homeDirPath) =>
@@ -216,6 +224,7 @@ class RestoreJournal {
     required List<String> previousProviderFiles,
     required List<String> restoredLocalProviderFiles,
     List<int> mountTargets = const [],
+    List<int>? mitmModules,
     String? appBuild,
   }) async {
     final journal = RestoreJournal._(
@@ -227,6 +236,7 @@ class RestoreJournal {
       previousProviderFiles: previousProviderFiles,
       restoredLocalProviderFiles: restoredLocalProviderFiles,
       mountTargets: mountTargets,
+      mitmModules: mitmModules,
       entries: [],
       phase: RestorePhase.prepared,
     );
@@ -288,6 +298,7 @@ class RestoreJournal {
     dbFingerprint: json['dbFingerprint'] as String?,
     prefsTarget: json['prefsTarget'] as String?,
     mountTargets: [...?(json['mountTargets'] as List?)?.cast<int>()],
+    mitmModules: (json['mitmModules'] as List?)?.cast<int>(),
   );
 
   Map<String, Object?> toJson() => {
@@ -303,6 +314,7 @@ class RestoreJournal {
     'dbFingerprint': dbFingerprint,
     'prefsTarget': prefsTarget,
     'mountTargets': mountTargets,
+    'mitmModules': mitmModules,
   };
 
   Future<void> _write() async {
@@ -447,6 +459,9 @@ class RestoreJournal {
     await discard();
   }
 
+  /// Whether the MITM consent recheck is still owed.
+  bool get owesMitm => phase.index < RestorePhase.mitmDone.index;
+
   /// What is still to do once the database has committed.
   List<RestoreStep> remainingSteps() => [
     if (phase.index < RestorePhase.cachesCleared.index) RestoreStep.caches,
@@ -555,8 +570,9 @@ class RestoreRecoveryReport {
       'followUp: $followUp)';
 }
 
-/// The labels of [targetIds] whose mount record is still pending.
-Future<List<String>> pendingMountLabels(
+/// The restored mount targets among [targetIds] whose record is still
+/// pending, in profile order.
+Future<List<RestoreMountProfile>> pendingMountProfiles(
   Database db,
   Iterable<int> targetIds,
 ) async {
@@ -570,8 +586,82 @@ Future<List<String>> pendingMountLabels(
   if (pending.isEmpty) return const [];
   return [
     for (final profile in await db.profilesDao.query().get())
-      if (pending.contains(profile.id)) profile.realLabel,
+      if (pending.contains(profile.id))
+        RestoreMountProfile(
+          profile.id,
+          label: profile.realLabel,
+          type: profile.type,
+        ),
   ];
+}
+
+/// The labels of [targetIds] whose mount record is still pending.
+Future<List<String>> pendingMountLabels(
+  Database db,
+  Iterable<int> targetIds,
+) async => [
+  for (final profile in await pendingMountProfiles(db, targetIds))
+    profile.label ?? '${profile.id}',
+];
+
+/// MITM modules a committed restore wrote whose consent this device has not
+/// rechecked yet. None of them runs meanwhile: the consent they carry was
+/// judged against another device's files.
+class RestoreMitmHold {
+  /// A restore that did not record its modules holds all of them.
+  final bool all;
+  final Set<int> ids;
+
+  const RestoreMitmHold({this.all = false, this.ids = const {}});
+
+  static const none = RestoreMitmHold();
+
+  /// One entry per restore; a null entry did not record its modules.
+  factory RestoreMitmHold.of(Iterable<List<int>?> held) {
+    var all = false;
+    final ids = <int>{};
+    for (final modules in held) {
+      if (modules == null) {
+        all = true;
+      } else {
+        ids.addAll(modules);
+      }
+    }
+    return RestoreMitmHold(all: all, ids: ids);
+  }
+
+  bool get isEmpty => !all && ids.isEmpty;
+
+  bool holds(int moduleId) => all || ids.contains(moduleId);
+
+  @override
+  bool operator ==(Object other) =>
+      other is RestoreMitmHold &&
+      other.all == all &&
+      other.ids.length == ids.length &&
+      other.ids.containsAll(ids);
+
+  @override
+  int get hashCode => Object.hash(all, Object.hashAllUnordered(ids));
+
+  @override
+  String toString() => 'RestoreMitmHold(all: $all, ids: $ids)';
+}
+
+/// A committed restore whose MITM step is still owed at launch.
+class _OwedMitm {
+  final int id;
+
+  /// Null for a journal that could not be read: it is set aside already,
+  /// and the recheck only lifts this session's hold.
+  final RestoreJournal? journal;
+  final List<String> torn;
+
+  /// Set when the data changed after the commit: these steps are skipped,
+  /// and the journal is set aside once the recheck has run.
+  final List<RestoreStep>? skipped;
+
+  const _OwedMitm(this.id, this.journal, {this.torn = const [], this.skipped});
 }
 
 /// Finishes or undoes a restore the app did not live to complete. [run]
@@ -590,10 +680,38 @@ class RestoreRecovery {
        _homeDirPath = homeDirPath ?? (() => appPath.homeDirPath),
        _preferences = store ?? (() => preferences);
 
-  final _awaitingMitm = <(RestoreJournal, List<String>)>[];
+  final _awaitingMitm = <_OwedMitm>[];
   final reports = <RestoreRecoveryReport>[];
 
   bool get needsMitm => _awaitingMitm.isNotEmpty;
+
+  final _mitmHolds = <int, List<int>?>{};
+
+  /// What no MITM module may run under: every committed restore, in this
+  /// session or one before, whose consent recheck has not completed.
+  final mitmHold = ValueNotifier<RestoreMitmHold>(RestoreMitmHold.none);
+
+  /// Holds the [modules] restore [journalId] writes (all, when null) until
+  /// [releaseMitm]. Set before the commit, so nothing runs in between.
+  void holdMitm(int journalId, List<int>? modules) {
+    _mitmHolds[journalId] = modules;
+    mitmHold.value = RestoreMitmHold.of(_mitmHolds.values);
+  }
+
+  /// Only once the recheck for [journalId] has completed, or its rows were
+  /// rolled back.
+  void releaseMitm(int journalId) {
+    if (!_mitmHolds.containsKey(journalId)) return;
+    _mitmHolds.remove(journalId);
+    mitmHold.value = RestoreMitmHold.of(_mitmHolds.values);
+  }
+
+  /// Each test starts from a launch with nothing held.
+  @visibleForTesting
+  void clearMitmHolds() {
+    _mitmHolds.clear();
+    mitmHold.value = RestoreMitmHold.none;
+  }
 
   Future<void> run() async {
     final List<(int, RestoreJournal?)> found;
@@ -604,6 +722,10 @@ class RestoreRecovery {
         'restore journals unreadable: $error',
         logLevel: LogLevel.error,
       );
+      // Whether a restore committed is unknown: no module runs until the
+      // recheck, which needs no journal, has.
+      holdMitm(-1, null);
+      _awaitingMitm.add(const _OwedMitm(-1, null));
       reports.add(const RestoreRecoveryReport(RestoreRecoveryOutcome.failed));
       return;
     }
@@ -631,6 +753,11 @@ class RestoreRecovery {
     } catch (_) {
       committed = null;
     }
+    // The journal stays for the next launch, and until then so does the
+    // hold on whatever it may have restored.
+    if (journal?.owesMitm ?? committed != null) {
+      holdMitm(id, journal?.mitmModules);
+    }
     if (committed == null) {
       return const RestoreRecoveryReport(RestoreRecoveryOutcome.failed);
     }
@@ -653,7 +780,10 @@ class RestoreRecovery {
         return;
       }
       // Which steps ran is unknown; none can be redone without the record.
+      // The consent recheck needs none of it, so that one still runs.
       await db.clearRestoreCommit(id);
+      holdMitm(id, null);
+      _awaitingMitm.add(_OwedMitm(id, null));
       reports.add(
         const RestoreRecoveryReport(
           RestoreRecoveryOutcome.pending,
@@ -699,39 +829,33 @@ class RestoreRecovery {
       reports.add(await _finished(db, journal, const []));
       return;
     }
-    final store = _preferences();
-    final expected = journal.dbFingerprint ?? committed;
-    final dbUnchanged = await db.restoreFingerprint() == expected;
-    final prefs = await storedConfigHash(store);
-    final settingsSaved =
-        journal.config == null ||
-        journal.phase.index >= RestorePhase.configSaved.index ||
-        (prefs != null &&
-            (prefs == journal.prefsTarget ||
-                prefs == configHash(Config.fromJson(journal.config!))));
-    final prefsUnchanged = settingsSaved || prefs == journal.prefsBefore;
-    if (!dbUnchanged || !prefsUnchanged) {
-      // Someone else ran on this data after the commit; rolling forward
-      // would overwrite what they did.
-      final remaining = journal.remainingSteps();
-      await db.clearRestoreCommit(id);
-      await journal.quarantine();
-      reports.add(
-        RestoreRecoveryReport(
-          RestoreRecoveryOutcome.incomplete,
-          skippedSteps: remaining,
-          pendingMounts: await pendingMountLabels(db, journal.mountTargets),
-          followUp: RestoreFollowUp.restoreAgain,
-        ),
-      );
-      return;
-    }
     final torn = await journal.tornFiles();
-    if (journal.phase.index < RestorePhase.cachesCleared.index) {
-      await journal.clearCaches(db);
-      await journal.advance(RestorePhase.cachesCleared);
-    }
+    // Only the consent recheck is left: it rereads the module files and
+    // overwrites nothing anyone else wrote, so later writes don't stop it.
     if (journal.phase.index < RestorePhase.configSaved.index) {
+      final store = _preferences();
+      final expected = journal.dbFingerprint ?? committed;
+      final dbUnchanged = await db.restoreFingerprint() == expected;
+      final prefs = await storedConfigHash(store);
+      final settingsSaved =
+          journal.config == null ||
+          (prefs != null &&
+              (prefs == journal.prefsTarget ||
+                  prefs == configHash(Config.fromJson(journal.config!))));
+      final prefsUnchanged = settingsSaved || prefs == journal.prefsBefore;
+      if (!dbUnchanged || !prefsUnchanged) {
+        // Someone else ran on this data after the commit; rolling forward
+        // would overwrite what they did. The recheck still runs first.
+        holdMitm(id, journal.mitmModules);
+        _awaitingMitm.add(
+          _OwedMitm(id, journal, skipped: journal.remainingSteps()),
+        );
+        return;
+      }
+      if (journal.phase.index < RestorePhase.cachesCleared.index) {
+        await journal.clearCaches(db);
+        await journal.advance(RestorePhase.cachesCleared);
+      }
       if (!settingsSaved) {
         if (!await store.saveConfig(Config.fromJson(journal.config!))) {
           throw StateError('saving the restored settings failed');
@@ -742,8 +866,9 @@ class RestoreRecovery {
         dbFingerprint: await db.restoreFingerprint(),
       );
     }
-    if (journal.phase.index < RestorePhase.mitmDone.index) {
-      _awaitingMitm.add((journal, torn));
+    if (journal.owesMitm) {
+      holdMitm(id, journal.mitmModules);
+      _awaitingMitm.add(_OwedMitm(id, journal, torn: torn));
       return;
     }
     await journal.finish(db);
@@ -768,37 +893,71 @@ class RestoreRecovery {
       skippedSteps: failedSteps,
       tornFiles: torn,
       pendingMounts: mounts,
-      followUp: RestoreFollowUp.restoreAgain,
+      // A failed recheck is retried at the next launch; torn files are not.
+      followUp: torn.isEmpty
+          ? RestoreFollowUp.nextLaunch
+          : RestoreFollowUp.restoreAgain,
     );
   }
 
   /// Runs the MITM step [run] left, then removes the journal and marker. A
-  /// failing step is reported rather than retried on every launch.
+  /// failed recheck keeps both, and the hold, for the next launch to retry.
   Future<void> finish(Future<void> Function() mitm) async {
     final db = _db();
     for (final item in [..._awaitingMitm]) {
       _awaitingMitm.remove(item);
-      final (journal, torn) = item;
-      var failed = const <RestoreStep>[];
+      final journal = item.journal;
+      var checked = false;
       try {
         await mitm();
-        await journal.advance(RestorePhase.mitmDone);
+        checked = true;
+        if (journal != null && item.skipped == null) {
+          await journal.advance(RestorePhase.mitmDone);
+        }
       } catch (error) {
         commonPrint.log(
-          'restore recovery ${journal.id} mitm step failed: $error',
-          logLevel: LogLevel.warning,
-        );
-        failed = const [RestoreStep.mitm];
-      }
-      try {
-        await journal.finish(db);
-      } catch (error) {
-        commonPrint.log(
-          'restore recovery ${journal.id} finalize failed: $error',
+          'restore recovery ${item.id} mitm step failed: $error',
           logLevel: LogLevel.warning,
         );
       }
-      reports.add(await _finished(db, journal, torn, failedSteps: failed));
+      if (checked) releaseMitm(item.id);
+      if (journal == null) continue;
+      if (item.skipped case final skipped?) {
+        if (checked) {
+          await db.clearRestoreCommit(item.id);
+          await journal.quarantine();
+        }
+        reports.add(
+          RestoreRecoveryReport(
+            RestoreRecoveryOutcome.incomplete,
+            skippedSteps: [
+              for (final step in skipped)
+                if (step != RestoreStep.mitm || !checked) step,
+            ],
+            pendingMounts: await pendingMountLabels(db, journal.mountTargets),
+            followUp: RestoreFollowUp.restoreAgain,
+          ),
+        );
+        continue;
+      }
+      if (checked) {
+        try {
+          await journal.finish(db);
+        } catch (error) {
+          commonPrint.log(
+            'restore recovery ${journal.id} finalize failed: $error',
+            logLevel: LogLevel.warning,
+          );
+        }
+      }
+      reports.add(
+        await _finished(
+          db,
+          journal,
+          item.torn,
+          failedSteps: checked ? const [] : const [RestoreStep.mitm],
+        ),
+      );
     }
   }
 
@@ -821,7 +980,7 @@ class RestoreRecovery {
         const RestoreRecoveryReport(
           RestoreRecoveryOutcome.pending,
           skippedSteps: [RestoreStep.mitm],
-          followUp: RestoreFollowUp.restoreAgain,
+          followUp: RestoreFollowUp.nextLaunch,
         ),
       );
     }
@@ -876,7 +1035,7 @@ String restoreRecoveryMessage(
         l10n.restoreTornFiles(report.tornFiles.join(separator)),
     ],
     RestoreRecoveryOutcome.incomplete => [
-      l10n.restoreOldVersionSkipped,
+      l10n.restoreDataChangedSkipped,
       if (report.skippedSteps.isNotEmpty) l10n.restoreSkippedSteps(steps()),
     ],
     RestoreRecoveryOutcome.unreadable => [l10n.restoreRecoveryUnreadable],

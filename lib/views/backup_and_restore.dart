@@ -126,16 +126,9 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
       await showRestoreBlocked(blocked, ref.read);
     } else if (partial case final partial?) {
       await showRestoreResult(
-        RestoreEvidence(
-          writeStarted: true,
-          committed: true,
-          pendingSteps: partial.steps.whereType<RestoreStep>().toList(),
-          skippedSteps: const [],
-          canContinue: true,
-        ),
+        restorePartialEvidence(partial),
         ref.read,
-        onContinue: () =>
-            ref.read(backupActionProvider.notifier).resumeRestore(),
+        onContinue: () => continueRestore(ref.read),
       );
     } else if (result case final result? when !result.plan.isEmpty) {
       await showRestoreResult(
@@ -462,11 +455,39 @@ Future<RestoreRecheckOutcome> recheckPendingMounts(
   return (state: state, failure: failure);
 }
 
+/// A restore whose rows committed while later steps did not all run.
+RestoreEvidence restorePartialEvidence(RestorePartialException partial) =>
+    RestoreEvidence(
+      writeStarted: true,
+      committed: true,
+      pendingSteps: partial.steps.whereType<RestoreStep>().toList(),
+      skippedSteps: const [],
+      pendingChecks: partial.pendingChecks,
+      canContinue: true,
+    );
+
+/// Runs the remaining steps and says what is known afterwards; a failure
+/// comes back as evidence, never as an exception.
+Future<RestoreEvidence> continueRestore(ProviderReader read) async {
+  try {
+    final checks = await read(backupActionProvider.notifier).resumeRestore();
+    return RestoreEvidence(
+      writeStarted: true,
+      committed: true,
+      pendingSteps: const [],
+      skippedSteps: const [],
+      pendingChecks: checks,
+    );
+  } on RestorePartialException catch (error) {
+    return restorePartialEvidence(error);
+  }
+}
+
 /// The result of a restore, titled by what is known about it.
 Future<void> showRestoreResult(
   RestoreEvidence evidence,
   ProviderReader read, {
-  Future<void> Function()? onContinue,
+  Future<RestoreEvidence> Function()? onContinue,
 }) async {
   var open = false;
   await dialogs.showCommonDialog<void>(

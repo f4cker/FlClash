@@ -2165,11 +2165,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String restoreResultPendingSection(Object count) {
-    return 'Still pending · $count';
-  }
-
-  @override
   String restoreResultSkippedSection(Object count) {
     return 'Skipped steps · $count';
   }
@@ -2177,6 +2172,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get restoreResultSkippedNote =>
       'The current data was kept as it is; skipped steps are not replayed.';
+
+  @override
+  String restoreResultStepsSection(Object count) {
+    return 'Follow-up steps · $count';
+  }
+
+  @override
+  String restoreResultChecksSection(Object count) {
+    return 'Profiles to check · $count';
+  }
+
+  @override
+  String get restoreMountTagPending => 'Not done';
+
+  @override
+  String get restoreMountTagSkipped => 'Skipped';
+
+  @override
+  String get restoreContinueFailed =>
+      'This retry didn\'t finish the remaining steps. What is still owed is listed below.';
+
+  @override
+  String get restoreDataChangedSkipped =>
+      'The data was changed after the restore, so some restore steps were skipped to keep those changes.';
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      'The last restore was interrupted and its record couldn\'t be read. The database holds no commit from it; files such as profiles may have been partly replaced, which can\'t be checked, so nothing was done automatically. If your data looks wrong, restore the backup again.';
 
   @override
   String get restoreResultUnknownItems =>
@@ -2218,10 +2241,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The last restore had already saved its data. The remaining steps were completed at startup.';
 
   @override
-  String get restoreRecoveryUnreadable =>
-      'The last restore was interrupted and its record couldn\'t be read, so nothing was done automatically. If your data looks wrong, restore the backup again.';
-
-  @override
   String get restoreStepCaches => 'clearing old rule caches';
 
   @override
@@ -2233,10 +2252,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get restoreRestoredPending =>
       'Your data has been restored, but follow-up processing isn\'t finished yet.';
-
-  @override
-  String get restoreOldVersionSkipped =>
-      'An older version of the app changed the data, so some restore steps were skipped.';
 
   @override
   String restorePendingSteps(Object steps) {

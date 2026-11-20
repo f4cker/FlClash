@@ -2124,11 +2124,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String restoreResultPendingSection(Object count) {
-    return 'Still pending · $count';
-  }
-
-  @override
   String restoreResultSkippedSection(Object count) {
     return 'Skipped steps · $count';
   }
@@ -2136,6 +2131,34 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get restoreResultSkippedNote =>
       'The current data was kept as it is; skipped steps are not replayed.';
+
+  @override
+  String restoreResultStepsSection(Object count) {
+    return '남은 단계 · $count';
+  }
+
+  @override
+  String restoreResultChecksSection(Object count) {
+    return '확인할 프로필 · $count';
+  }
+
+  @override
+  String get restoreMountTagPending => '미완료';
+
+  @override
+  String get restoreMountTagSkipped => '건너뜀';
+
+  @override
+  String get restoreContinueFailed =>
+      '이번 재시도로 남은 단계를 끝내지 못했습니다. 남은 항목은 아래에 있습니다.';
+
+  @override
+  String get restoreDataChangedSkipped =>
+      '복원 후 데이터가 변경되어, 그 변경을 유지하기 위해 일부 복원 단계를 건너뛰었습니다.';
+
+  @override
+  String get restoreRecoveryUnreadable =>
+      '지난 복원이 중단되었고 복원 기록을 읽을 수 없습니다. 데이터베이스에는 이 복원의 커밋 기록이 없습니다. 프로필 등의 파일은 일부 교체되었을 수 있으나 확인할 수 없어 자동으로 아무 작업도 하지 않았습니다. 데이터가 이상하면 백업을 다시 복원하세요.';
 
   @override
   String get restoreResultUnknownItems =>
@@ -2177,10 +2200,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '지난 복원은 이미 데이터를 저장했습니다. 남은 단계는 시작할 때 완료했습니다.';
 
   @override
-  String get restoreRecoveryUnreadable =>
-      '지난 복원이 중단되었고 복원 기록을 읽을 수 없어 자동으로 아무 작업도 하지 않았습니다. 데이터가 이상하면 백업을 다시 복원하세요.';
-
-  @override
   String get restoreStepCaches => '오래된 규칙 캐시 정리';
 
   @override
@@ -2191,10 +2210,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreRestoredPending => '데이터는 복원되었지만 후속 처리가 아직 완료되지 않았습니다.';
-
-  @override
-  String get restoreOldVersionSkipped =>
-      '이전 버전의 앱이 데이터를 변경해 일부 복원 단계를 건너뛰었습니다.';
 
   @override
   String restorePendingSteps(Object steps) {
