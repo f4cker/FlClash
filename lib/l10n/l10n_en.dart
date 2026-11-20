@@ -1951,7 +1951,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'A mount operation\'s result isn\'t confirmed yet, so restoring is unavailable for now. No existing data was changed. Try again once the mount status is confirmed.';
 
   @override
-  String get restoreBlockedViewProfiles => 'View conflicting profiles';
+  String get restoreBlockedViewProfiles => 'Open Profiles';
 
   @override
   String get pruneCache => 'Prune cache';

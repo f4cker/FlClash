@@ -1863,7 +1863,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'マウント操作の結果がまだ確認されていないため、現在は復元できません。既存のデータは一切変更されていません。マウントの状態が確認されてから再試行してください。';
 
   @override
-  String get restoreBlockedViewProfiles => '競合しているプロファイルを表示';
+  String get restoreBlockedViewProfiles => 'プロファイルを開く';
 
   @override
   String get pruneCache => 'キャッシュを整理';

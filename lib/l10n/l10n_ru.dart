@@ -1947,7 +1947,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Результат операции монтирования ещё не подтверждён, поэтому восстановление пока недоступно. Существующие данные не изменены. Повторите попытку, когда состояние монтирования будет подтверждено.';
 
   @override
-  String get restoreBlockedViewProfiles => 'Показать конфликтующие профили';
+  String get restoreBlockedViewProfiles => 'Открыть профили';
 
   @override
   String get pruneCache => 'Очистить кэш';

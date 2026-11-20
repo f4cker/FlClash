@@ -3585,7 +3585,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreBlockedViewProfiles.
   ///
   /// In en, this message translates to:
-  /// **'View conflicting profiles'**
+  /// **'Open Profiles'**
   String get restoreBlockedViewProfiles;
 
   /// No description provided for @pruneCache.

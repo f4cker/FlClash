@@ -603,7 +603,7 @@
   "restoreBlockedMergeMounts": "「互換」で復元できません。次のプロファイルが競合しています：{profileNames}。マウントを解除してもこの制限は解除されません。既存のデータは変更されていません。",
   "restoreBlockedMergeMountsUnnamed": "「互換」で復元できません。バックアップ内のプロファイルがこの端末のマウント記録と競合しています。マウントを解除してもこの制限は解除されません。既存のデータは変更されていません。",
   "restoreBlockedMountPending": "マウント操作の結果がまだ確認されていないため、現在は復元できません。既存のデータは一切変更されていません。マウントの状態が確認されてから再試行してください。",
-  "restoreBlockedViewProfiles": "競合しているプロファイルを表示",
+  "restoreBlockedViewProfiles": "プロファイルを開く",
   "pruneCache": "キャッシュを整理",
   "backupAndRestore": "バックアップと復元",
   "restore": "復元",

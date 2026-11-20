@@ -603,7 +603,7 @@
   "restoreBlockedMergeMounts": "No se puede restaurar con «Compatible». Estos perfiles están en conflicto: {profileNames}. Desmontar no elimina esta restricción. No se ha modificado ningún dato existente.",
   "restoreBlockedMergeMountsUnnamed": "No se puede restaurar con «Compatible». Los perfiles de la copia de seguridad entran en conflicto con registros de montaje de este dispositivo. Desmontar no elimina esta restricción. No se ha modificado ningún dato existente.",
   "restoreBlockedMountPending": "El resultado de una operación de montaje aún no está confirmado, así que por ahora no se puede restaurar. No se ha modificado ningún dato existente. Inténtalo de nuevo cuando se confirme el estado del montaje.",
-  "restoreBlockedViewProfiles": "Ver perfiles en conflicto",
+  "restoreBlockedViewProfiles": "Abrir perfiles",
   "pruneCache": "Depurar caché",
   "backupAndRestore": "Copia de seguridad y restauración",
   "restore": "Restaurar",

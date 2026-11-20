@@ -1910,7 +1910,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '마운트 작업의 결과가 아직 확인되지 않아 지금은 복원할 수 없습니다. 기존 데이터는 전혀 변경되지 않았습니다. 마운트 상태가 확인된 뒤 다시 시도하세요.';
 
   @override
-  String get restoreBlockedViewProfiles => '충돌하는 프로필 보기';
+  String get restoreBlockedViewProfiles => '프로필 열기';
 
   @override
   String get pruneCache => '캐시 정리';

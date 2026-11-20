@@ -1971,7 +1971,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'El resultado de una operación de montaje aún no está confirmado, así que por ahora no se puede restaurar. No se ha modificado ningún dato existente. Inténtalo de nuevo cuando se confirme el estado del montaje.';
 
   @override
-  String get restoreBlockedViewProfiles => 'Ver perfiles en conflicto';
+  String get restoreBlockedViewProfiles => 'Abrir perfiles';
 
   @override
   String get pruneCache => 'Depurar caché';

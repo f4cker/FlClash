@@ -603,7 +603,7 @@
   "restoreBlockedMergeMounts": "Impossible de restaurer avec « Compatible ». Ces profils sont en conflit : {profileNames}. Le démontage ne lève pas cette restriction. Aucune donnée existante n’a été modifiée.",
   "restoreBlockedMergeMountsUnnamed": "Impossible de restaurer avec « Compatible ». Des profils de la sauvegarde sont en conflit avec des enregistrements de montage de cet appareil. Le démontage ne lève pas cette restriction. Aucune donnée existante n’a été modifiée.",
   "restoreBlockedMountPending": "Le résultat d’une opération de montage n’est pas encore confirmé : la restauration est donc indisponible pour le moment. Aucune donnée existante n’a été modifiée. Réessayez une fois l’état du montage confirmé.",
-  "restoreBlockedViewProfiles": "Voir les profils en conflit",
+  "restoreBlockedViewProfiles": "Ouvrir les profils",
   "pruneCache": "Nettoyer le cache",
   "backupAndRestore": "Sauvegarde et restauration",
   "restore": "Restaurer",

@@ -603,7 +603,7 @@
   "restoreBlockedMergeMounts": "‘호환’으로 복원할 수 없습니다. 다음 프로필이 충돌합니다: {profileNames}. 마운트를 해제해도 이 제한은 해제되지 않으며, 기존 데이터는 변경되지 않았습니다.",
   "restoreBlockedMergeMountsUnnamed": "‘호환’으로 복원할 수 없습니다. 백업의 프로필이 이 기기의 마운트 기록과 충돌합니다. 마운트를 해제해도 이 제한은 해제되지 않으며, 기존 데이터는 변경되지 않았습니다.",
   "restoreBlockedMountPending": "마운트 작업의 결과가 아직 확인되지 않아 지금은 복원할 수 없습니다. 기존 데이터는 전혀 변경되지 않았습니다. 마운트 상태가 확인된 뒤 다시 시도하세요.",
-  "restoreBlockedViewProfiles": "충돌하는 프로필 보기",
+  "restoreBlockedViewProfiles": "프로필 열기",
   "pruneCache": "캐시 정리",
   "backupAndRestore": "백업 및 복원",
   "restore": "복원",

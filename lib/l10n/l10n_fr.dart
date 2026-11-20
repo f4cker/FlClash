@@ -1971,7 +1971,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le résultat d’une opération de montage n’est pas encore confirmé : la restauration est donc indisponible pour le moment. Aucune donnée existante n’a été modifiée. Réessayez une fois l’état du montage confirmé.';
 
   @override
-  String get restoreBlockedViewProfiles => 'Voir les profils en conflit';
+  String get restoreBlockedViewProfiles => 'Ouvrir les profils';
 
   @override
   String get pruneCache => 'Nettoyer le cache';

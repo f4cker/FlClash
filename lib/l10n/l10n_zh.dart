@@ -1840,7 +1840,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '挂载操作的结果尚未确认，暂时无法恢复。现有数据未做任何改动。请在挂载状态确认后再试。';
 
   @override
-  String get restoreBlockedViewProfiles => '查看冲突配置';
+  String get restoreBlockedViewProfiles => '打开配置页';
 
   @override
   String get pruneCache => '修剪缓存';
