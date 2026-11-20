@@ -827,8 +827,8 @@ class RestoreRecovery {
     final db = _db();
     final committed = await db.restoreCommit(id);
     if (journal == null) {
-      await RestoreJournal._quarantineUnreadable(await _homeDirPath(), id);
       if (committed == null) {
+        await RestoreJournal._quarantineUnreadable(await _homeDirPath(), id);
         _report(
           id,
           const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
@@ -838,8 +838,8 @@ class RestoreRecovery {
       // Which steps ran is unknown; none can be redone or verified without
       // the record, so no step is claimed done or owed and no action is
       // offered. The consent recheck needs none of it, so that one still
-      // runs; it never changes this report.
-      await db.clearRestoreCommit(id);
+      // runs; it never changes this report. The journal and marker stay
+      // until it passed, so a failed one is retried at the next launch.
       holdMitm(id, null);
       _awaitingMitm.add(_OwedMitm(id, null));
       _report(
@@ -1004,7 +1004,18 @@ class RestoreRecovery {
         );
       }
       if (checked) releaseMitm(item.id);
-      if (journal == null) continue;
+      if (journal == null) {
+        // An unreadable journal whose restore committed: set aside only
+        // once its recheck passed.
+        if (checked && item.id >= 0) {
+          await RestoreJournal._quarantineUnreadable(
+            await _homeDirPath(),
+            item.id,
+          );
+          await db.clearRestoreCommit(item.id);
+        }
+        continue;
+      }
       if (item.skipped case final skipped?) {
         if (checked) {
           await db.clearRestoreCommit(item.id);

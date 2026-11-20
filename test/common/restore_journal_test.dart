@@ -742,6 +742,26 @@ void main() {
         [for (final r in reports) r.outcome],
         [RestoreRecoveryOutcome.committedUnconfirmed],
       );
+      // Kept, with its marker, so the next launch retries the recheck.
+      expect(journals(), hasLength(1));
+      expect(await markers(), hasLength(1));
+      expect(quarantined(), isEmpty);
+
+      await relaunch();
+      var rechecked = 0;
+      final retried = await recover(mitm: () => rechecked++);
+
+      expect(rechecked, 1, reason: 'the next launch retries the recheck');
+      expect(
+        [for (final r in retried) r.outcome],
+        [RestoreRecoveryOutcome.committedUnconfirmed],
+      );
+      expect(journals(), isEmpty);
+      expect(await markers(), isEmpty);
+      expect(quarantined(), hasLength(1));
+
+      await relaunch();
+      expect(await recover(), isEmpty, reason: 'done once it passed');
     });
 
     test('a published file torn after the commit is reported, not called '
