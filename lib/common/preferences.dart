@@ -45,6 +45,10 @@ class Preferences {
     await _store.value;
   }
 
+  /// As if the store could not be opened.
+  @visibleForTesting
+  void bindUnavailable() => _store = ResolveOnce(() async => null);
+
   factory Preferences() {
     _instance ??= Preferences._internal();
     return _instance!;
@@ -52,11 +56,12 @@ class Preferences {
 
   static const mitmSafetyLockKey = 'mitmSafetyLock';
 
-  /// The settings copy of the MITM safety lock, read fresh from the store;
-  /// null when the store cannot be opened.
+  /// The settings copy of the MITM safety lock, read fresh from the store.
+  /// Throws when the store cannot be opened: unknown, which the lock counts
+  /// as there.
   Future<String?> readMitmSafetyLock() async {
     final store = await _store.value;
-    if (store == null) return null;
+    if (store == null) throw StateError('settings store unavailable');
     await store.reload();
     return store.getString(mitmSafetyLockKey);
   }
@@ -73,7 +78,8 @@ class Preferences {
   /// Whether the lock is gone, read back fresh from the store.
   Future<bool> clearMitmSafetyLock() async {
     final store = await _store.value;
-    if (store == null) return true;
+    // Whether a copy is there is unknown: not cleared.
+    if (store == null) return false;
     await store.remove(mitmSafetyLockKey);
     await store.reload();
     return !store.containsKey(mitmSafetyLockKey);

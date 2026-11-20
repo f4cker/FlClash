@@ -2366,6 +2366,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'An error occurred while pausing MITM modules. To be safe, all MITM modules are stopped while the app runs.';
 
   @override
+  String get restoreRecoveryMitmLockKept =>
+      'The safety restriction on MITM modules hasn\'t been lifted yet: all MITM modules will be turned off again at the next launch.';
+
+  @override
+  String get restoreRecoveryMitmLockKeptUnconfirmed =>
+      'The safety restriction on MITM modules hasn\'t been lifted yet: whether all MITM modules will be turned off again at the next launch can\'t be confirmed.';
+
+  @override
+  String get restoreRecoveryMitmLockNotSaved =>
+      'Which MITM modules the last restore involved can\'t be determined, and the MITM safety record couldn\'t be saved reliably, so no modules were turned off this time. To be safe, all MITM modules are stopped while the app runs; this is handled again at the next launch.';
+
+  @override
+  String get restoreRecoveryMitmLockNotSavedNoRetry =>
+      'Which MITM modules the last restore involved can\'t be determined, and the MITM safety record couldn\'t be saved reliably, so no modules were turned off this time. To be safe, all MITM modules are stopped while the app runs; whether this is handled again at the next launch can\'t be confirmed.';
+
+  @override
   String get restoreContinue => 'Continue';
 
   @override

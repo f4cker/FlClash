@@ -2257,6 +2257,22 @@ class AppLocalizationsJa extends AppLocalizations {
       '復号モジュールの一時停止中にエラーが発生しました。安全のため、アプリの実行中はすべての復号モジュールを停止しています。';
 
   @override
+  String get restoreRecoveryMitmLockKept =>
+      '復号モジュールの安全制限はまだ解除されていません。次回の起動時に、すべての復号モジュールをもう一度オフにします。';
+
+  @override
+  String get restoreRecoveryMitmLockKeptUnconfirmed =>
+      '復号モジュールの安全制限はまだ解除されていません。次回の起動時に、すべての復号モジュールをもう一度オフにするかどうかは確認できません。';
+
+  @override
+  String get restoreRecoveryMitmLockNotSaved =>
+      '前回の復元がどの復号モジュールに関係したか判別できず、復号モジュールの安全記録を確実に保存できなかったため、今回はモジュールをオフにしていません。安全のため、アプリの実行中はすべての復号モジュールを停止しています。次回の起動時にもう一度処理します。';
+
+  @override
+  String get restoreRecoveryMitmLockNotSavedNoRetry =>
+      '前回の復元がどの復号モジュールに関係したか判別できず、復号モジュールの安全記録を確実に保存できなかったため、今回はモジュールをオフにしていません。安全のため、アプリの実行中はすべての復号モジュールを停止しています。次回の起動時にもう一度処理するかどうかは確認できません。';
+
+  @override
   String get restoreContinue => '続行';
 
   @override

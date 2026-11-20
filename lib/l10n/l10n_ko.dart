@@ -2305,6 +2305,22 @@ class AppLocalizationsKo extends AppLocalizations {
       '복호화 모듈을 일시 중지하는 중 오류가 발생했습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈을 중지합니다.';
 
   @override
+  String get restoreRecoveryMitmLockKept =>
+      '복호화 모듈의 안전 제한이 아직 해제되지 않았습니다. 다음 실행 시 모든 복호화 모듈을 다시 끕니다.';
+
+  @override
+  String get restoreRecoveryMitmLockKeptUnconfirmed =>
+      '복호화 모듈의 안전 제한이 아직 해제되지 않았습니다. 다음 실행 시 모든 복호화 모듈을 다시 끌지는 확인할 수 없습니다.';
+
+  @override
+  String get restoreRecoveryMitmLockNotSaved =>
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 복호화 모듈의 안전 기록을 확실하게 저장하지 못해 이번에는 모듈을 끄지 않았습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈을 중지합니다. 다음 실행 시 다시 처리합니다.';
+
+  @override
+  String get restoreRecoveryMitmLockNotSavedNoRetry =>
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 복호화 모듈의 안전 기록을 확실하게 저장하지 못해 이번에는 모듈을 끄지 않았습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈을 중지합니다. 다음 실행 시 다시 처리할지는 확인할 수 없습니다.';
+
+  @override
   String get restoreContinue => '계속';
 
   @override

@@ -621,6 +621,22 @@ class RestoreRecoveryReport {
   /// of this launch.
   final bool mitmStopped;
 
+  /// Every module reads off, but the safety lock still stands: the next
+  /// launch turns every module off again. Never said with a finished
+  /// outcome.
+  final bool mitmLockKept;
+
+  /// With [mitmLockKept]: the next launch is confirmed to turn every module
+  /// off again.
+  final bool mitmLockKeptConfirmed;
+
+  /// The safety lock could not be saved durably, so nothing was turned off
+  /// and every module is stopped for this launch; with
+  /// [mitmLockNotSavedRetryKept], the journal is confirmed kept for the
+  /// next launch.
+  final bool mitmLockNotSaved;
+  final bool mitmLockNotSavedRetryKept;
+
   const RestoreRecoveryReport(
     this.outcome, {
     this.keptFiles = const [],
@@ -632,60 +648,90 @@ class RestoreRecoveryReport {
     this.mitmOffFailed = false,
     this.mitmOffRetryKept = false,
     this.mitmStopped = false,
+    this.mitmLockKept = false,
+    this.mitmLockKeptConfirmed = false,
+    this.mitmLockNotSaved = false,
+    this.mitmLockNotSavedRetryKept = false,
   });
+
+  /// [outcome], unless it would call the restore finished: with every
+  /// module turned off, or the lock still standing, it is not.
+  RestoreRecoveryOutcome get _unfinished =>
+      outcome == RestoreRecoveryOutcome.completed ||
+          (outcome == RestoreRecoveryOutcome.incomplete && skippedSteps.isEmpty)
+      ? RestoreRecoveryOutcome.pending
+      : outcome;
+
+  RestoreRecoveryReport _copy({
+    RestoreRecoveryOutcome? outcome,
+    bool? mitmAllOff,
+    bool? mitmOffFailed,
+    bool? mitmOffRetryKept,
+    bool? mitmStopped,
+    bool? mitmLockKept,
+    bool? mitmLockKeptConfirmed,
+    bool? mitmLockNotSaved,
+    bool? mitmLockNotSavedRetryKept,
+  }) => RestoreRecoveryReport(
+    outcome ?? this.outcome,
+    keptFiles: keptFiles,
+    skippedSteps: skippedSteps,
+    tornFiles: tornFiles,
+    pendingMounts: pendingMounts,
+    followUp: followUp,
+    mitmAllOff: mitmAllOff ?? this.mitmAllOff,
+    mitmOffFailed: mitmOffFailed ?? this.mitmOffFailed,
+    mitmOffRetryKept: mitmOffRetryKept ?? this.mitmOffRetryKept,
+    mitmStopped: mitmStopped ?? this.mitmStopped,
+    mitmLockKept: mitmLockKept ?? this.mitmLockKept,
+    mitmLockKeptConfirmed: mitmLockKeptConfirmed ?? this.mitmLockKeptConfirmed,
+    mitmLockNotSaved: mitmLockNotSaved ?? this.mitmLockNotSaved,
+    mitmLockNotSavedRetryKept:
+        mitmLockNotSavedRetryKept ?? this.mitmLockNotSavedRetryKept,
+  );
 
   /// With every module turned off the restore is never called finished:
   /// what ran before needs consent again here.
   RestoreRecoveryReport withMitmAllOff({
     bool failed = false,
     bool retryKept = false,
-  }) {
-    final finished =
-        outcome == RestoreRecoveryOutcome.completed ||
-        (outcome == RestoreRecoveryOutcome.incomplete && skippedSteps.isEmpty);
-    return RestoreRecoveryReport(
-      finished ? RestoreRecoveryOutcome.pending : outcome,
-      keptFiles: keptFiles,
-      skippedSteps: skippedSteps,
-      tornFiles: tornFiles,
-      pendingMounts: pendingMounts,
-      followUp: followUp,
-      mitmAllOff: !failed,
-      mitmOffFailed: failed,
-      mitmOffRetryKept: failed && retryKept,
-      mitmStopped: mitmStopped,
-    );
-  }
+  }) => _copy(
+    outcome: _unfinished,
+    mitmAllOff: !failed,
+    mitmOffFailed: failed,
+    mitmOffRetryKept: failed && retryKept,
+  );
 
-  /// The safety lock's lines, said with whatever this report says.
+  /// The safety lock's lines, said with whatever this report says; never
+  /// called finished either.
   RestoreRecoveryReport withMitmLines({
     required bool allOff,
     required bool offFailed,
     required bool retryKept,
-  }) => RestoreRecoveryReport(
-    outcome,
-    keptFiles: keptFiles,
-    skippedSteps: skippedSteps,
-    tornFiles: tornFiles,
-    pendingMounts: pendingMounts,
-    followUp: followUp,
+  }) => _copy(
+    outcome: _unfinished,
     mitmAllOff: allOff,
     mitmOffFailed: offFailed,
     mitmOffRetryKept: offFailed && retryKept,
-    mitmStopped: mitmStopped,
   );
 
-  RestoreRecoveryReport withMitmStopped() => RestoreRecoveryReport(
-    outcome,
-    keptFiles: keptFiles,
-    skippedSteps: skippedSteps,
-    tornFiles: tornFiles,
-    pendingMounts: pendingMounts,
-    followUp: followUp,
-    mitmAllOff: mitmAllOff,
-    mitmOffFailed: mitmOffFailed,
-    mitmOffRetryKept: mitmOffRetryKept,
-    mitmStopped: true,
+  RestoreRecoveryReport withMitmStopped() => _copy(mitmStopped: true);
+
+  /// Never called finished either.
+  RestoreRecoveryReport withMitmLockNotSaved(bool retryKept) => _copy(
+    outcome: _unfinished,
+    mitmLockNotSaved: true,
+    mitmLockNotSavedRetryKept: retryKept,
+  );
+
+  /// The same report, not called finished.
+  RestoreRecoveryReport unfinished() => _copy(outcome: _unfinished);
+
+  /// The lock still stands: never called finished.
+  RestoreRecoveryReport withMitmLockKept(bool confirmed) => _copy(
+    outcome: _unfinished,
+    mitmLockKept: true,
+    mitmLockKeptConfirmed: confirmed,
   );
 
   @override
@@ -694,7 +740,8 @@ class RestoreRecoveryReport {
       'skipped: $skippedSteps, torn: $tornFiles, mounts: $pendingMounts, '
       'followUp: $followUp, mitmAllOff: $mitmAllOff, '
       'mitmOffFailed: $mitmOffFailed, retryKept: $mitmOffRetryKept, '
-      'stopped: $mitmStopped)';
+      'stopped: $mitmStopped, lockKept: $mitmLockKept/$mitmLockKeptConfirmed, '
+      'lockNotSaved: $mitmLockNotSaved/$mitmLockNotSavedRetryKept)';
 }
 
 /// The restored mount targets among [targetIds] whose record is still
@@ -791,6 +838,11 @@ class _OwedMitm {
   const _OwedMitm(this.id, this.journal, {this.torn = const [], this.skipped});
 }
 
+/// A step waited on a durable lock that could not be saved.
+class _LockNotDurable implements Exception {
+  const _LockNotDurable();
+}
+
 /// One of the two copies of a [MitmSafetyLock].
 enum MitmLockCopy { file, prefs }
 
@@ -831,27 +883,28 @@ class MitmSafetyLock {
     return found;
   }
 
-  /// Whether a copy was actually read back as there.
-  Future<bool> confirmedPresent() async {
+  /// Whether the file copy reads back now. Only the file counts as kept:
+  /// the setting's store cannot be confirmed flushed to disk.
+  Future<bool> fileReads() async {
     try {
-      if (await (await _file()).exists()) return true;
-    } catch (_) {}
-    try {
-      if (await _store().readMitmSafetyLock() != null) return true;
-    } catch (_) {}
-    return false;
+      final file = await _file();
+      return await file.exists() && (await file.readAsString()).isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
-  /// Writes both copies. True once at least one is confirmed: the file
-  /// written, flushed, renamed into place, its directory synced and read
-  /// back; the setting saved and read back fresh from the store. Never
-  /// throws.
-  Future<bool> write(String reason) async {
+  /// Writes both copies; never throws. The file is confirmed once written,
+  /// flushed, renamed into place, its directory synced and read back; the
+  /// setting once saved and read back fresh from the store, which says
+  /// nothing of the disk, so only [file] makes the lock durable.
+  Future<({bool file, bool prefs})> write(String reason) async {
     final value = json.encode({
       'reason': reason,
       'at': DateTime.now().toUtc().toIso8601String(),
     });
-    var saved = false;
+    var fileSaved = false;
+    var prefsSaved = false;
     try {
       final file = await _file();
       final temp = File('${file.path}.tmp');
@@ -864,7 +917,7 @@ class MitmSafetyLock {
         throw StateError('lock file reads back otherwise');
       }
       await _step(MitmLockCopy.file, 'confirmed');
-      saved = true;
+      fileSaved = true;
     } catch (error) {
       commonPrint.log('MITM lock file: $error', logLevel: LogLevel.error);
     }
@@ -874,11 +927,11 @@ class MitmSafetyLock {
         throw StateError('lock setting not saved');
       }
       await _step(MitmLockCopy.prefs, 'confirmed');
-      saved = true;
+      prefsSaved = true;
     } catch (error) {
       commonPrint.log('MITM lock setting: $error', logLevel: LogLevel.error);
     }
-    return saved;
+    return (file: fileSaved, prefs: prefsSaved);
   }
 
   /// Removes the file, then the setting. True once both read back gone.
@@ -950,7 +1003,7 @@ class RestoreRecovery {
   /// back, or the journal of [id] is still there in the old format, with
   /// its marker if it had one.
   Future<bool> _confirmOffRetry(int id, RestoreJournal journal) async {
-    if (await _lock.confirmedPresent()) return true;
+    if (await _lockRetryConfirmed()) return true;
     try {
       final file = File(join(journal.dirPath, _journalFileName));
       if (!await file.exists()) return false;
@@ -1001,8 +1054,20 @@ class RestoreRecovery {
   /// The lock may be on disk: found at launch, or written here.
   bool _lockActive = false;
 
-  /// A copy was confirmed: found at launch, or written and read back here.
-  bool _lockSaved = false;
+  /// The file copy was written durably this launch: only then may a step
+  /// that could lose a journal go ahead.
+  bool _lockDurable = false;
+
+  /// The file copy was there at launch, so it outlived one.
+  bool _lockFileAtLaunch = false;
+
+  /// The lock still stands after a verified turn-off: the next launch turns
+  /// every module off again.
+  bool _lockKeptAfterOff = false;
+
+  /// With [_lockKeptAfterOff]: the file copy still reads, so the next
+  /// launch is confirmed to turn every module off again.
+  bool _lockKeptConfirmed = false;
 
   /// Lock writes started, and [_lockSeq] when the last verified turn-off
   /// began: the lock is cleared only after a turn-off that followed every
@@ -1017,24 +1082,58 @@ class RestoreRecovery {
   bool _lockOffRetryKept = false;
   bool _lockSaid = false;
 
+  /// A step that waits on a durable lock found it not durable: nothing
+  /// that could lose the journal was done, nothing was turned off, and
+  /// every module is stopped.
+  bool _lockGateFailed = false;
+  bool _lockGateRetryKept = false;
+  bool _lockGateSaid = false;
+
+  /// Whether a journal the lock stands in for is confirmed still pending,
+  /// for the next launch to handle again.
+  Future<bool> _evidenceConfirmed() async {
+    try {
+      final found = await RestoreJournal.pending(await _homeDirPath());
+      return found.any(
+        (entry) =>
+            entry.$2 == null ||
+            (entry.$2!.mitmUnrecorded && entry.$2!.mitmModules == null),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Writes the lock and holds every module until a turn-off verified after
-  /// it. True once a copy is confirmed; otherwise every module is stopped
-  /// for this launch. Never throws.
-  Future<bool> _writeLock(String reason) {
+  /// it. True once the file copy is durable; otherwise every module is
+  /// stopped for this launch, the setting copy left only as a signal for
+  /// later launches. Never throws.
+  Future<bool> _writeLock(String reason, {bool gate = false}) {
     _lockActive = true;
     _lockSeq++;
     _hold(_lockHold, null, persist: false);
     final write = _lockQueue.then((_) => _lock.write(reason));
     _lockQueue = write.then((_) {});
     return write.then((saved) {
-      if (saved) {
-        _lockSaved = true;
+      if (saved.file) {
+        _lockDurable = true;
       } else {
-        stopMitmModules('safety lock not saved ($reason)', persist: false);
+        // Said by its own line, when a step waited on it.
+        stopMitmModules(
+          'safety lock not durable ($reason)',
+          persist: false,
+          said: false,
+        );
+        if (gate) _lockGateFailed = true;
       }
-      return saved;
+      return saved.file;
     });
   }
+
+  /// Whether the next launch is confirmed to turn every module off: a file
+  /// copy known durable still reads.
+  Future<bool> _lockRetryConfirmed() async =>
+      (_lockDurable || _lockFileAtLaunch) && await _lock.fileReads();
 
   /// Every module row reads off and declined.
   Future<void> _verifyAllOff(Database db) async {
@@ -1068,6 +1167,11 @@ class RestoreRecovery {
   Future<void> _settleLock() async {
     if (!_lockActive) return;
     await _lockQueue;
+    // Nothing more without a durable lock: the journal is the evidence.
+    if (_lockGateFailed) {
+      _lockGateRetryKept = await _evidenceConfirmed();
+      return;
+    }
     // A journal's own turn-off failed this launch: its report says so, and
     // the next launch tries again.
     if (_mitmOffFailed.isNotEmpty) return;
@@ -1086,7 +1190,7 @@ class RestoreRecovery {
           logLevel: LogLevel.error,
         );
         _lockOffFailed = true;
-        _lockOffRetryKept = await _lock.confirmedPresent();
+        _lockOffRetryKept = await _lockRetryConfirmed();
         return;
       }
       _offVerifiedSeq = seq;
@@ -1094,8 +1198,18 @@ class RestoreRecovery {
       await onMitmOff?.call(true);
     }
     releaseMitm(_lockHold);
+    _lockKeptAfterOff = true;
+    _lockKeptConfirmed = true;
     if (await _lockEvidencePending()) return;
-    if (await _lock.clear()) _lockActive = false;
+    // Cleared only once neither copy reads, nor fails to read, as there.
+    if (await _lock.clear() && !await _lock.present()) {
+      _lockActive = false;
+      _lockKeptAfterOff = false;
+      _lockDurable = false;
+      _lockFileAtLaunch = false;
+    } else {
+      _lockKeptConfirmed = await _lock.fileReads();
+    }
   }
 
   final _mitmHolds = <int, List<int>?>{};
@@ -1112,6 +1226,10 @@ class RestoreRecovery {
 
   /// Whether a report has said [mitmStopped] yet.
   bool _mitmStopSaid = false;
+
+  /// A stop that its own line should say: not one a lock that could not be
+  /// saved explains.
+  bool _mitmStopSay = false;
 
   /// What no module may run under right now.
   RestoreMitmHold get effectiveMitmHold =>
@@ -1144,12 +1262,17 @@ class RestoreRecovery {
   /// Stops every module for the rest of this launch, for when what must not
   /// run cannot be held, or cannot be known; with [persist], also writes
   /// the lock, so the next launch turns every module off first.
-  Future<void> stopMitmModules(Object reason, {bool persist = true}) async {
+  Future<void> stopMitmModules(
+    Object reason, {
+    bool persist = true,
+    bool said = true,
+  }) async {
     commonPrint.log(
       'MITM modules stopped for this launch: $reason',
       logLevel: LogLevel.error,
     );
     _mitmStopped = true;
+    if (said) _mitmStopSay = true;
     try {
       mitmHold.value = const RestoreMitmHold(all: true);
     } catch (_) {
@@ -1172,6 +1295,10 @@ class RestoreRecovery {
     _mitmHolds.clear();
     _mitmStopped = false;
     _mitmStopSaid = false;
+    _mitmStopSay = false;
+    _lockGateFailed = false;
+    _lockGateRetryKept = false;
+    _lockGateSaid = false;
     onHoldMitm = null;
     onMitmOff = null;
     _awaitingMitm.clear();
@@ -1182,7 +1309,10 @@ class RestoreRecovery {
     _mitmOffRetryKept.clear();
     onLockStep = null;
     _lockActive = false;
-    _lockSaved = false;
+    _lockDurable = false;
+    _lockFileAtLaunch = false;
+    _lockKeptAfterOff = false;
+    _lockKeptConfirmed = false;
     _lockSeq = 0;
     _offVerifiedSeq = -1;
     _lockQueue = Future.value();
@@ -1198,7 +1328,7 @@ class RestoreRecovery {
     // every module until a turn-off is verified, journal or not.
     if (await _lock.present()) {
       _lockActive = true;
-      _lockSaved = true;
+      _lockFileAtLaunch = await _lock.fileReads();
       holdMitm(_lockHold, null);
     }
     await _runJournals();
@@ -1219,7 +1349,7 @@ class RestoreRecovery {
       holdMitm(-1, null);
       // Rows an older build wrote on may be among them: every module is
       // turned off before the lock goes, whatever the recheck finds.
-      await _writeLock('journals unreadable');
+      await _writeLock('journals unreadable', gate: true);
       _awaitingMitm.add(const _OwedMitm(-1, null));
       reports.add(const RestoreRecoveryReport(RestoreRecoveryOutcome.failed));
       return;
@@ -1295,7 +1425,7 @@ class RestoreRecovery {
       // Which rows it wrote, and whether on, is unknown: every module is
       // turned off before the lock goes. Until a copy is confirmed the
       // journal is not set aside.
-      await _writeLock('journal $id unreadable');
+      await _writeLock('journal $id unreadable', gate: true);
       _awaitingMitm.add(_OwedMitm(id, null));
       _report(
         id,
@@ -1327,8 +1457,8 @@ class RestoreRecovery {
       try {
         // The lock outlives the journal: confirmed before anything that
         // could lose the journal, or nothing more is done here.
-        if (!await _writeLock('old-format journal $id')) {
-          throw StateError('safety lock not saved');
+        if (!await _writeLock('old-format journal $id', gate: true)) {
+          throw const _LockNotDurable();
         }
         // Every lock write so far, a stop's included, came before this.
         seq = _lockSeq;
@@ -1348,12 +1478,16 @@ class RestoreRecovery {
           }
           await onMitmOff?.call(false);
         });
-      } catch (_) {
+      } catch (error) {
         // Every module stays held (or stopped) for this run; the journal
         // stays, unless it went too, for the next launch to try again.
         holdMitm(id, null);
-        _mitmOffFailed.add(id);
-        _mitmOffMarked[id] = committed != null;
+        // Without a durable lock no turn-off was tried: its own line says
+        // so, not that turning off failed.
+        if (error is! _LockNotDurable) {
+          _mitmOffFailed.add(id);
+          _mitmOffMarked[id] = committed != null;
+        }
         rethrow;
       }
       // Every row reads off and declined: the hold is no longer what keeps
@@ -1502,13 +1636,13 @@ class RestoreRecovery {
         );
       }
       // An unreadable journal stays, and so does its hold, until the lock
-      // standing in for it is confirmed.
-      if (checked && (journal != null || _lockSaved)) releaseMitm(item.id);
+      // standing in for it is durable.
+      if (checked && (journal != null || _lockDurable)) releaseMitm(item.id);
       if (journal == null) {
         // An unreadable journal whose restore committed: set aside only
         // once its recheck passed and the lock is confirmed; the lock goes
         // only after every module reads off.
-        if (checked && _lockSaved && item.id >= 0) {
+        if (checked && _lockDurable && item.id >= 0) {
           await RestoreJournal._quarantineUnreadable(
             await _homeDirPath(),
             item.id,
@@ -1630,9 +1764,22 @@ class RestoreRecovery {
         );
       }
     }
-    if (_mitmStopped && !_mitmStopSaid) {
+    if (_lockGateFailed && !_lockGateSaid) {
+      _lockGateSaid = true;
+      attach((report) => report.withMitmLockNotSaved(_lockGateRetryKept));
+    }
+    if (_mitmStopSay && !_mitmStopSaid) {
       _mitmStopSaid = true;
       attach((report) => report.withMitmStopped());
+    }
+    // Said once, with the first report; none of them is called finished
+    // while the lock stands.
+    if (_lockActive && _lockKeptAfterOff && !_lockOffFailed) {
+      _lockKeptAfterOff = false;
+      attach((report) => report.withMitmLockKept(_lockKeptConfirmed));
+      for (var i = 1; i < taken.length; i++) {
+        taken[i] = taken[i].unfinished();
+      }
     }
     return taken;
   }
@@ -1695,7 +1842,15 @@ String restoreRecoveryMessage(
       report.mitmOffRetryKept
           ? l10n.restoreRecoveryMitmOffFailed
           : l10n.restoreRecoveryMitmOffFailedNoRetry,
+    if (report.mitmLockNotSaved)
+      report.mitmLockNotSavedRetryKept
+          ? l10n.restoreRecoveryMitmLockNotSaved
+          : l10n.restoreRecoveryMitmLockNotSavedNoRetry,
     if (report.mitmStopped) l10n.restoreRecoveryMitmStopped,
+    if (report.mitmLockKept)
+      report.mitmLockKeptConfirmed
+          ? l10n.restoreRecoveryMitmLockKept
+          : l10n.restoreRecoveryMitmLockKeptUnconfirmed,
     if (report.pendingMounts.isNotEmpty)
       l10n.restorePendingMounts(report.pendingMounts.join(separator)),
     if (restoreFollowUpText(report.followUp, l10n) case final text

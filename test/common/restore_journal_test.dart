@@ -1582,6 +1582,17 @@ void main() {
         return (reports: restoreRecovery.takeReports(), heldDuring: held);
       }
 
+      Future<void> consentTo50() async {
+        final container = buildContainer();
+        final keep = container.listen(mitmModulesProvider, (_, _) {});
+        addTearDown(keep.close);
+        await container.read(mitmModulesProvider.future);
+        await container
+            .read(mitmModulesActionProvider.notifier)
+            .recordConsent(other.id, asksConsent: true, agreed: true);
+        await pumpEventQueue();
+      }
+
       /// Off until consented to here, then it runs.
       Future<void> expectOffUntilConsent() async {
         final third = await launch();
@@ -1674,31 +1685,307 @@ void main() {
         });
       }
 
-      for (final failing in MitmLockCopy.values) {
-        test('the ${failing.name} copy of the lock cannot be written: the '
-            'other one alone makes the next launch turn every module '
-            'off', () async {
+      test('only the setting copy of the lock is confirmed: not durable, so '
+          'nothing that could lose the journal is done; the journal stays '
+          'the basis for the retry', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        var turnOffs = 0;
+        restoreRecovery
+          ..onMitmOff = (_) async {
+            turnOffs++;
+          }
+          ..onLockStep = (copy, step) async {
+            if (copy == MitmLockCopy.file && step != 'read') {
+              throw StateError('file');
+            }
+          };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final [report] = restoreRecovery.takeReports();
+
+        expect(turnOffs, 0, reason: 'not tried without a durable lock');
+        expect(await states(), {41: (true, true), 50: (true, true)});
+        expect(journals(), hasLength(1), reason: 'the journal is kept');
+        expect(await markers(), hasLength(1));
+        expect(await lock(), (file: false, prefs: true));
+        expect(restoreRecovery.mitmStopped, isTrue);
+        expect(report.mitmOffFailed, isFalse, reason: 'never tried');
+        expect(report.mitmStopped, isFalse, reason: 'its own line says it');
+        expect(report.mitmLockNotSaved, isTrue);
+        expect(
+          report.mitmLockNotSavedRetryKept,
+          isTrue,
+          reason: 'the journal is kept',
+        );
+        expect(report.outcome, isNot(RestoreRecoveryOutcome.completed));
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryMitmLockNotSaved));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmOffFailed)));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmStopped)));
+        final zh = lookupAppLocalizations(const Locale('zh'));
+        expect(
+          restoreRecoveryMessage(report, zh).split('\n'),
+          contains(
+            '无法确定上次恢复涉及哪些解密模块，且未能可靠保存解密模块的安全记录，'
+            '因此本次没有关闭模块。为安全起见，本次运行期间已停止所有解密模块；'
+            '下次启动时会再次处理。',
+          ),
+        );
+        expectNone(await reaching());
+
+        final second = await launch();
+        expect(second.heldDuring, everyElement(isTrue));
+        expect(second.heldDuring, isNotEmpty);
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(await lock(), (file: false, prefs: false));
+        expect(journals(), isEmpty);
+        await expectOffUntilConsent();
+      });
+
+      test('only the setting copy is confirmed and the journal goes too: '
+          'the retry is never said confirmed; the setting copy still makes '
+          'the next launch turn every module off', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        final [dir] = journals();
+        restoreRecovery.onLockStep = (copy, step) async {
+          if (copy == MitmLockCopy.file && step != 'read') {
+            throw StateError('file');
+          }
+          if (copy == MitmLockCopy.prefs && step == 'confirmed') {
+            dir.deleteSync(recursive: true);
+          }
+        };
+        await restoreRecovery.run();
+        final [report] = restoreRecovery.takeReports();
+
+        expect(await states(), {41: (true, true), 50: (true, true)});
+        expect(report.mitmOffFailed, isFalse, reason: 'never tried');
+        expect(report.mitmStopped, isFalse, reason: 'its own line says it');
+        expect(report.mitmLockNotSaved, isTrue);
+        expect(report.mitmLockNotSavedRetryKept, isFalse);
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryMitmLockNotSavedNoRetry));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmLockNotSaved)));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmOffFailed)));
+        expectNone(await reaching());
+
+        await expectSecondLaunchTurnsOff();
+        await expectOffUntilConsent();
+      });
+
+      test(
+        'only the file copy is confirmed: durable, so it goes ahead, and '
+        'the file alone makes the next launch turn every module off',
+        () async {
           await oldCrash(_Crash.afterCommit);
           restoreRecovery.clearMitmHolds();
           failTurnOffAndLoseJournal();
           restoreRecovery.onLockStep = (copy, step) async {
-            if (copy == failing && step != 'read') {
-              throw StateError('$copy');
+            if (copy == MitmLockCopy.prefs && step != 'read') {
+              throw StateError('prefs');
             }
           };
           await restoreRecovery.run();
           final [report] = restoreRecovery.takeReports();
-          expect(report.mitmOffRetryKept, isTrue);
+          expect(report.mitmOffFailed, isTrue);
+          expect(
+            report.mitmOffRetryKept,
+            isTrue,
+            reason: 'the file is durable',
+          );
           expect(report.mitmStopped, isFalse);
-          expect(await lock(), (
-            file: failing != MitmLockCopy.file,
-            prefs: failing != MitmLockCopy.prefs,
-          ));
+          expect(
+            restoreRecoveryMessage(report, currentAppLocalizations),
+            contains(currentAppLocalizations.restoreRecoveryMitmOffFailed),
+          );
+          expect(await lock(), (file: true, prefs: false));
           expectNone(await reaching());
           await expectSecondLaunchTurnsOff();
           await expectOffUntilConsent();
-        });
-      }
+        },
+      );
+
+      test('the lock cannot be cleared after a verified turn-off: it says '
+          'the restriction is not lifted, never that the restore finished; '
+          'the next launch turns every module off again', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        restoreRecovery.onLockStep = (copy, step) async {
+          if (copy == MitmLockCopy.file && step == 'clearing') {
+            throw StateError('busy');
+          }
+        };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final [report] = restoreRecovery.takeReports();
+
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(journals(), isEmpty);
+        expect(await lock(), (file: true, prefs: false));
+        expect(report.mitmLockKept, isTrue);
+        expect(report.outcome, isNot(RestoreRecoveryOutcome.completed));
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryMitmLockKept));
+        expect(lines, isNot(contains(en.restoreRecoveryCompleted)));
+        final zh = lookupAppLocalizations(const Locale('zh'));
+        expect(
+          restoreRecoveryMessage(report, zh).split('\n'),
+          contains('解密模块的安全限制尚未解除：下次启动时会再次关闭所有解密模块。'),
+        );
+
+        final second = await launch();
+        expect(second.heldDuring, [true], reason: 'turned off again');
+        expect(await lock(), (file: false, prefs: false));
+        final [next] = second.reports;
+        expect(next.mitmLockKept, isFalse);
+        expect(next.mitmAllOff, isTrue);
+        await expectOffUntilConsent();
+      });
+
+      test('the file copy clears but the setting copy will not: the next '
+          'launch turns every module off again and again says the '
+          'restriction is not lifted, never that the next turn-off is '
+          'confirmed', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        Future<void> refuseSettingClear(MitmLockCopy copy, String step) async {
+          if (copy == MitmLockCopy.prefs && step == 'clearing') {
+            throw StateError('busy');
+          }
+        }
+
+        restoreRecovery.onLockStep = refuseSettingClear;
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final [report] = restoreRecovery.takeReports();
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(await lock(), (file: false, prefs: true));
+        expect(report.mitmLockKept, isTrue);
+        expect(report.mitmLockKeptConfirmed, isFalse, reason: 'setting only');
+        expect(report.outcome, isNot(RestoreRecoveryOutcome.completed));
+        final en = currentAppLocalizations;
+        expect(
+          restoreRecoveryMessage(report, en).split('\n'),
+          allOf(
+            contains(en.restoreRecoveryMitmLockKeptUnconfirmed),
+            isNot(contains(en.restoreRecoveryMitmLockKept)),
+          ),
+        );
+        final zh = lookupAppLocalizations(const Locale('zh'));
+        expect(
+          restoreRecoveryMessage(report, zh).split('\n'),
+          contains('解密模块的安全限制尚未解除：无法确认下次启动时是否会再次关闭所有解密模块。'),
+        );
+
+        // Consented to in between: the lock still turns it off again.
+        await consentTo50();
+        expect((await states())[50], (true, true));
+        for (var i = 0; i < 2; i++) {
+          await relaunch();
+          restoreRecovery.clearMitmHolds();
+          final held = <bool>[];
+          restoreRecovery
+            ..onLockStep = refuseSettingClear
+            ..onMitmOff = (committed) async {
+              if (!committed) held.add(restoreRecovery.effectiveMitmHold.all);
+            };
+          await recoverAtLaunch();
+          final [next] = restoreRecovery.takeReports();
+          expect(held, [true], reason: 'launch $i: turned off again');
+          expect(await states(), {41: (false, false), 50: (false, false)});
+          expect(next.mitmAllOff, isTrue, reason: 'launch $i');
+          expect(next.mitmLockKept, isTrue, reason: 'launch $i: said again');
+          expect(next.mitmLockKeptConfirmed, isFalse);
+          expect(next.outcome, isNot(RestoreRecoveryOutcome.completed));
+          expectNone(await reaching());
+          restoreRecovery.onMitmOff = null;
+        }
+
+        final last = await launch();
+        expect(last.heldDuring, [true]);
+        expect(await lock(), (file: false, prefs: false));
+        final [done] = last.reports;
+        expect(done.mitmLockKept, isFalse);
+        await expectOffUntilConsent();
+      });
+
+      test('the setting copy keeps failing to read: it counts as there, so '
+          'every launch turns every module off and says the restriction is '
+          'not lifted', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        restoreRecovery.takeReports();
+        expect(await lock(), (file: false, prefs: false));
+        await consentTo50();
+
+        for (var i = 0; i < 3; i++) {
+          await relaunch();
+          restoreRecovery.clearMitmHolds();
+          final held = <bool>[];
+          restoreRecovery
+            ..onLockStep = (copy, step) async {
+              if (copy == MitmLockCopy.prefs && step == 'read') {
+                throw StateError('unreadable');
+              }
+            }
+            ..onMitmOff = (committed) async {
+              if (!committed) held.add(restoreRecovery.effectiveMitmHold.all);
+            };
+          await recoverAtLaunch();
+          final [report] = restoreRecovery.takeReports();
+          expect(held, [true], reason: 'launch $i');
+          expect(await states(), {41: (false, false), 50: (false, false)});
+          expect(report.mitmLockKept, isTrue, reason: 'launch $i');
+          expect(report.mitmLockKeptConfirmed, isFalse);
+          final en = currentAppLocalizations;
+          expect(
+            restoreRecoveryMessage(report, en).split('\n'),
+            contains(en.restoreRecoveryMitmLockKeptUnconfirmed),
+          );
+          expectNone(await reaching());
+          restoreRecovery.onMitmOff = null;
+        }
+      });
+
+      test('the settings store cannot be opened: the setting copy reads as '
+          'unknown, never as absent, and is never said cleared', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        restoreRecovery.takeReports();
+        await consentTo50();
+
+        preferences.bindUnavailable();
+        addTearDown(preferences.rebind);
+        await expectLater(preferences.readMitmSafetyLock(), throwsStateError);
+        expect(await preferences.clearMitmSafetyLock(), isFalse);
+        expect(await preferences.writeMitmSafetyLock('x'), isFalse);
+        final safety = MitmSafetyLock(
+          () async => home.path,
+          () => preferences,
+          (_, _) async {},
+        );
+        expect(await safety.present(), isTrue, reason: 'fails closed');
+        expect(await safety.clear(), isFalse);
+
+        await relaunch();
+        restoreRecovery.clearMitmHolds();
+        await recoverAtLaunch();
+        final [report] = restoreRecovery.takeReports();
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(report.mitmAllOff, isTrue);
+        expect(report.mitmLockKept, isTrue);
+        expect(report.mitmLockKeptConfirmed, isFalse);
+        expectNone(await reaching());
+      });
 
       test('neither copy can be written: nothing that could lose the '
           'journal is done, every module is stopped and that is said; the '
@@ -1721,13 +2008,14 @@ void main() {
         expect(journals(), hasLength(1), reason: 'the journal is the evidence');
         expect(await lock(), (file: false, prefs: false));
         expect(restoreRecovery.mitmStopped, isTrue);
-        expect(report.mitmStopped, isTrue);
-        expect(report.mitmOffFailed, isTrue);
-        expect(report.mitmOffRetryKept, isTrue, reason: 'the journal reads');
+        expect(report.mitmOffFailed, isFalse, reason: 'never tried');
+        expect(report.mitmStopped, isFalse, reason: 'its own line says it');
+        expect(report.mitmLockNotSaved, isTrue);
+        expect(report.mitmLockNotSavedRetryKept, isTrue);
         final en = currentAppLocalizations;
         final lines = restoreRecoveryMessage(report, en).split('\n');
-        expect(lines, contains(en.restoreRecoveryMitmStopped));
-        expect(lines, contains(en.restoreRecoveryMitmOffFailed));
+        expect(lines, contains(en.restoreRecoveryMitmLockNotSaved));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmOffFailed)));
         expectNone(await reaching());
 
         final second = await launch();
@@ -1917,7 +2205,9 @@ void main() {
         await restoreRecovery.run();
         await restoreRecovery.finish(() async {});
         final [report] = restoreRecovery.takeReports();
-        expect(report.mitmStopped, isTrue);
+        expect(restoreRecovery.mitmStopped, isTrue);
+        expect(report.mitmLockNotSaved, isTrue);
+        expect(report.mitmLockNotSavedRetryKept, isTrue);
         expect(journals(), hasLength(1), reason: 'not set aside');
         expect(quarantined(), isEmpty);
         expectNone(await reaching());

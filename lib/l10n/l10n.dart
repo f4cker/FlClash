@@ -4194,6 +4194,30 @@ abstract class AppLocalizations {
   /// **'An error occurred while pausing MITM modules. To be safe, all MITM modules are stopped while the app runs.'**
   String get restoreRecoveryMitmStopped;
 
+  /// No description provided for @restoreRecoveryMitmLockKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The safety restriction on MITM modules hasn\'t been lifted yet: all MITM modules will be turned off again at the next launch.'**
+  String get restoreRecoveryMitmLockKept;
+
+  /// No description provided for @restoreRecoveryMitmLockKeptUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'The safety restriction on MITM modules hasn\'t been lifted yet: whether all MITM modules will be turned off again at the next launch can\'t be confirmed.'**
+  String get restoreRecoveryMitmLockKeptUnconfirmed;
+
+  /// No description provided for @restoreRecoveryMitmLockNotSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Which MITM modules the last restore involved can\'t be determined, and the MITM safety record couldn\'t be saved reliably, so no modules were turned off this time. To be safe, all MITM modules are stopped while the app runs; this is handled again at the next launch.'**
+  String get restoreRecoveryMitmLockNotSaved;
+
+  /// No description provided for @restoreRecoveryMitmLockNotSavedNoRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Which MITM modules the last restore involved can\'t be determined, and the MITM safety record couldn\'t be saved reliably, so no modules were turned off this time. To be safe, all MITM modules are stopped while the app runs; whether this is handled again at the next launch can\'t be confirmed.'**
+  String get restoreRecoveryMitmLockNotSavedNoRetry;
+
   /// No description provided for @restoreContinue.
   ///
   /// In en, this message translates to:
