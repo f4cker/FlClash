@@ -4268,6 +4268,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsFieldUnavailable => '不可用';
 
   @override
+  String get tsManageAccounts => '管理账号';
+
+  @override
   String get tsCopyFailed => '未能复制，请重试。';
 
   @override

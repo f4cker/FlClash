@@ -2516,31 +2516,181 @@ void main() {
   });
 
   group('unconfirmed empty list', () {
+    const onFile = [
+      TailscaleManagedRecord(
+        id: 'm1',
+        profileId: 42,
+        name: 'tailscale-m1',
+        attached: true,
+        account: tsHomeAccount,
+      ),
+      TailscaleManagedRecord(id: 'm2', profileId: 42, name: 'tailscale-m2'),
+      TailscaleManagedRecord(id: 'x', profileId: 7, name: 'other-profile'),
+    ];
+
     Future<void> pumpUnconfirmed(
       WidgetTester tester, {
       ThemeMode themeMode = ThemeMode.light,
+      Size size = _size,
     }) async {
       container.listen(currentProfileIdProvider, (_, _) {});
       container.read(currentProfileIdProvider.notifier).value = 42;
       await container
           .read(tailscaleManagedRecordsProvider.notifier)
-          .modify(
-            (_) => const [
-              TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
-            ],
-          );
+          .modify((_) => onFile);
       container.listen(settledConfigProfileProvider, (_, _) {});
       container.read(settledConfigProfileProvider.notifier).settle(42, 0);
       serve(const []);
-      await pumpPanel(tester, themeMode: themeMode);
+      await pumpPanel(tester, themeMode: themeMode, size: size);
     }
+
+    final read = find.byKey(const ValueKey('ts-unconfirmed-read'));
+    final manage = find.byKey(const ValueKey('ts-unconfirmed-manage'));
+
+    Future<void> retry(WidgetTester tester) async {
+      await tester.tap(read);
+      await settle(tester);
+    }
+
+    void verifyNothingChanged() {
+      verifyNever(() => core.startTailscale(any()));
+      verifyNever(
+        () => core.loginTailscale(any(), reauth: any(named: 'reauth')),
+      );
+      verifyNever(() => core.logoutTailscale(any()));
+      verifyNever(() => core.forgetTailscaleRoutes(any()));
+      verifyNever(() => core.assignTailscaleRoutes(any(), any()));
+      expect(container.read(tailscaleManagedRecordsProvider), onFile);
+    }
+
+    testWidgets('管理账号 stays hidden until the user reads again', (tester) async {
+      await pumpUnconfirmed(tester);
+
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(read, findsOneWidget);
+      expect(manage, findsNothing);
+      expect(find.text('管理账号'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('a read the user asked for that lists nothing offers 管理账号', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      final pending = Completer<List<TailscaleNode>>();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+      await tester.tap(read);
+      await settle(tester);
+      // Not while the read runs.
+      expect(manage, findsNothing);
+      pending.complete(const []);
+      await settle(tester);
+
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(manage, findsOneWidget);
+      expect(find.text('管理账号'), findsOneWidget);
+      expect(find.text('添加 Tailscale 账号'), findsNothing);
+      expect(find.text('登录 Tailscale'), findsNothing);
+      final primary = tester.getRect(read);
+      final secondary = tester.getRect(manage);
+      expect(secondary.height, greaterThanOrEqualTo(44));
+      expect(secondary.top - primary.bottom, moreOrLessEquals(8));
+      expect(secondary.center.dx, moreOrLessEquals(primary.center.dx));
+      final context = tester.element(find.byType(TailscaleView));
+      final style = tester
+          .widget<RichText>(
+            find.descendant(of: manage, matching: find.byType(RichText)),
+          )
+          .text
+          .style;
+      expect(style?.color, context.colorScheme.primary);
+      verifyNothingChanged();
+      await teardownView(tester);
+    });
+
+    testWidgets('管理账号 lists the accounts on file and changes nothing', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      await retry(tester);
+      await tester.tap(manage);
+      await settle(tester);
+
+      expect(find.text('当前配置中的 Tailscale 账号'), findsOneWidget);
+      expect(find.text('pat@example.test'), findsOneWidget);
+      expect(find.text('新账号'), findsOneWidget);
+      expect(find.text('other-profile'), findsNothing);
+      expect(find.text('添加 Tailscale 账号'), findsNothing);
+      expect(find.text('退出此账号'), findsNothing);
+      expect(find.textContaining('example-net.test'), findsOneWidget);
+
+      await tester.tap(find.text('pat@example.test'));
+      await settle(tester);
+      expect(find.text('状态待确认'), findsOneWidget);
+      verifyNothingChanged();
+      await teardownView(tester);
+    });
+
+    testWidgets('a listed node clears it; the next empty list needs a read', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester);
+      await retry(tester);
+      expect(manage, findsOneWidget);
+
+      serve([tsConnectedNode], tsConnectedStatus());
+      container.invalidate(tailscaleNodesProvider);
+      await settle(tester);
+      expect(find.text('状态待确认'), findsNothing);
+
+      serve(const []);
+      container.invalidate(tailscaleNodesProvider);
+      await settle(tester);
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(manage, findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('a Core restart clears it', (tester) async {
+      await pumpUnconfirmed(tester);
+      await retry(tester);
+      expect(manage, findsOneWidget);
+
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      await settle(tester);
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      container.read(settledConfigProfileProvider.notifier).settle(42, 1);
+      container.invalidate(tailscaleNodesProvider);
+      await settle(tester);
+
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(manage, findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('narrow with large text, the buttons stay stacked', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pumpUnconfirmed(tester, size: const Size(320, 900));
+      await retry(tester);
+
+      expect(tester.takeException(), isNull);
+      final primary = tester.getRect(read);
+      final secondary = tester.getRect(manage);
+      expect(secondary.top, greaterThanOrEqualTo(primary.bottom));
+      expect(secondary.height, greaterThanOrEqualTo(44));
+      expect(secondary.right, lessThanOrEqualTo(320));
+      await teardownView(tester);
+    });
 
     testWidgets('offers only 重新读取状态, at least 44 tall', (tester) async {
       await pumpUnconfirmed(tester);
 
       expect(find.text('状态待确认'), findsOneWidget);
       expect(find.text('添加 Tailscale 账号'), findsNothing);
-      final read = find.byKey(const ValueKey('ts-unconfirmed-read'));
       expect(read, findsOneWidget);
       expect(tester.getSize(read).height, greaterThanOrEqualTo(44));
       expect(find.byType(TonalButton), findsNothing);

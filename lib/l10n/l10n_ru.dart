@@ -4550,6 +4550,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tsFieldUnavailable => 'Unavailable';
 
   @override
+  String get tsManageAccounts => 'Manage accounts';
+
+  @override
   String get tsCopyFailed => 'Couldn\'t copy. Try again.';
 
   @override

@@ -1342,4 +1342,72 @@ void main() {
       await shoot(tester, 'card-08-unconfirmed-$name');
     });
   }
+
+  // 管理账号 after a read the user asked for still lists nothing.
+  const onFile = [
+    TailscaleManagedRecord(
+      id: 'm1',
+      profileId: 42,
+      name: 'tailscale-m1',
+      attached: true,
+      account: tsHomeAccount,
+    ),
+    TailscaleManagedRecord(
+      id: 'm2',
+      profileId: 42,
+      name: 'tailscale-m2',
+      attached: true,
+      account: TailscaleAccount(
+        userId: '2001',
+        loginName: 'pat@work.test',
+        displayName: 'Pat Work',
+        tailnet: 'work-net.test',
+      ),
+    ),
+    TailscaleManagedRecord(id: 'm3', profileId: 42, name: 'tailscale-m3'),
+  ];
+
+  Future<void> pumpRetried(
+    WidgetTester tester, {
+    ThemeMode themeMode = ThemeMode.light,
+    Size size = const Size(1100, 700),
+    double pixelRatio = 1,
+  }) async {
+    await seedManaged(const [], saved: onFile);
+    container.listen(settledConfigProfileProvider, (_, _) {});
+    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+    await pumpPanel(
+      tester,
+      size: size,
+      themeMode: themeMode,
+      pixelRatio: pixelRatio,
+    );
+    await tester.tap(find.text('重新读取状态'));
+    await settle(tester);
+    expect(find.text('管理账号'), findsOneWidget);
+  }
+
+  for (final (name, mode) in [
+    ('light', ThemeMode.light),
+    ('dark', ThemeMode.dark),
+  ]) {
+    shot('card-09-retried-$name', (tester) async {
+      await pumpRetried(tester, themeMode: mode);
+      await shoot(tester, 'card-09-retried-$name');
+    });
+
+    shot('card-10-manage-$name', (tester) async {
+      await pumpRetried(tester, themeMode: mode);
+      await tester.tap(find.text('管理账号'));
+      await settle(tester);
+      await shoot(tester, 'card-10-manage-$name');
+    });
+  }
+
+  shot('card-11-retried-narrow-large-text', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await pumpRetried(tester, size: const Size(360, 760), pixelRatio: 2);
+    await shoot(tester, 'card-11-retried-narrow-large-text');
+  });
 }

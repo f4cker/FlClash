@@ -7884,6 +7884,12 @@ abstract class AppLocalizations {
   /// **'Unavailable'**
   String get tsFieldUnavailable;
 
+  /// No description provided for @tsManageAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage accounts'**
+  String get tsManageAccounts;
+
   /// No description provided for @tsCopyFailed.
   ///
   /// In en, this message translates to:

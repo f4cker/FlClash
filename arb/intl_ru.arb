@@ -1420,6 +1420,7 @@
     }
   },
   "tsFieldUnavailable": "Unavailable",
+  "tsManageAccounts": "Manage accounts",
   "tsCopyFailed": "Couldn't copy. Try again.",
   "tsLogin": "Log in to Tailscale",
   "tsRelogin": "Log in again",

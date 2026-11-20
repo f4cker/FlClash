@@ -63,6 +63,11 @@ class _Retry {
 
 class _TailscaleViewState extends ConsumerState<TailscaleView> {
   TailscaleNodeKey? _selected;
+
+  /// The profile whose empty list the user read again from 状态待确认; only
+  /// after that does the page offer 管理账号. Cleared once a node is listed
+  /// or the Core leaves the applied config.
+  int? _retriedProfile;
   bool _preparingProfile = false;
   bool _adding = false;
   TailscaleNodeKey? _shownKey;
@@ -766,6 +771,16 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   Widget build(BuildContext context) {
     final coreStatus = ref.watch(coreStatusProvider);
     ref.watch(currentPageLabelProvider);
+    ref.listen(tailscaleNodesProvider, (_, next) {
+      if (_retriedProfile != null && (next.value?.isNotEmpty ?? false)) {
+        setState(() => _retriedProfile = null);
+      }
+    });
+    ref.listen(settledConfigProfileProvider, (_, next) {
+      if (_retriedProfile != null && next == null) {
+        setState(() => _retriedProfile = null);
+      }
+    });
     if (coreStatus != CoreStatus.connected) {
       return _page(
         context,
@@ -1322,7 +1337,13 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
         records == null ||
         records.any((record) => record.profileId == profileId);
     if (hasRecords) {
-      return _nodesUnavailable(context);
+      return _nodesUnavailable(
+        context,
+        profileId: profileId,
+        records: profileId != null && profileId == _retriedProfile
+            ? records?.where((record) => record.profileId == profileId).toList()
+            : null,
+      );
     }
     return _noNodes(context);
   }
@@ -1354,10 +1375,90 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
 
   /// Accounts are on record, yet the applied config lists no node for them:
   /// said as it is, never as not signed in. It is unknown, not a failure, so
-  /// it reads in grey with nothing but 重新读取状态.
-  Widget _nodesUnavailable(BuildContext context) {
+  /// it reads in grey with 重新读取状态 first. Once a read the user asked for
+  /// still lists nothing, 管理账号 shows the [records] on file.
+  Widget _nodesUnavailable(
+    BuildContext context, {
+    required int? profileId,
+    required List<TailscaleManagedRecord>? records,
+  }) {
     return _UnconfirmedStatus(
-      onRead: () => ref.invalidate(tailscaleNodesProvider),
+      onRead: () {
+        setState(() => _retriedProfile = profileId);
+        ref.invalidate(tailscaleNodesProvider);
+      },
+      manage: records == null || records.isEmpty
+          ? null
+          : _recordAccounts(context, records),
+    );
+  }
+
+  /// 管理账号 of a profile whose nodes are not listed: the panel-added
+  /// accounts as recorded, picked the way the switcher picks one. Picking
+  /// only says which account the page shows once nodes are listed; nothing
+  /// here signs in, signs out, adds or removes.
+  Widget _recordAccounts(
+    BuildContext context,
+    List<TailscaleManagedRecord> records,
+  ) {
+    final appLocalizations = context.appLocalizations;
+    String labelOf(TailscaleManagedRecord record) {
+      final account = record.account;
+      if (account != null && !record.loggedOut) {
+        final label = account.loginName.takeFirstValid([account.displayName]);
+        if (label.isNotEmpty) {
+          return label;
+        }
+      }
+      if (account == null && !record.loggedOut) {
+        return appLocalizations.tsNewAccount;
+      }
+      return record.name.isEmpty ? record.id : record.name;
+    }
+
+    return PopupAnchor(
+      placement: PopupPlacement.belowAnchorStart,
+      targetBuilder: (open) => TextButton(
+        key: const ValueKey('ts-unconfirmed-manage'),
+        style: const ButtonStyle(
+          minimumSize: Size(0, _UnconfirmedStatus.minButtonHeight),
+        ),
+        onPressed: open,
+        child: Text(appLocalizations.tsManageAccounts),
+      ),
+      popupBuilder: (_) => PopupMenu(
+        width: 380,
+        leadingCheck: true,
+        itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        items: [
+          for (final (index, record) in records.indexed)
+            () {
+              final label = labelOf(record);
+              final network = record.loggedOut
+                  ? ''
+                  : record.account?.tailnet ?? '';
+              return PopupMenuItem(
+                label: label,
+                labelEmphasized: true,
+                leading: record.account == null && !record.loggedOut
+                    ? const TailscaleNewAccountAvatar()
+                    : TailscaleAvatar(name: label),
+                subtitle: [
+                  if (network.isNotEmpty) appLocalizations.tsNetworkOf(network),
+                  appLocalizations.tsStateUnconfirmed,
+                ].join(' · '),
+                subtitleMaxLines: 1,
+                checked: record.key == _selected,
+                section: index == 0
+                    ? PopupMenuSection(
+                        title: appLocalizations.tsAccountsInProfile,
+                      )
+                    : null,
+                onPressed: () => _select(record.key),
+              );
+            }(),
+        ],
+      ),
     );
   }
 
@@ -1442,12 +1543,15 @@ String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
 /// The no-node screen of [NullStatus], with an info button after its title.
 /// 状态待确认 of an empty node list: a quiet grey mark, no decorations.
 class _UnconfirmedStatus extends StatelessWidget {
-  const _UnconfirmedStatus({required this.onRead});
+  const _UnconfirmedStatus({required this.onRead, this.manage});
 
   static const markSize = 72.0;
   static const minButtonHeight = 44.0;
 
   final VoidCallback onRead;
+
+  /// 管理账号, 8 under 重新读取状态; always stacked, never beside it.
+  final Widget? manage;
 
   @override
   Widget build(BuildContext context) {
@@ -1506,6 +1610,10 @@ class _UnconfirmedStatus extends StatelessWidget {
                 onPressed: onRead,
                 child: Text(appLocalizations.tsReadStatus),
               ),
+              if (manage case final manage?) ...[
+                const SizedBox(height: 8),
+                manage,
+              ],
             ],
           ),
         ),
