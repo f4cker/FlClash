@@ -3666,5 +3666,7 @@
   "requery": "Interroger à nouveau",
   "switchToLocalExit": "Passer à la sortie locale",
   "switchToProxyExit": "Passer à la sortie du proxy",
-  "localExit": "Sortie locale"
+  "localExit": "Sortie locale",
+  "statusQuerying": "Recherche en cours",
+  "queryFailedShowingLast": "Échec de la recherche, dernier résultat affiché ; touchez pour réessayer"
 }

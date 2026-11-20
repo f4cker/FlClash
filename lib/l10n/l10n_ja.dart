@@ -8642,4 +8642,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get localExit => 'ローカル出口';
+
+  @override
+  String get statusQuerying => '照会しています';
+
+  @override
+  String get queryFailedShowingLast => '照会に失敗しました。前回の結果を表示中。タップで再試行';
 }

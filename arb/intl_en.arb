@@ -3725,5 +3725,7 @@
   "requery": "Look up again",
   "switchToLocalExit": "Switch to local exit",
   "switchToProxyExit": "Switch to proxy exit",
-  "localExit": "Local exit"
+  "localExit": "Local exit",
+  "statusQuerying": "Looking up now",
+  "queryFailedShowingLast": "Lookup failed, showing the last result; tap to retry"
 }

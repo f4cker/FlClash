@@ -3666,5 +3666,7 @@
   "requery": "再取得",
   "switchToLocalExit": "ローカル出口に切り替え",
   "switchToProxyExit": "プロキシ出口に切り替え",
-  "localExit": "ローカル出口"
+  "localExit": "ローカル出口",
+  "statusQuerying": "照会しています",
+  "queryFailedShowingLast": "照会に失敗しました。前回の結果を表示中。タップで再試行"
 }

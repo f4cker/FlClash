@@ -8921,4 +8921,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get localExit => 'Salida local';
+
+  @override
+  String get statusQuerying => 'Consultando ahora';
+
+  @override
+  String get queryFailedShowingLast =>
+      'Error de consulta; se muestra el último resultado. Toca para reintentar';
 }

@@ -36,6 +36,14 @@ const _decorationTurn = 2 * math.pi / 12;
 /// The smallest side of a tap target on the card.
 const _minHitSize = 44.0;
 
+/// Two answers came back over one route: neither the Core, the host nor the
+/// proxying changed, and no node was picked in between.
+bool _sameRoute(RouteStamp a, RouteStamp b) =>
+    a.coreEpoch == b.coreEpoch &&
+    a.hostEpoch == b.hostEpoch &&
+    a.proxied == b.proxied &&
+    a.routeVersion == b.routeVersion;
+
 /// The address the card shows: the proxy's exit, or this device's own.
 enum StatusCardExit { proxy, local }
 
@@ -55,8 +63,9 @@ class CurrentOutboundCard extends ConsumerStatefulWidget {
 class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   late final OutboundIpProbe _probe;
 
-  /// The last address each lookup found: a failed lookup leaves it shown.
-  final _kept = <String, IpInfo>{};
+  /// The last address each lookup found and the route it was found on: a
+  /// lookup that fails on that same route leaves it shown.
+  final _kept = <String, ({RouteStamp stamp, IpInfo info})>{};
 
   /// The user switched to the local address.
   var _wantsLocal = false;
@@ -64,12 +73,34 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   /// A retry asked for and not yet under way.
   var _requested = false;
 
+  /// Addresses whose report the card may ask ipx.al and the IP quality
+  /// sources about: the exit shown before any switch, and the address the
+  /// country badge was tapped on. Anything else shows only what is cached.
+  final _askable = <String>{};
+
   @override
   void initState() {
     super.initState();
     _probe = ref.read(outboundIpProbeProvider.notifier)
       ..watch(routedOutbound)
       ..watch(directOutbound);
+    ref.listenManual(
+      outboundIpProbeProvider,
+      (_, next) => _onProbe(next),
+      fireImmediately: true,
+    );
+    ref.listenManual(isStartProvider, (previous, next) {
+      if (previous == next) {
+        return;
+      }
+      if (next) {
+        // A new session opens on the proxy exit.
+        _wantsLocal = false;
+      } else {
+        _kept.remove(routedOutbound);
+      }
+      _askDefault(ref.read(outboundIpProbeProvider));
+    });
   }
 
   @override
@@ -80,11 +111,58 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     super.dispose();
   }
 
-  IpInfo? _valueOf(String target, ProbeEntry<IpInfo> entry) {
-    if (entry.displayValue case final info?) {
-      return _kept[target] = info;
+  void _onProbe(RoutedProbeState<String, IpInfo> state) {
+    for (final target in const [routedOutbound, directOutbound]) {
+      final entry = state.entryOf(target);
+      final value = entry.value;
+      final stamp = entry.stamp;
+      if (value != null && stamp != null) {
+        _kept[target] = (stamp: stamp, info: value);
+      } else if (entry.phase == ProbePhase.empty) {
+        _kept.remove(target);
+      }
     }
-    return _kept[target];
+    _askDefault(state);
+  }
+
+  /// The exit the card opens on may have its report asked for unprompted,
+  /// as long as no switch has put the other one on show.
+  void _askDefault(RoutedProbeState<String, IpInfo> state) {
+    final isStart = ref.read(isStartProvider);
+    if (isStart &&
+        _wantsLocal &&
+        _infoOf(directOutbound, state.entryOf(directOutbound)) != null) {
+      return;
+    }
+    final target = isStart ? routedOutbound : directOutbound;
+    if (_infoOf(target, state.entryOf(target))?.ip case final ip?) {
+      _askable.add(ip);
+    }
+  }
+
+  /// What [entry] shows: its value, the one it holds while its route is
+  /// checked again, or after a failure the last one found on the same route.
+  IpInfo? _infoOf(String target, ProbeEntry<IpInfo> entry) {
+    if (entry.displayValue case final info?) {
+      return info;
+    }
+    final kept = _kept[target];
+    final stamp = entry.stamp;
+    if (entry.phase != ProbePhase.failed ||
+        kept == null ||
+        stamp == null ||
+        !_sameRoute(kept.stamp, stamp)) {
+      return null;
+    }
+    return kept.info;
+  }
+
+  void _switch(bool toLocal) {
+    setState(() {
+      _wantsLocal = toLocal;
+      // A switch shows what is at hand and asks for nothing.
+      _askable.clear();
+    });
   }
 
   void _retry({
@@ -99,11 +177,17 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         ref.read(outboundIpProbeProvider).entryOf(target).isLoading) {
       return;
     }
-    setState(() => _requested = true);
+    setState(() {
+      _requested = true;
+      // The report of the address on show, and of it alone.
+      if (ip != null) {
+        _askable.add(ip);
+      }
+    });
     _probe.refresh({target, ...missing});
     if (ip != null) {
-      final ipx = ref.read(ipxLookupProvider(ip));
-      if (ipx.phase == IpxPhase.failed) {
+      if (ref.exists(ipxLookupProvider(ip)) &&
+          ref.read(ipxLookupProvider(ip)).phase == IpxPhase.failed) {
         ref.read(ipxLookupProvider(ip).notifier).retry();
       }
       // Only a fallback already asked for: reading one would start it.
@@ -138,13 +222,10 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final localEntry = ref.watch(
       outboundIpProbeProvider.select((state) => state.entryOf(directOutbound)),
     );
-    if (!isStart) {
-      _kept.remove(routedOutbound);
-    }
     // While Flash is not running there is no proxy exit: the device's own
     // address is the one traffic leaves by.
-    final exitInfo = isStart ? _valueOf(routedOutbound, exitEntry) : null;
-    final localInfo = _valueOf(directOutbound, localEntry);
+    final exitInfo = isStart ? _infoOf(routedOutbound, exitEntry) : null;
+    final localInfo = _infoOf(directOutbound, localEntry);
     final shown = !isStart || (_wantsLocal && localInfo != null)
         ? StatusCardExit.local
         : StatusCardExit.proxy;
@@ -153,6 +234,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final entry = local ? localEntry : exitEntry;
     final info = local ? localInfo : exitInfo;
     final other = local ? exitInfo : localInfo;
+    final otherEntry = local ? exitEntry : localEntry;
     final busy = entry.isLoading || _requested;
     final failed = entry.phase == ProbePhase.failed;
     // No live route (the Core is not connected, e.g. while the helper cannot
@@ -270,13 +352,15 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                           ip: info?.ip,
                           busy: busy,
                           missing: [
-                            if (other == null && (local ? isStart : true))
+                            // The other exit's address alone, not its report;
+                            // one already being looked up is left to it.
+                            if (other == null &&
+                                !otherEntry.isLoading &&
+                                (local ? isStart : true))
                               local ? routedOutbound : directOutbound,
                           ],
                         ),
-                        onSwitch: other == null
-                            ? null
-                            : () => setState(() => _wantsLocal = !local),
+                        onSwitch: other == null ? null : () => _switch(!local),
                       ),
                       SizedBox(height: metrics.cellsTop),
                       if (density.isDesktop) const Spacer(),
@@ -315,10 +399,18 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   }
 
   /// What ipx.al says about [info], or the IP quality sources when it has
-  /// nothing; asked only for the address on show.
+  /// nothing. Only an address in [_askable] is asked about; for any other
+  /// the card reads what is cached and otherwise says it is unknown.
   _IpFacts _factsOf(IpInfo info) {
     final ip = info.ip;
     final appLocalizations = context.appLocalizations;
+    final askable = _askable.contains(ip);
+    if (!askable && !ref.exists(ipxLookupProvider(ip))) {
+      return _IpFacts(
+        countryCode: info.countryCode.isNotEmpty ? info.countryCode : null,
+        loading: false,
+      );
+    }
     final ipx = ref.watch(ipxLookupProvider(ip));
     final report = ipx.report;
     final brief = ipx.brief;
@@ -367,7 +459,16 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
         loading: true,
       );
     }
-    // No report: the IP quality sources stand in, as the detail sheet does.
+    // No report: the IP quality sources stand in, as the detail sheet does,
+    // when they may be asked or already answered.
+    if (!askable && !ref.exists(ipQualityProvider(ip))) {
+      return _IpFacts(
+        countryCode: country,
+        organization: briefNetwork,
+        loading: ipx.retrying,
+        reportFailed: !ipx.retrying,
+      );
+    }
     final fallback = ref.watch(ipQualityProvider(ip));
     final quality = fallback.value;
     if (quality != null) {
@@ -882,29 +983,41 @@ class _CountryBadgeState extends State<_CountryBadge>
     final enabled = !widget.checking;
     final size = widget.size;
     final code = widget.countryCode;
-    final tooltip = appLocalizations.requery;
+    final stale = widget.failed && !widget.checking;
+    final name = stale
+        ? appLocalizations.queryFailedShowingLast
+        : appLocalizations.requery;
     final separator = appLocalizations.semanticsSeparator;
     final color = Color.alphaBlend(
       foreground.withValues(alpha: enabled && _hovered ? 0.08 : 0),
       DashboardColors.of(context).tone2,
     );
+    // The label below names the badge once; the tooltip is for the eye.
     return Tooltip(
-      message: tooltip,
+      message: name,
+      excludeFromSemantics: true,
       child: Semantics(
         button: true,
         enabled: enabled,
+        liveRegion: true,
         label: [
-          tooltip,
+          name,
           if (code != null && code.isNotEmpty) code.toUpperCase(),
-          if (widget.checking) appLocalizations.querying,
-          if (widget.failed) appLocalizations.queryFailed,
+          if (widget.checking) appLocalizations.statusQuerying,
         ].join(separator),
+        onTap: enabled ? widget.onRefresh : null,
         excludeSemantics: true,
         child: PressRegion(
-          onTap: enabled ? widget.onRefresh : null,
+          // Stays focusable while a lookup is out; the tap is ignored then.
+          onTap: () {
+            if (!widget.checking) {
+              widget.onRefresh();
+            }
+          },
+          mouseCursor: enabled ? null : SystemMouseCursors.basic,
           onHover: (value) => setState(() => _hovered = value),
           onFocusChange: (value) => setState(() => _focused = value),
-          excludeFromSemantics: !enabled,
+          excludeFromSemantics: true,
           child: SizedBox.square(
             dimension: widget.box,
             child: Center(
@@ -941,29 +1054,50 @@ class _CountryBadgeState extends State<_CountryBadge>
                                   ),
                             ),
                     ),
-                    if (widget.failed && !widget.checking)
+                    if (stale)
                       PositionedDirectional(
-                        top: size * 0.06,
-                        end: size * 0.06,
-                        child: SizedBox.square(
-                          dimension: 8,
-                          child: DecoratedBox(
-                            decoration: ShapeDecoration(
-                              color: colorScheme.error,
-                              shape: CircleBorder(
-                                side: BorderSide(
-                                  color: DashboardColors.of(context).card,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                        top: -2,
+                        end: -2,
+                        child: _StaleMark(size: size < 48 ? 16 : 18),
                       ),
                   ],
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// An exclamation on the badge's corner: the last lookup failed and what
+/// it found before is still shown.
+class _StaleMark extends StatelessWidget {
+  const _StaleMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // The glyph's circle spans 17.6 of its 24: grown to fill the mark, it
+    // leaves a 1.5 ring of the card around it.
+    final glyph = (size - 3) * 24 / 17.6;
+    return SizedBox.square(
+      dimension: size,
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: DashboardColors.of(context).card,
+          shape: const CircleBorder(),
+        ),
+        child: OverflowBox(
+          maxWidth: glyph,
+          maxHeight: glyph,
+          child: GlyphIcon(
+            AppGlyphs.error,
+            fill: 1,
+            size: glyph,
+            color: context.colorScheme.error,
           ),
         ),
       ),

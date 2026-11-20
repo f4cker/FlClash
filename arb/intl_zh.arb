@@ -2440,5 +2440,7 @@
   "requery": "重新查询",
   "switchToLocalExit": "切换到本地出口",
   "switchToProxyExit": "切换到代理出口",
-  "localExit": "本地出口"
+  "localExit": "本地出口",
+  "statusQuerying": "正在查询",
+  "queryFailedShowingLast": "查询失败，显示上次结果；点击重试"
 }

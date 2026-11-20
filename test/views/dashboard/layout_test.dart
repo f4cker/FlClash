@@ -13,9 +13,57 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:fl_clash/common/ipx_al.dart';
+import 'package:fl_clash/common/service_probe.dart'
+    show directOutbound, routedOutbound;
+import 'package:fl_clash/providers/ipx_report.dart';
+import 'package:fl_clash/providers/outbound_ip.dart';
+import 'package:fl_clash/providers/routed_probe.dart';
+
 import '../../helpers/glyph_finders.dart';
 import '../../helpers/test_app.dart';
 import '../../helpers/test_profiles.dart';
+
+class _Ips extends OutboundIpProbe {
+  @override
+  RoutedProbeState<String, IpInfo> build() => const RoutedProbeState({
+    routedOutbound: ProbeEntry(
+      phase: ProbePhase.fresh,
+      value: IpInfo(ip: '204.136.11.10', countryCode: 'US'),
+    ),
+    directOutbound: ProbeEntry(
+      phase: ProbePhase.fresh,
+      value: IpInfo(ip: '58.152.33.18', countryCode: 'HK'),
+    ),
+  });
+
+  @override
+  void watch(String target) {}
+
+  @override
+  void unwatch(String target) {}
+}
+
+class _Ipx extends IpxLookup {
+  @override
+  IpxLookupState build(String ip) => const IpxLookupState(
+    phase: IpxPhase.done,
+    report: IpxReport(
+      ip: '204.136.11.10',
+      score: 62,
+      type: IpxIpType.hosting,
+      nativity: IpxNativity.native,
+      countryCode: 'US',
+      city: 'Los Angeles',
+      organization: 'Sharktech',
+    ),
+  );
+}
+
+class _Running extends RunTime {
+  @override
+  int? build() => 1000;
+}
 
 void main() {
   test('the window picks the density', () {
@@ -499,6 +547,51 @@ void main() {
       expect(find.byType(CurrentOutboundCard), findsOneWidget);
       expect(find.byType(NetworkSpeedCard), findsNothing);
       expect(tester.takeException(), isNull);
+    }
+
+    await teardown(tester);
+  });
+
+  testWidgets('a full status card fits at compact width, the tables keeping '
+      'their minimum below it', (tester) async {
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(
+          () => TestProfiles(const [
+            Profile(id: 1, autoUpdateDuration: Duration.zero),
+          ]),
+        ),
+        runTimeProvider.overrideWith(_Running.new),
+        outboundIpProbeProvider.overrideWith(_Ips.new),
+        ipxLookupProvider('204.136.11.10').overrideWith(_Ipx.new),
+      ],
+    );
+    globalState.container = container;
+    for (final size in const [Size(1220, 824), Size(1000, 824)]) {
+      await pumpDashboard(tester, size);
+
+      final compact = size.width < 1040;
+      final current = rectOf(tester, CurrentOutboundCard);
+      expect(current.height, compact ? 174 : 186, reason: '$size');
+      expect(find.text('204.136.11.10'), findsOneWidget);
+      // The organization cell, last on the card, keeps the bottom padding.
+      final organization = tester.getRect(find.text('Sharktech'));
+      expect(current.bottom - organization.bottom, greaterThanOrEqualTo(20));
+      final table = rectOf(tester, ConnectionsTableCard);
+      expect(
+        table.height,
+        greaterThanOrEqualTo(
+          connectionsTableMinHeight(
+            compact ? DashboardDensity.compact : DashboardDensity.standard,
+            1,
+          ),
+        ),
+        reason: '$size',
+      );
+      expect(table.bottom, size.height - 24);
+      expect(scrollExtentOf(tester), 0);
+      expect(tester.takeException(), isNull, reason: '$size');
     }
 
     await teardown(tester);

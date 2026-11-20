@@ -14619,6 +14619,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Local exit'**
   String get localExit;
+
+  /// No description provided for @statusQuerying.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up now'**
+  String get statusQuerying;
+
+  /// No description provided for @queryFailedShowingLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Lookup failed, showing the last result; tap to retry'**
+  String get queryFailedShowingLast;
 }
 
 class _AppLocalizationsDelegate

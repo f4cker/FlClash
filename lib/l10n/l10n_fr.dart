@@ -8922,4 +8922,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get localExit => 'Sortie locale';
+
+  @override
+  String get statusQuerying => 'Recherche en cours';
+
+  @override
+  String get queryFailedShowingLast =>
+      'Échec de la recherche, dernier résultat affiché ; touchez pour réessayer';
 }

@@ -3666,5 +3666,7 @@
   "requery": "다시 조회",
   "switchToLocalExit": "로컬 출구로 전환",
   "switchToProxyExit": "프록시 출구로 전환",
-  "localExit": "로컬 출구"
+  "localExit": "로컬 출구",
+  "statusQuerying": "조회하는 중",
+  "queryFailedShowingLast": "조회 실패, 이전 결과 표시 중. 탭하여 다시 시도"
 }

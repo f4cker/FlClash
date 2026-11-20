@@ -3666,5 +3666,7 @@
   "requery": "Volver a consultar",
   "switchToLocalExit": "Cambiar a la salida local",
   "switchToProxyExit": "Cambiar a la salida del proxy",
-  "localExit": "Salida local"
+  "localExit": "Salida local",
+  "statusQuerying": "Consultando ahora",
+  "queryFailedShowingLast": "Error de consulta; se muestra el último resultado. Toca para reintentar"
 }

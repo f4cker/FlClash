@@ -8156,4 +8156,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get localExit => '本地出口';
+
+  @override
+  String get statusQuerying => '正在查询';
+
+  @override
+  String get queryFailedShowingLast => '查询失败，显示上次结果；点击重试';
 }

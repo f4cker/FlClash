@@ -8863,4 +8863,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localExit => 'Local exit';
+
+  @override
+  String get statusQuerying => 'Looking up now';
+
+  @override
+  String get queryFailedShowingLast =>
+      'Lookup failed, showing the last result; tap to retry';
 }

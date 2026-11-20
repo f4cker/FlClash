@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/common/ipx_al.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/common/service_probe.dart'
     show directOutbound, routedOutbound;
 import 'package:fl_clash/manager/theme_manager.dart';
@@ -17,6 +18,7 @@ import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/current_outbound.dart';
 import 'package:flutter/rendering.dart';
@@ -29,6 +31,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 
 import '../helpers/host_scaffold.dart';
 import '../helpers/test_app.dart';
+import '../helpers/test_profiles.dart';
 
 final _outDir = Platform.environment['STATUS_CARD_SCREENSHOTS'];
 const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
@@ -125,9 +128,17 @@ class _Running extends RunTime {
   int? build() => (97 * 3600 + 23 * 60 + 18) * 1000;
 }
 
+const _stamp = RouteStamp(
+  coreEpoch: 1,
+  routeVersion: 1,
+  hostEpoch: 1,
+  proxied: true,
+);
+
 ProbeEntry<IpInfo> _fresh(String ip, String country) => ProbeEntry(
   phase: ProbePhase.fresh,
   value: IpInfo(ip: ip, countryCode: country),
+  stamp: _stamp,
 );
 
 void main() {
@@ -251,9 +262,21 @@ void main() {
 
     testWidgets('local-$tone', skip: skip != null, (tester) async {
       await pump(tester, brightness: brightness, entries: both);
+      // Its report was looked up before, from the badge.
+      ProviderScope.containerOf(
+        tester.element(find.byType(CurrentOutboundCard)),
+      ).read(ipxLookupProvider(_localIp));
       await tester.tap(find.text(_exitIp));
       await settle(tester);
       await capture(tester, 'local-$tone');
+    });
+
+    testWidgets('local-uncached-$tone', skip: skip != null, (tester) async {
+      await pump(tester, brightness: brightness, entries: both);
+      // Nothing cached about the local exit: the switch asks for nothing.
+      await tester.tap(find.text(_exitIp));
+      await settle(tester);
+      await capture(tester, 'local-uncached-$tone');
     });
 
     testWidgets('querying-$tone', skip: skip != null, (tester) async {
@@ -275,7 +298,10 @@ void main() {
       tester,
     ) async {
       final ips = await pump(tester, brightness: brightness, entries: both);
-      ips.settle(routedOutbound, const ProbeEntry(phase: ProbePhase.failed));
+      ips.settle(
+        routedOutbound,
+        const ProbeEntry(phase: ProbePhase.failed, stamp: _stamp),
+      );
       await settle(tester);
       await capture(tester, 'failed-with-old-values-$tone');
     });
@@ -310,6 +336,79 @@ void main() {
     testWidgets('not-running-$tone', skip: skip != null, (tester) async {
       await pump(tester, brightness: brightness, entries: both, running: false);
       await capture(tester, 'not-running-$tone');
+    });
+  }
+
+  for (final (name, size) in const [
+    ('normal', Size(1220, 824)),
+    ('compact', Size(1000, 824)),
+  ]) {
+    testWidgets('dashboard-full-$name-light', skip: skip != null, (
+      tester,
+    ) async {
+      // Cached files go to a scratch directory of the test's own.
+      final cache = Directory.systemTemp.createTempSync('status-card-');
+      addTearDown(() => cache.deleteSync(recursive: true));
+      const pathProvider = MethodChannel('plugins.flutter.io/path_provider');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        pathProvider,
+        (_) async => cache.path,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          pathProvider,
+          null,
+        ),
+      );
+      tester.view.physicalSize = size * 2;
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final container = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(
+            () => TestProfiles(const [
+              Profile(id: 1, autoUpdateDuration: Duration.zero),
+            ]),
+          ),
+          suspendProvider.overrideWithValue(false),
+          runTimeProvider.overrideWith(_Running.new),
+          outboundIpProbeProvider.overrideWith(() => _Ips(both)),
+          for (final ip in [_exitIp, _localIp])
+            ipxLookupProvider(ip).overrideWith(_Ipx.new),
+          ipQualityProvider.overrideWith((_, _) => Future.any(const [])),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).value = size;
+      // As in use: the Core is up, so the header shows no failure.
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundary,
+          child: UncontrolledProviderScope(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) => TestApp(
+                locale: const Locale('zh', 'CN'),
+                includeNavigatorKey: false,
+                theme: watchAppTheme(ref, Brightness.light),
+                darkTheme: watchAppTheme(ref, Brightness.dark),
+                themeMode: ThemeMode.light,
+                child: const HostScaffold(
+                  body: DashboardView(platform: SupportPlatform.MacOS),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      await capture(tester, 'dashboard-full-$name-light');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 11));
     });
   }
 }

@@ -8718,4 +8718,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get localExit => '로컬 출구';
+
+  @override
+  String get statusQuerying => '조회하는 중';
+
+  @override
+  String get queryFailedShowingLast => '조회 실패, 이전 결과 표시 중. 탭하여 다시 시도';
 }

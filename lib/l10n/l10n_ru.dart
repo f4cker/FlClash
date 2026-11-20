@@ -8866,4 +8866,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get localExit => 'Локальный выход';
+
+  @override
+  String get statusQuerying => 'Идёт запрос';
+
+  @override
+  String get queryFailedShowingLast =>
+      'Ошибка запроса, показан последний результат; нажмите, чтобы повторить';
 }
