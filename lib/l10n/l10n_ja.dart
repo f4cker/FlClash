@@ -1854,171 +1854,164 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String restoreBlockedMountPendingNamed(Object names) {
-    return 'A mount operation for these profiles hasn\'t been confirmed yet, so the restore didn\'t start and nothing was written: $names. Check them again first. Unmounting doesn\'t lift this.';
+    return 'これらのプロファイルにはまだ確定していないマウント操作があるため、復元は開始されず、何も書き込まれていません：$names。先にもう一度確認してください。マウントを解除してもこの状態は解消されません。';
   }
 
   @override
   String get restoreBlockedMountStateChanged =>
-      'Mounts changed after you confirmed the restore, so it didn\'t start and nothing was written. Review the list again.';
+      '復元を確認した後にマウントが変わったため、復元は開始されず、何も書き込まれていません。もう一度一覧を確認してください。';
 
   @override
-  String get restoreMountTitleOverride => 'Override with this backup?';
+  String get restoreMountTitleOverride => 'このバックアップで上書きしますか？';
 
   @override
-  String get restoreMountTitleMerge => 'Restore this backup compatibly?';
+  String get restoreMountTitleMerge => 'このバックアップを互換モードで復元しますか？';
 
   @override
-  String get restoreIrreversible =>
-      'This can\'t be undone. There is no undo or revert.';
+  String get restoreIrreversible => 'この操作は取り消せません。元に戻す手段はありません。';
 
   @override
-  String get restoreMountOverrideLead =>
-      'Current mounts are removed and rebuilt from the backup.';
+  String get restoreMountOverrideLead => '現在のマウントは削除され、バックアップから作り直されます。';
 
   @override
-  String get restoreMountOverrideNote =>
-      'Relations that would be invalid are not written; each one is listed below.';
+  String get restoreMountOverrideNote => '無効になる関係は書き込まれません。それぞれ下に表示されます。';
 
   @override
   String get restoreMountMergeLead =>
-      'Valid local mounts that don\'t conflict are kept; conflicts are replaced by the backup, not merged.';
+      '競合しない有効なローカルのマウントは保持されます。競合はバックアップで置き換えられ、統合はされません。';
 
   @override
   String get restoreMountMergeNote =>
-      'Only invalid relations that can\'t be kept are removed; valid local relations without a conflict stay.';
+      '保持できない無効な関係だけが削除されます。競合しない有効なローカルの関係はそのまま残ります。';
 
   @override
   String get restoreMountLegacyLead =>
-      'This backup has no mount data. Only invalid relations are removed; everything else keeps its current setting.';
+      'このバックアップにはマウントのデータがありません。無効な関係だけが削除され、それ以外は現在の設定のままです。';
 
   @override
   String get restoreMountLegacyNote =>
-      'Missing mount data is not read as an empty list; local relations are not cleared.';
+      'マウントのデータがないことを空の一覧とは見なしません。ローカルの関係は消去されません。';
 
   @override
   String restoreMountRemoveCount(Object count) {
-    return 'Remove $count';
+    return '削除 $count 件';
   }
 
   @override
   String restoreMountReplaceCount(Object count) {
-    return 'Replace $count';
+    return '置き換え $count 件';
   }
 
   @override
   String restoreMountKeepCount(Object count) {
-    return 'Keep $count';
+    return '保持 $count 件';
   }
 
   @override
   String restoreMountRestoreCount(Object count) {
-    return 'Restore $count from backup';
+    return 'バックアップから復元 $count 件';
   }
 
   @override
   String restoreMountCheckCount(Object count) {
-    return 'Check after restore $count';
+    return '復元後に確認 $count 件';
   }
 
   @override
   String restoreMountInvalidCount(Object count) {
-    return 'Not written $count';
+    return '書き込まない $count 件';
   }
 
   @override
   String restoreMountRemoveSection(Object count) {
-    return 'Current mounts to remove · $count';
+    return '削除される現在のマウント · $count';
   }
 
   @override
   String restoreMountReplaceSection(Object count) {
-    return 'Replaced by the backup · $count';
+    return 'バックアップで置き換え · $count';
   }
 
   @override
   String restoreMountKeepSection(Object count) {
-    return 'Relations kept · $count';
+    return '保持される関係 · $count';
   }
 
   @override
   String restoreMountRestoreSection(Object count) {
-    return 'Restored from backup · $count';
+    return 'バックアップから復元 · $count';
   }
 
   @override
   String restoreMountCheckSection(Object count) {
-    return 'To check after the restore · $count';
+    return '復元後に確認が必要 · $count';
   }
 
   @override
   String restoreMountInvalidSection(Object count) {
-    return 'Backup relations not written · $count';
+    return '書き込まれないバックアップの関係 · $count';
   }
 
   @override
   String restoreMountOwner(Object name) {
-    return 'Profile: $name';
+    return 'プロファイル：$name';
   }
 
   @override
   String restoreMountSource(Object name) {
-    return 'Source: $name';
+    return 'ソース：$name';
   }
 
   @override
   String restoreMountWithId(Object name, Object id) {
-    return '$name (ID $id)';
+    return '$name（ID $id）';
   }
 
   @override
   String restoreMountNameUnavailable(Object id) {
-    return 'Name unavailable (ID $id)';
+    return '名前を取得できません（ID $id）';
   }
 
   @override
-  String get restoreMountReasonSelf =>
-      'Invalid: the profile is its own source.';
+  String get restoreMountReasonSelf => '無効：プロファイル自身がソースになっています。';
 
   @override
-  String get restoreMountReasonNotSubscription =>
-      'Invalid: the source is not a subscription.';
+  String get restoreMountReasonNotSubscription => '無効：ソースがサブスクリプションではありません。';
 
   @override
   String get restoreMountReasonMissing =>
-      'Invalid: the source doesn\'t exist. Its known name and ID are kept for reference.';
+      '無効：ソースが存在しません。参照用に既知の名前と ID を残しています。';
 
   @override
-  String get restoreMountReasonTargetMissing =>
-      'The profile isn\'t in the backup and will be deleted.';
+  String get restoreMountReasonTargetMissing => 'このプロファイルはバックアップにないため、削除されます。';
 
   @override
-  String get restoreMountReasonNotInBackup =>
-      'The backup doesn\'t have this relation.';
+  String get restoreMountReasonNotInBackup => 'バックアップにこの関係はありません。';
 
   @override
   String restoreMountBefore(Object names) {
-    return 'Before: $names';
+    return '変更前：$names';
   }
 
   @override
   String restoreMountAfter(Object names) {
-    return 'After: $names';
+    return '変更後：$names';
   }
 
   @override
-  String get restoreMountNone => 'none';
+  String get restoreMountNone => 'なし';
 
   @override
-  String get restoreMountTagRemove => 'Remove';
+  String get restoreMountTagRemove => '削除';
 
   @override
-  String get restoreMountTagReplace => 'Replace';
+  String get restoreMountTagReplace => '置き換え';
 
   @override
-  String get restoreMountTagKeep => 'Keep';
+  String get restoreMountTagKeep => '保持';
 
   @override
-  String get restoreMountTagRestore => 'From backup';
+  String get restoreMountTagRestore => 'バックアップから';
 
   @override
   String restoreMitmSection(Object count) {
@@ -2056,79 +2049,72 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreMountTagSame => '関係は同じ';
 
   @override
-  String get restoreMountTagCheck => 'To check';
+  String get restoreMountTagCheck => '要確認';
 
   @override
-  String get restoreMountTagInvalid => 'Not written';
+  String get restoreMountTagInvalid => '書き込まない';
 
   @override
-  String get restoreMountCheckNote =>
-      'Locked until checked again; nothing is applied automatically.';
+  String get restoreMountCheckNote => '再確認するまでロックされます。自動では適用されません。';
 
   @override
-  String get restoreMountNoChanges => 'No mount relations change.';
+  String get restoreMountNoChanges => '変わるマウントの関係はありません。';
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'I understand the loss from the $removals removals and $replacements replacements listed above, and want to make these changes.';
+    return '上記の削除 $removals 件と置き換え $replacements 件による損失を理解したうえで、これらの変更を行います。';
   }
 
   @override
-  String get restoreCancelWritesNothing => 'Cancelling writes nothing';
+  String get restoreCancelWritesNothing => 'キャンセルすると何も書き込まれません';
 
   @override
-  String get restoreMountConfirmOverride => 'Restore and override';
+  String get restoreMountConfirmOverride => '復元して上書き';
 
   @override
-  String get restoreMountConfirmMerge => 'Restore and replace';
+  String get restoreMountConfirmMerge => '復元して置き換え';
 
   @override
-  String get restoreMountChecking => 'Checking what the restore changes…';
+  String get restoreMountChecking => '復元で変わる内容を確認しています…';
 
   @override
-  String get restoreResultNotStarted =>
-      'The restore didn\'t start; nothing was written.';
+  String get restoreResultNotStarted => '復元は開始されませんでした。何も書き込まれていません。';
 
   @override
-  String get restoreResultRolledBack =>
-      'The restore didn\'t finish and was rolled back to before it wrote.';
+  String get restoreResultRolledBack => '復元は完了せず、書き込み前の状態に戻しました。';
 
   @override
-  String get restoreResultUnverified =>
-      'The restore\'s state needs to be confirmed.';
+  String get restoreResultUnverified => '復元の状態を確認する必要があります。';
 
   @override
   String get restoreResultUnverifiedDetail =>
-      'Whether the rollback is complete can\'t be confirmed. Don\'t start another restore.';
+      '取り消しが完了したか確認できません。別の復元を開始しないでください。';
 
   @override
-  String get restoreResultCompleted => 'The restore is complete.';
+  String get restoreResultCompleted => '復元が完了しました。';
 
   @override
-  String get restoreResultNeedsCheck =>
-      'Your data has been restored, but profiles still need to be checked again.';
+  String get restoreResultNeedsCheck => 'データは復元されましたが、まだ再確認が必要なプロファイルがあります。';
 
   @override
   String get restoreResultNeedsCheckDetail =>
-      'These profiles stay locked until checked again. Open each profile\'s mount page and choose “Read status again”.';
+      'これらのプロファイルは再確認するまでロックされたままです。各プロファイルのマウント画面を開き、「Read status again」を選んでください。';
 
   @override
-  String get restoreResultRefused =>
-      'A new restore can\'t start; nothing was written.';
+  String get restoreResultRefused => '新しい復元を開始できません。何も書き込まれていません。';
 
   @override
   String restoreResultLockedNote(Object count) {
-    return '$count items are still unfinished. Don\'t start another restore.';
+    return '未完了の項目が $count 件あります。別の復元を開始しないでください。';
   }
 
   @override
   String restoreResultSkippedSection(Object count) {
-    return 'Skipped steps · $count';
+    return 'スキップした手順 · $count';
   }
 
   @override
-  String get restoreResultSkippedNote =>
-      'The current data was kept as it is; skipped steps are not replayed.';
+  String get restoreResultSkippedNote => '現在のデータはそのまま残しています。スキップした手順は再実行されません。';
 
   @override
   String restoreResultStepsSection(Object count) {
@@ -2166,26 +2152,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreResultCommitKnown => '確認済み：今回の復元データはデータベースに書き込まれました。';
 
   @override
-  String get restoreResultNavigateOnly =>
-      'Opening Profiles only navigates; it doesn\'t check or change anything.';
+  String get restoreResultNavigateOnly => '「プロファイル」を開いても移動するだけで、確認や変更は行いません。';
 
   @override
-  String get restoreRecheckChecking => 'Checking…';
+  String get restoreRecheckChecking => '確認中…';
 
   @override
-  String get restoreRecheckPassed => 'Check passed';
+  String get restoreRecheckPassed => '確認に成功しました';
 
   @override
   String restoreRecheckFailed(Object reason) {
-    return 'Check failed: $reason';
+    return '確認に失敗しました：$reason';
   }
 
   @override
-  String get restoreRecheckUnavailable => 'Can\'t check right now';
+  String get restoreRecheckUnavailable => '現在は確認できません';
 
   @override
   String get restoreRecheckStillIncomplete =>
-      'Even after a passed check, the restore remains incomplete while items are pending or skipped.';
+      '確認に成功しても、保留中またはスキップした項目がある間は復元は未完了のままです。';
 
   @override
   String get restoreRecoveryRolledBack =>

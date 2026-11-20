@@ -1962,115 +1962,116 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String restoreBlockedMountPendingNamed(Object names) {
-    return 'A mount operation for these profiles hasn\'t been confirmed yet, so the restore didn\'t start and nothing was written: $names. Check them again first. Unmounting doesn\'t lift this.';
+    return 'Une opération de montage n’a pas encore été confirmée pour ces profils : la restauration n’a pas démarré et rien n’a été écrit : $names. Vérifiez-les d’abord à nouveau. Démonter ne lève pas ce blocage.';
   }
 
   @override
   String get restoreBlockedMountStateChanged =>
-      'Mounts changed after you confirmed the restore, so it didn\'t start and nothing was written. Review the list again.';
+      'Les montages ont changé après la confirmation de la restauration : elle n’a pas démarré et rien n’a été écrit. Revoyez la liste.';
 
   @override
-  String get restoreMountTitleOverride => 'Override with this backup?';
+  String get restoreMountTitleOverride => 'Écraser avec cette sauvegarde ?';
 
   @override
-  String get restoreMountTitleMerge => 'Restore this backup compatibly?';
+  String get restoreMountTitleMerge =>
+      'Restaurer cette sauvegarde en mode compatible ?';
 
   @override
   String get restoreIrreversible =>
-      'This can\'t be undone. There is no undo or revert.';
+      'Cette action est irréversible. Il n’existe aucune annulation ni retour en arrière.';
 
   @override
   String get restoreMountOverrideLead =>
-      'Current mounts are removed and rebuilt from the backup.';
+      'Les montages actuels sont supprimés et reconstruits à partir de la sauvegarde.';
 
   @override
   String get restoreMountOverrideNote =>
-      'Relations that would be invalid are not written; each one is listed below.';
+      'Les relations qui seraient invalides ne sont pas écrites ; chacune est listée ci-dessous.';
 
   @override
   String get restoreMountMergeLead =>
-      'Valid local mounts that don\'t conflict are kept; conflicts are replaced by the backup, not merged.';
+      'Les montages locaux valides sans conflit sont conservés ; les conflits sont remplacés par la sauvegarde, pas fusionnés.';
 
   @override
   String get restoreMountMergeNote =>
-      'Only invalid relations that can\'t be kept are removed; valid local relations without a conflict stay.';
+      'Seules les relations invalides impossibles à conserver sont supprimées ; les relations locales valides sans conflit restent.';
 
   @override
   String get restoreMountLegacyLead =>
-      'This backup has no mount data. Only invalid relations are removed; everything else keeps its current setting.';
+      'Cette sauvegarde ne contient pas de données de montage. Seules les relations invalides sont supprimées ; tout le reste garde son réglage actuel.';
 
   @override
   String get restoreMountLegacyNote =>
-      'Missing mount data is not read as an empty list; local relations are not cleared.';
+      'L’absence de données de montage n’est pas lue comme une liste vide ; les relations locales ne sont pas effacées.';
 
   @override
   String restoreMountRemoveCount(Object count) {
-    return 'Remove $count';
+    return 'Supprimer $count';
   }
 
   @override
   String restoreMountReplaceCount(Object count) {
-    return 'Replace $count';
+    return 'Remplacer $count';
   }
 
   @override
   String restoreMountKeepCount(Object count) {
-    return 'Keep $count';
+    return 'Conserver $count';
   }
 
   @override
   String restoreMountRestoreCount(Object count) {
-    return 'Restore $count from backup';
+    return 'Restaurer $count depuis la sauvegarde';
   }
 
   @override
   String restoreMountCheckCount(Object count) {
-    return 'Check after restore $count';
+    return 'À vérifier après restauration $count';
   }
 
   @override
   String restoreMountInvalidCount(Object count) {
-    return 'Not written $count';
+    return 'Non écrites $count';
   }
 
   @override
   String restoreMountRemoveSection(Object count) {
-    return 'Current mounts to remove · $count';
+    return 'Montages actuels supprimés · $count';
   }
 
   @override
   String restoreMountReplaceSection(Object count) {
-    return 'Replaced by the backup · $count';
+    return 'Remplacés par la sauvegarde · $count';
   }
 
   @override
   String restoreMountKeepSection(Object count) {
-    return 'Relations kept · $count';
+    return 'Relations conservées · $count';
   }
 
   @override
   String restoreMountRestoreSection(Object count) {
-    return 'Restored from backup · $count';
+    return 'Restaurés depuis la sauvegarde · $count';
   }
 
   @override
   String restoreMountCheckSection(Object count) {
-    return 'To check after the restore · $count';
+    return 'À vérifier après la restauration · $count';
   }
 
   @override
   String restoreMountInvalidSection(Object count) {
-    return 'Backup relations not written · $count';
+    return 'Relations de la sauvegarde non écrites · $count';
   }
 
   @override
   String restoreMountOwner(Object name) {
-    return 'Profile: $name';
+    return 'Profil : $name';
   }
 
   @override
   String restoreMountSource(Object name) {
-    return 'Source: $name';
+    return 'Source : $name';
   }
 
   @override
@@ -2080,53 +2081,53 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String restoreMountNameUnavailable(Object id) {
-    return 'Name unavailable (ID $id)';
+    return 'Nom indisponible (ID $id)';
   }
 
   @override
   String get restoreMountReasonSelf =>
-      'Invalid: the profile is its own source.';
+      'Invalide : le profil est sa propre source.';
 
   @override
   String get restoreMountReasonNotSubscription =>
-      'Invalid: the source is not a subscription.';
+      'Invalide : la source n’est pas un abonnement.';
 
   @override
   String get restoreMountReasonMissing =>
-      'Invalid: the source doesn\'t exist. Its known name and ID are kept for reference.';
+      'Invalide : la source n’existe pas. Son nom et son ID connus sont gardés pour référence.';
 
   @override
   String get restoreMountReasonTargetMissing =>
-      'The profile isn\'t in the backup and will be deleted.';
+      'Le profil n’est pas dans la sauvegarde et sera supprimé.';
 
   @override
   String get restoreMountReasonNotInBackup =>
-      'The backup doesn\'t have this relation.';
+      'La sauvegarde ne contient pas cette relation.';
 
   @override
   String restoreMountBefore(Object names) {
-    return 'Before: $names';
+    return 'Avant : $names';
   }
 
   @override
   String restoreMountAfter(Object names) {
-    return 'After: $names';
+    return 'Après : $names';
   }
 
   @override
-  String get restoreMountNone => 'none';
+  String get restoreMountNone => 'aucune';
 
   @override
-  String get restoreMountTagRemove => 'Remove';
+  String get restoreMountTagRemove => 'Supprimer';
 
   @override
-  String get restoreMountTagReplace => 'Replace';
+  String get restoreMountTagReplace => 'Remplacer';
 
   @override
-  String get restoreMountTagKeep => 'Keep';
+  String get restoreMountTagKeep => 'Conserver';
 
   @override
-  String get restoreMountTagRestore => 'From backup';
+  String get restoreMountTagRestore => 'Depuis la sauvegarde';
 
   @override
   String restoreMitmSection(Object count) {
@@ -2165,79 +2166,80 @@ class AppLocalizationsFr extends AppLocalizations {
   String get restoreMountTagSame => 'Relation identique';
 
   @override
-  String get restoreMountTagCheck => 'To check';
+  String get restoreMountTagCheck => 'À vérifier';
 
   @override
-  String get restoreMountTagInvalid => 'Not written';
+  String get restoreMountTagInvalid => 'Non écrite';
 
   @override
   String get restoreMountCheckNote =>
-      'Locked until checked again; nothing is applied automatically.';
+      'Verrouillé jusqu’à une nouvelle vérification ; rien n’est appliqué automatiquement.';
 
   @override
-  String get restoreMountNoChanges => 'No mount relations change.';
+  String get restoreMountNoChanges => 'Aucune relation de montage ne change.';
 
   @override
   String restoreMountAcknowledge(Object removals, Object replacements) {
-    return 'I understand the loss from the $removals removals and $replacements replacements listed above, and want to make these changes.';
+    return 'Je comprends la perte due aux $removals suppressions et $replacements remplacements listés ci-dessus et je veux effectuer ces changements.';
   }
 
   @override
-  String get restoreCancelWritesNothing => 'Cancelling writes nothing';
+  String get restoreCancelWritesNothing => 'Annuler n’écrit rien';
 
   @override
-  String get restoreMountConfirmOverride => 'Restore and override';
+  String get restoreMountConfirmOverride => 'Restaurer et écraser';
 
   @override
-  String get restoreMountConfirmMerge => 'Restore and replace';
+  String get restoreMountConfirmMerge => 'Restaurer et remplacer';
 
   @override
-  String get restoreMountChecking => 'Checking what the restore changes…';
+  String get restoreMountChecking =>
+      'Vérification de ce que change la restauration…';
 
   @override
   String get restoreResultNotStarted =>
-      'The restore didn\'t start; nothing was written.';
+      'La restauration n’a pas démarré ; rien n’a été écrit.';
 
   @override
   String get restoreResultRolledBack =>
-      'The restore didn\'t finish and was rolled back to before it wrote.';
+      'La restauration n’a pas abouti et a été annulée jusqu’à l’état d’avant l’écriture.';
 
   @override
   String get restoreResultUnverified =>
-      'The restore\'s state needs to be confirmed.';
+      'L’état de la restauration doit être confirmé.';
 
   @override
   String get restoreResultUnverifiedDetail =>
-      'Whether the rollback is complete can\'t be confirmed. Don\'t start another restore.';
+      'Impossible de confirmer que l’annulation est complète. Ne lancez pas d’autre restauration.';
 
   @override
-  String get restoreResultCompleted => 'The restore is complete.';
+  String get restoreResultCompleted => 'La restauration est terminée.';
 
   @override
   String get restoreResultNeedsCheck =>
-      'Your data has been restored, but profiles still need to be checked again.';
+      'Vos données ont été restaurées, mais des profils doivent encore être vérifiés à nouveau.';
 
   @override
   String get restoreResultNeedsCheckDetail =>
-      'These profiles stay locked until checked again. Open each profile\'s mount page and choose “Read status again”.';
+      'Ces profils restent verrouillés jusqu’à une nouvelle vérification. Ouvrez la page de montage de chaque profil et choisissez « Read status again ».';
 
   @override
   String get restoreResultRefused =>
-      'A new restore can\'t start; nothing was written.';
+      'Impossible de lancer une nouvelle restauration ; rien n’a été écrit.';
 
   @override
   String restoreResultLockedNote(Object count) {
-    return '$count items are still unfinished. Don\'t start another restore.';
+    return '$count éléments ne sont pas encore terminés. Ne lancez pas d’autre restauration.';
   }
 
   @override
   String restoreResultSkippedSection(Object count) {
-    return 'Skipped steps · $count';
+    return 'Étapes ignorées · $count';
   }
 
   @override
   String get restoreResultSkippedNote =>
-      'The current data was kept as it is; skipped steps are not replayed.';
+      'Les données actuelles ont été laissées telles quelles ; les étapes ignorées ne sont pas rejouées.';
 
   @override
   String restoreResultStepsSection(Object count) {
@@ -2277,25 +2279,26 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreResultNavigateOnly =>
-      'Opening Profiles only navigates; it doesn\'t check or change anything.';
+      'Ouvrir Profils ne fait que naviguer ; rien n’est vérifié ni modifié.';
 
   @override
-  String get restoreRecheckChecking => 'Checking…';
+  String get restoreRecheckChecking => 'Vérification…';
 
   @override
-  String get restoreRecheckPassed => 'Check passed';
+  String get restoreRecheckPassed => 'Vérification réussie';
 
   @override
   String restoreRecheckFailed(Object reason) {
-    return 'Check failed: $reason';
+    return 'Échec de la vérification : $reason';
   }
 
   @override
-  String get restoreRecheckUnavailable => 'Can\'t check right now';
+  String get restoreRecheckUnavailable =>
+      'Vérification impossible pour le moment';
 
   @override
   String get restoreRecheckStillIncomplete =>
-      'Even after a passed check, the restore remains incomplete while items are pending or skipped.';
+      'Même après une vérification réussie, la restauration reste incomplète tant que des éléments sont en attente ou ignorés.';
 
   @override
   String get restoreRecoveryRolledBack =>
