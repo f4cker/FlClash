@@ -1281,7 +1281,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                 checked: node.key == current?.key,
                 section: index == 0
                     ? PopupMenuSection(
-                        title: appLocalizations.tsAccountsInProfile,
+                        title: appLocalizations.tsAccountsOfProfile,
                       )
                     : null,
                 onPressed: () => _select(node.key),

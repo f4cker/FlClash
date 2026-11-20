@@ -632,7 +632,7 @@ void main() {
       await tester.tap(pill);
       await settle(tester);
 
-      expect(find.text('当前配置中的 Tailscale 账号'), findsOneWidget);
+      expect(find.text('当前配置的 Tailscale 账号'), findsOneWidget);
       expect(find.text('添加 Tailscale 账号'), findsOneWidget);
       expect(find.text('面板添加'), findsNothing);
       expect(find.text('设为默认账号'), findsNothing);
