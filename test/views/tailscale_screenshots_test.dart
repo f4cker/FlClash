@@ -1330,11 +1330,16 @@ void main() {
     await shoot(tester, 'card-07-sign-in');
   });
 
-  shot('card-08-unconfirmed', (tester) async {
-    await seedManaged(const []);
-    container.listen(settledConfigProfileProvider, (_, _) {});
-    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
-    await pumpPanel(tester, size: const Size(1100, 700));
-    await shoot(tester, 'card-08-unconfirmed');
-  });
+  for (final (name, mode) in [
+    ('light', ThemeMode.light),
+    ('dark', ThemeMode.dark),
+  ]) {
+    shot('card-08-unconfirmed-$name', (tester) async {
+      await seedManaged(const []);
+      container.listen(settledConfigProfileProvider, (_, _) {});
+      container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+      await pumpPanel(tester, size: const Size(1100, 700), themeMode: mode);
+      await shoot(tester, 'card-08-unconfirmed-$name');
+    });
+  }
 }

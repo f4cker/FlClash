@@ -1353,29 +1353,11 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   }
 
   /// Accounts are on record, yet the applied config lists no node for them:
-  /// said as it is, never as not signed in. Adding another account stays
-  /// possible, so a draft that never built cannot trap the page.
+  /// said as it is, never as not signed in. It is unknown, not a failure, so
+  /// it reads in grey with nothing but 重新读取状态.
   Widget _nodesUnavailable(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    return NullStatus(
-      illustration: NullStatusIllustration.error,
-      label: appLocalizations.tsStateUnconfirmed,
-      description: appLocalizations.tsUnconfirmedTip,
-      action: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          FilledButton(
-            onPressed: () => ref.invalidate(tailscaleNodesProvider),
-            child: Text(appLocalizations.tsReadStatus),
-          ),
-          TonalButton(
-            label: appLocalizations.tsAddAccount,
-            onPressed: _adding ? null : _addAccount,
-          ),
-        ],
-      ),
+    return _UnconfirmedStatus(
+      onRead: () => ref.invalidate(tailscaleNodesProvider),
     );
   }
 
@@ -1458,6 +1440,80 @@ String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
 }
 
 /// The no-node screen of [NullStatus], with an info button after its title.
+/// 状态待确认 of an empty node list: a quiet grey mark, no decorations.
+class _UnconfirmedStatus extends StatelessWidget {
+  const _UnconfirmedStatus({required this.onRead});
+
+  static const markSize = 72.0;
+  static const minButtonHeight = 44.0;
+
+  final VoidCallback onRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final compact = MediaQuery.sizeOf(context).height < 560;
+    return Align(
+      alignment: const Alignment(0.0, -0.2),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: Container(
+                  key: const ValueKey('ts-unconfirmed-mark'),
+                  width: markSize,
+                  height: markSize,
+                  decoration: ShapeDecoration(
+                    shape: const CircleBorder(),
+                    color: colorScheme.surfaceContainerHighest,
+                  ),
+                  alignment: Alignment.center,
+                  child: GlyphIcon(
+                    AppGlyphs.question,
+                    size: 36,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              SizedBox(height: compact ? 12 : 16),
+              Semantics(
+                header: true,
+                child: Text(
+                  appLocalizations.tsStateUnconfirmed,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyle.headline
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurface),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                appLocalizations.tsUnconfirmedTip,
+                textAlign: TextAlign.center,
+                style: AppTextStyle.subheadline
+                    .of(context)
+                    .copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                key: const ValueKey('ts-unconfirmed-read'),
+                style: const ButtonStyle(minimumSize: Size(0, minButtonHeight)),
+                onPressed: onRead,
+                child: Text(appLocalizations.tsReadStatus),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SignInStatus extends StatelessWidget {
   const _SignInStatus({required this.about, required this.action});
 

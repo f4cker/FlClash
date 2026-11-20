@@ -7872,6 +7872,12 @@ abstract class AppLocalizations {
   /// **'Copy {field}, {value}'**
   String tsCopyFieldValue(String field, String value);
 
+  /// No description provided for @tsFieldValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{field}, {value}'**
+  String tsFieldValue(String field, String value);
+
   /// No description provided for @tsCopyFailed.
   ///
   /// In en, this message translates to:

@@ -55,6 +55,7 @@ void main() {
     TailscalePhase phase = TailscalePhase.connected,
     double width = 800,
     double height = 900,
+    String locale = 'en',
   }) async {
     tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = 1;
@@ -64,7 +65,7 @@ void main() {
     await tester.pumpWidget(
       TestApp(
         includeNavigatorKey: false,
-        locale: const Locale('en'),
+        locale: Locale(locale),
         child: Align(
           alignment: Alignment.topCenter,
           child: Padding(
@@ -242,10 +243,119 @@ void main() {
     await pumpCard(tester, status: _status(dnsName: null));
     await openMenu(tester);
 
-    expect(find.bySemanticsLabel('Copy IPv6, $_ipv6'), findsOneWidget);
-    expect(find.bySemanticsLabel('Copy IPv4, $_ipv4'), findsOneWidget);
-    expect(find.bySemanticsLabel('Short hostname，$_missing'), findsOneWidget);
+    for (final (label, value) in [('IPv6', _ipv6), ('IPv4', _ipv4)]) {
+      final node = tester.getSemantics(
+        find.bySemanticsLabel('Copy $label, $value'),
+      );
+      expect(
+        node,
+        matchesSemantics(
+          label: 'Copy $label, $value',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+        ),
+      );
+    }
+    // A row with nothing to copy reads as text: no button, no action.
+    for (final label in ['Short hostname', 'Full DNS name']) {
+      final node = tester.getSemantics(
+        find.bySemanticsLabel('$label, $_missing'),
+      );
+      final data = node.getSemanticsData();
+      expect(data.flagsCollection.isButton, isFalse);
+      expect(data.hasAction(SemanticsAction.tap), isFalse);
+      expect(find.bySemanticsLabel(RegExp('Copy $label')), findsNothing);
+    }
     semantics.dispose();
+  });
+
+  testWidgets('the separator of a disabled row follows the locale', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await pumpCard(tester, status: _status(dnsName: null), locale: 'zh');
+    await tester.tap(find.text('复制地址'));
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('短主机名，地址未提供'), findsOneWidget);
+    expect(find.bySemanticsLabel('复制IPv4，$_ipv4'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('Tab reaches the button, Enter opens, Tab and Enter copy', (
+    tester,
+  ) async {
+    await pumpCard(tester, status: _status());
+
+    bool inButton() {
+      final focused = FocusManager.instance.primaryFocus?.context;
+      return focused != null &&
+          find
+              .ancestor(
+                of: find.byElementPredicate((element) => element == focused),
+                matching: find.byType(TailscaleAddressMenu),
+              )
+              .evaluate()
+              .isNotEmpty;
+    }
+
+    for (var i = 0; i < 6 && !inButton(); i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+    expect(inButton(), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(popover(), findsOneWidget);
+    // Into the menu: the first row, then the second.
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(copied, [_dns]);
+    expect(popover(), findsNothing);
+    expect(inButton(), isTrue);
+  });
+
+  testWidgets('Tab skips a disabled row', (tester) async {
+    await pumpCard(tester, status: _status(dnsName: null));
+    await openMenu(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(copied, [_ipv6]);
+  });
+
+  testWidgets('a long IPv6 wraps whole in a narrow menu', (tester) async {
+    const ipv6 = '2001:db8:1234:5678:9abc:def0:1234:5678';
+    await pumpCard(
+      tester,
+      status: _status(addresses: const [_ipv4, ipv6]),
+      width: 320,
+    );
+    await openMenu(tester);
+
+    expect(tester.takeException(), isNull);
+    final paragraph = tester.renderObject<RenderParagraph>(find.text(ipv6));
+    expect(paragraph.didExceedMaxLines, isFalse);
+    expect(paragraph.text.toPlainText(), ipv6);
+    expect(
+      tester.getRect(find.text(ipv6)).right,
+      lessThanOrEqualTo(tester.getRect(popover()).right),
+    );
+    await tester.tap(row('IPv6'));
+    expect(copied, [ipv6]);
   });
 
   testWidgets('Escape closes the menu and focus returns to the button', (

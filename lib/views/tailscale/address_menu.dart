@@ -113,6 +113,13 @@ class _TailscaleAddressMenuState extends State<TailscaleAddressMenu> {
       _controller.hide();
     } else {
       _controller.show();
+      // The button keeps focus otherwise, autofocus or not: the menu takes
+      // it, so the next Tab lands on its first row.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.isShowing) {
+          _menuFocus.requestFocus();
+        }
+      });
     }
   }
 
@@ -265,7 +272,8 @@ class _AddressPopover extends StatelessWidget {
       },
       child: Focus(
         focusNode: focusNode,
-        autofocus: true,
+        // Holds focus for the shortcuts only; never a Tab stop of its own.
+        skipTraversal: true,
         child: FocusTraversalGroup(
           child: Semantics(
             container: true,
@@ -380,15 +388,25 @@ class _AddressRow extends StatelessWidget {
         ),
       ),
     );
+    if (!enabled) {
+      // Nothing to copy: read as plain text, never as a button.
+      return Semantics(
+        container: true,
+        label: appLocalizations.tsFieldValue(
+          entry.label,
+          appLocalizations.tsAddressMissing,
+        ),
+        excludeSemantics: true,
+        child: content,
+      );
+    }
     return PressSurface(
       fill: const Color(0x00000000),
       shape: AppShape.all(AppCorner.sm),
-      onPressed: enabled ? () => onCopy(value) : null,
+      onPressed: () => onCopy(value),
       childFills: true,
       child: Semantics(
-        label: enabled
-            ? appLocalizations.tsCopyFieldValue(entry.label, value)
-            : '${entry.label}，${appLocalizations.tsAddressMissing}',
+        label: appLocalizations.tsCopyFieldValue(entry.label, value),
         excludeSemantics: true,
         child: content,
       ),

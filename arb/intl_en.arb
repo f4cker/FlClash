@@ -1442,6 +1442,17 @@
       }
     }
   },
+  "tsFieldValue": "{field}, {value}",
+  "@tsFieldValue": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "tsCopyFailed": "Couldn't copy. Try again.",
   "tsLogin": "Log in to Tailscale",
   "tsRelogin": "Log in again",

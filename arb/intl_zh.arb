@@ -1303,6 +1303,17 @@
       }
     }
   },
+  "tsFieldValue": "{field}，{value}",
+  "@tsFieldValue": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "tsCopyFailed": "未能复制，请重试。",
   "tsLogin": "登录 Tailscale",
   "tsRelogin": "重新登录",

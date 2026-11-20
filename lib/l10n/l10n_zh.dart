@@ -4260,6 +4260,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String tsFieldValue(String field, String value) {
+    return '$field，$value';
+  }
+
+  @override
   String get tsCopyFailed => '未能复制，请重试。';
 
   @override

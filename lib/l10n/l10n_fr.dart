@@ -4596,6 +4596,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String tsFieldValue(String field, String value) {
+    return '$field, $value';
+  }
+
+  @override
   String get tsCopyFailed => 'Couldn\'t copy. Try again.';
 
   @override

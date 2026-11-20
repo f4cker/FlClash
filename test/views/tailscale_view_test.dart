@@ -26,6 +26,8 @@ import 'package:prism_ui/prism_ui.dart'
     show
         AppBar,
         AppShape,
+        BannerHost,
+        EmptyIllustration,
         BuildContextExtension,
         Chip,
         ColorSchemeExtension,
@@ -246,7 +248,8 @@ void main() {
         if (settled) {
           expect(find.text('状态待确认'), findsOneWidget);
           expect(find.text('重新读取状态'), findsOneWidget);
-          expect(find.text('添加 Tailscale 账号'), findsOneWidget);
+          // Unknown, not a failure: no add entry, no red alert.
+          expect(find.text('添加 Tailscale 账号'), findsNothing);
           expect(find.text('正在启动…'), findsNothing);
         } else {
           expect(find.text('正在启动…'), findsOneWidget);
@@ -2509,6 +2512,170 @@ void main() {
       );
       expect(glyph.left - label.right, moreOrLessEquals(4, epsilon: 0.5));
       await teardownView(tester);
+    });
+  });
+
+  group('unconfirmed empty list', () {
+    Future<void> pumpUnconfirmed(
+      WidgetTester tester, {
+      ThemeMode themeMode = ThemeMode.light,
+    }) async {
+      container.listen(currentProfileIdProvider, (_, _) {});
+      container.read(currentProfileIdProvider.notifier).value = 42;
+      await container
+          .read(tailscaleManagedRecordsProvider.notifier)
+          .modify(
+            (_) => const [
+              TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+            ],
+          );
+      container.listen(settledConfigProfileProvider, (_, _) {});
+      container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+      serve(const []);
+      await pumpPanel(tester, themeMode: themeMode);
+    }
+
+    testWidgets('offers only 重新读取状态, at least 44 tall', (tester) async {
+      await pumpUnconfirmed(tester);
+
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(find.text('添加 Tailscale 账号'), findsNothing);
+      final read = find.byKey(const ValueKey('ts-unconfirmed-read'));
+      expect(read, findsOneWidget);
+      expect(tester.getSize(read).height, greaterThanOrEqualTo(44));
+      expect(find.byType(TonalButton), findsNothing);
+
+      var reads = 0;
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async {
+        reads++;
+        return const [];
+      });
+      await tester.tap(read);
+      await settle(tester);
+      expect(reads, 1);
+      await teardownView(tester);
+    });
+
+    for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets('marks it with one grey glyph, no illustration ($mode)', (
+        tester,
+      ) async {
+        await pumpUnconfirmed(tester, themeMode: mode);
+
+        expect(find.byType(EmptyIllustration), findsNothing);
+        final mark = find.byKey(const ValueKey('ts-unconfirmed-mark'));
+        expect(mark, findsOneWidget);
+        final colorScheme = tester
+            .element(find.byType(TailscaleView))
+            .colorScheme;
+        final glyphs = tester.widgetList<GlyphIcon>(
+          find.descendant(of: mark, matching: find.byType(GlyphIcon)),
+        );
+        expect(glyphs, hasLength(1));
+        expect(glyphs.single.color, colorScheme.onSurfaceVariant);
+        expect(
+          (tester.widget<Container>(mark).decoration! as ShapeDecoration).color,
+          colorScheme.surfaceContainerHighest,
+        );
+        // Nothing in the error colour anywhere on the page.
+        expect(
+          tester
+              .widgetList<GlyphIcon>(find.byType(GlyphIcon))
+              .where((glyph) => glyph.color == colorScheme.error),
+          isEmpty,
+        );
+        await teardownView(tester);
+      });
+    }
+  });
+
+  group('copying from the address menu', () {
+    late List<String> copies;
+    late bool clipboardFails;
+
+    setUp(() {
+      copies = [];
+      clipboardFails = false;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'Clipboard.setData') {
+              if (clipboardFails) {
+                throw PlatformException(code: 'clipboard', message: 'busy');
+              }
+              copies.add((call.arguments as Map)['text'] as String);
+            }
+            return null;
+          });
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    Future<void> pumpWithBanners(WidgetTester tester) async {
+      tester.view.physicalSize = _size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      serve([tsConnectedNode], tsConnectedStatus());
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: HostApp(
+            navigatorKey: globalState.navigatorKey,
+            locale: const Locale('zh', 'CN'),
+            themeMode: ThemeMode.light,
+            builder: (context, child) => BannerHost(
+              stacked: false,
+              topInset: 0,
+              child: wrapViewScopes(context, child!),
+            ),
+            home: TailscaleView(
+              clock: () => tsNow,
+              launcher: (_) async => true,
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.text('复制地址'));
+      await settle(tester);
+    }
+
+    Finder ipv4Row() => find.ancestor(
+      of: find.text('IPv4'),
+      matching: find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_AddressRow',
+      ),
+    );
+
+    testWidgets('a copy the clipboard took says so', (tester) async {
+      await pumpWithBanners(tester);
+      await tester.tap(ipv4Row());
+      await settle(tester);
+
+      expect(copies, ['100.101.7.58']);
+      expect(find.text('地址已复制'), findsOneWidget);
+      expect(find.text('未能复制，请重试。'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a copy the clipboard refused says so, never copied', (
+      tester,
+    ) async {
+      clipboardFails = true;
+      await pumpWithBanners(tester);
+      await tester.tap(ipv4Row());
+      await settle(tester);
+
+      expect(copies, isEmpty);
+      expect(find.text('未能复制，请重试。'), findsOneWidget);
+      expect(find.text('地址已复制'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 5));
     });
   });
 }
