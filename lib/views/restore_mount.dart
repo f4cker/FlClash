@@ -590,10 +590,15 @@ class RestoreMountConfirmSheet extends StatefulWidget {
   /// The backup's name, as the user picked it, when known.
   final String? backupName;
 
+  /// The backup carries MITM modules; they are written turned off until
+  /// consented to on this device.
+  final bool restoresMitm;
+
   const RestoreMountConfirmSheet({
     super.key,
     required this.plan,
     this.backupName,
+    this.restoresMitm = false,
   });
 
   @override
@@ -765,6 +770,10 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
               ),
               const SizedBox(height: 20),
               _Callout(lead: lead, note: note, warning: plan.mountsCarried),
+              if (widget.restoresMitm) ...[
+                const SizedBox(height: 12),
+                Text(l10n.restoreMitmReconsent),
+              ],
               const SizedBox(height: 16),
               counts,
               if (plan.isEmpty)

@@ -7,8 +7,10 @@ typedef BackupDelivery = Future<bool> Function(String archivePath);
 typedef BackupFetch = Future<String?> Function(String downloadPath);
 
 /// Shown the mount plan of a restore before anything is written; false
-/// cancels it.
-typedef RestoreMountConfirm = Future<bool> Function(RestoreMountPlan plan);
+/// cancels it. [restoresMitm] says the backup carries MITM modules, which
+/// the restore writes turned off until consented to on this device.
+typedef RestoreMountConfirm =
+    Future<bool> Function(RestoreMountPlan plan, {bool restoresMitm});
 
 /// What a committed restore did to mounts. [stillPending] are the targets
 /// that stay locked until checked again.
@@ -186,7 +188,10 @@ class BackupAction extends _$BackupAction {
     }
     if (!preview.isEmpty) {
       final accepted = switch (confirm) {
-        final confirm? => await confirm(preview),
+        final confirm? => await confirm(
+          preview,
+          restoresMitm: data.mitmModules.isNotEmpty,
+        ),
         null => !preview.hasLosses,
       };
       if (!accepted) return null;

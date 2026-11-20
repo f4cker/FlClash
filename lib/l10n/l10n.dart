@@ -3636,6 +3636,12 @@ abstract class AppLocalizations {
   /// **'Missing mount data is not read as an empty list; local relations are not cleared.'**
   String get restoreMountLegacyNote;
 
+  /// No description provided for @restoreMitmReconsent.
+  ///
+  /// In en, this message translates to:
+  /// **'MITM modules restored from the backup run only after you agree to them again on this device.'**
+  String get restoreMitmReconsent;
+
   /// No description provided for @restoreMountRemoveCount.
   ///
   /// In en, this message translates to:

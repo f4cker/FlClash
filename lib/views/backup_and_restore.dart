@@ -104,9 +104,12 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
               .restore(
                 option,
                 fetch,
-                confirm: (plan) async =>
+                confirm: (plan, {restoresMitm = false}) async =>
                     await dialogs.showCommonDialog<bool>(
-                      child: RestoreMountConfirmSheet(plan: plan),
+                      child: RestoreMountConfirmSheet(
+                        plan: plan,
+                        restoresMitm: restoresMitm,
+                      ),
                       dismissible: false,
                     ) ??
                     false,

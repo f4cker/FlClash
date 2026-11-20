@@ -916,34 +916,35 @@ void main() {
       expect(await markers(), isEmpty);
     });
 
-    test('restored module rows carry the other device\'s consent as-is, '
-        'so they stay held until rechecked here', () async {
-      final (:container, :staging, :data) = await fixture();
-      final action = container.read(backupActionProvider.notifier);
-      action.afterRestoreCommit = () async => throw StateError('injected');
-      await expectLater(
-        action.applyRestore(
-          data,
-          RestoreOption.all,
-          stagingDirPath: staging.path,
-        ),
-        throwsA(isA<RestorePartialException>()),
-      );
-      final [row] = await database.mitmModulesDao.query().get();
-      expect(row.enabled, isTrue);
-      expect(row.asksConsent, isFalse);
-      expect(row.accepted, isTrue);
-      expect(row.runsUnder(RestoreMitmHold.none), isTrue);
-      final hold = container.read(restoreMitmHoldStateProvider);
-      expect(hold.holds(_module.id), isTrue);
-      expect(row.runsUnder(hold), isFalse);
-      final [dir] = journals();
-      expect(
-        jsonDecode(File(join(dir.path, 'journal.json')).readAsStringSync())
-            as Map,
-        containsPair('mitmModules', [_module.id]),
-      );
-    });
+    test(
+      'restored module rows never carry the other device\'s consent: '
+      'they are written off and declined, and held until rechecked',
+      () async {
+        final (:container, :staging, :data) = await fixture();
+        final action = container.read(backupActionProvider.notifier);
+        action.afterRestoreCommit = () async => throw StateError('injected');
+        await expectLater(
+          action.applyRestore(
+            data,
+            RestoreOption.all,
+            stagingDirPath: staging.path,
+          ),
+          throwsA(isA<RestorePartialException>()),
+        );
+        expect((_module.enabled, _module.accepted), (true, true));
+        final [row] = await database.mitmModulesDao.query().get();
+        expect((row.enabled, row.accepted), (false, false));
+        expect(row.runsUnder(RestoreMitmHold.none), isFalse);
+        final hold = container.read(restoreMitmHoldStateProvider);
+        expect(hold.holds(_module.id), isTrue);
+        final [dir] = journals();
+        expect(
+          jsonDecode(File(join(dir.path, 'journal.json')).readAsStringSync())
+              as Map,
+          containsPair('mitmModules', [_module.id]),
+        );
+      },
+    );
 
     test('an uninterrupted restore holds its modules only until the '
         'recheck', () async {
@@ -1010,10 +1011,10 @@ void main() {
       expect(await markers(), isEmpty);
       expect(await storedProfileId(), 3);
       // What the recheck leaves: the file is not on this device, so the
-      // module now asks for consent; the other fields are as restored.
+      // module now asks for consent; it stays off and declined, as written.
       final [row] = await database.mitmModulesDao.query().get();
       expect(row.asksConsent, isTrue);
-      expect((row.enabled, row.accepted), (true, true));
+      expect((row.enabled, row.accepted), (false, false));
     });
 
     test('launch runs the recovery before any gate and wires the recheck '
@@ -1041,6 +1042,105 @@ void main() {
         isFalse,
       );
       expect(RestoreMitmHold.of(const []).isEmpty, isTrue);
+    });
+  });
+
+  group('restored MITM modules need consent on this device', () {
+    /// Consented to here before the restore, and not in the backup.
+    final local = MitmModule(
+      id: 50,
+      name: 'Local module',
+      enabled: true,
+      accepted: true,
+      lastUpdateTime: DateTime(2026),
+    );
+
+    Future<({ProviderContainer container, MigrationData data})>
+    mergeFixture() async {
+      final (:container, :staging, :data) = await fixture();
+      await database.mitmModulesDao.putAll([
+        local.toCompanion(0),
+        // The backup's module is here too, consented to: the backup's
+        // whole item still wins, and its consent is still cleared.
+        _module.copyWith(name: 'Local copy').toCompanion(1),
+      ]);
+      container
+          .read(appSettingProvider.notifier)
+          .update(
+            (state) =>
+                state.copyWith(restoreStrategy: RestoreStrategy.compatible),
+          );
+      await container
+          .read(backupActionProvider.notifier)
+          .applyRestore(data, RestoreOption.all, stagingDirPath: staging.path);
+      return (container: container, data: data);
+    }
+
+    Future<Map<int, MitmModule>> rows() async => {
+      for (final row in await database.mitmModulesDao.query().get())
+        row.id: row,
+    };
+
+    test('a restored module the backup had accepted does not run after '
+        'the commit and a passing recheck', () async {
+      final (:container, data: _) = await mergeFixture();
+      expect(
+        restoreRecovery.mitmHold.value.isEmpty,
+        isTrue,
+        reason: 'the recheck passed and lifted the hold',
+      );
+      await container.read(mitmModulesActionProvider.notifier).recheckConsent();
+      final restored = (await rows())[_module.id]!;
+      expect(restored.name, _module.name, reason: 'the backup wins');
+      expect((restored.enabled, restored.accepted), (false, false));
+      expect(restored.runsUnder(restoreRecovery.mitmHold.value), isFalse);
+      expect(
+        restored.awaitsConsent,
+        isFalse,
+        reason: 'declined, so never offered or turned on by itself',
+      );
+    });
+
+    test(
+      'a relaunch after the journal finished does not run it either',
+      () async {
+        await mergeFixture();
+        expect(journals(), isEmpty);
+        expect(await markers(), isEmpty);
+        await relaunch();
+        final next = RestoreRecovery(
+          db: () => database,
+          homeDirPath: () async => home.path,
+          store: () => preferences,
+        );
+        await next.run();
+        expect(next.needsMitm, isFalse);
+        expect(next.mitmHold.value.isEmpty, isTrue);
+        final restored = (await rows())[_module.id]!;
+        expect((restored.enabled, restored.accepted), (false, false));
+        expect(restored.runsUnder(next.mitmHold.value), isFalse);
+      },
+    );
+
+    test('a local module the restore did not write keeps its consent and '
+        'runs', () async {
+      await mergeFixture();
+      final kept = (await rows())[local.id]!;
+      expect((kept.enabled, kept.accepted), (true, true));
+      expect(kept.runsUnder(restoreRecovery.mitmHold.value), isTrue);
+    });
+
+    test('only the explicit local consent turns it on', () async {
+      final (:container, data: _) = await mergeFixture();
+      final action = container.read(mitmModulesActionProvider.notifier);
+      final keep = container.listen(mitmModulesProvider, (_, _) {});
+      addTearDown(keep.close);
+      await container.read(mitmModulesProvider.future);
+      await action.recordConsent(_module.id, asksConsent: true, agreed: true);
+      await pumpEventQueue();
+      final restored = (await rows())[_module.id]!;
+      expect((restored.enabled, restored.accepted), (true, true));
+      expect(restored.runsUnder(restoreRecovery.mitmHold.value), isTrue);
     });
   });
 }

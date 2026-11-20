@@ -1866,6 +1866,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreMountLegacyNote => '不把缺少挂载数据解释为空列表；不清空本地关系。';
 
   @override
+  String get restoreMitmReconsent => '从备份恢复的解密模块需要在本机重新同意后才会运行。';
+
+  @override
   String restoreMountRemoveCount(Object count) {
     return '移除 $count 条';
   }

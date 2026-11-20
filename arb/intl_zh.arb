@@ -587,6 +587,7 @@
   "restoreMountMergeNote": "仅移除无法保留的无效关系；有效且不冲突的本地关系继续保留。",
   "restoreMountLegacyLead": "备份不含挂载关系。仅移除无效关系，其余保持当前设置。",
   "restoreMountLegacyNote": "不把缺少挂载数据解释为空列表；不清空本地关系。",
+  "restoreMitmReconsent": "从备份恢复的解密模块需要在本机重新同意后才会运行。",
   "restoreMountRemoveCount": "移除 {count} 条",
   "restoreMountReplaceCount": "替换 {count} 项",
   "restoreMountKeepCount": "保留 {count} 条",

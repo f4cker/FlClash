@@ -2004,6 +2004,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Missing mount data is not read as an empty list; local relations are not cleared.';
 
   @override
+  String get restoreMitmReconsent =>
+      'MITM modules restored from the backup run only after you agree to them again on this device.';
+
+  @override
   String restoreMountRemoveCount(Object count) {
     return 'Remove $count';
   }

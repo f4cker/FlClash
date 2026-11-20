@@ -222,7 +222,7 @@ void main() {
         MigrationData(profiles: [_sub(77712, 'Restored')]),
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (plan) async {
+        confirm: (plan, {restoresMitm = false}) async {
           shown = plan;
           return true;
         },
@@ -279,7 +279,7 @@ void main() {
         data,
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (plan) async {
+        confirm: (plan, {restoresMitm = false}) async {
           declined = plan;
           return false;
         },
@@ -315,7 +315,7 @@ void main() {
         data,
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (_) async => true,
+        confirm: (_, {restoresMitm = false}) async => true,
       );
 
       expect(result!.plan.removals.single.reason.id, 'source-missing');
@@ -354,7 +354,7 @@ void main() {
             ],
           ),
           RestoreOption.onlyProfiles,
-          confirm: (plan) async {
+          confirm: (plan, {restoresMitm = false}) async {
             shown = plan;
             return true;
           },
@@ -410,7 +410,7 @@ void main() {
           MigrationData(profiles: [_sub(77792, 'Restored')]),
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
-          confirm: (_) async {
+          confirm: (_, {restoresMitm = false}) async {
             final current = await testDatabase.mountsDao.target(77791);
             final saved = await testDatabase.mountsDao.save(
               targetId: 77791,

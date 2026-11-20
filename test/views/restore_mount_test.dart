@@ -569,6 +569,23 @@ void main() {
       );
     });
 
+    testWidgets('the MITM re-consent line shows only when the backup '
+        'carries modules', (tester) async {
+      const line = '从备份恢复的解密模块需要在本机重新同意后才会运行。';
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _mergePlan(), restoresMitm: true),
+        locale: const Locale('zh'),
+      );
+      expect(find.text(line), findsOne);
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _mergePlan()),
+        locale: const Locale('zh'),
+      );
+      expect(find.text(line), findsNothing);
+    });
+
     testWidgets('an empty plan says no relation changes', (tester) async {
       await pushSheet(
         tester,
@@ -923,6 +940,7 @@ void main() {
         () => RestoreMountConfirmSheet(
           plan: _mergePlan(),
           backupName: '示例备份 · 2026年11月18日 10:30',
+          restoresMitm: true,
         ),
         locale: const Locale('zh'),
         size: const Size(860, 1000),

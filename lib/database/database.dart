@@ -868,6 +868,7 @@ class Database extends _$Database {
           await this.mountSourceStatuses.remove((t) => t.sourceId.equals(id));
         }
       }
+      final restored = [for (final m in mitmModules) restoredMitmModule(m)];
       await batch((b) {
         if (isOverride) {
           profilesDao.setAllWithBatch(b, profiles);
@@ -878,7 +879,7 @@ class Database extends _$Database {
           clashProvidersDao.setAllWithBatch(b, clashProviders);
           // Rewriting profiles or custom proxies cascades into these.
           proxyDialersDao.setAllWithBatch(b, proxyDialers);
-          mitmModulesDao.setAllWithBatch(b, mitmModules);
+          mitmModulesDao.setAllWithBatch(b, restored);
           addedRuleSetsDao.setAllWithBatch(b, addedRuleSets);
           return;
         }
@@ -892,7 +893,7 @@ class Database extends _$Database {
         customProxiesDao.putAllWithBatch(b, customProxies);
         clashProvidersDao.putAllWithBatch(b, clashProviders);
         proxyDialersDao.putAllWithBatch(b, proxyDialers);
-        mitmModulesDao.putAllWithBatch(b, mitmModules);
+        mitmModulesDao.putAllWithBatch(b, restored);
         addedRuleSetsDao.putAllWithBatch(b, addedRuleSets);
       });
       await _writeRestoredMounts(
@@ -1141,3 +1142,10 @@ Database get database => _database;
 
 @visibleForTesting
 set database(Database value) => _database = value;
+
+/// A MITM module as a restore writes it. Consent given on the device the
+/// backup came from does not carry over: the module is off and declined
+/// until it is consented to on this one. Only that explicit local action
+/// turns it on; the restore's recheck never does.
+MitmModule restoredMitmModule(MitmModule module) =>
+    module.copyWith(enabled: false, accepted: false);
