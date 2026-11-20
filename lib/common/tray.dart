@@ -689,15 +689,16 @@ final appTray = system.isDesktop ? AppTray() : null;
 const mitmDotRed = 0xFFFF3B30;
 const mitmDotAmber = 0xFFFF9F0A;
 
-/// The menu bar dot for the MITM status: red while on, breathing while it
-/// decrypts, amber while paused or unconfirmed, and none while off.
+/// The menu bar dot for the MITM status: red and breathing while decryption
+/// is on and healthy (the dot says "MITM mode enabled"; nothing is polled for
+/// it, and with reduce motion the native side holds it still), amber and
+/// still while paused or unconfirmed, and none while off.
 TrayDot? mitmTrayDot(MitmIndicator? indicator) => switch (indicator?.kind) {
   null => null,
-  MitmIndicatorKind.decrypting => const TrayDot(
+  MitmIndicatorKind.on || MitmIndicatorKind.decrypting => const TrayDot(
     color: mitmDotRed,
     breathing: true,
   ),
-  MitmIndicatorKind.on => const TrayDot(color: mitmDotRed, breathing: false),
   MitmIndicatorKind.paused || MitmIndicatorKind.unconfirmed => const TrayDot(
     color: mitmDotAmber,
     breathing: false,

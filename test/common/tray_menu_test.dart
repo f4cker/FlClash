@@ -13,6 +13,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/providers/database.dart';
+import 'package:fl_clash/providers/mitm.dart' show mitmIndicatorOf;
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/tray_menu.dart';
@@ -352,6 +353,33 @@ void main() {
       expect(items.first['enabled'], isTrue);
       expect(items[1]['type'], 'separator');
       expect(items[2]['label'], l10n.show);
+    });
+
+    test('reads on, with no reason, for the Core\'s standing caveat', () async {
+      await update(
+        _trayState(
+          mitmIndicator: mitmIndicatorOf(
+            enabled: true,
+            coreConnected: true,
+            coreRefused: false,
+            status: const MitmStatus(
+              enable: true,
+              paused: 'partialConnections',
+            ),
+            trusted: true,
+            hostsListed: true,
+          ),
+        ),
+      );
+
+      final l10n = currentAppLocalizations;
+      final labels = _labels(showCall());
+      expect(labels.first, l10n.mitmIndicatorOn);
+      expect(labels, isNot(contains(l10n.mitmPartialConnections)));
+      expect(
+        labels.where((label) => label.contains(l10n.mitmIndicatorPaused)),
+        isEmpty,
+      );
     });
 
     test('says when it decrypts', () async {

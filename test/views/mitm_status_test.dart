@@ -1,5 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_indicator.dart';
+import 'package:fl_clash/common/tray.dart'
+    show mitmDotAmber, mitmDotRed, mitmTrayDot;
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -15,6 +17,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:rust_api/tray.dart' show TrayDot;
 
 import '../helpers/core_connections.dart';
 import '../helpers/test_app.dart';
@@ -67,9 +70,127 @@ void main() {
       );
     });
 
+    test('the Core\'s standing partialConnections caveat reads as on', () {
+      // core/mitm.go mitmStatus reports it whenever it decrypts and nothing
+      // is paused: a caveat, not a pause.
+      const status = MitmStatus(enable: true, paused: 'partialConnections');
+      expect(of(status: status), const MitmIndicator.on());
+      expect(of(status: status, trusted: true), const MitmIndicator.on());
+      expect(
+        of(status: status, trusted: true, hostsListed: true),
+        const MitmIndicator.on(),
+      );
+      final indicator = of(status: status)!;
+      expect(indicator.reason, isNull);
+      for (final locale in const [Locale('zh'), Locale('en')]) {
+        final l = lookupAppLocalizations(locale);
+        expect(mitmIndicatorText(l, indicator), l.mitmIndicatorOn);
+        expect(mitmIndicatorLabel(l, indicator), l.mitmIndicatorOn);
+        expect(
+          mitmIndicatorText(l, indicator),
+          isNot(l.mitmPartialConnections),
+        );
+      }
+      expect(
+        mitmIndicatorText(
+          lookupAppLocalizations(const Locale('zh')),
+          indicator,
+        ),
+        '解密已开启',
+      );
+      // The decryption page still maps it, to say it as information.
+      expect(
+        mitmCorePauseReason('partialConnections'),
+        MitmPauseReason.partialConnections,
+      );
+    });
+
+    test('every real reason still pauses, with its words', () {
+      final zh = lookupAppLocalizations(const Locale('zh'));
+      String paused(String reason) => zh.mitmIndicatorPausedBecause(reason);
+      final cases = <(String, MitmIndicator?, MitmIndicator, String)>[
+        (
+          'core stopped',
+          of(coreConnected: false),
+          const MitmIndicator.paused(MitmPauseReason.coreStopped),
+          paused(zh.mitmPauseCoreStopped),
+        ),
+        (
+          'core refused',
+          of(coreRefused: true),
+          const MitmIndicator.paused(MitmPauseReason.coreIdentity),
+          paused(zh.mitmPauseCoreIdentity),
+        ),
+        (
+          'not trusted',
+          of(status: const MitmStatus()),
+          const MitmIndicator.paused(MitmPauseReason.notTrusted),
+          '解密已暂停：根证书未生成或未受信任',
+        ),
+        (
+          'not applied',
+          of(status: const MitmStatus(), trusted: true, hostsListed: true),
+          const MitmIndicator.paused(MitmPauseReason.notApplied),
+          '解密未生效：设置还没应用到内核',
+        ),
+        for (final (core, reason, words) in [
+          (
+            'livenessUnavailable',
+            MitmPauseReason.liveness,
+            zh.mitmPauseLiveness,
+          ),
+          ('trustUnavailable', MitmPauseReason.liveness, zh.mitmPauseLiveness),
+          (
+            'indicatorPending',
+            MitmPauseReason.indicatorPending,
+            zh.mitmPauseIndicatorPending,
+          ),
+          (
+            'coreIdentity',
+            MitmPauseReason.coreIdentity,
+            zh.mitmPauseCoreIdentity,
+          ),
+          (
+            'appUnavailable',
+            MitmPauseReason.appUnavailable,
+            zh.mitmPauseAppUnavailable,
+          ),
+          ('signTimeout', MitmPauseReason.signTimeout, zh.mitmPauseSignTimeout),
+          (
+            'leafUnusable',
+            MitmPauseReason.leafUnusable,
+            zh.mitmPauseLeafUnusable,
+          ),
+          ('signFailed', MitmPauseReason.signRefused, zh.mitmPauseSignRefused),
+          ('signBusy', MitmPauseReason.signRefused, zh.mitmPauseSignRefused),
+          ('disabled', MitmPauseReason.signRefused, zh.mitmPauseSignRefused),
+          (
+            'somethingNew',
+            MitmPauseReason.unavailable,
+            zh.mitmPauseUnavailable,
+          ),
+        ])
+          (
+            core,
+            of(status: MitmStatus(enable: true, paused: core)),
+            MitmIndicator.paused(reason),
+            paused(words),
+          ),
+      ];
+      for (final (name, actual, expected, text) in cases) {
+        expect(actual, expected, reason: name);
+        expect(actual!.kind, MitmIndicatorKind.paused, reason: name);
+        expect(mitmIndicatorText(zh, actual), text, reason: name);
+        expect(
+          mitmTrayDot(actual),
+          const TrayDot(color: mitmDotAmber, breathing: false),
+          reason: name,
+        );
+      }
+    });
+
     test('names why it is paused', () {
       const cases = {
-        'partialConnections': MitmPauseReason.partialConnections,
         'livenessUnavailable': MitmPauseReason.liveness,
         'trustUnavailable': MitmPauseReason.liveness,
         'indicatorPending': MitmPauseReason.indicatorPending,
@@ -289,7 +410,7 @@ void main() {
       await settle(tester);
     });
 
-    testWidgets('says decrypting only while a decrypted connection is open', (
+    testWidgets('stays on, breathing, without reading the live connections', (
       tester,
     ) async {
       TrackerInfo info(String id, {bool mitm = false}) => TrackerInfo(
@@ -302,26 +423,29 @@ void main() {
       );
       final l = currentAppLocalizations;
 
-      // Decrypted earlier, but that connection has closed.
+      // A decrypted connection is still open, and the Core reports its
+      // standing caveat: the status is on, and nothing polls connections.
       await pump(
         tester,
         mitm: const Mitm(enable: true),
-        requests: [info('old', mitm: true), info('plain')],
-        connections: [info('plain')],
-      );
-      await tester.pump();
-      expect(find.text(l.mitmIndicatorOn), findsOneWidget);
-      expect(find.text(l.mitmIndicatorDecrypting), findsNothing);
-      await settle(tester);
-
-      await pump(
-        tester,
-        mitm: const Mitm(enable: true),
+        status: const MitmStatus(enable: true, paused: 'partialConnections'),
         requests: [info('live', mitm: true), info('plain')],
         connections: [info('live'), info('plain')],
       );
-      await tester.pump();
-      expect(find.text(l.mitmIndicatorDecrypting), findsOneWidget);
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(seconds: 2));
+      }
+      expect(find.text(l.mitmIndicatorOn), findsOneWidget);
+      expect(find.text(l.mitmIndicatorDecrypting), findsNothing);
+      expect(find.text(l.mitmPartialConnections), findsNothing);
+      final indicator = container.read(mitmIndicatorProvider);
+      expect(indicator, const MitmIndicator.on());
+      expect(
+        mitmTrayDot(indicator),
+        const TrayDot(color: mitmDotRed, breathing: true),
+      );
+      expect(container.exists(mitmDecryptingProvider), isFalse);
+      verifyNever(() => core.getConnectionsWith<bool>(any()));
       await settle(tester);
     });
 

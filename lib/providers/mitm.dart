@@ -157,6 +157,11 @@ final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
 /// the IDs of the requests marked decrypted, matched against the Core's live
 /// connection list. Unknown, or no decrypted request, is false, so the status
 /// claims decryption only on that evidence. Polled while it is watched.
+///
+/// Not watched by [mitmIndicatorProvider] in this version: an open connection
+/// once marked decrypted is not proof that decryption is happening now, and
+/// reading the live connections every two seconds is not worth that. The
+/// tray dot breathes whenever decryption is on, without it.
 final mitmDecryptingProvider = FutureProvider.autoDispose<bool>((ref) async {
   ref.watch(coreStatusProvider);
   try {
@@ -188,6 +193,11 @@ final mitmDecryptingProvider = FutureProvider.autoDispose<bool>((ref) async {
 /// unconfirmed rather than paused: only the Core knows it passes through.
 /// Ready is "on"; "decrypting" needs [decrypting], a decrypted connection
 /// that is still open.
+///
+/// The Core's `partialConnections` is not a pause: it is what the Core says
+/// whenever it decrypts and nothing is paused (core/mitm.go `mitmStatus`),
+/// a standing caveat rather than evidence of an undecrypted connection. It
+/// reads as "on"; the decryption page still says it, as information.
 ///
 /// A Core that does not decrypt is "not trusted" only when this device has
 /// not found the CA trusted ([trusted]); with trust and listed hosts it has
@@ -224,8 +234,9 @@ MitmIndicator? mitmIndicatorOf({
         : const MitmIndicator.on();
   }
   return switch (mitmCorePauseReason(status.paused)) {
-    null when decrypting => const MitmIndicator.decrypting(),
-    null => const MitmIndicator.on(),
+    null || MitmPauseReason.partialConnections when decrypting =>
+      const MitmIndicator.decrypting(),
+    null || MitmPauseReason.partialConnections => const MitmIndicator.on(),
     final reason => MitmIndicator.paused(reason),
   };
 }
@@ -280,20 +291,17 @@ final mitmIndicatorProvider = Provider.autoDispose<MitmIndicator?>((ref) {
       ),
     ),
   );
-  MitmIndicator? of({bool decrypting = false}) => mitmIndicatorOf(
+  // [mitmDecryptingProvider] is deliberately not watched: the live
+  // connections are not polled for the status, so it never says
+  // "decrypting". The tray dot breathes from the "on" state alone.
+  return mitmIndicatorOf(
     enabled: enabled,
     coreConnected: coreConnected,
     coreRefused: coreRefused,
     status: status,
-    decrypting: decrypting,
     trusted: trusted,
     hostsListed: listed || (status?.hostnames ?? 0) > 0,
   );
-  // The live connections are read only while decryption is ready.
-  if (of()?.kind != MitmIndicatorKind.on) {
-    return of();
-  }
-  return of(decrypting: ref.watch(mitmDecryptingProvider).value == true);
 });
 
 /// How many `mitm` hostnames the running profile wrote, all of them ignored.

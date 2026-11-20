@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:fl_clash/common/tray.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/mitm.dart' show mitmIndicatorOf;
 import 'package:rust_api/tray.dart';
 import 'package:test/test.dart';
 
@@ -75,11 +76,10 @@ void main() {
     );
     expect(
       mitmTrayDot(const MitmIndicator.on()),
-      const TrayDot(color: 0xFFFF3B30, breathing: false),
+      const TrayDot(color: 0xFFFF3B30, breathing: true),
     );
     for (final indicator in const [
       MitmIndicator.paused(MitmPauseReason.notTrusted),
-      MitmIndicator.paused(MitmPauseReason.partialConnections),
       MitmIndicator.unconfirmed(),
     ]) {
       expect(
@@ -87,5 +87,21 @@ void main() {
         const TrayDot(color: 0xFFFF9F0A, breathing: false),
       );
     }
+  });
+
+  test('the Core\'s partialConnections caveat is a breathing red dot', () {
+    final indicator = mitmIndicatorOf(
+      enabled: true,
+      coreConnected: true,
+      coreRefused: false,
+      status: const MitmStatus(enable: true, paused: 'partialConnections'),
+      trusted: true,
+      hostsListed: true,
+    );
+    expect(indicator, const MitmIndicator.on());
+    expect(
+      mitmTrayDot(indicator),
+      const TrayDot(color: 0xFFFF3B30, breathing: true),
+    );
   });
 }
