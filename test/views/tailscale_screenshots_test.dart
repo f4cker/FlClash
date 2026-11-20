@@ -1343,7 +1343,7 @@ void main() {
     });
   }
 
-  // 管理账号 after a read the user asked for still lists nothing.
+  // 查看账号 after a read the user asked for still lists nothing.
   const onFile = [
     TailscaleManagedRecord(
       id: 'm1',
@@ -1384,7 +1384,7 @@ void main() {
     );
     await tester.tap(find.text('重新读取状态'));
     await settle(tester);
-    expect(find.text('管理账号'), findsOneWidget);
+    expect(find.text('查看账号'), findsOneWidget);
   }
 
   for (final (name, mode) in [
@@ -1398,7 +1398,7 @@ void main() {
 
     shot('card-10-manage-$name', (tester) async {
       await pumpRetried(tester, themeMode: mode);
-      await tester.tap(find.text('管理账号'));
+      await tester.tap(find.text('查看账号'));
       await settle(tester);
       await shoot(tester, 'card-10-manage-$name');
     });
@@ -1409,5 +1409,12 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await pumpRetried(tester, size: const Size(360, 760), pixelRatio: 2);
     await shoot(tester, 'card-11-retried-narrow-large-text');
+  });
+
+  shot('card-12-view-narrow-open', (tester) async {
+    await pumpRetried(tester, size: const Size(360, 760), pixelRatio: 2);
+    await tester.tap(find.text('查看账号'));
+    await settle(tester);
+    await shoot(tester, 'card-12-view-narrow-open');
   });
 }

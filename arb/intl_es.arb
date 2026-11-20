@@ -1420,7 +1420,10 @@
     }
   },
   "tsFieldUnavailable": "Unavailable",
-  "tsManageAccounts": "Manage accounts",
+  "tsViewAccounts": "View accounts",
+  "tsAccountsOfProfile": "Tailscale accounts in this profile",
+  "tsUnfinishedAccount": "Unfinished account",
+  "tsAccountStatusUnknown": "Account status unknown",
   "tsCopyFailed": "Couldn't copy. Try again.",
   "tsLogin": "Log in to Tailscale",
   "tsRelogin": "Log in again",

@@ -4604,7 +4604,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tsFieldUnavailable => 'Unavailable';
 
   @override
-  String get tsManageAccounts => 'Manage accounts';
+  String get tsViewAccounts => 'View accounts';
+
+  @override
+  String get tsAccountsOfProfile => 'Tailscale accounts in this profile';
+
+  @override
+  String get tsUnfinishedAccount => 'Unfinished account';
+
+  @override
+  String get tsAccountStatusUnknown => 'Account status unknown';
 
   @override
   String get tsCopyFailed => 'Couldn\'t copy. Try again.';

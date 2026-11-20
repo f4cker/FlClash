@@ -7884,11 +7884,29 @@ abstract class AppLocalizations {
   /// **'Unavailable'**
   String get tsFieldUnavailable;
 
-  /// No description provided for @tsManageAccounts.
+  /// No description provided for @tsViewAccounts.
   ///
   /// In en, this message translates to:
-  /// **'Manage accounts'**
-  String get tsManageAccounts;
+  /// **'View accounts'**
+  String get tsViewAccounts;
+
+  /// No description provided for @tsAccountsOfProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale accounts in this profile'**
+  String get tsAccountsOfProfile;
+
+  /// No description provided for @tsUnfinishedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfinished account'**
+  String get tsUnfinishedAccount;
+
+  /// No description provided for @tsAccountStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Account status unknown'**
+  String get tsAccountStatusUnknown;
 
   /// No description provided for @tsCopyFailed.
   ///

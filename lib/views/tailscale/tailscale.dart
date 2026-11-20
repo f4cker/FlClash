@@ -65,7 +65,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   TailscaleNodeKey? _selected;
 
   /// The profile whose empty list the user read again from 状态待确认; only
-  /// after that does the page offer 管理账号. Cleared once a node is listed
+  /// after that does the page offer 查看账号. Cleared once a node is listed
   /// or the Core leaves the applied config.
   int? _retriedProfile;
   bool _preparingProfile = false;
@@ -1376,7 +1376,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   /// Accounts are on record, yet the applied config lists no node for them:
   /// said as it is, never as not signed in. It is unknown, not a failure, so
   /// it reads in grey with 重新读取状态 first. Once a read the user asked for
-  /// still lists nothing, 管理账号 shows the [records] on file.
+  /// still lists nothing, 查看账号 shows the [records] on file.
   Widget _nodesUnavailable(
     BuildContext context, {
     required int? profileId,
@@ -1393,7 +1393,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
   }
 
-  /// 管理账号 of a profile whose nodes are not listed: the panel-added
+  /// 查看账号 of a profile whose nodes are not listed: the panel-added
   /// accounts as recorded, picked the way the switcher picks one. Picking
   /// only says which account the page shows once nodes are listed; nothing
   /// here signs in, signs out, adds or removes.
@@ -1410,8 +1410,8 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           return label;
         }
       }
-      if (account == null && !record.loggedOut) {
-        return appLocalizations.tsNewAccount;
+      if (tailscaleRecordUnfinished(record)) {
+        return appLocalizations.tsUnfinishedAccount;
       }
       return record.name.isEmpty ? record.id : record.name;
     }
@@ -1424,7 +1424,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           minimumSize: Size(0, _UnconfirmedStatus.minButtonHeight),
         ),
         onPressed: open,
-        child: Text(appLocalizations.tsManageAccounts),
+        child: Text(appLocalizations.tsViewAccounts),
       ),
       popupBuilder: (_) => PopupMenu(
         width: 380,
@@ -1440,18 +1440,19 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
               return PopupMenuItem(
                 label: label,
                 labelEmphasized: true,
-                leading: record.account == null && !record.loggedOut
-                    ? const TailscaleNewAccountAvatar()
+                leading: tailscaleRecordUnfinished(record)
+                    ? const TailscaleUnfinishedAccountAvatar()
                     : TailscaleAvatar(name: label),
                 subtitle: [
                   if (network.isNotEmpty) appLocalizations.tsNetworkOf(network),
-                  appLocalizations.tsStateUnconfirmed,
+                  appLocalizations.tsAccountStatusUnknown,
                 ].join(' · '),
-                subtitleMaxLines: 1,
+                // Wraps rather than cutting the state off on a narrow window.
+                subtitleMaxLines: 2,
                 checked: record.key == _selected,
                 section: index == 0
                     ? PopupMenuSection(
-                        title: appLocalizations.tsAccountsInProfile,
+                        title: appLocalizations.tsAccountsOfProfile,
                       )
                     : null,
                 onPressed: () => _select(record.key),
@@ -1540,7 +1541,16 @@ String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
   };
 }
 
-/// The no-node screen of [NullStatus], with an info button after its title.
+/// A record known to be an account never finished: no sign-in was ever
+/// attached to it and nothing is under way. Anything else may have had an
+/// account, so it goes by its name.
+bool tailscaleRecordUnfinished(TailscaleManagedRecord record) =>
+    record.account == null &&
+    !record.attached &&
+    !record.loggedOut &&
+    !record.removing &&
+    !record.unlinking;
+
 /// 状态待确认 of an empty node list: a quiet grey mark, no decorations.
 class _UnconfirmedStatus extends StatelessWidget {
   const _UnconfirmedStatus({required this.onRead, this.manage});
@@ -1550,7 +1560,7 @@ class _UnconfirmedStatus extends StatelessWidget {
 
   final VoidCallback onRead;
 
-  /// 管理账号, 8 under 重新读取状态; always stacked, never beside it.
+  /// 查看账号, 8 under 重新读取状态; always stacked, never beside it.
   final Widget? manage;
 
   @override
@@ -1622,6 +1632,7 @@ class _UnconfirmedStatus extends StatelessWidget {
   }
 }
 
+/// The no-node screen of [NullStatus], with an info button after its title.
 class _SignInStatus extends StatelessWidget {
   const _SignInStatus({required this.about, required this.action});
 

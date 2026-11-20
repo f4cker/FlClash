@@ -4268,7 +4268,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsFieldUnavailable => '不可用';
 
   @override
-  String get tsManageAccounts => '管理账号';
+  String get tsViewAccounts => '查看账号';
+
+  @override
+  String get tsAccountsOfProfile => '当前配置的 Tailscale 账号';
+
+  @override
+  String get tsUnfinishedAccount => '未完成的账号';
+
+  @override
+  String get tsAccountStatusUnknown => '账号状态未知';
 
   @override
   String get tsCopyFailed => '未能复制，请重试。';

@@ -1315,7 +1315,10 @@
     }
   },
   "tsFieldUnavailable": "不可用",
-  "tsManageAccounts": "管理账号",
+  "tsViewAccounts": "查看账号",
+  "tsAccountsOfProfile": "当前配置的 Tailscale 账号",
+  "tsUnfinishedAccount": "未完成的账号",
+  "tsAccountStatusUnknown": "账号状态未知",
   "tsCopyFailed": "未能复制，请重试。",
   "tsLogin": "登录 Tailscale",
   "tsRelogin": "重新登录",

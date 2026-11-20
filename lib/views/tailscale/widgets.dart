@@ -290,6 +290,25 @@ class TailscaleNewAccountAvatar extends StatelessWidget {
   }
 }
 
+/// The avatar of a record confirmed to be an account never finished: a
+/// plain grey person, as large as [TailscaleAvatar].
+class TailscaleUnfinishedAccountAvatar extends StatelessWidget {
+  const TailscaleUnfinishedAccountAvatar({super.key, this.size = 20});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: GlyphIcon(
+        AppGlyphs.account,
+        size: size,
+        color: context.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
 /// The account switcher's target, design.md §13.1: avatar, account, state
 /// and a dot in the state's colour.
 class TailscaleAccountPill extends StatelessWidget {

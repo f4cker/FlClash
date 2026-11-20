@@ -8,6 +8,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/ui/icons/app_glyphs.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/views/tailscale/device_card.dart';
@@ -2525,6 +2526,19 @@ void main() {
         account: tsHomeAccount,
       ),
       TailscaleManagedRecord(id: 'm2', profileId: 42, name: 'tailscale-m2'),
+      // Attached once, its account not on file: not known to be unfinished.
+      TailscaleManagedRecord(
+        id: 'm3',
+        profileId: 42,
+        name: 'tailscale-m3',
+        attached: true,
+      ),
+      TailscaleManagedRecord(
+        id: 'm4',
+        profileId: 42,
+        name: 'tailscale-m4',
+        loggedOut: true,
+      ),
       TailscaleManagedRecord(id: 'x', profileId: 7, name: 'other-profile'),
     ];
 
@@ -2532,12 +2546,13 @@ void main() {
       WidgetTester tester, {
       ThemeMode themeMode = ThemeMode.light,
       Size size = _size,
+      List<TailscaleManagedRecord> saved = onFile,
     }) async {
       container.listen(currentProfileIdProvider, (_, _) {});
       container.read(currentProfileIdProvider.notifier).value = 42;
       await container
           .read(tailscaleManagedRecordsProvider.notifier)
-          .modify((_) => onFile);
+          .modify((_) => saved);
       container.listen(settledConfigProfileProvider, (_, _) {});
       container.read(settledConfigProfileProvider.notifier).settle(42, 0);
       serve(const []);
@@ -2563,17 +2578,17 @@ void main() {
       expect(container.read(tailscaleManagedRecordsProvider), onFile);
     }
 
-    testWidgets('管理账号 stays hidden until the user reads again', (tester) async {
+    testWidgets('查看账号 stays hidden until the user reads again', (tester) async {
       await pumpUnconfirmed(tester);
 
       expect(find.text('状态待确认'), findsOneWidget);
       expect(read, findsOneWidget);
       expect(manage, findsNothing);
-      expect(find.text('管理账号'), findsNothing);
+      expect(find.text('查看账号'), findsNothing);
       await teardownView(tester);
     });
 
-    testWidgets('a read the user asked for that lists nothing offers 管理账号', (
+    testWidgets('a read the user asked for that lists nothing offers 查看账号', (
       tester,
     ) async {
       await pumpUnconfirmed(tester);
@@ -2588,7 +2603,7 @@ void main() {
 
       expect(find.text('状态待确认'), findsOneWidget);
       expect(manage, findsOneWidget);
-      expect(find.text('管理账号'), findsOneWidget);
+      expect(find.text('查看账号'), findsOneWidget);
       expect(find.text('添加 Tailscale 账号'), findsNothing);
       expect(find.text('登录 Tailscale'), findsNothing);
       final primary = tester.getRect(read);
@@ -2608,7 +2623,7 @@ void main() {
       await teardownView(tester);
     });
 
-    testWidgets('管理账号 lists the accounts on file and changes nothing', (
+    testWidgets('查看账号 lists the accounts on file and changes nothing', (
       tester,
     ) async {
       await pumpUnconfirmed(tester);
@@ -2616,9 +2631,17 @@ void main() {
       await tester.tap(manage);
       await settle(tester);
 
-      expect(find.text('当前配置中的 Tailscale 账号'), findsOneWidget);
+      expect(find.text('当前配置的 Tailscale 账号'), findsOneWidget);
+      expect(find.text('当前配置中的 Tailscale 账号'), findsNothing);
       expect(find.text('pat@example.test'), findsOneWidget);
-      expect(find.text('新账号'), findsOneWidget);
+      // Only the record known to be unfinished says so; the rest go by name.
+      expect(find.text('未完成的账号'), findsOneWidget);
+      expect(find.text('tailscale-m2'), findsNothing);
+      expect(find.text('tailscale-m3'), findsOneWidget);
+      expect(find.text('tailscale-m4'), findsOneWidget);
+      expect(find.text('新账号'), findsNothing);
+      expect(find.textContaining('账号状态未知'), findsNWidgets(4));
+      expect(find.textContaining('状态待确认 ·'), findsNothing);
       expect(find.text('other-profile'), findsNothing);
       expect(find.text('添加 Tailscale 账号'), findsNothing);
       expect(find.text('退出此账号'), findsNothing);
@@ -2628,6 +2651,101 @@ void main() {
       await settle(tester);
       expect(find.text('状态待确认'), findsOneWidget);
       verifyNothingChanged();
+      await teardownView(tester);
+    });
+
+    testWidgets(
+      'an unfinished account has a grey person, as large as the rest',
+      (tester) async {
+        await pumpUnconfirmed(tester);
+        await retry(tester);
+        await tester.tap(manage);
+        await settle(tester);
+
+        final unfinished = find.byType(TailscaleUnfinishedAccountAvatar);
+        expect(unfinished, findsOneWidget);
+        expect(find.byType(TailscaleNewAccountAvatar), findsNothing);
+        final avatar = find.byType(TailscaleAvatar).first;
+        expect(tester.getSize(unfinished), tester.getSize(avatar));
+        final glyph = tester.widget<GlyphIcon>(
+          find.descendant(of: unfinished, matching: find.byType(GlyphIcon)),
+        );
+        expect(glyph.glyph, AppGlyphs.account);
+        expect(
+          glyph.color,
+          tester
+              .element(find.byType(TailscaleView))
+              .colorScheme
+              .onSurfaceVariant,
+        );
+        expect(
+          find.ancestor(of: unfinished, matching: find.text('未完成的账号')),
+          findsNothing,
+        );
+        await teardownView(tester);
+      },
+    );
+
+    testWidgets('in a narrow window the list keeps 16 from both edges', (
+      tester,
+    ) async {
+      await pumpUnconfirmed(tester, size: const Size(320, 900));
+      await retry(tester);
+      await tester.tap(manage);
+      await settle(tester);
+
+      expect(tester.takeException(), isNull);
+      final menu = tester.getRect(find.byType(PopupMenuCard));
+      expect(menu.left, greaterThanOrEqualTo(16));
+      expect(menu.right, lessThanOrEqualTo(320 - 16));
+      expect(find.text('未完成的账号'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a list taller than the window scrolls inside 16 margins', (
+      tester,
+    ) async {
+      const height = 640.0;
+      final many = [
+        for (var i = 0; i < 14; i++)
+          TailscaleManagedRecord(
+            id: 'r$i',
+            profileId: 42,
+            name: 'tailscale-r$i',
+            attached: true,
+            account: TailscaleAccount(
+              userId: '$i',
+              loginName: 'user$i@example.test',
+              tailnet: 'example-net.test',
+            ),
+          ),
+      ];
+      await pumpUnconfirmed(
+        tester,
+        size: const Size(1100, height),
+        saved: many,
+      );
+      await retry(tester);
+      await tester.tap(manage);
+      await settle(tester);
+
+      expect(tester.takeException(), isNull);
+      final card = find.byType(PopupMenuCard);
+      final menu = tester.getRect(card);
+      expect(menu.top, greaterThanOrEqualTo(16));
+      expect(menu.bottom, lessThanOrEqualTo(height - 16));
+      final scrollable = find.descendant(
+        of: card,
+        matching: find.byType(Scrollable),
+      );
+      expect(scrollable, findsWidgets);
+      final last = find.text('user13@example.test');
+      await tester.scrollUntilVisible(last, 80, scrollable: scrollable.first);
+      await settle(tester);
+      final row = tester.getRect(last);
+      expect(row.bottom, lessThanOrEqualTo(menu.bottom));
+      expect(row.top, greaterThanOrEqualTo(menu.top));
+      expect(container.read(tailscaleManagedRecordsProvider), many);
       await teardownView(tester);
     });
 
