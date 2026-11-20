@@ -4,9 +4,10 @@ import 'dart:math' as math;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ipx_al.dart';
 import 'package:fl_clash/common/service_probe.dart';
-import 'package:fl_clash/features/features.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/ip_quality/labels.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/ip_quality.dart';
 import 'package:fl_clash/providers/ipx_report.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -15,7 +16,6 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/shapes/shapes.dart';
@@ -33,20 +33,17 @@ const _decorationGrowth = 0.12;
 
 const _decorationTurn = 2 * math.pi / 12;
 
-const _nameWidth = 64.0;
-const _rowInset = EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 7);
-const _lineHeight = 22.0;
-const _secondLineHeight = 18.0;
-const _ipMaxWidth = 150.0;
-const _tagHeight = 20.0;
-const _tagGap = 6.0;
-const _copiedFor = Duration(milliseconds: 1500);
-const _failureRed = Color(0xFFB3261E);
-const _retryBlue = Color(0xFF0062CC);
-const _retryBlueDark = Color(0xFF4DA3FF);
+/// The smallest side of a tap target on the card.
+const _minHitSize = 44.0;
 
-/// Where the traffic leaves by and the address this device has without
-/// Flash, next to the start button.
+/// The address the card shows: the proxy's exit, or this device's own.
+enum StatusCardExit { proxy, local }
+
+/// The status, the exit's address with what is known about it, and the
+/// start button.
+///
+/// The country badge looks the shown address up again; the address switches
+/// between the proxy's exit and the local one, among those already found.
 class CurrentOutboundCard extends ConsumerStatefulWidget {
   const CurrentOutboundCard({super.key});
 
@@ -57,6 +54,15 @@ class CurrentOutboundCard extends ConsumerStatefulWidget {
 
 class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   late final OutboundIpProbe _probe;
+
+  /// The last address each lookup found: a failed lookup leaves it shown.
+  final _kept = <String, IpInfo>{};
+
+  /// The user switched to the local address.
+  var _wantsLocal = false;
+
+  /// A retry asked for and not yet under way.
+  var _requested = false;
 
   @override
   void initState() {
@@ -74,6 +80,48 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     super.dispose();
   }
 
+  IpInfo? _valueOf(String target, ProbeEntry<IpInfo> entry) {
+    if (entry.displayValue case final info?) {
+      return _kept[target] = info;
+    }
+    return _kept[target];
+  }
+
+  void _retry({
+    required String target,
+    required String? ip,
+    required bool busy,
+    required Iterable<String> missing,
+  }) {
+    // Read afresh: a second tap may land before the card rebuilds.
+    if (busy ||
+        _requested ||
+        ref.read(outboundIpProbeProvider).entryOf(target).isLoading) {
+      return;
+    }
+    setState(() => _requested = true);
+    _probe.refresh({target, ...missing});
+    if (ip != null) {
+      final ipx = ref.read(ipxLookupProvider(ip));
+      if (ipx.phase == IpxPhase.failed) {
+        ref.read(ipxLookupProvider(ip).notifier).retry();
+      }
+      // Only a fallback already asked for: reading one would start it.
+      if (ref.exists(ipQualityProvider(ip)) &&
+          ref.read(ipQualityProvider(ip)).hasError) {
+        ref.invalidate(ipQualityProvider(ip));
+      }
+    }
+    // The probe launches the lookup in a microtask of its own, queued
+    // before this one: by now it is under way, or there is no route to ask
+    // on and nothing to wait for.
+    scheduleMicrotask(() {
+      if (mounted) {
+        setState(() => _requested = false);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final density = DashboardDensityScope.of(context);
@@ -84,25 +132,47 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final suspended = isStart && ref.watch(suspendProvider);
     final rootAccess =
         mitmFeature && (ref.watch(rootAccessProvider).value ?? false);
-    final exit = ref.watch(
+    final exitEntry = ref.watch(
       outboundIpProbeProvider.select((state) => state.entryOf(routedOutbound)),
     );
-    final local = ref.watch(
+    final localEntry = ref.watch(
       outboundIpProbeProvider.select((state) => state.entryOf(directOutbound)),
     );
+    if (!isStart) {
+      _kept.remove(routedOutbound);
+    }
+    // While Flash is not running there is no proxy exit: the device's own
+    // address is the one traffic leaves by.
+    final exitInfo = isStart ? _valueOf(routedOutbound, exitEntry) : null;
+    final localInfo = _valueOf(directOutbound, localEntry);
+    final shown = !isStart || (_wantsLocal && localInfo != null)
+        ? StatusCardExit.local
+        : StatusCardExit.proxy;
+    final local = shown == StatusCardExit.local;
+    final target = local ? directOutbound : routedOutbound;
+    final entry = local ? localEntry : exitEntry;
+    final info = local ? localInfo : exitInfo;
+    final other = local ? exitInfo : localInfo;
+    final busy = entry.isLoading || _requested;
+    final failed = entry.phase == ProbePhase.failed;
     // No live route (the Core is not connected, e.g. while the helper cannot
     // start it) and nothing out: no answer is coming, so the placeholders hold
     // still instead of pulsing, which would redraw the window every frame.
-    final live = ref.watch(routeTrackerProvider.select((state) => state.live));
-    bool stillFor(ProbeEntry<IpInfo> entry) =>
-        entry.value == null && entry.phase != ProbePhase.probing && !live;
+    final still =
+        info == null &&
+        entry.phase != ProbePhase.probing &&
+        !ref.watch(routeTrackerProvider.select((state) => state.live));
+    final facts = info == null ? null : _factsOf(info);
     final metrics = _OutboundMetrics.of(density);
     final padding = metrics.padding.resolve(Directionality.of(context));
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final colors = DashboardColors.of(context);
-    final exitIp = isStart ? _answerOf(exit) : null;
-    final localIp = _answerOf(local);
+    final (chipLabel, chipTone) = suspended
+        ? (appLocalizations.suspended, DashboardChipTone.warn)
+        : isStart
+        ? (appLocalizations.running, DashboardChipTone.ok)
+        : (appLocalizations.notRunning, DashboardChipTone.idle);
     return TweenAnimationBuilder<double>(
       tween: Tween(end: rootAccess ? 1 : 0),
       duration: context.motionDuration(commonDuration),
@@ -174,49 +244,49 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         glyph: AppGlyphs.status,
                         title: appLocalizations.status,
                         leading: [
-                          _StatusChip(running: isStart, suspended: suspended),
+                          DashboardChip(
+                            label: chipLabel,
+                            tone: chipTone,
+                            dot: isStart,
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 12 - 7),
-                      // Above the start button the rows lean out by their
-                      // inset, so their text lines up with the title.
-                      Transform.translate(
-                        offset: Offset(
-                          Directionality.of(context) == TextDirection.ltr
-                              ? -8
-                              : 8,
-                          0,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TickerMode(
-                              enabled: !stillFor(exit),
-                              child: ExitIpRow(
-                                answer: exitIp,
-                                running: isStart,
-                                onRetry: () =>
-                                    _probe.refresh(const [routedOutbound]),
-                              ),
-                            ),
-                            _RowDivider(
-                              end: metrics.dividerEnd(
-                                Directionality.of(context),
-                                grown: isStart ? 1 : 0,
-                              ),
-                            ),
-                            TickerMode(
-                              enabled: !stillFor(local),
-                              child: LocalIpRow(
-                                answer: localIp,
-                                sameAsExit:
-                                    exitIp?.ip != null &&
-                                    exitIp?.ip == localIp.ip,
-                                onRetry: () =>
-                                    _probe.refresh(const [directOutbound]),
-                              ),
-                            ),
+                      _ExitRow(
+                        info: info,
+                        shown: shown,
+                        // Only while running is there another exit to tell
+                        // this one apart from.
+                        marked: isStart && local,
+                        failed: failed && info == null,
+                        staleFailed: failed && info != null,
+                        still: still,
+                        busy: busy,
+                        facts: facts,
+                        active: isStart,
+                        metrics: metrics,
+                        large: !density.isDesktop,
+                        onRetry: () => _retry(
+                          target: target,
+                          ip: info?.ip,
+                          busy: busy,
+                          missing: [
+                            if (other == null && (local ? isStart : true))
+                              local ? routedOutbound : directOutbound,
                           ],
+                        ),
+                        onSwitch: other == null
+                            ? null
+                            : () => setState(() => _wantsLocal = !local),
+                      ),
+                      SizedBox(height: metrics.cellsTop),
+                      if (density.isDesktop) const Spacer(),
+                      TickerMode(
+                        enabled: !still,
+                        child: _Cells(
+                          organization: facts?.organization,
+                          loading: info == null ? !failed : facts!.loading,
+                          active: isStart && !suspended,
+                          gap: metrics.cellGap,
                         ),
                       ),
                     ],
@@ -243,67 +313,124 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
       ),
     );
   }
-}
 
-/// What a lookup has come to: an address, a failure, or neither yet.
-@immutable
-class IpAnswer {
-  const IpAnswer.found(IpInfo this.info, {this.revalidating = false})
-    : failed = false;
-
-  const IpAnswer.failed() : info = null, failed = true, revalidating = false;
-
-  const IpAnswer.pending() : info = null, failed = false, revalidating = false;
-
-  final IpInfo? info;
-  final bool failed;
-  final bool revalidating;
-
-  String? get ip => info?.ip;
-}
-
-IpAnswer _answerOf(ProbeEntry<IpInfo> entry) {
-  if (entry.displayValue case final info?) {
-    return IpAnswer.found(info, revalidating: entry.isLoading);
-  }
-  return entry.phase == ProbePhase.failed
-      ? const IpAnswer.failed()
-      : const IpAnswer.pending();
-}
-
-/// 运行中 · 02:14:05 while running; the time ticks here alone.
-class _StatusChip extends ConsumerWidget {
-  const _StatusChip({required this.running, required this.suspended});
-
-  final bool running;
-  final bool suspended;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  /// What ipx.al says about [info], or the IP quality sources when it has
+  /// nothing; asked only for the address on show.
+  _IpFacts _factsOf(IpInfo info) {
+    final ip = info.ip;
     final appLocalizations = context.appLocalizations;
-    if (suspended) {
-      return DashboardChip(
-        label: appLocalizations.suspended,
-        tone: DashboardChipTone.warn,
-        dot: true,
+    final ipx = ref.watch(ipxLookupProvider(ip));
+    final report = ipx.report;
+    final brief = ipx.brief;
+    final country = info.countryCode.isNotEmpty
+        ? info.countryCode
+        : report?.countryCode ?? brief?.countryCode;
+    String? network(String? organization, int? asn) =>
+        organization != null && organization.isNotEmpty
+        ? organization
+        : asn == null
+        ? null
+        : 'AS$asn';
+    if (report != null) {
+      final grade = report.grade;
+      return _IpFacts(
+        countryCode: country,
+        type: report.type == IpxIpType.unknown
+            ? null
+            : report.type.label(context),
+        quality: grade == null
+            ? null
+            : (
+                '${appLocalizations.ipQualityShort} ${grade.label(context)}',
+                switch (grade) {
+                  IpxGrade.aPlus || IpxGrade.a => DashboardChipTone.ok,
+                  IpxGrade.b => DashboardChipTone.idle,
+                  IpxGrade.c => DashboardChipTone.warn,
+                  IpxGrade.d => DashboardChipTone.error,
+                },
+              ),
+        scoreLabel: report.score == null || grade == null
+            ? null
+            : appLocalizations.ipxScoreSemantics(
+                '${report.score}',
+                grade.letter,
+              ),
+        organization: network(report.organization, report.asn),
+        loading: false,
       );
     }
-    if (!running) {
-      return DashboardChip(label: appLocalizations.notRunning);
+    final briefNetwork = network(brief?.organization, brief?.asn);
+    if (ipx.phase != IpxPhase.failed) {
+      return _IpFacts(
+        countryCode: country,
+        organization: briefNetwork,
+        loading: true,
+      );
     }
-    final time = getTimeText(ref.watch(runTimeProvider));
-    return DashboardChip(
-      label: '${appLocalizations.running} · $time',
-      tone: DashboardChipTone.ok,
-      dot: true,
+    // No report: the IP quality sources stand in, as the detail sheet does.
+    final fallback = ref.watch(ipQualityProvider(ip));
+    final quality = fallback.value;
+    if (quality != null) {
+      return _IpFacts(
+        countryCode: country,
+        type: quality.type.label(context),
+        quality: (
+          '${appLocalizations.ipQualityShort} ${quality.level.label(context)}',
+          switch (quality.level) {
+            IpQualityLevel.good => DashboardChipTone.ok,
+            IpQualityLevel.normal => DashboardChipTone.idle,
+            IpQualityLevel.risky => DashboardChipTone.warn,
+          },
+        ),
+        organization:
+            briefNetwork ?? network(quality.organization, quality.asn),
+        loading: false,
+      );
+    }
+    return _IpFacts(
+      countryCode: country,
+      organization: briefNetwork,
+      loading: fallback.isLoading || ipx.retrying,
+      // The address is known; only the report about it is missing.
+      reportFailed: !fallback.isLoading && !ipx.retrying,
     );
   }
+}
+
+/// What the card shows about one address.
+@immutable
+class _IpFacts {
+  const _IpFacts({
+    required this.countryCode,
+    this.type,
+    this.quality,
+    this.scoreLabel,
+    this.organization,
+    required this.loading,
+    this.reportFailed = false,
+  });
+
+  final String? countryCode;
+  final String? type;
+  final (String, DashboardChipTone)? quality;
+
+  /// ipx.al's health score, read out with the address.
+  final String? scoreLabel;
+  final String? organization;
+  final bool loading;
+  final bool reportFailed;
 }
 
 class _OutboundMetrics {
   const _OutboundMetrics({
     required this.padding,
     required this.gap,
+    required this.ipTop,
+    required this.ipBottom,
+    required this.cellsTop,
+    required this.cellGap,
+    required this.badgeSize,
+    required this.ip,
     required this.buttonSize,
     required this.buttonSlot,
     required this.decorationSize,
@@ -315,6 +442,12 @@ class _OutboundMetrics {
     DashboardDensity.standard => _OutboundMetrics(
       padding: dashboardCardPadding(density).copyWith(bottom: 20),
       gap: 16,
+      ipTop: 10,
+      ipBottom: 4,
+      cellsTop: 12,
+      cellGap: 28,
+      badgeSize: 48,
+      ip: AppTextStyle.title1,
       buttonSize: 104,
       buttonSlot: 120,
       decorationSize: 290,
@@ -324,6 +457,13 @@ class _OutboundMetrics {
     DashboardDensity.compact => _OutboundMetrics(
       padding: dashboardCardPadding(density).copyWith(bottom: 20),
       gap: 16,
+      ipTop: 8,
+      // The address's tap target reaches 44 without covering the chips.
+      ipBottom: 8,
+      cellsTop: 8,
+      cellGap: 22,
+      badgeSize: 40,
+      ip: AppTextStyle.title2,
       buttonSize: 84,
       buttonSlot: 100,
       decorationSize: 250,
@@ -333,6 +473,12 @@ class _OutboundMetrics {
     DashboardDensity.mobile => const _OutboundMetrics(
       padding: EdgeInsetsDirectional.fromSTEB(20, 18, 16, 18),
       gap: 10,
+      ipTop: 12,
+      ipBottom: 4,
+      cellsTop: 16,
+      cellGap: 24,
+      badgeSize: 48,
+      ip: AppTextStyle.title2,
       buttonSize: 88,
       buttonSlot: 88,
       decorationSize: 240,
@@ -343,261 +489,166 @@ class _OutboundMetrics {
 
   final EdgeInsetsGeometry padding;
   final double gap;
+
+  /// Above and below the address, inside its tap target.
+  final double ipTop;
+  final double ipBottom;
+
+  /// The least room between the chips and the cells; a taller desktop row
+  /// gives the cells the rest, pinned to the bottom.
+  final double cellsTop;
+  final double cellGap;
+  final double badgeSize;
+  final AppTextStyle ip;
   final double buttonSize;
   final double buttonSlot;
   final double decorationSize;
   final double decorationEnd;
   final double decorationTop;
-
-  /// How far the divider stops short of the rows' end, so that it ends
-  /// [_dividerClearance] before the backdrop behind the start button. The
-  /// rows lean out by their 8 inset, and the backdrop sits [decorationEnd]
-  /// in from the card's end.
-  /// [grown] runs from the resting backdrop at 0 to the running one at 1,
-  /// which swells about its centre by [_decorationGrowth]. Its rounded
-  /// lobes stand [_decorationInset] of its size in from its box.
-  double dividerEnd(TextDirection direction, {required double grown}) {
-    final end = padding.resolve(direction).end(direction);
-    final size = decorationSize * (1 + _decorationGrowth * grown);
-    final left =
-        decorationEnd -
-        (size - decorationSize) / 2 +
-        size * (1 - _decorationInset);
-    return math.max(0, left + _dividerClearance - 8 - gap - buttonSlot - end);
-  }
 }
 
-/// How far the cookie's leftmost lobe sits in from its box, of its size.
-const double _decorationInset = 0.015;
+class _ExitRow extends StatelessWidget {
+  const _ExitRow({
+    required this.info,
+    required this.shown,
+    required this.marked,
+    required this.failed,
+    required this.staleFailed,
+    required this.still,
+    required this.busy,
+    required this.facts,
+    required this.active,
+    required this.metrics,
+    required this.large,
+    required this.onRetry,
+    required this.onSwitch,
+  });
 
-const double _dividerClearance = 16;
+  final IpInfo? info;
+  final StatusCardExit shown;
 
-extension on EdgeInsets {
-  double end(TextDirection direction) =>
-      direction == TextDirection.ltr ? right : left;
-}
+  /// Says which exit this is, next to the chips.
+  final bool marked;
 
-/// The flag emoji of a two-letter country [code], from its regional
-/// indicators; none for anything else.
-@visibleForTesting
-String? flagOf(String? code) {
-  if (code == null || !RegExp(r'^[A-Za-z]{2}$').hasMatch(code)) {
-    return null;
-  }
-  const regionalA = 0x1F1E6;
-  return String.fromCharCodes([
-    for (final unit in code.toUpperCase().codeUnits) regionalA + unit - 0x41,
-  ]);
-}
+  /// The lookup failed with nothing to show.
+  final bool failed;
 
-TextStyle _nameStyle(BuildContext context) => AppTextStyle.caption1
-    .of(context)
-    .copyWith(color: context.colorScheme.onSurfaceVariant);
+  /// The last lookup failed; what it found before stays.
+  final bool staleFailed;
 
-TextStyle _ipStyle(BuildContext context) => AppTextStyle.subheadline
-    .of(context, emphasized: true)
-    .copyWith(color: context.colorScheme.onSurface, height: 1.2)
-    .toJetBrainsMono;
-
-TextStyle _detailStyle(BuildContext context) => AppTextStyle.caption1
-    .of(context)
-    .copyWith(color: context.colorScheme.onSurfaceVariant);
-
-class _Name extends StatelessWidget {
-  const _Name(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: _nameWidth,
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: _nameStyle(context),
-      ),
-    );
-  }
-}
-
-/// [ip], or the mask while addresses are hidden, no wider than
-/// [_ipMaxWidth]: a long IPv6 address loses its middle, never its ends.
-class _IpText extends ConsumerWidget {
-  const _IpText(this.ip);
-
-  final String ip;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hidden = ref.watch(
-      appSettingProvider.select((state) => state.hideIp),
-    );
-    final style = _ipStyle(context);
-    // An IPv4 address always fits; only IPv6 runs long enough to cut.
-    final text = hidden
-        ? ipMask
-        : !ip.contains(':')
-        ? ip
-        : middleEllipsis(
-            ip,
-            style: style,
-            maxWidth: _ipMaxWidth,
-            textScaler: MediaQuery.textScalerOf(context),
-          );
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: _ipMaxWidth),
-      child: Text(
-        text,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.clip,
-        style: style,
-      ),
-    );
-  }
-}
-
-/// [text] whole if it fits [maxWidth], else its two ends around an ellipsis.
-String middleEllipsis(
-  String text, {
-  required TextStyle style,
-  required double maxWidth,
-  TextScaler textScaler = TextScaler.noScaling,
-}) {
-  double widthOf(String value) {
-    final painter = TextPainter(
-      text: TextSpan(text: value, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: textScaler,
-      maxLines: 1,
-    )..layout();
-    final width = painter.width;
-    painter.dispose();
-    return width;
-  }
-
-  if (widthOf(text) <= maxWidth) {
-    return text;
-  }
-  var keep = text.length - 1;
-  while (keep > 2) {
-    final head = (keep + 1) ~/ 2;
-    final candidate =
-        '${text.substring(0, head)}…${text.substring(text.length - (keep - head))}';
-    if (widthOf(candidate) <= maxWidth) {
-      return candidate;
-    }
-    keep--;
-  }
-  return '…';
-}
-
-/// A small label after the address: idle grey unless [background] says
-/// otherwise.
-class _Tag extends StatelessWidget {
-  const _Tag(this.label, {this.background, this.foreground});
-
-  final String label;
-  final Color? background;
-  final Color? foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = DashboardColors.of(context);
-    return Container(
-      height: _tagHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 7),
-      decoration: ShapeDecoration(
-        color: background ?? colors.tone,
-        shape: AppShape.all(8),
-      ),
-      child: Center(
-        widthFactor: 1,
-        child: Text(
-          label,
-          maxLines: 1,
-          style: AppTextStyle.caption1
-              .of(context, emphasized: true)
-              .toTabular
-              .copyWith(
-                color: foreground ?? context.colorScheme.onSurfaceVariant,
-                height: 1,
-              ),
-        ),
-      ),
-    );
-  }
-}
-
-(Color, Color)? _gradeColors(BuildContext context, IpxGrade grade) {
-  final colors = DashboardColors.of(context);
-  return switch (grade) {
-    IpxGrade.aPlus || IpxGrade.a => (colors.okContainer, colors.onOkContainer),
-    IpxGrade.b => null,
-    IpxGrade.c => (colors.warnContainer, colors.onWarnContainer),
-    IpxGrade.d => (
-      context.colorScheme.errorContainer,
-      context.colorScheme.onErrorContainer,
-    ),
-  };
-}
-
-/// 查询失败 in red and a 重试 after it.
-class _Failure extends StatelessWidget {
-  const _Failure({required this.onRetry, this.label, this.quiet = false});
-
+  /// Placeholders do not pulse: nothing is on its way.
+  final bool still;
+  final bool busy;
+  final _IpFacts? facts;
+  final bool active;
+  final _OutboundMetrics metrics;
+  final bool large;
   final VoidCallback onRetry;
 
-  /// What failed; the lookup of the address itself otherwise.
-  final String? label;
-
-  /// Only a report is missing under an address in hand: it says so in the
-  /// detail's grey, not the failure's red.
-  final bool quiet;
+  /// Null while the other exit has no address.
+  final VoidCallback? onSwitch;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
     final appLocalizations = context.appLocalizations;
-    final dark = context.colorScheme.brightness == Brightness.dark;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 8,
-      children: [
-        Flexible(
-          child: Text(
-            label ?? appLocalizations.queryFailed,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: quiet
-                ? _detailStyle(context)
-                : AppTextStyle.subheadline
-                      .of(context, emphasized: true)
-                      .copyWith(
-                        color: dark ? context.colorScheme.error : _failureRed,
-                        height: 1.2,
+    final style = DashboardText.figure(
+      context,
+      metrics.ip,
+      color: active ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+    ).copyWith(letterSpacing: 0);
+    final info = this.info;
+    final facts = this.facts;
+    final lineHeight =
+        metrics.ip.leading * DashboardDensityScope.scaleOf(context);
+    final chipHeight = _chipHeight(large);
+    final badgeBox = math.max(_minHitSize, metrics.badgeSize);
+    final badgeTop = math.max(
+      0.0,
+      metrics.ipTop +
+          (lineHeight + metrics.ipBottom + chipHeight - badgeBox) / 2,
+    );
+    final Widget ip = info != null
+        ? _IpTarget(
+            ip: info.ip,
+            shown: shown,
+            style: style,
+            onSwitch: onSwitch,
+            scoreLabel: facts?.scoreLabel,
+            padding: EdgeInsets.only(
+              top: metrics.ipTop,
+              bottom: metrics.ipBottom,
+            ),
+            lineHeight: lineHeight,
+          )
+        : Padding(
+            padding: EdgeInsets.only(
+              top: metrics.ipTop,
+              bottom: metrics.ipBottom,
+            ),
+            child: SizedBox(
+              height: lineHeight,
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: failed
+                    ? Text(
+                        appLocalizations.serviceFailed,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: style.copyWith(color: colorScheme.error),
+                      )
+                    : TickerMode(
+                        enabled: !still,
+                        child: SkeletonText(width: 140, style: style),
                       ),
-          ),
-        ),
-        FocusRing(
-          shape: AppShape.xs,
-          standsOff: true,
-          child: PressRegion(
-            onTap: onRetry,
-            shape: AppShape.xs,
-            overlay: PressRegion.focusOverlay,
-            child: Semantics(
-              button: true,
-              child: Text(
-                appLocalizations.retry,
-                maxLines: 1,
-                style: AppTextStyle.footnote
-                    .of(context, emphasized: true)
-                    .copyWith(color: dark ? _retryBlueDark : _retryBlue),
               ),
             ),
+          );
+    return Row(
+      spacing: 12,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: badgeTop),
+          child: _CountryBadge(
+            countryCode: facts?.countryCode ?? info?.countryCode,
+            size: metrics.badgeSize,
+            box: badgeBox,
+            active: active,
+            checking: busy,
+            failed: staleFailed,
+            onRefresh: onRetry,
+          ),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ip,
+              if (failed)
+                SizedBox(
+                  height: chipHeight,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      appLocalizations.tapIconToRetry,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DashboardText.label(context),
+                    ),
+                  ),
+                )
+              else
+                TickerMode(
+                  enabled: !still,
+                  child: _IpChips(
+                    facts: facts,
+                    loading: info == null || facts!.loading,
+                    marked: marked,
+                    large: large,
+                  ),
+                ),
+            ],
           ),
         ),
       ],
@@ -605,383 +656,419 @@ class _Failure extends StatelessWidget {
   }
 }
 
-/// The exit: its address, ipx.al's grade and verdicts, and who runs it
-/// where. It opens the full report.
-class ExitIpRow extends ConsumerWidget {
-  const ExitIpRow({
-    super.key,
-    required this.answer,
-    required this.running,
-    required this.onRetry,
+/// The address, which switches to the other exit when there is one.
+class _IpTarget extends ConsumerWidget {
+  const _IpTarget({
+    required this.ip,
+    required this.shown,
+    required this.style,
+    required this.onSwitch,
+    required this.scoreLabel,
+    required this.padding,
+    required this.lineHeight,
   });
 
-  /// Null while Flash is not running: there is no exit to show.
-  final IpAnswer? answer;
-  final bool running;
-  final VoidCallback onRetry;
+  final String ip;
+  final StatusCardExit shown;
+  final TextStyle style;
+  final VoidCallback? onSwitch;
+  final String? scoreLabel;
+
+  /// Inside the tap target, so it reaches 44 without growing the row.
+  final EdgeInsets padding;
+  final double lineHeight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
-    final answer = this.answer;
-    final info = answer?.info;
-    final detailStyle = _detailStyle(context);
-    final ipStyle = _ipStyle(context);
-    final scaler = MediaQuery.textScalerOf(context);
-    // Larger text grows each line with it.
-    Widget line(double height, Widget child) => SizedBox(
-      height: scaler.scale(height),
-      child: Align(alignment: AlignmentDirectional.centerStart, child: child),
-    );
-    Widget detail(String text) => Tooltip(
-      message: text,
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: detailStyle,
-      ),
-    );
-
-    if (answer == null || info == null) {
-      final first = switch (answer) {
-        null => Text('—', style: ipStyle),
-        IpAnswer(failed: true) => _Failure(onRetry: onRetry),
-        _ => const Row(
-          spacing: _tagGap,
-          children: [
-            SkeletonPill(width: 120, height: 14),
-            SkeletonPill(width: 44, height: _tagHeight),
-          ],
-        ),
-      };
-      final second = switch (answer) {
-        null => detail(appLocalizations.exitNotRunning),
-        IpAnswer(failed: true) => detail(appLocalizations.exitIpLookupFailed),
-        _ => const SkeletonPill(width: 180, height: 10),
-      };
-      return Padding(
-        padding: _rowInset,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            line(_lineHeight, _Name(appLocalizations.exitIpRow)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  line(_lineHeight, first),
-                  line(_secondLineHeight, second),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final ip = info.ip;
-    final lookup = ref.watch(ipxLookupProvider(ip));
-    final report = lookup.report;
-    final brief = lookup.brief;
-    final grade = report?.grade;
-    final score = report?.score;
-    final gradeColors = grade == null ? null : _gradeColors(context, grade);
-    final type = report?.type;
-    final nativity = report?.nativity;
-    final typeLabel = type == null || type == IpxIpType.unknown
-        ? null
-        : type.label(context);
-    final nativityLabel = switch (nativity) {
-      IpxNativity.native => appLocalizations.ipxNativeShort,
-      IpxNativity.broadcast => appLocalizations.ipxBroadcastShort,
-      _ => null,
-    };
-    final organization = report?.organization ?? brief?.organization;
-    final asn = report?.asn ?? brief?.asn;
-    final network = organization ?? (asn == null ? null : 'AS$asn');
-    final country =
-        report?.countryCode ?? brief?.countryCode ?? info.countryCode;
-    final city = report?.city ?? brief?.city;
-    final place = [if (country.isNotEmpty) country, ?city].join(' ');
-    final flag = flagOf(country);
-    final shownPlace = [?flag, if (place.isNotEmpty) place].join(' ');
-    final summary = [
-      if (answer.revalidating) appLocalizations.querying,
-      ?network,
-      if (shownPlace.isNotEmpty) shownPlace,
-    ].join(' · ');
-    final pending = lookup.isLoading && report == null;
-    // The address is known; only ipx.al's report about it is missing.
-    final reportFailed =
-        lookup.phase == IpxPhase.failed && report == null && !lookup.retrying;
     final hidden = ref.watch(
       appSettingProvider.select((state) => state.hideIp),
     );
-    final separator = appLocalizations.semanticsSeparator;
-    final semanticLabel = [
-      appLocalizations.exitIp,
-      if (answer.revalidating) appLocalizations.querying,
-      hidden ? appLocalizations.hideIp : ip,
-      if (score != null && grade != null)
-        appLocalizations.ipxScoreSemantics('$score', grade.letter),
-      ?typeLabel,
-      ?nativityLabel,
-      ?network,
-      if (place.isNotEmpty) place,
-      if (reportFailed) appLocalizations.ipxNoResponse,
-    ].join(separator);
-    final second = summary.isNotEmpty || !pending
-        ? detail(summary)
-        : const SkeletonPill(width: 180, height: 10);
-    void open() => unawaited(
-      showIpQualitySheet(
-        context,
-        ip: ip,
-        countryCode: info.countryCode,
-        title: appLocalizations.exitIp,
-      ),
-    );
-    return Semantics(
+    final name = switch (shown) {
+      StatusCardExit.proxy => appLocalizations.exitIp,
+      StatusCardExit.local => appLocalizations.localPublicIp,
+    };
+    final onSwitch = this.onSwitch;
+    final hint = onSwitch == null
+        ? null
+        : switch (shown) {
+            StatusCardExit.proxy => appLocalizations.switchToLocalExit,
+            StatusCardExit.local => appLocalizations.switchToProxyExit,
+          };
+    final Widget target = Semantics(
       container: true,
-      button: true,
-      label: semanticLabel,
-      hint: appLocalizations.exitIpOpenHint,
-      onTap: open,
+      button: onSwitch != null,
+      label: [
+        name,
+        hidden ? appLocalizations.hideIp : ip,
+        ?scoreLabel,
+      ].join(appLocalizations.semanticsSeparator),
+      hint: hint,
+      onTap: onSwitch,
       excludeSemantics: true,
       child: FocusRing(
-        shape: AppShape.all(10),
+        shape: AppShape.xs,
         child: PressRegion(
-          onTap: open,
-          shape: AppShape.all(10),
-          overlay: PressRegion.hoverOverlay,
-          child: Padding(
-            padding: _rowInset,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                line(_lineHeight, _Name(appLocalizations.exitIpRow)),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      line(
-                        _lineHeight,
-                        ClipRect(
-                          child: Row(
-                            children: [
-                              _IpText(ip),
-                              const SizedBox(width: _tagGap),
-                              Flexible(
-                                child: Wrap(
-                                  spacing: _tagGap,
-                                  runSpacing: _lineHeight,
-                                  clipBehavior: Clip.hardEdge,
-                                  children: [
-                                    if (score != null && grade != null)
-                                      _Tag(
-                                        '$score · ${grade.letter}',
-                                        background: gradeColors?.$1,
-                                        foreground: gradeColors?.$2,
-                                      ),
-                                    if (typeLabel != null) _Tag(typeLabel),
-                                    if (nativityLabel != null)
-                                      _Tag(nativityLabel),
-                                    if (reportFailed)
-                                      _Failure(
-                                        label: appLocalizations.ipxNoResponse,
-                                        quiet: true,
-                                        onRetry: () => ref
-                                            .read(
-                                              ipxLookupProvider(ip).notifier,
-                                            )
-                                            .retry(),
-                                      ),
-                                    if (pending)
-                                      const SkeletonPill(
-                                        width: 44,
-                                        height: _tagHeight,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      line(_secondLineHeight, second),
-                    ],
-                  ),
+          onTap: onSwitch,
+          canRequestFocus: onSwitch != null,
+          excludeFromSemantics: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: _minHitSize),
+            child: Padding(
+              padding: padding,
+              child: SizedBox(
+                height: lineHeight,
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  widthFactor: 1,
+                  child: DashboardFitText(hidden ? ipMask : ip, style: style),
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      widthFactor: 1,
+      child: hint == null ? target : Tooltip(message: hint, child: target),
+    );
   }
 }
 
-/// A hairline under the exit, from the address column on.
-class _RowDivider extends StatelessWidget {
-  const _RowDivider({required this.end});
+double _chipHeight(bool large) => large ? 28 : 24;
 
-  /// Where it stops short of the rows' end.
-  final double end;
+const _chipSkeletonWidths = [48.0, 72.0];
+
+class _IpChips extends StatelessWidget {
+  const _IpChips({
+    required this.facts,
+    required this.loading,
+    required this.marked,
+    required this.large,
+  });
+
+  final _IpFacts? facts;
+  final bool loading;
+  final bool marked;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
-    final dark = context.colorScheme.brightness == Brightness.dark;
-    return AnimatedPadding(
-      duration: context.motionDuration(_morphDuration),
-      curve: Curves.easeOutBack,
-      padding: EdgeInsetsDirectional.only(
-        start: 8 + _nameWidth + 2,
-        end: end,
-        top: 8 - 7,
-        bottom: 6,
-      ),
-      child: SizedBox(
-        height: 1,
-        child: ColoredBox(
-          color: dark
-              ? context.colorScheme.onSurface.withValues(alpha: 0.1)
-              : const Color(0xFFEEEBEF),
+    final appLocalizations = context.appLocalizations;
+    final facts = this.facts;
+    final height = _chipHeight(large);
+    final known = [
+      if (facts?.type case final type?)
+        DashboardChip(label: type, large: large),
+      if (facts?.quality case (final label, final tone))
+        DashboardChip(label: label, tone: tone, large: large),
+    ];
+    // Chips that do not fit wrap onto a clipped second line; the details
+    // sheet still lists them all.
+    return SizedBox(
+      height: height,
+      child: ClipRect(
+        child: Wrap(
+          spacing: 6,
+          runSpacing: height,
+          children: [
+            if (marked)
+              DashboardChip(
+                label: appLocalizations.localExit,
+                dot: true,
+                dotColor: context.colorScheme.primary,
+                large: large,
+              ),
+            if (known.isNotEmpty)
+              ...known
+            else if (loading)
+              for (final width in _chipSkeletonWidths)
+                SkeletonPill(width: width, height: height)
+            else
+              DashboardChip(
+                label: facts?.reportFailed ?? false
+                    ? appLocalizations.ipxNoResponse
+                    : appLocalizations.ipTypeUnknown,
+                large: large,
+              ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// The address this device has on its own, looked up straight, never
-/// through a node; nothing to open.
-class LocalIpRow extends ConsumerWidget {
-  const LocalIpRow({
-    super.key,
-    required this.answer,
-    required this.sameAsExit,
-    required this.onRetry,
+const _spinPeriod = Duration(milliseconds: 1500);
+
+/// The exit's country on a clover that looks the address up again when
+/// tapped and turns while it is being looked up.
+class _CountryBadge extends StatefulWidget {
+  const _CountryBadge({
+    required this.countryCode,
+    required this.size,
+    required this.box,
+    required this.active,
+    required this.checking,
+    required this.failed,
+    required this.onRefresh,
   });
 
-  final IpAnswer answer;
+  final String? countryCode;
+  final double size;
 
-  /// Both lookups answered, with the same address.
-  final bool sameAsExit;
-  final VoidCallback onRetry;
+  /// The tap target around the clover, no smaller than 44.
+  final double box;
+  final bool active;
+  final bool checking;
+
+  /// The last lookup failed under an address still shown.
+  final bool failed;
+  final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final appLocalizations = context.appLocalizations;
-    final ip = answer.ip;
-    final hidden = ref.watch(
-      appSettingProvider.select((state) => state.hideIp),
-    );
-    final Widget content = switch (answer) {
-      IpAnswer(failed: true) => _Failure(onRetry: onRetry),
-      IpAnswer(ip: null) => const SkeletonPill(width: 110, height: 14),
-      _ => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Semantics(
-            container: true,
-            label:
-                '${appLocalizations.localPublicIp}'
-                '${appLocalizations.semanticsSeparator}'
-                '${hidden ? appLocalizations.hideIp : ip}'
-                '${answer.revalidating ? '${appLocalizations.semanticsSeparator}${appLocalizations.querying}' : ''}',
-            excludeSemantics: true,
-            child: _IpText(ip!),
-          ),
-          if (!hidden) ...[
-            const SizedBox(width: 2),
-            _CopyButton(text: ip, tooltip: appLocalizations.copyLocalPublicIp),
-          ],
-          if (answer.revalidating || sameAsExit)
-            Padding(
-              padding: EdgeInsetsDirectional.only(start: hidden ? 8 : 4),
-              child: Text(
-                answer.revalidating
-                    ? appLocalizations.querying
-                    : appLocalizations.sameAsExit,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _detailStyle(context),
-              ),
-            ),
-        ],
-      ),
-    };
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
-      child: SizedBox(
-        height: MediaQuery.textScalerOf(context).scale(_lineHeight),
-        child: Row(
-          children: [
-            ExcludeSemantics(
-              excluding: ip != null,
-              child: _Name(appLocalizations.localPublicIpRow),
-            ),
-            Expanded(
-              child: ClipRect(
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: content,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  State<_CountryBadge> createState() => _CountryBadgeState();
+}
+
+class _CountryBadgeState extends State<_CountryBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _turns = AnimationController(
+    vsync: this,
+    duration: _spinPeriod,
+  );
+  var _hovered = false;
+  var _focused = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _spin();
   }
-}
-
-/// Copies [text] and shows a tick for a moment.
-class _CopyButton extends StatefulWidget {
-  const _CopyButton({required this.text, required this.tooltip});
-
-  final String text;
-  final String tooltip;
 
   @override
-  State<_CopyButton> createState() => _CopyButtonState();
-}
-
-class _CopyButtonState extends State<_CopyButton> {
-  Timer? _reset;
+  void didUpdateWidget(_CountryBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.checking != widget.checking) {
+      _spin();
+    }
+  }
 
   @override
   void dispose() {
-    _reset?.cancel();
+    _turns.dispose();
     super.dispose();
   }
 
-  Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.text));
-    if (!mounted) {
-      return;
-    }
-    _reset?.cancel();
-    setState(() => _reset = Timer(_copiedFor, _done));
-  }
-
-  void _done() {
-    if (mounted) {
-      setState(() => _reset = null);
+  void _spin() {
+    if (context.disableAnimations) {
+      _turns.value = 0;
+    } else if (widget.checking) {
+      _turns.repeat();
+    } else {
+      // A clover looks the same every quarter turn, so it stops on the next.
+      final rest = (_turns.value * 4).ceil() / 4;
+      _turns.animateTo(rest, duration: _spinPeriod * (rest - _turns.value));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: _lineHeight,
-      child: DashboardIconButton(
-        glyph: _reset == null ? AppGlyphs.copy : AppGlyphs.check,
-        glyphSize: 16,
-        tooltip: widget.tooltip,
-        onPressed: _copy,
+    final colorScheme = context.colorScheme;
+    final appLocalizations = context.appLocalizations;
+    final foreground = widget.active
+        ? colorScheme.onSurface
+        : colorScheme.onSurfaceVariant;
+    final enabled = !widget.checking;
+    final size = widget.size;
+    final code = widget.countryCode;
+    final tooltip = appLocalizations.requery;
+    final separator = appLocalizations.semanticsSeparator;
+    final color = Color.alphaBlend(
+      foreground.withValues(alpha: enabled && _hovered ? 0.08 : 0),
+      DashboardColors.of(context).tone2,
+    );
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        label: [
+          tooltip,
+          if (code != null && code.isNotEmpty) code.toUpperCase(),
+          if (widget.checking) appLocalizations.querying,
+          if (widget.failed) appLocalizations.queryFailed,
+        ].join(separator),
+        excludeSemantics: true,
+        child: PressRegion(
+          onTap: enabled ? widget.onRefresh : null,
+          onHover: (value) => setState(() => _hovered = value),
+          onFocusChange: (value) => setState(() => _focused = value),
+          excludeFromSemantics: !enabled,
+          child: SizedBox.square(
+            dimension: widget.box,
+            child: Center(
+              child: ElasticPress(
+                enabled: enabled,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _turns,
+                      builder: (_, child) => ShapeBadge(
+                        shape: MaterialShapes.clover4Leaf,
+                        color: color,
+                        size: size,
+                        rotation: _turns.value * 2 * math.pi,
+                        ring: _focused ? focusRingSide(colorScheme) : null,
+                        child: child,
+                      ),
+                      child: code == null || code.isEmpty
+                          ? GlyphIcon(
+                              AppGlyphs.proxies,
+                              size: size * 0.42,
+                              color: foreground,
+                            )
+                          : Text(
+                              code.toUpperCase(),
+                              maxLines: 1,
+                              style: AppTextStyle.footnote
+                                  .of(context, emphasized: true)
+                                  .copyWith(
+                                    color: foreground,
+                                    letterSpacing:
+                                        0.04 * AppTextStyle.footnote.size,
+                                  ),
+                            ),
+                    ),
+                    if (widget.failed && !widget.checking)
+                      PositionedDirectional(
+                        top: size * 0.06,
+                        end: size * 0.06,
+                        child: SizedBox.square(
+                          dimension: 8,
+                          child: DecoratedBox(
+                            decoration: ShapeDecoration(
+                              color: colorScheme.error,
+                              shape: CircleBorder(
+                                side: BorderSide(
+                                  color: DashboardColors.of(context).card,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
+  }
+}
+
+class _Cells extends StatelessWidget {
+  const _Cells({
+    required this.organization,
+    required this.loading,
+    required this.active,
+    required this.gap,
+  });
+
+  final String? organization;
+  final bool loading;
+  final bool active;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final organization = this.organization;
+    return Row(
+      spacing: gap,
+      children: [
+        _Cell(
+          label: appLocalizations.runTime,
+          value: active ? const _RunTimeValue() : const _Placeholder(),
+        ),
+        Flexible(
+          child: _Cell(
+            label: appLocalizations.ipOrganization,
+            value: organization != null
+                ? _CellText(organization)
+                : loading
+                ? SkeletonText(width: 96, style: _cellStyle(context))
+                : const _Placeholder(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Cell extends StatelessWidget {
+  const _Cell({required this.label, required this.value});
+
+  final String label;
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DashboardText.label(context),
+        ),
+        const SizedBox(height: 2),
+        value,
+      ],
+    );
+  }
+}
+
+TextStyle _cellStyle(BuildContext context) =>
+    AppTextStyle.subheadline.of(context, emphasized: true).toTabular;
+
+class _CellText extends StatelessWidget {
+  const _CellText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: _cellStyle(context),
+    );
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  const _Placeholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('—', maxLines: 1, style: _cellStyle(context));
+  }
+}
+
+class _RunTimeValue extends ConsumerWidget {
+  const _RunTimeValue();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _CellText(getTimeText(ref.watch(runTimeProvider)));
   }
 }
 

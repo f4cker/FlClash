@@ -8909,4 +8909,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get resourceListsRecovered => 'Listas de recursos restauradas.';
+
+  @override
+  String get requery => 'Volver a consultar';
+
+  @override
+  String get switchToLocalExit => 'Cambiar a la salida local';
+
+  @override
+  String get switchToProxyExit => 'Cambiar a la salida del proxy';
+
+  @override
+  String get localExit => 'Salida local';
 }

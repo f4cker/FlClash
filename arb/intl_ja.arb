@@ -3662,5 +3662,9 @@
   "connectionsRefreshFailedStale": "接続を更新できませんでした。前回の結果を表示しています。",
   "connectionsRefreshed": "接続を更新しました。",
   "resourceListsReadFailed": "一部のリソースリストを読み込めませんでした。",
-  "resourceListsRecovered": "リソースリストが復旧しました。"
+  "resourceListsRecovered": "リソースリストが復旧しました。",
+  "requery": "再取得",
+  "switchToLocalExit": "ローカル出口に切り替え",
+  "switchToProxyExit": "プロキシ出口に切り替え",
+  "localExit": "ローカル出口"
 }

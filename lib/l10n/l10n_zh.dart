@@ -8144,4 +8144,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceListsRecovered => '资源列表已恢复。';
+
+  @override
+  String get requery => '重新查询';
+
+  @override
+  String get switchToLocalExit => '切换到本地出口';
+
+  @override
+  String get switchToProxyExit => '切换到代理出口';
+
+  @override
+  String get localExit => '本地出口';
 }

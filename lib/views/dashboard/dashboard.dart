@@ -150,8 +150,9 @@ class _DesktopDashboard extends StatelessWidget {
       24,
       24 + MediaQuery.paddingOf(context).bottom,
     );
-    // Reserve conservatively for scaled text; the row itself sizes to content.
-    final topHeight = 160 * math.max(1, scale);
+    // Reserve the status card's own height (its chips and cells stacked);
+    // the row itself sizes to content.
+    final topHeight = (compact ? 174 : 186) * math.max(1, scale);
     final controlHeight = (compact ? 56 : 64) * scale;
     final middleHeight = (compact ? 152 : 176) * scale;
     final tablesHeight = connectionsTableMinHeight(density, scale);

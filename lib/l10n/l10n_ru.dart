@@ -8854,4 +8854,16 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get resourceListsRecovered => 'Списки ресурсов восстановлены.';
+
+  @override
+  String get requery => 'Запросить снова';
+
+  @override
+  String get switchToLocalExit => 'Переключить на локальный выход';
+
+  @override
+  String get switchToProxyExit => 'Переключить на выход прокси';
+
+  @override
+  String get localExit => 'Локальный выход';
 }

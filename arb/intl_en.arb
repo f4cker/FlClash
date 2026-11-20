@@ -3721,5 +3721,9 @@
   "connectionsRefreshFailedStale": "Couldn't refresh connections. Showing the last result.",
   "connectionsRefreshed": "Connections refreshed.",
   "resourceListsReadFailed": "Some resource lists couldn't be read.",
-  "resourceListsRecovered": "Resource lists restored."
+  "resourceListsRecovered": "Resource lists restored.",
+  "requery": "Look up again",
+  "switchToLocalExit": "Switch to local exit",
+  "switchToProxyExit": "Switch to proxy exit",
+  "localExit": "Local exit"
 }

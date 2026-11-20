@@ -8851,4 +8851,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceListsRecovered => 'Resource lists restored.';
+
+  @override
+  String get requery => 'Look up again';
+
+  @override
+  String get switchToLocalExit => 'Switch to local exit';
+
+  @override
+  String get switchToProxyExit => 'Switch to proxy exit';
+
+  @override
+  String get localExit => 'Local exit';
 }

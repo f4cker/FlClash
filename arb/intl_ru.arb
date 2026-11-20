@@ -3662,5 +3662,9 @@
   "connectionsRefreshFailedStale": "Не удалось обновить соединения. Показан последний результат.",
   "connectionsRefreshed": "Соединения обновлены.",
   "resourceListsReadFailed": "Не удалось прочитать некоторые списки ресурсов.",
-  "resourceListsRecovered": "Списки ресурсов восстановлены."
+  "resourceListsRecovered": "Списки ресурсов восстановлены.",
+  "requery": "Запросить снова",
+  "switchToLocalExit": "Переключить на локальный выход",
+  "switchToProxyExit": "Переключить на выход прокси",
+  "localExit": "Локальный выход"
 }

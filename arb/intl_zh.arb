@@ -2436,5 +2436,9 @@
   "connectionsRefreshFailedStale": "连接刷新失败，当前显示上次结果。",
   "connectionsRefreshed": "连接已刷新。",
   "resourceListsReadFailed": "部分资源列表读取失败。",
-  "resourceListsRecovered": "资源列表已恢复。"
+  "resourceListsRecovered": "资源列表已恢复。",
+  "requery": "重新查询",
+  "switchToLocalExit": "切换到本地出口",
+  "switchToProxyExit": "切换到代理出口",
+  "localExit": "本地出口"
 }

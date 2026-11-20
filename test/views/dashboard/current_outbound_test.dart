@@ -19,7 +19,6 @@ import 'package:fl_clash/views/dashboard/widgets/current_outbound.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -111,6 +110,16 @@ Widget _app(
 
 const _localIp = '58.152.33.18';
 
+const _localReport = IpxReport(
+  ip: _localIp,
+  score: 88,
+  type: IpxIpType.residential,
+  nativity: IpxNativity.native,
+  countryCode: 'HK',
+  city: 'Hong Kong',
+  organization: 'HKBN',
+);
+
 const _report = IpxReport(
   ip: _ip,
   score: 35,
@@ -121,9 +130,9 @@ const _report = IpxReport(
   organization: 'TORSERVERS-NET',
 );
 
-ProbeEntry<IpInfo> _fresh(String ip) => ProbeEntry(
+ProbeEntry<IpInfo> _fresh(String ip, {String country = 'GB'}) => ProbeEntry(
   phase: ProbePhase.fresh,
-  value: IpInfo(ip: ip, countryCode: 'GB'),
+  value: IpInfo(ip: ip, countryCode: country),
 );
 
 class _RecordingIps extends OutboundIpProbe {
@@ -182,6 +191,7 @@ class _FakeIpx extends IpxLookup {
   _FakeIpx(this.answer);
 
   final IpxLookupState answer;
+  static var retries = 0;
 
   @override
   IpxLookupState build(String ip) => answer;
@@ -190,7 +200,7 @@ class _FakeIpx extends IpxLookup {
   void reload() {}
 
   @override
-  void retry() {}
+  void retry() => retries++;
 }
 
 class _Running extends RunTime {
@@ -203,20 +213,58 @@ class _Hidden extends AppSetting {
   AppSettingProps build() => const AppSettingProps(hideIp: true);
 }
 
+/// A probe the test moves by hand; [refresh] marks the targets as looked up
+/// again, keeping what they showed, as the real one does.
+class _ManualIps extends OutboundIpProbe {
+  _ManualIps(this.initial);
+
+  final Map<String, ProbeEntry<IpInfo>> initial;
+  final refreshed = <String>[];
+
+  @override
+  RoutedProbeState<String, IpInfo> build() => RoutedProbeState(initial);
+
+  @override
+  void watch(String target) {}
+
+  @override
+  void unwatch(String target) {}
+
+  @override
+  void refresh(Iterable<String> targets) {
+    refreshed.addAll(targets);
+    final entries = Map.of(state.entries);
+    for (final target in targets) {
+      entries[target] = ProbeEntry(
+        phase: ProbePhase.probing,
+        value: entries[target]?.value,
+      );
+    }
+    state = RoutedProbeState(entries);
+  }
+
+  void settle(String target, ProbeEntry<IpInfo> entry) {
+    state = RoutedProbeState({...state.entries, target: entry});
+  }
+}
+
+const _done = IpxLookupState(phase: IpxPhase.done, report: _report);
+const _localDone = IpxLookupState(phase: IpxPhase.done, report: _localReport);
+
 Widget _ipApp({
   ProbeEntry<IpInfo>? exit,
   ProbeEntry<IpInfo>? local,
-  IpxLookupState lookup = const IpxLookupState(
-    phase: IpxPhase.done,
-    report: _report,
-  ),
+  IpxLookupState lookup = _done,
+  IpxLookupState localLookup = _localDone,
   bool running = true,
   bool hideIp = false,
   OutboundIpProbe Function()? probe,
   RouteState? route,
+  DashboardDensity density = DashboardDensity.standard,
+  SetupAction Function()? setup,
 }) {
   final exitEntry = exit ?? _fresh(_ip);
-  final localEntry = local ?? _fresh(_localIp);
+  final localEntry = local ?? _fresh(_localIp, country: 'HK');
   return TestApp(
     locale: const Locale('en'),
     overrides: [
@@ -226,27 +274,42 @@ Widget _ipApp({
         routeTrackerProvider.overrideWithBuild((_, _) => route),
       if (running) runTimeProvider.overrideWith(_Running.new),
       if (hideIp) appSettingProvider.overrideWith(_Hidden.new),
+      if (setup != null) setupActionProvider.overrideWith(setup),
       outboundIpProbeProvider.overrideWith(
         probe ?? () => _RecordingIps(exitEntry, localEntry),
       ),
       ipQualityProvider.overrideWith((_, _) async => _residential),
-      if (exitEntry.value case final info?)
-        ipxLookupProvider(info.ip).overrideWith(() => _FakeIpx(lookup)),
+      ipxLookupProvider(_ip).overrideWith(() => _FakeIpx(lookup)),
+      ipxLookupProvider(_localIp).overrideWith(() => _FakeIpx(localLookup)),
     ],
-    child: _card(),
+    child: _card(density: density),
   );
 }
 
-void _useTallView(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1000, 1600);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.resetPhysicalSize);
-  addTearDown(tester.view.resetDevicePixelRatio);
+Finder _badge() => find.byTooltip('Look up again');
+
+Finder _badgeRegion() =>
+    find.descendant(of: _badge(), matching: find.byType(PressRegion));
+
+Finder _ipRegion(String ip) =>
+    find.ancestor(of: find.text(ip), matching: find.byType(PressRegion));
+
+String? _badgeCode(WidgetTester tester) {
+  final texts = tester.widgetList<Text>(
+    find.descendant(of: _badge(), matching: find.byType(Text)),
+  );
+  return texts.map((text) => text.data).firstOrNull;
 }
 
 void main() {
+  setUp(() {
+    mitmFeature = true;
+    _FakeIpx.retries = 0;
+    addTearDown(() => mitmFeature = false);
+  });
+
   testWidgets(
-    'unchanged network refresh never replaces IPs or report with skeletons',
+    'unchanged network refresh never replaces the IP or report with skeletons',
     (tester) async {
       final probe = _ControlledIps();
       await tester.pumpWidget(
@@ -266,8 +329,7 @@ void main() {
       probe.answer();
       await tester.pumpAndSettle();
       expect(find.text(_ip), findsOneWidget);
-      expect(find.text(_localIp), findsOneWidget);
-      expect(find.textContaining('TORSERVERS-NET'), findsOneWidget);
+      expect(find.text('TORSERVERS-NET'), findsOneWidget);
       expect(find.byType(SkeletonPill), findsNothing);
       final container = ProviderScope.containerOf(
         tester.element(find.byType(CurrentOutboundCard)),
@@ -276,8 +338,7 @@ void main() {
         container.read(routeTrackerProvider.notifier).bumpHostEpoch();
         await tester.pump(const Duration(milliseconds: 50));
         expect(find.text(_ip), findsOneWidget);
-        expect(find.text(_localIp), findsOneWidget);
-        expect(find.textContaining('TORSERVERS-NET'), findsOneWidget);
+        expect(find.text('TORSERVERS-NET'), findsOneWidget);
         expect(find.byType(SkeletonPill), findsNothing);
         expect(
           container.read(outboundIpProbeProvider).valueOf(routedOutbound),
@@ -285,25 +346,21 @@ void main() {
         );
       }
       expect(probe.requests, hasLength(2));
-      expect(find.text('Looking up'), findsOneWidget);
+      // Only the badge says a lookup is out: it is off until it lands.
+      expect(tester.widget<PressRegion>(_badgeRegion()).onTap, isNull);
       await tester.pump(probeMoveSettleDuration);
       expect(probe.requests, hasLength(4));
       expect(find.byType(SkeletonPill), findsNothing);
       probe.answer();
       await tester.pumpAndSettle();
       expect(find.text(_ip), findsOneWidget);
-      expect(find.text('Looking up'), findsNothing);
+      expect(tester.widget<PressRegion>(_badgeRegion()).onTap, isNotNull);
       expect(find.byType(SkeletonPill), findsNothing);
       await tester.pump(const Duration(minutes: 1));
       expect(probe.requests, hasLength(4));
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
-
-  setUp(() {
-    mitmFeature = true;
-    addTearDown(() => mitmFeature = false);
-  });
 
   group('root access', () {
     if (rsFeature) {
@@ -337,272 +394,303 @@ void main() {
     });
   });
 
-  group('the exit row', () {
-    testWidgets('shows the address, its grade, verdicts and network', (
+  group('the restored layout', () {
+    testWidgets('shows the country, the address, its chips and the cells', (
       tester,
     ) async {
-      final semantics = tester.ensureSemantics();
       await tester.pumpWidget(_ipApp());
       await tester.pump();
 
-      expect(find.text('Exit'), findsOneWidget);
+      expect(find.text('Running'), findsOneWidget);
+      expect(_badgeCode(tester), 'GB');
       expect(find.text(_ip), findsOneWidget);
-      expect(find.text('35 · C'), findsOneWidget);
       expect(find.text('Data center'), findsOneWidget);
-      expect(find.text('Native'), findsOneWidget);
-      expect(find.text('TORSERVERS-NET · 🇩🇪 DE Brandenburg'), findsOneWidget);
-      expect(find.textContaining('Running · 00:00:'), findsOneWidget);
-      expect(find.text('Runtime'), findsNothing);
-      expect(
-        find.semantics.byLabel(
-          'Exit IP, $_ip, Health score 35, grade C, Data center, Native, '
-          'TORSERVERS-NET, DE Brandenburg',
-        ),
-        findsOne,
+      expect(find.text('Quality Poor'), findsOneWidget);
+      expect(find.text('Run time'), findsOneWidget);
+      expect(find.text('Organization'), findsOneWidget);
+      expect(find.text('TORSERVERS-NET'), findsOneWidget);
+      // One address at a time: the local one waits behind the switch.
+      expect(find.text(_localIp), findsNothing);
+      expect(find.text('Local exit'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final density in [
+      DashboardDensity.standard,
+      DashboardDensity.compact,
+      DashboardDensity.mobile,
+    ]) {
+      testWidgets('keeps two separate tap targets of at least 44 '
+          '(${density.name})', (tester) async {
+        await tester.pumpWidget(_ipApp(density: density));
+        await tester.pump();
+
+        final badge = tester.getRect(_badgeRegion());
+        final ip = tester.getRect(_ipRegion(_ip));
+        final chips = tester
+            .getRect(find.text('Data center'))
+            .expandToInclude(tester.getRect(find.text('Quality Poor')));
+        expect(badge.width, greaterThanOrEqualTo(44));
+        expect(badge.height, greaterThanOrEqualTo(44));
+        expect(ip.width, greaterThanOrEqualTo(44));
+        expect(ip.height, greaterThanOrEqualTo(44));
+        expect(badge.overlaps(ip), isFalse);
+        expect(ip.overlaps(chips), isFalse);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('masks a hidden address', (tester) async {
+      await tester.pumpWidget(_ipApp(hideIp: true));
+      await tester.pump();
+
+      expect(find.text(ipMask), findsOneWidget);
+      expect(find.text(_ip), findsNothing);
+    });
+
+    testWidgets('says so in place of the address when the lookup fails', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _ipApp(exit: const ProbeEntry(phase: ProbePhase.failed)),
       );
+      await tester.pump();
+
+      expect(find.text('Check failed'), findsOneWidget);
+      expect(find.text('Tap the icon to retry'), findsOneWidget);
+    });
+
+    testWidgets('tells a failed report apart from a failed lookup', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            profilesProvider.overrideWithValue(const [_profile]),
+            suspendProvider.overrideWithValue(false),
+            runTimeProvider.overrideWith(_Running.new),
+            outboundIpProbeProvider.overrideWith(
+              () => _RecordingIps(_fresh(_ip), _fresh(_localIp)),
+            ),
+            ipQualityProvider.overrideWith(
+              (_, _) => Future<IpQuality>.error(StateError('down')),
+            ),
+            ipxLookupProvider(_ip).overrideWith(
+              () => _FakeIpx(const IpxLookupState(phase: IpxPhase.failed)),
+            ),
+          ],
+          child: _card(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // The address stands; only the report about it is missing.
+      expect(find.text(_ip), findsOneWidget);
+      expect(find.text('Couldn’t get the report'), findsOneWidget);
+      expect(find.text('Check failed'), findsNothing);
+    });
+
+    testWidgets('falls back to the IP quality sources without a report', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _ipApp(lookup: const IpxLookupState(phase: IpxPhase.failed)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Residential'), findsOneWidget);
+      expect(find.text('Example Broadband'), findsOneWidget);
+    });
+
+    testWidgets('shows the local address while Flash is not running', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_ipApp(running: false));
+      await tester.pump();
+
+      expect(find.text('Not running'), findsOneWidget);
+      expect(find.text(_localIp), findsOneWidget);
+      expect(_badgeCode(tester), 'HK');
+      // There is no proxy exit to switch to, so nothing says which it is.
+      expect(find.text('Local exit'), findsNothing);
+      expect(find.byTooltip('Switch to proxy exit'), findsNothing);
+    });
+  });
+
+  group('the country badge', () {
+    testWidgets('looks the shown address up again, once at a time', (
+      tester,
+    ) async {
+      final probe = _ManualIps({
+        routedOutbound: _fresh(_ip),
+        directOutbound: _fresh(_localIp, country: 'HK'),
+      });
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_ipApp(probe: () => probe));
+      await tester.pump();
+
+      expect(find.semantics.byLabel(RegExp('^Look up again, GB')), findsOne);
+      await tester.tap(_badge());
+      await tester.tap(_badge(), warnIfMissed: false);
+      await tester.pump();
+      expect(probe.refreshed, [routedOutbound]);
+
+      // Under way: the badge turns and is off; the rest of the card stays.
+      expect(tester.widget<PressRegion>(_badgeRegion()).onTap, isNull);
+      await tester.tap(_badge(), warnIfMissed: false);
+      await tester.pump();
+      expect(probe.refreshed, [routedOutbound]);
+      expect(find.text(_ip), findsOneWidget);
+      expect(find.text('Data center'), findsOneWidget);
+      expect(find.text('TORSERVERS-NET'), findsOneWidget);
+      expect(find.byType(SkeletonPill), findsNothing);
+      expect(find.semantics.byLabel(RegExp('Looking up')), findsOne);
+
+      probe.settle(routedOutbound, _fresh(_ip));
+      await tester.pumpAndSettle();
+      expect(tester.widget<PressRegion>(_badgeRegion()).onTap, isNotNull);
       semantics.dispose();
     });
 
-    testWidgets('opens the full report titled as the exit', (tester) async {
-      _useTallView(tester);
-      await tester.pumpWidget(_ipApp());
+    testWidgets('a failed lookup keeps what was shown', (tester) async {
+      final probe = _ManualIps({
+        routedOutbound: _fresh(_ip),
+        directOutbound: _fresh(_localIp, country: 'HK'),
+      });
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_ipApp(probe: () => probe));
       await tester.pump();
 
-      await tester.tap(find.text(_ip));
+      await tester.tap(_badge());
+      await tester.pump();
+      probe.settle(routedOutbound, const ProbeEntry(phase: ProbePhase.failed));
       await tester.pumpAndSettle();
 
-      expect(find.text('Exit IP'), findsOneWidget);
-    });
-
-    testWidgets('holds the place of both rows while they load', (tester) async {
-      await tester.pumpWidget(
-        _ipApp(
-          exit: const ProbeEntry(phase: ProbePhase.probing),
-          local: const ProbeEntry(phase: ProbePhase.probing),
-        ),
-      );
+      expect(find.text(_ip), findsOneWidget);
+      expect(_badgeCode(tester), 'GB');
+      expect(find.text('Data center'), findsOneWidget);
+      expect(find.text('TORSERVERS-NET'), findsOneWidget);
+      expect(find.text('Check failed'), findsNothing);
+      expect(find.semantics.byLabel(RegExp('Lookup failed')), findsOne);
+      // And it can be asked again.
+      expect(tester.widget<PressRegion>(_badgeRegion()).onTap, isNotNull);
+      await tester.tap(_badge());
       await tester.pump();
-
-      final widths = [
-        for (final pill in tester.widgetList<SkeletonPill>(
-          find.byType(SkeletonPill),
-        ))
-          pill.width,
-      ];
-      expect(widths, [120, 44, 180, 110]);
-      expect(find.text('Same as exit'), findsNothing);
+      expect(probe.refreshed, [routedOutbound, routedOutbound]);
+      semantics.dispose();
     });
 
-    testWidgets('says so and offers a retry when the lookup fails', (
+    testWidgets('asks again for a failed report and the missing other exit', (
       tester,
     ) async {
       late _RecordingIps probe;
       await tester.pumpWidget(
         _ipApp(
-          exit: const ProbeEntry(phase: ProbePhase.failed),
+          lookup: const IpxLookupState(phase: IpxPhase.failed),
           probe: () => probe = _RecordingIps(
+            _fresh(_ip),
             const ProbeEntry(phase: ProbePhase.failed),
-            const ProbeEntry(
-              phase: ProbePhase.fresh,
-              value: IpInfo(ip: _localIp, countryCode: 'HK'),
-            ),
           ),
         ),
       );
       await tester.pump();
 
-      expect(find.text('Lookup failed'), findsOneWidget);
-      expect(find.text('Couldn’t look up the exit IP'), findsOneWidget);
-      // Not the report's failure: there is no address to report on.
-      expect(find.text('Couldn’t get the report'), findsNothing);
-      // The other row goes on regardless.
-      expect(find.text(_localIp), findsOneWidget);
-
-      await tester.tap(find.text('Retry'));
-      expect(probe.refreshed, [routedOutbound]);
-    });
-
-    testWidgets('has no exit while Flash is not running', (tester) async {
-      await tester.pumpWidget(_ipApp(running: false, local: _fresh(_ip)));
+      await tester.tap(_badge());
       await tester.pump();
-
-      expect(find.text('—'), findsOneWidget);
       expect(
-        find.text('Flash isn’t running, so there’s no exit'),
-        findsOneWidget,
+        probe.refreshed,
+        unorderedEquals([routedOutbound, directOutbound]),
       );
-      expect(find.text('Not running'), findsOneWidget);
-      // Nothing to compare against: never inferred.
-      expect(find.text('Same as exit'), findsNothing);
+      expect(_FakeIpx.retries, 1);
     });
+  });
 
-    testWidgets('names its network by ASN without an organization', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _ipApp(
-          lookup: const IpxLookupState(
-            phase: IpxPhase.done,
-            report: IpxReport(ip: _ip, score: 90, asn: 64500),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('90 · A+'), findsOneWidget);
-      expect(find.text('AS64500 · 🇬🇧 GB'), findsOneWidget);
-    });
-
-    testWidgets('keeps the address when only the report failed', (
+  group('the address', () {
+    testWidgets('switches the country, chips and organization together', (
       tester,
     ) async {
       final semantics = tester.ensureSemantics();
-      await tester.pumpWidget(
-        _ipApp(lookup: const IpxLookupState(phase: IpxPhase.failed)),
-      );
+      await tester.pumpWidget(_ipApp());
       await tester.pump();
 
-      expect(find.text(_ip), findsOneWidget);
-      expect(find.text('🇬🇧 GB'), findsOneWidget);
-      expect(find.text('Couldn’t get the report'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-      // Not the address lookup's failure.
-      expect(find.text('Lookup failed'), findsNothing);
-      expect(find.text('Couldn’t look up the exit IP'), findsNothing);
+      expect(find.byTooltip('Switch to local exit'), findsOneWidget);
+      expect(find.semantics.byLabel('Exit IP, $_ip'), findsNothing);
+      expect(find.semantics.byLabel(RegExp('^Exit IP, $_ip')), findsOne);
+      await tester.tap(find.text(_ip));
+      await tester.pump();
+
+      expect(find.text(_localIp), findsOneWidget);
+      expect(find.text(_ip), findsNothing);
+      expect(_badgeCode(tester), 'HK');
+      expect(find.text('Residential'), findsOneWidget);
+      expect(find.text('Quality Excellent'), findsOneWidget);
+      expect(find.text('HKBN'), findsOneWidget);
+      expect(find.text('Data center'), findsNothing);
+      expect(find.text('TORSERVERS-NET'), findsNothing);
+      expect(find.text('Local exit'), findsOneWidget);
+      expect(find.byTooltip('Switch to proxy exit'), findsOneWidget);
       expect(
-        find.semantics.byLabel(
-          RegExp('^Exit IP, $_ip, .*Couldn’t get the report\$'),
-        ),
+        find.semantics.byLabel(RegExp('^Local public IP, $_localIp')),
         findsOne,
       );
-      semantics.dispose();
-    });
 
-    testWidgets('a long IPv6 address loses its middle', (tester) async {
-      const v6 = '2001:0db8:85a3:0000:0000:8a2e:0370:7334';
-      await tester.pumpWidget(
-        _ipApp(
-          exit: _fresh(v6),
-          lookup: const IpxLookupState(phase: IpxPhase.failed),
-        ),
-      );
+      await tester.tap(find.text(_localIp));
       await tester.pump();
-
-      final shown = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((text) => text.data ?? '')
-          .firstWhere((text) => text.contains('…'));
-      expect(shown, startsWith('2001:'));
-      expect(shown, endsWith('7334'));
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('the flag before the place', () {
-    test('comes from a two-letter code', () {
-      expect(flagOf('DE'), '🇩🇪');
-      expect(flagOf('hk'), '🇭🇰');
-    });
-
-    test('is left out for anything else', () {
-      expect(flagOf(null), isNull);
-      expect(flagOf(''), isNull);
-      expect(flagOf('D'), isNull);
-      expect(flagOf('DEU'), isNull);
-      expect(flagOf('1A'), isNull);
-    });
-
-    testWidgets('is left out of the line when the code is not one', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _ipApp(
-          exit: const ProbeEntry(
-            phase: ProbePhase.fresh,
-            value: IpInfo(ip: _ip, countryCode: 'ZZZ'),
-          ),
-          lookup: const IpxLookupState(phase: IpxPhase.failed),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('ZZZ'), findsOneWidget);
-    });
-  });
-
-  group('the local row', () {
-    testWidgets('says it matches the exit only when both are equal', (
-      tester,
-    ) async {
-      final semantics = tester.ensureSemantics();
-      await tester.pumpWidget(_ipApp(local: _fresh(_ip)));
-      await tester.pump();
-
-      expect(find.text('Local'), findsOneWidget);
-      expect(find.text('Same as exit'), findsOneWidget);
-      expect(find.semantics.byLabel('Local public IP, $_ip'), findsOne);
-      semantics.dispose();
-    });
-
-    testWidgets('leaves a different address alone', (tester) async {
-      await tester.pumpWidget(_ipApp());
-      await tester.pump();
-
-      expect(find.text(_localIp), findsOneWidget);
-      expect(find.text('Same as exit'), findsNothing);
-    });
-
-    testWidgets('copies the address and ticks for a moment', (tester) async {
-      String? copied;
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (call) async {
-          if (call.method == 'Clipboard.setData') {
-            copied = (call.arguments as Map)['text'] as String?;
-          }
-          return null;
-        },
-      );
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
-      await tester.pumpWidget(_ipApp());
-      await tester.pump();
-
-      await tester.tap(find.byTooltip('Copy local public IP'));
-      await tester.pump();
-      expect(copied, _localIp);
-      expect(find.byGlyph(AppGlyphs.check), findsOneWidget);
-
-      await tester.pump(const Duration(milliseconds: 1600));
-      expect(find.byGlyph(AppGlyphs.check), findsNothing);
-      expect(find.byGlyph(AppGlyphs.copy), findsOneWidget);
-    });
-
-    testWidgets('fails on its own, without a copy button', (tester) async {
-      await tester.pumpWidget(
-        _ipApp(local: const ProbeEntry(phase: ProbePhase.failed)),
-      );
-      await tester.pump();
-
-      expect(find.text('Lookup failed'), findsOneWidget);
       expect(find.text(_ip), findsOneWidget);
-      expect(find.byTooltip('Copy local public IP'), findsNothing);
+      expect(_badgeCode(tester), 'GB');
+      expect(find.text('TORSERVERS-NET'), findsOneWidget);
+      expect(find.text('Local exit'), findsNothing);
+      semantics.dispose();
     });
 
-    testWidgets('hidden addresses are masked and cannot be copied', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_ipApp(hideIp: true));
-      await tester.pump();
+    for (final local in const [
+      ProbeEntry<IpInfo>(phase: ProbePhase.probing),
+      ProbeEntry<IpInfo>(phase: ProbePhase.failed),
+    ]) {
+      testWidgets('does nothing while the local exit is ${local.phase.name}', (
+        tester,
+      ) async {
+        late _RecordingIps probe;
+        await tester.pumpWidget(
+          _ipApp(probe: () => probe = _RecordingIps(_fresh(_ip), local)),
+        );
+        await tester.pump();
 
-      expect(find.text(_ip), findsNothing);
-      expect(find.text(_localIp), findsNothing);
-      expect(find.text(ipMask), findsNWidgets(2));
-      expect(find.byTooltip('Copy local public IP'), findsNothing);
+        expect(find.byTooltip('Switch to local exit'), findsNothing);
+        expect(tester.widget<PressRegion>(_ipRegion(_ip)).onTap, isNull);
+        await tester.tap(find.text(_ip));
+        await tester.pump();
+
+        expect(find.text(_ip), findsOneWidget);
+        expect(_badgeCode(tester), 'GB');
+        expect(find.text('Local exit'), findsNothing);
+        expect(probe.refreshed, isEmpty);
+      });
+    }
+
+    testWidgets('keeps the start button out of both', (tester) async {
+      await tester.pumpWidget(_ipApp(setup: _RecordingSetupAction.new));
+      await tester.pump();
+      final action =
+          ProviderScope.containerOf(
+                tester.element(find.byType(CurrentOutboundCard)),
+              ).read(setupActionProvider.notifier)
+              as _RecordingSetupAction;
+
+      await tester.tap(_badge());
+      await tester.pump();
+      await tester.tap(find.text(_ip));
+      await tester.pump();
+      await tester.tap(find.text(_localIp));
+      await tester.pump();
+      expect(action.requests, isEmpty);
+
+      await tester.tap(find.byTooltip('Stop'));
+      await tester.pump();
+      expect(action.requests, [false]);
     });
   });
 

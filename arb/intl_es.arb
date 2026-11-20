@@ -3662,5 +3662,9 @@
   "connectionsRefreshFailedStale": "No se pudieron actualizar las conexiones. Se muestra el último resultado.",
   "connectionsRefreshed": "Conexiones actualizadas.",
   "resourceListsReadFailed": "No se pudieron leer algunas listas de recursos.",
-  "resourceListsRecovered": "Listas de recursos restauradas."
+  "resourceListsRecovered": "Listas de recursos restauradas.",
+  "requery": "Volver a consultar",
+  "switchToLocalExit": "Cambiar a la salida local",
+  "switchToProxyExit": "Cambiar a la salida del proxy",
+  "localExit": "Salida local"
 }

@@ -14595,6 +14595,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resource lists restored.'**
   String get resourceListsRecovered;
+
+  /// No description provided for @requery.
+  ///
+  /// In en, this message translates to:
+  /// **'Look up again'**
+  String get requery;
+
+  /// No description provided for @switchToLocalExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to local exit'**
+  String get switchToLocalExit;
+
+  /// No description provided for @switchToProxyExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to proxy exit'**
+  String get switchToProxyExit;
+
+  /// No description provided for @localExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Local exit'**
+  String get localExit;
 }
 
 class _AppLocalizationsDelegate

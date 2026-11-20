@@ -8630,4 +8630,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceListsRecovered => 'リソースリストが復旧しました。';
+
+  @override
+  String get requery => '再取得';
+
+  @override
+  String get switchToLocalExit => 'ローカル出口に切り替え';
+
+  @override
+  String get switchToProxyExit => 'プロキシ出口に切り替え';
+
+  @override
+  String get localExit => 'ローカル出口';
 }

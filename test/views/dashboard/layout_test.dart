@@ -111,7 +111,7 @@ void main() {
     final table = rectOf(tester, ConnectionsTableCard);
     final groups = rectOf(tester, ProxyGroupsCard);
 
-    expect(current.height, 160);
+    expect(current.height, 186);
     for (final speed
         in find
             .byType(SpeedCard)
@@ -173,8 +173,9 @@ void main() {
       expect(speed.top, current.top);
       expect(speed.bottom, current.bottom);
     }
-    final local = tester.getRect(find.byType(LocalIpRow));
-    expect(current.bottom - local.bottom, greaterThanOrEqualTo(20));
+    // The organization cell, last on the card, keeps the bottom padding.
+    final organization = tester.getRect(find.text('Organization'));
+    expect(current.bottom - organization.bottom, greaterThanOrEqualTo(20));
     expect(tester.takeException(), isNull);
     await teardown(tester);
   });
@@ -247,7 +248,7 @@ void main() {
       ),
     );
 
-    expect(rectOf(tester, CurrentOutboundCard).height, 160);
+    expect(rectOf(tester, CurrentOutboundCard).height, 186);
     expect(find.byType(ConnectionsTableCard), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -259,7 +260,7 @@ void main() {
   ) async {
     await pumpDashboard(tester, const Size(1220, 720));
 
-    expect(rectOf(tester, CurrentOutboundCard).height, 160);
+    expect(rectOf(tester, CurrentOutboundCard).height, 174);
     expect(rectOf(tester, OutboundModeBar).height, 56);
     expect(rectOf(tester, IntranetIpCard).height, 152);
     expect(scrollExtentOf(tester), 0);

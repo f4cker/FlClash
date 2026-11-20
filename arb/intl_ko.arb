@@ -3662,5 +3662,9 @@
   "connectionsRefreshFailedStale": "연결을 새로 고치지 못했습니다. 마지막 결과를 표시합니다.",
   "connectionsRefreshed": "연결을 새로 고쳤습니다.",
   "resourceListsReadFailed": "일부 리소스 목록을 읽지 못했습니다.",
-  "resourceListsRecovered": "리소스 목록이 복구되었습니다."
+  "resourceListsRecovered": "리소스 목록이 복구되었습니다.",
+  "requery": "다시 조회",
+  "switchToLocalExit": "로컬 출구로 전환",
+  "switchToProxyExit": "프록시 출구로 전환",
+  "localExit": "로컬 출구"
 }

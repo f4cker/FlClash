@@ -8706,4 +8706,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceListsRecovered => '리소스 목록이 복구되었습니다.';
+
+  @override
+  String get requery => '다시 조회';
+
+  @override
+  String get switchToLocalExit => '로컬 출구로 전환';
+
+  @override
+  String get switchToProxyExit => '프록시 출구로 전환';
+
+  @override
+  String get localExit => '로컬 출구';
 }
