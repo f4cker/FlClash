@@ -441,7 +441,7 @@ void main() {
     test('a root replaced during the check refuses', () async {
       var reads = 0;
       answer = (call) => call.method == 'certificate'
-          ? root(++reads == 1 ? 'AB:CD' : 'EF:01')
+          ? root(++reads == 1 ? _rootFingerprint : 'EF:01')
           : defaultAnswer(call);
       expectRefused(await signGuarded('api.example.com'));
       expect(reads, 2);
