@@ -1,6 +1,6 @@
 // Widget tests for the restore mount confirmation, refusal and result views.
 // Screenshots are off by default:
-//   RESTORE_MOUNT_SHOTS=/private/tmp/flash-restore-mount/shots flutter test \
+//   RESTORE_MOUNT_SHOTS=/private/tmp/flash-restore-mount/shots-r2 flutter test \
 //     test/views/restore_mount_test.dart
 import 'dart:async';
 import 'dart:io';
@@ -101,6 +101,37 @@ RestoreMountPlan _mergePlan() => planRestoreMounts(
   },
 );
 
+/// An override restore with mount data: the backup's relations win, local
+/// ones it does not carry go, and one relation is new from the backup.
+RestoreMountPlan _overridePlan() => planRestoreMounts(
+  isOverride: true,
+  localTargets: {
+    10: const MountTargetState(targetId: 10, sourceIds: [11, 12], version: 3),
+    20: const MountTargetState(targetId: 20, sourceIds: [21], version: 1),
+    40: const MountTargetState(targetId: 40, sourceIds: [41], version: 2),
+  },
+  localProfiles: [
+    _file(10, '晨光配置'),
+    _sub(11, '海岸订阅'),
+    _sub(12, '旧海岸订阅'),
+    _file(20, '夜航配置'),
+    _sub(21, '夜航订阅'),
+    _file(40, '远行配置'),
+    _sub(41, '远行订阅'),
+  ],
+  backupProfiles: [
+    _file(10, '晨光配置'),
+    _sub(11, '海岸订阅'),
+    _sub(13, '山岚订阅'),
+    _file(40, '远行配置'),
+    _sub(41, '远行订阅'),
+  ],
+  backupTargets: {
+    10: const MountTargetState(targetId: 10, sourceIds: [11, 13], version: 5),
+    40: const MountTargetState(targetId: 40, sourceIds: [41], version: 2),
+  },
+);
+
 /// An old backup without mount data, as in the narrow mockup.
 RestoreMountPlan _legacyPlan() => planRestoreMounts(
   isOverride: true,
@@ -173,6 +204,7 @@ void main() {
     Locale locale = const Locale('en'),
     Size size = const Size(900, 1000),
     double textScale = 1,
+    ThemeMode themeMode = ThemeMode.light,
   }) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -193,12 +225,14 @@ void main() {
               locale: locale,
               theme: watchAppTheme(ref, Brightness.light),
               darkTheme: watchAppTheme(ref, Brightness.dark),
-              themeMode: ThemeMode.light,
+              themeMode: themeMode,
               child: MediaQuery.withClampedTextScaling(
                 minScaleFactor: textScale,
                 maxScaleFactor: textScale,
                 child: ColoredBox(
-                  color: const Color(0xFFE8E9ED),
+                  color: themeMode == ThemeMode.dark
+                      ? const Color(0xFF1C1C1E)
+                      : const Color(0xFFE8E9ED),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: child(),
@@ -277,6 +311,173 @@ void main() {
         reason: 'a missing source is never given a guessed name',
       );
     });
+  });
+
+  group('kept and restored relations', () {
+    test('kept holds only local relations left as they are; the backup\'s '
+        'new relations are their own group and never count as kept', () {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      final plan = _mergePlan();
+      final rows = restoreMountRows(plan, l10n);
+      String pair(RestoreMountRow r) => '${r.owner!.label}←${r.source}';
+      expect(
+        {for (final r in rows[RestoreMountGroup.keep]!) pair(r)},
+        {'晨光配置←海岸订阅', '远行配置←远行订阅'},
+      );
+      expect(
+        {for (final r in rows[RestoreMountGroup.restore]!) pair(r)},
+        {'晨光配置←山岚订阅'},
+      );
+      expect(
+        {for (final r in rows[RestoreMountGroup.keep]!) r.tag},
+        {l10n.restoreMountTagKeep},
+      );
+      expect(
+        {for (final r in rows[RestoreMountGroup.restore]!) r.tag},
+        {l10n.restoreMountTagRestore},
+      );
+      expect(plan.keptLocally, hasLength(2));
+      expect(plan.restoredFromBackup, hasLength(1));
+      expect(
+        plan.keptLocally.length + plan.restoredFromBackup.length,
+        plan.kept.length,
+        reason: 'every relation after the restore is in exactly one group',
+      );
+    });
+
+    testWidgets('chips and headings count each group on its own', (
+      tester,
+    ) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _mergePlan()),
+        locale: const Locale('zh'),
+        size: const Size(860, 1400),
+      );
+      expect(find.text('保留 2 条'), findsOne);
+      expect(find.text('从备份恢复 1 条'), findsOne);
+      expect(find.text('保留的关系 · 2'), findsOne);
+      expect(find.text('从备份恢复 · 1'), findsOne);
+      expect(find.text('保留 3 条'), findsNothing);
+      // Inside 保留 no row is tagged as coming from the backup.
+      expect(find.text('来自备份'), findsOne);
+    });
+
+    testWidgets('a plan with nothing new from the backup shows no restore '
+        'chip or group', (tester) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _legacyPlan()),
+        locale: const Locale('zh'),
+      );
+      expect(find.textContaining('从备份恢复'), findsNothing);
+    });
+  });
+
+  group('long lists reach the bottom', () {
+    Future<void> expectLastRowReachable(
+      WidgetTester tester,
+      Finder last, {
+      required bool pinned,
+      Finder? footer,
+    }) async {
+      final scrollView = find.byType(CustomScrollView);
+      final scrollable = find
+          .descendant(of: scrollView, matching: find.byType(Scrollable))
+          .first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      for (var i = 0; i < 200 && last.evaluate().isEmpty; i++) {
+        final before = position.pixels;
+        await tester.drag(scrollView, const Offset(0, -500));
+        await tester.pump();
+        if (position.pixels == before) break;
+      }
+      expect(last, findsOne, reason: 'scrolling down reaches the last row');
+      final viewport = tester.getRect(scrollView);
+      void expectInside(String when) {
+        final row = tester.getRect(last);
+        expect(
+          row.top >= viewport.top - 0.5 && row.bottom <= viewport.bottom + 0.5,
+          isTrue,
+          reason: '$when: the last row $row lies inside $viewport',
+        );
+        if (footer != null && tester.getRect(footer).top > row.top) {
+          expect(
+            row.bottom <= tester.getRect(footer).top + 0.5,
+            isTrue,
+            reason: '$when: the footer does not cover the last row',
+          );
+        }
+      }
+
+      // Brought fully into view by scrolling alone, never cut off.
+      await tester.ensureVisible(last);
+      await tester.pumpAndSettle();
+      expectInside('scrolled to');
+      // And on to the very end, as a user flinging down would.
+      await tester.drag(scrollView, const Offset(0, -100000));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(position.pixels, position.maxScrollExtent);
+      if (footer != null) {
+        final screen = Offset.zero & tester.view.physicalSize / 2;
+        expect(screen.contains(tester.getRect(footer).center), isTrue);
+      }
+      // With a pinned footer the last row is still in view at the end; in
+      // a paged sheet the footer, in the flow, may have pushed it up.
+      if (pinned) {
+        expect(last, findsOne);
+        expectInside('at the end');
+      }
+    }
+
+    for (final (name, size, scale) in [
+      ('desktop', const Size(900, 1000), 1.0),
+      ('393 pt', const Size(393, 852), 1.0),
+      ('393 pt at 200%', const Size(393, 852), 2.0),
+    ]) {
+      testWidgets('confirm, $name', (tester) async {
+        await host(
+          tester,
+          () => RestoreMountConfirmSheet(plan: _bigPlan(120)),
+          locale: const Locale('zh'),
+          size: size,
+          textScale: scale,
+        );
+        await expectLastRowReachable(
+          tester,
+          find.text('所属配置：配置 119'),
+          pinned: name == 'desktop',
+          footer: find.text(
+            currentAppLocalizations.restoreMountConfirmOverride,
+          ),
+        );
+      });
+
+      testWidgets('result, $name', (tester) async {
+        await host(
+          tester,
+          () => RestoreResultView(
+            evidence: RestoreEvidence.committed(
+              pendingChecks: [
+                for (var i = 0; i < 120; i++)
+                  RestoreMountProfile(i + 1, label: '配置 $i'),
+              ],
+            ),
+            onOpenProfiles: () {},
+          ),
+          locale: const Locale('zh'),
+          size: size,
+          textScale: scale,
+        );
+        await expectLastRowReachable(
+          tester,
+          find.text('所属配置：配置 119'),
+          pinned: name == 'desktop',
+          footer: find.text(currentAppLocalizations.restoreBlockedViewProfiles),
+        );
+      });
+    }
   });
 
   group('confirmation', () {
@@ -728,6 +929,91 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       await shoot(tester, 'restore-confirm-desktop-zh');
+    });
+
+    testWidgets('confirm override zh', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(
+          plan: _overridePlan(),
+          backupName: '示例备份 · 2026年11月18日 10:30',
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 1100),
+      );
+      expect(tester.takeException(), isNull);
+      await shoot(tester, 'restore-confirm-override-zh');
+    });
+
+    testWidgets('confirm old backup desktop zh', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _legacyPlan()),
+        locale: const Locale('zh'),
+        size: const Size(860, 1000),
+      );
+      expect(tester.takeException(), isNull);
+      await shoot(tester, 'restore-confirm-legacy-zh');
+    });
+
+    testWidgets('confirm dark zh', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _mergePlan()),
+        locale: const Locale('zh'),
+        size: const Size(860, 1000),
+        themeMode: ThemeMode.dark,
+      );
+      expect(tester.takeException(), isNull);
+      await shoot(tester, 'restore-confirm-dark-zh');
+    });
+
+    testWidgets('result locked dark zh', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => RestoreResultView(
+          evidence: const RestoreEvidence(
+            writeStarted: true,
+            committed: true,
+            pendingSteps: [RestoreStep.settings, RestoreStep.mitm],
+            skippedSteps: [],
+            pendingChecks: [
+              RestoreMountProfile(1, label: '晨光配置'),
+              RestoreMountProfile(2, label: '远行配置'),
+            ],
+          ),
+          onOpenProfiles: () {},
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 820),
+        themeMode: ThemeMode.dark,
+      );
+      expect(tester.takeException(), isNull);
+      await shoot(tester, 'restore-result-locked-dark-zh');
+    });
+
+    testWidgets('result locked narrow zh 200%', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => RestoreResultView(
+          evidence: const RestoreEvidence(
+            writeStarted: true,
+            committed: true,
+            pendingSteps: [RestoreStep.settings, RestoreStep.mitm],
+            skippedSteps: [],
+            pendingChecks: [
+              RestoreMountProfile(1, label: '晨光配置'),
+              RestoreMountProfile(2, label: '远行配置'),
+            ],
+          ),
+          onOpenProfiles: () {},
+        ),
+        locale: const Locale('zh'),
+        size: const Size(393, 1900),
+        textScale: 2,
+      );
+      expect(tester.takeException(), isNull);
+      await shoot(tester, 'restore-result-locked-narrow-zh-200');
     });
 
     testWidgets('confirm desktop en', skip: !shots, (tester) async {

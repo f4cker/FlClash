@@ -147,7 +147,9 @@ class RestoreMountPlan {
   /// Targets whose local relation the backup replaces. These are losses.
   final List<RestoreMountReplacement> replacements;
 
-  /// Relations that exist after the restore.
+  /// Relations that exist after the restore: those kept as they are
+  /// locally and those the backup brings; see [keptLocally] and
+  /// [restoredFromBackup].
   final List<RestoreMountKept> kept;
 
   /// Backup relations that are not written, and are not local either.
@@ -181,6 +183,19 @@ class RestoreMountPlan {
   int get removalCount => removals.length;
 
   int get replacementCount => replacements.length;
+
+  /// Relations that exist locally now and stay as they are.
+  List<RestoreMountKept> get keptLocally => [
+    for (final k in kept)
+      if (k.origin == RestoreMountOrigin.local) k,
+  ];
+
+  /// Relations the backup brings that do not exist locally now; never
+  /// counted as kept.
+  List<RestoreMountKept> get restoredFromBackup => [
+    for (final k in kept)
+      if (k.origin == RestoreMountOrigin.backup) k,
+  ];
 
   bool get hasLosses => removals.isNotEmpty || replacements.isNotEmpty;
 

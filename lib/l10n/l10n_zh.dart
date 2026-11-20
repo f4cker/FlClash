@@ -1881,6 +1881,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String restoreMountRestoreCount(Object count) {
+    return '从备份恢复 $count 条';
+  }
+
+  @override
   String restoreMountCheckCount(Object count) {
     return '恢复后待检查 $count 项';
   }
@@ -1903,6 +1908,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String restoreMountKeepSection(Object count) {
     return '保留的关系 · $count';
+  }
+
+  @override
+  String restoreMountRestoreSection(Object count) {
+    return '从备份恢复 · $count';
   }
 
   @override

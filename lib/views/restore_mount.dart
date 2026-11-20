@@ -140,7 +140,7 @@ String restoreMountReasonText(
 };
 
 /// One group of the confirmation list, with its true total.
-enum RestoreMountGroup { remove, replace, keep, check, invalid }
+enum RestoreMountGroup { remove, replace, keep, restore, check, invalid }
 
 /// A row as the list shows it; the confirmation sheet and its tests read
 /// the same data.
@@ -179,8 +179,9 @@ class RestoreMountRow {
        reasonId = null;
 }
 
-/// Groups the plan for the list: remove, replace, keep, then to check, and
-/// last the backup relations that are not written.
+/// Groups the plan for the list: remove, replace, keep (local relations
+/// left as they are), restore (relations the backup brings), then to
+/// check, and last the backup relations that are not written.
 Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
   RestoreMountPlan plan,
   AppLocalizations l10n,
@@ -230,14 +231,21 @@ Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
         ),
     ],
     RestoreMountGroup.keep: [
-      for (final k in plan.kept)
+      for (final k in plan.keptLocally)
         RestoreMountRow(
           group: RestoreMountGroup.keep,
           owner: k.relation.target,
           source: name(k.relation.source),
-          tag: k.origin == RestoreMountOrigin.backup
-              ? l10n.restoreMountTagRestore
-              : l10n.restoreMountTagKeep,
+          tag: l10n.restoreMountTagKeep,
+        ),
+    ],
+    RestoreMountGroup.restore: [
+      for (final k in plan.restoredFromBackup)
+        RestoreMountRow(
+          group: RestoreMountGroup.restore,
+          owner: k.relation.target,
+          source: name(k.relation.source),
+          tag: l10n.restoreMountTagRestore,
         ),
     ],
     RestoreMountGroup.check: [
@@ -633,7 +641,11 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
           l10n.restoreMountReplaceCount('${plan.replacementCount}'),
           loss: plan.replacementCount > 0,
         ),
-        _Chip(l10n.restoreMountKeepCount('${plan.kept.length}')),
+        _Chip(l10n.restoreMountKeepCount('${plan.keptLocally.length}')),
+        if (plan.restoredFromBackup.isNotEmpty)
+          _Chip(
+            l10n.restoreMountRestoreCount('${plan.restoredFromBackup.length}'),
+          ),
         _Chip(l10n.restoreMountCheckCount('${plan.pendingCheck.length}')),
         if (plan.invalid.isNotEmpty)
           _Chip(l10n.restoreMountInvalidCount('${plan.invalid.length}')),
@@ -782,6 +794,13 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                   '${rows[RestoreMountGroup.keep]!.length}',
                 ),
                 rows[RestoreMountGroup.keep]!,
+              ),
+              ..._groupSlivers(
+                context,
+                l10n.restoreMountRestoreSection(
+                  '${rows[RestoreMountGroup.restore]!.length}',
+                ),
+                rows[RestoreMountGroup.restore]!,
               ),
               ..._groupSlivers(
                 context,

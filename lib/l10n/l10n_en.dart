@@ -1999,6 +1999,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String restoreMountRestoreCount(Object count) {
+    return 'Restore $count from backup';
+  }
+
+  @override
   String restoreMountCheckCount(Object count) {
     return 'Check after restore $count';
   }
@@ -2021,6 +2026,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String restoreMountKeepSection(Object count) {
     return 'Relations kept · $count';
+  }
+
+  @override
+  String restoreMountRestoreSection(Object count) {
+    return 'Restored from backup · $count';
   }
 
   @override

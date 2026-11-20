@@ -3654,6 +3654,12 @@ abstract class AppLocalizations {
   /// **'Keep {count}'**
   String restoreMountKeepCount(Object count);
 
+  /// No description provided for @restoreMountRestoreCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore {count} from backup'**
+  String restoreMountRestoreCount(Object count);
+
   /// No description provided for @restoreMountCheckCount.
   ///
   /// In en, this message translates to:
@@ -3683,6 +3689,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Relations kept · {count}'**
   String restoreMountKeepSection(Object count);
+
+  /// No description provided for @restoreMountRestoreSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored from backup · {count}'**
+  String restoreMountRestoreSection(Object count);
 
   /// No description provided for @restoreMountCheckSection.
   ///
