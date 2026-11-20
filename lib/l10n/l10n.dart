@@ -4182,11 +4182,17 @@ abstract class AppLocalizations {
   /// **'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off. All MITM modules stay paused while the app runs; turning them off is tried again at the next launch.'**
   String get restoreRecoveryMitmOffFailed;
 
-  /// No description provided for @restoreRecoveryMitmOffFailedUnheld.
+  /// No description provided for @restoreRecoveryMitmOffFailedNoRetry.
   ///
   /// In en, this message translates to:
-  /// **'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off; some may still be running. Check each module\'s switch on the MITM modules page.'**
-  String get restoreRecoveryMitmOffFailedUnheld;
+  /// **'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off. All MITM modules stay paused while the app runs, but whether turning them off is tried again at the next launch can\'t be confirmed. Check the MITM modules page.'**
+  String get restoreRecoveryMitmOffFailedNoRetry;
+
+  /// No description provided for @restoreRecoveryMitmStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred while pausing MITM modules. To be safe, all MITM modules are stopped while the app runs.'**
+  String get restoreRecoveryMitmStopped;
 
   /// No description provided for @restoreContinue.
   ///

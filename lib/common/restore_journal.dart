@@ -583,6 +583,10 @@ enum RestoreRecoveryOutcome {
   /// Recovery itself failed before it could tell whether anything had
   /// committed; the journal stays for the next launch.
   failed,
+
+  /// Nothing to say but that every MITM module was stopped for this launch
+  /// ([RestoreRecoveryReport.mitmStopped]).
+  modulesStopped,
 }
 
 /// What the user can do about a [RestoreRecoveryReport].
@@ -608,10 +612,14 @@ class RestoreRecoveryReport {
   /// Turning every module off was needed but failed.
   final bool mitmOffFailed;
 
-  /// With [mitmOffFailed]: every module was confirmed held for this run,
-  /// and the journal (and its marker, if it had one) confirmed kept for the
-  /// next launch to try again.
-  final bool mitmOffHeld;
+  /// With [mitmOffFailed]: the journal (and its marker, if it had one) was
+  /// confirmed kept for the next launch to try again. Either way no module
+  /// runs for the rest of this launch.
+  final bool mitmOffRetryKept;
+
+  /// A hold could not be applied, so every module was stopped for the rest
+  /// of this launch.
+  final bool mitmStopped;
 
   const RestoreRecoveryReport(
     this.outcome, {
@@ -622,14 +630,15 @@ class RestoreRecoveryReport {
     this.followUp = RestoreFollowUp.none,
     this.mitmAllOff = false,
     this.mitmOffFailed = false,
-    this.mitmOffHeld = false,
+    this.mitmOffRetryKept = false,
+    this.mitmStopped = false,
   });
 
   /// With every module turned off the restore is never called finished:
   /// what ran before needs consent again here.
   RestoreRecoveryReport withMitmAllOff({
     bool failed = false,
-    bool held = false,
+    bool retryKept = false,
   }) {
     final finished =
         outcome == RestoreRecoveryOutcome.completed ||
@@ -643,16 +652,31 @@ class RestoreRecoveryReport {
       followUp: followUp,
       mitmAllOff: !failed,
       mitmOffFailed: failed,
-      mitmOffHeld: failed && held,
+      mitmOffRetryKept: failed && retryKept,
+      mitmStopped: mitmStopped,
     );
   }
+
+  RestoreRecoveryReport withMitmStopped() => RestoreRecoveryReport(
+    outcome,
+    keptFiles: keptFiles,
+    skippedSteps: skippedSteps,
+    tornFiles: tornFiles,
+    pendingMounts: pendingMounts,
+    followUp: followUp,
+    mitmAllOff: mitmAllOff,
+    mitmOffFailed: mitmOffFailed,
+    mitmOffRetryKept: mitmOffRetryKept,
+    mitmStopped: true,
+  );
 
   @override
   String toString() =>
       'RestoreRecoveryReport($outcome, kept: $keptFiles, '
       'skipped: $skippedSteps, torn: $tornFiles, mounts: $pendingMounts, '
       'followUp: $followUp, mitmAllOff: $mitmAllOff, '
-      'mitmOffFailed: $mitmOffFailed, held: $mitmOffHeld)';
+      'mitmOffFailed: $mitmOffFailed, retryKept: $mitmOffRetryKept, '
+      'stopped: $mitmStopped)';
 }
 
 /// The restored mount targets among [targetIds] whose record is still
@@ -777,18 +801,14 @@ class RestoreRecovery {
   /// Of [_mitmOffFailed]: whether the journal had a commit marker then.
   final _mitmOffMarked = <int, bool>{};
 
-  /// Of [_mitmOffFailed]: those confirmed held and kept for a retry.
-  final _mitmOffHeld = <int>{};
+  /// Of [_mitmOffFailed]: those whose journal was confirmed kept for a
+  /// retry.
+  final _mitmOffRetryKept = <int>{};
 
-  /// Whether every module is held for [id] right now, and its journal is
-  /// still there in the old format, with its marker if it had one.
+  /// Whether the journal of [id] is still there in the old format, with its
+  /// marker if it had one, for the next launch to try again.
   Future<bool> _confirmOffRetry(int id, RestoreJournal journal) async {
     try {
-      if (!_mitmHolds.containsKey(id) ||
-          _mitmHolds[id] != null ||
-          !mitmHold.value.all) {
-        return false;
-      }
       final file = File(join(journal.dirPath, _journalFileName));
       if (!await file.exists()) return false;
       final map = json.decode(await file.readAsString()) as Map;
@@ -809,7 +829,10 @@ class RestoreRecovery {
 
   void _report(int id, RestoreRecoveryReport report) => reports.add(
     _mitmOffFailed.contains(id)
-        ? report.withMitmAllOff(failed: true, held: _mitmOffHeld.contains(id))
+        ? report.withMitmAllOff(
+            failed: true,
+            retryKept: _mitmOffRetryKept.contains(id),
+          )
         : _mitmAllOff.contains(id)
         ? report.withMitmAllOff()
         : report,
@@ -823,11 +846,53 @@ class RestoreRecovery {
   /// session or one before, whose consent recheck has not completed.
   final mitmHold = ValueNotifier<RestoreMitmHold>(RestoreMitmHold.none);
 
+  /// Set once a hold could not be confirmed in place: no module runs for
+  /// the rest of this launch, whatever [mitmHold] says. Every place that
+  /// runs a module reads this directly, not only through [mitmHold].
+  bool get mitmStopped => _mitmStopped;
+  bool _mitmStopped = false;
+
+  /// Whether a report has said [mitmStopped] yet.
+  bool _mitmStopSaid = false;
+
+  /// What no module may run under right now.
+  RestoreMitmHold get effectiveMitmHold =>
+      _mitmStopped ? const RestoreMitmHold(all: true) : mitmHold.value;
+
+  /// Called first in [holdMitm]; a test throws here to fail the hold.
+  @visibleForTesting
+  void Function()? onHoldMitm;
+
   /// Holds the [modules] restore [journalId] writes (all, when null) until
-  /// [releaseMitm]. Set before the commit, so nothing runs in between.
+  /// [releaseMitm]. Set before the commit, so nothing runs in between. Never
+  /// throws: a hold that cannot be confirmed stops every module instead.
   void holdMitm(int journalId, List<int>? modules) {
-    _mitmHolds[journalId] = modules;
-    mitmHold.value = RestoreMitmHold.of(_mitmHolds.values);
+    try {
+      onHoldMitm?.call();
+      _mitmHolds[journalId] = modules;
+      mitmHold.value = RestoreMitmHold.of(_mitmHolds.values);
+      final hold = mitmHold.value;
+      if (modules == null ? !hold.all : !modules.every(hold.holds)) {
+        throw StateError('hold not in effect: $hold');
+      }
+    } catch (error) {
+      stopMitmModules(error);
+    }
+  }
+
+  /// Stops every module for the rest of this launch, for when what must not
+  /// run cannot be held, or cannot be known.
+  void stopMitmModules(Object reason) {
+    commonPrint.log(
+      'MITM modules stopped for this launch: $reason',
+      logLevel: LogLevel.error,
+    );
+    _mitmStopped = true;
+    try {
+      mitmHold.value = const RestoreMitmHold(all: true);
+    } catch (_) {
+      // Every module reads [mitmStopped] itself as well.
+    }
   }
 
   /// Only once the recheck for [journalId] has completed, or its rows were
@@ -838,10 +903,20 @@ class RestoreRecovery {
     mitmHold.value = RestoreMitmHold.of(_mitmHolds.values);
   }
 
-  /// Each test starts from a launch with nothing held.
+  /// Each test starts from a launch with nothing held or stopped.
   @visibleForTesting
   void clearMitmHolds() {
     _mitmHolds.clear();
+    _mitmStopped = false;
+    _mitmStopSaid = false;
+    onHoldMitm = null;
+    onMitmOff = null;
+    _awaitingMitm.clear();
+    reports.clear();
+    _mitmAllOff.clear();
+    _mitmOffFailed.clear();
+    _mitmOffMarked.clear();
+    _mitmOffRetryKept.clear();
     mitmHold.value = RestoreMitmHold.none;
   }
 
@@ -870,11 +945,16 @@ class RestoreRecovery {
           'restore recovery $id failed: $error\n$stack',
           logLevel: LogLevel.error,
         );
+        if (_mitmOffFailed.contains(id)) {
+          // Applied again before anything else here, whatever the journal
+          // says now.
+          holdMitm(id, null);
+        }
         final report = await _failure(id, journal);
         if (_mitmOffFailed.contains(id) &&
             journal != null &&
             await _confirmOffRetry(id, journal)) {
-          _mitmOffHeld.add(id);
+          _mitmOffRetryKept.add(id);
         }
         _report(id, report);
       }
@@ -948,6 +1028,9 @@ class RestoreRecovery {
           committed != null &&
           journal.phase.index < RestorePhase.configSaved.index &&
           journal.recorded(await db.restoreFingerprint(), committed);
+      // Held, or else stopped, before trying: whether turning off works or
+      // the journal survives, nothing runs on the old consent meanwhile.
+      holdMitm(id, null);
       try {
         // The new fingerprint is recorded before this commits, keeping the
         // old one too, so a crash at any point leaves a recorded database.
@@ -970,13 +1053,16 @@ class RestoreRecovery {
           await onMitmOff?.call(false);
         });
       } catch (_) {
-        // Every module stays held for this run; the journal stays, so the
-        // next launch tries again.
+        // Every module stays held (or stopped) for this run; the journal
+        // stays, unless it went too, for the next launch to try again.
         holdMitm(id, null);
         _mitmOffFailed.add(id);
         _mitmOffMarked[id] = committed != null;
         rethrow;
       }
+      // Every row reads off and declined: the hold is no longer what keeps
+      // them from running. Whatever this journal still owes holds again.
+      releaseMitm(id);
       _mitmAllOff.add(id);
       await onMitmOff?.call(true);
     }
@@ -1205,7 +1291,7 @@ class RestoreRecovery {
         _mitmOffFailed.isNotEmpty
             ? report.withMitmAllOff(
                 failed: true,
-                held: _mitmOffHeld.containsAll(_mitmOffFailed),
+                retryKept: _mitmOffRetryKept.containsAll(_mitmOffFailed),
               )
             : _mitmAllOff.isNotEmpty
             ? report.withMitmAllOff()
@@ -1218,10 +1304,23 @@ class RestoreRecovery {
     }
   }
 
-  /// Reports are shown once.
+  /// Reports are shown once; a stop is said once, with the first of them.
   List<RestoreRecoveryReport> takeReports() {
     final taken = [...reports];
     reports.clear();
+    if (_mitmStopped && !_mitmStopSaid) {
+      _mitmStopSaid = true;
+      if (taken.isEmpty) {
+        taken.add(
+          const RestoreRecoveryReport(
+            RestoreRecoveryOutcome.modulesStopped,
+            mitmStopped: true,
+          ),
+        );
+      } else {
+        taken[0] = taken[0].withMitmStopped();
+      }
+    }
     return taken;
   }
 }
@@ -1274,14 +1373,16 @@ String restoreRecoveryMessage(
       l10n.restoreResultUnknownItems,
     ],
     RestoreRecoveryOutcome.failed => [l10n.restoreRecoveryFailed],
+    RestoreRecoveryOutcome.modulesStopped => const <String>[],
   };
   return [
     ...lines,
     if (report.mitmAllOff) l10n.restoreRecoveryMitmAllOff,
     if (report.mitmOffFailed)
-      report.mitmOffHeld
+      report.mitmOffRetryKept
           ? l10n.restoreRecoveryMitmOffFailed
-          : l10n.restoreRecoveryMitmOffFailedUnheld,
+          : l10n.restoreRecoveryMitmOffFailedNoRetry,
+    if (report.mitmStopped) l10n.restoreRecoveryMitmStopped,
     if (report.pendingMounts.isNotEmpty)
       l10n.restorePendingMounts(report.pendingMounts.join(separator)),
     if (restoreFollowUpText(report.followUp, l10n) case final text

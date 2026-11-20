@@ -285,6 +285,9 @@ class Bootstrap {
         'restore recovery failed: $error',
         logLevel: LogLevel.error,
       );
+      // Whether a restore left modules on another device's consent is
+      // unknown: none runs this launch.
+      restoreRecovery.stopMitmModules(error);
       restoreRecovery.reports.add(
         const RestoreRecoveryReport(RestoreRecoveryOutcome.failed),
       );

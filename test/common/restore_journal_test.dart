@@ -12,6 +12,8 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
+import 'package:fl_clash/providers/mitm.dart';
+import 'package:fl_clash/providers/state.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
@@ -1437,8 +1439,8 @@ void main() {
       expect(await states(), {41: (false, false), 50: (true, true)});
     });
 
-    test('when the retry cannot be confirmed kept, it never says all are '
-        'paused or that the next launch tries again', () async {
+    test('when the retry cannot be confirmed kept, every module is still '
+        'held, and it never says the next launch tries again', () async {
       await oldCrash(_Crash.afterCommit);
       final [dir] = journals();
       final recovery =
@@ -1457,13 +1459,194 @@ void main() {
       final report = recovery.takeReports().single;
 
       expect(report.mitmOffFailed, isTrue);
-      expect(report.mitmOffHeld, isFalse);
+      expect(report.mitmOffRetryKept, isFalse);
+      expect(report.mitmStopped, isFalse);
       final en = currentAppLocalizations;
       final message = restoreRecoveryMessage(report, en);
-      expect(message, contains(en.restoreRecoveryMitmOffFailedUnheld));
+      expect(message, contains(en.restoreRecoveryMitmOffFailedNoRetry));
       expect(message, isNot(contains(en.restoreRecoveryMitmOffFailed)));
       expect(message, isNot(contains(en.restoreRecoveryMitmAllOff)));
       expect(await states(), {41: (true, true), 50: (true, true)});
+      for (final id in [41, 50, 999]) {
+        expect(recovery.mitmHold.value.holds(id), isTrue, reason: '$id');
+      }
+      expect(
+        restoreRecoveryMessage(
+          report,
+          lookupAppLocalizations(const Locale('zh')),
+        ).split('\n'),
+        contains(
+          '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，'
+          '所有解密模块保持暂停；但无法确认下次启动时会再次尝试关闭。'
+          '请前往解密模块页面检查。',
+        ),
+      );
+    });
+
+    group('a failed turn-off or hold: no module reaches the profile or the '
+        'runtime this launch', () {
+      setUp(() => mitmFeature = true);
+      tearDown(() {
+        mitmFeature = false;
+        restoreRecovery.clearMitmHolds();
+      });
+
+      String moduleText(int id) =>
+          '#!name=M$id\n'
+          '[Rule]\n'
+          'DOMAIN,m$id.example.com,DIRECT\n'
+          '[MITM]\n'
+          'hostname = %APPEND% m$id.example.com\n';
+
+      /// What the app would run now, from a fresh container on the current
+      /// database: the Core's module rules, the modules' contents, and the
+      /// profile's module routing.
+      Future<({List<String> hosts, List<String> modules, List<int?> routed})>
+      reaching() async {
+        final dir = Directory(await appPath.mitmModulesDirPath)
+          ..createSync(recursive: true);
+        for (final id in [41, 50]) {
+          File(join(dir.path, '$id.txt')).writeAsStringSync(moduleText(id));
+        }
+        final container = buildContainer();
+        container.listen(patchClashConfigProvider, (_, _) {});
+        container.read(patchClashConfigProvider.notifier).value =
+            const PatchClashConfig(mitm: Mitm(enable: true));
+        final keep = [
+          container.listen(mitmModulesProvider, (_, _) {}),
+          container.listen(enabledMitmModuleRulesProvider, (_, _) {}),
+          container.listen(enabledMitmModulesProvider, (_, _) {}),
+          container.listen(setupStateProvider(null), (_, _) {}),
+        ];
+        addTearDown(() {
+          for (final sub in keep) {
+            sub.close();
+          }
+        });
+        final rules = await container.read(
+          enabledMitmModuleRulesProvider.future,
+        );
+        final modules = await container.read(enabledMitmModulesProvider.future);
+        final setup = await container.read(setupStateProvider(null).future);
+        return (
+          hosts: [...rules.hostname],
+          modules: [for (final module in modules) module.name],
+          routed: [for (final source in setup.mitmModules) source.id],
+        );
+      }
+
+      void expectNone(
+        ({List<String> hosts, List<String> modules, List<int?> routed}) got,
+      ) {
+        expect(got.hosts, isEmpty, reason: 'Core module rules');
+        expect(got.modules, isEmpty, reason: 'module contents');
+        expect(got.routed, isEmpty, reason: 'profile module routing');
+      }
+
+      /// The same rows run once nothing holds or stops them: what kept them
+      /// out above was the block.
+      Future<void> expectRunsUnblocked() async {
+        restoreRecovery.clearMitmHolds();
+        final got = await reaching();
+        expect(got.hosts, contains('m50.example.com'));
+        expect(got.modules, contains(other.name));
+        expect(got.routed, contains(50));
+      }
+
+      void deleteJournalAndFail() {
+        final [dir] = journals();
+        restoreRecovery.onMitmOff = (committed) async {
+          if (!committed) {
+            dir.deleteSync(recursive: true);
+            throw StateError('disk');
+          }
+        };
+      }
+
+      test('turning off throws and the journal goes with it: every module '
+          'stays held; only the retry is said unconfirmed', () async {
+        await oldCrash(_Crash.afterCommit);
+        deleteJournalAndFail();
+        await restoreRecovery.run();
+        final report = restoreRecovery.takeReports().single;
+
+        expect(await states(), {41: (true, true), 50: (true, true)});
+        expect(journals(), isEmpty);
+        expect(restoreRecovery.mitmStopped, isFalse);
+        expect(restoreRecovery.mitmHold.value.all, isTrue);
+        expect(report.mitmOffFailed, isTrue);
+        expect(report.mitmOffRetryKept, isFalse);
+        expect(report.mitmStopped, isFalse);
+        final en = currentAppLocalizations;
+        final message = restoreRecoveryMessage(report, en);
+        expect(message, contains(en.restoreRecoveryMitmOffFailedNoRetry));
+        expect(message, isNot(contains(en.restoreRecoveryMitmStopped)));
+        expectNone(await reaching());
+        await expectRunsUnblocked();
+      });
+
+      test('the hold throws: every module is stopped for this launch, even '
+          'one turned on afterwards, and it says so', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.onHoldMitm = () => throw StateError('hold');
+        await restoreRecovery.run();
+        final report = restoreRecovery.takeReports().single;
+
+        expect(restoreRecovery.mitmStopped, isTrue);
+        expect(report.mitmStopped, isTrue);
+        final en = currentAppLocalizations;
+        expect(
+          restoreRecoveryMessage(report, en),
+          contains(en.restoreRecoveryMitmStopped),
+        );
+        // Turned on again, as another writer could.
+        await database.mitmModulesDao.putAll([other.toCompanion(1)]);
+        final [row] = [
+          for (final row in await database.mitmModulesDao.query().get())
+            if (row.id == 50) row,
+        ];
+        expect(row.runsUnder(RestoreMitmHold.none), isFalse);
+        expectNone(await reaching());
+        // Released holds do not lift the stop.
+        restoreRecovery.releaseMitm(-1);
+        expect(restoreRecovery.mitmStopped, isTrue);
+        await expectRunsUnblocked();
+      });
+
+      test('both: turning off and the hold throw and the journal goes: '
+          'every module is stopped, and both are said', () async {
+        await oldCrash(_Crash.afterCommit);
+        deleteJournalAndFail();
+        restoreRecovery.onHoldMitm = () => throw StateError('hold');
+        await restoreRecovery.run();
+        final report = restoreRecovery.takeReports().single;
+
+        expect(await states(), {41: (true, true), 50: (true, true)});
+        expect(journals(), isEmpty);
+        expect(restoreRecovery.mitmStopped, isTrue);
+        expect(report.mitmOffFailed, isTrue);
+        expect(report.mitmOffRetryKept, isFalse);
+        expect(report.mitmStopped, isTrue);
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryMitmOffFailedNoRetry));
+        expect(lines, contains(en.restoreRecoveryMitmStopped));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmOffFailed)));
+        expectNone(await reaching());
+        await expectRunsUnblocked();
+      });
+
+      test('a stop with nothing else to report is still said, once', () {
+        restoreRecovery.stopMitmModules('test');
+        final [report] = restoreRecovery.takeReports();
+        expect(report.outcome, RestoreRecoveryOutcome.modulesStopped);
+        final en = currentAppLocalizations;
+        expect(
+          restoreRecoveryMessage(report, en),
+          en.restoreRecoveryMitmStopped,
+        );
+        expect(restoreRecovery.takeReports(), isEmpty);
+      });
     });
 
     for (final (name, trigger) in [
@@ -1493,7 +1676,7 @@ void main() {
 
         expect(report.mitmAllOff, isFalse);
         expect(report.mitmOffFailed, isTrue);
-        expect(report.mitmOffHeld, isTrue, reason: 'hold and retry confirmed');
+        expect(report.mitmOffRetryKept, isTrue, reason: 'retry confirmed');
         expect(
           report.outcome,
           isNot(RestoreRecoveryOutcome.completed),
@@ -1502,7 +1685,10 @@ void main() {
         final en = currentAppLocalizations;
         final message = restoreRecoveryMessage(report, en);
         expect(message, contains(en.restoreRecoveryMitmOffFailed));
-        expect(message, isNot(contains(en.restoreRecoveryMitmOffFailedUnheld)));
+        expect(
+          message,
+          isNot(contains(en.restoreRecoveryMitmOffFailedNoRetry)),
+        );
         expect(message, isNot(contains(en.restoreRecoveryMitmAllOff)));
         expect(
           restoreRecoveryMessage(

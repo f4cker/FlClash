@@ -508,16 +508,18 @@ class RestoreMitmHoldState extends _$RestoreMitmHoldState {
   @override
   RestoreMitmHold build() {
     final hold = restoreRecovery.mitmHold;
-    void update() => state = hold.value;
+    void update() => state = restoreRecovery.effectiveMitmHold;
     hold.addListener(update);
     ref.onDispose(() => hold.removeListener(update));
-    return hold.value;
+    return restoreRecovery.effectiveMitmHold;
   }
 }
 
 extension MitmModuleHoldExt on MitmModule {
-  /// Turned on, and not held by a restore.
-  bool runsUnder(RestoreMitmHold hold) => enabled && !hold.holds(id);
+  /// Turned on, not held by a restore, and modules not stopped for this
+  /// launch (read directly, in case the hold never reached [hold]).
+  bool runsUnder(RestoreMitmHold hold) =>
+      enabled && !restoreRecovery.mitmStopped && !hold.holds(id);
 }
 
 @riverpod

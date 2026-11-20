@@ -2297,8 +2297,12 @@ class AppLocalizationsKo extends AppLocalizations {
       '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되며, 다음 실행 시 다시 끄기를 시도합니다.';
 
   @override
-  String get restoreRecoveryMitmOffFailedUnheld =>
-      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 일부 모듈이 아직 실행 중일 수 있습니다. 복호화 모듈 페이지에서 각 모듈의 스위치를 확인하세요.';
+  String get restoreRecoveryMitmOffFailedNoRetry =>
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되지만, 다음 실행 시 다시 끄기를 시도할지는 확인할 수 없습니다. 복호화 모듈 페이지를 확인하세요.';
+
+  @override
+  String get restoreRecoveryMitmStopped =>
+      '복호화 모듈을 일시 중지하는 중 오류가 발생했습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈을 중지합니다.';
 
   @override
   String get restoreContinue => '계속';

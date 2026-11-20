@@ -2249,8 +2249,12 @@ class AppLocalizationsJa extends AppLocalizations {
       '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。アプリの実行中はすべての復号モジュールを一時停止し、次回の起動時にもう一度オフにします。';
 
   @override
-  String get restoreRecoveryMitmOffFailedUnheld =>
-      '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。一部のモジュールが実行中の可能性があります。復号モジュールの画面で各モジュールのスイッチを確認してください。';
+  String get restoreRecoveryMitmOffFailedNoRetry =>
+      '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。アプリの実行中はすべての復号モジュールを一時停止しますが、次回の起動時にもう一度オフにするかは確認できません。復号モジュールの画面を確認してください。';
+
+  @override
+  String get restoreRecoveryMitmStopped =>
+      '復号モジュールの一時停止中にエラーが発生しました。安全のため、アプリの実行中はすべての復号モジュールを停止しています。';
 
   @override
   String get restoreContinue => '続行';

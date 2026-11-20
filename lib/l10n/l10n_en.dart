@@ -2358,8 +2358,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off. All MITM modules stay paused while the app runs; turning them off is tried again at the next launch.';
 
   @override
-  String get restoreRecoveryMitmOffFailedUnheld =>
-      'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off; some may still be running. Check each module\'s switch on the MITM modules page.';
+  String get restoreRecoveryMitmOffFailedNoRetry =>
+      'Which MITM modules the last restore involved can\'t be determined, and not all modules could be turned off. All MITM modules stay paused while the app runs, but whether turning them off is tried again at the next launch can\'t be confirmed. Check the MITM modules page.';
+
+  @override
+  String get restoreRecoveryMitmStopped =>
+      'An error occurred while pausing MITM modules. To be safe, all MITM modules are stopped while the app runs.';
 
   @override
   String get restoreContinue => 'Continue';
