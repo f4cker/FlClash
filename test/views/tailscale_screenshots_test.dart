@@ -673,7 +673,8 @@ void main() {
     container.listen(currentProfileIdProvider, (_, _) {});
     container.read(currentProfileIdProvider.notifier).value = 42;
     container.listen(settledConfigProfileProvider, (_, _) {});
-    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+    final settled = container.read(settledConfigProfileProvider.notifier);
+    settled.settle(42, settled.epoch);
     serve(const []);
     await pumpPanel(tester, size: const Size(1100, 700));
     await shoot(tester, '31-sign-in-no-node');
@@ -1324,7 +1325,8 @@ void main() {
     container.listen(currentProfileIdProvider, (_, _) {});
     container.read(currentProfileIdProvider.notifier).value = 42;
     container.listen(settledConfigProfileProvider, (_, _) {});
-    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+    final settled = container.read(settledConfigProfileProvider.notifier);
+    settled.settle(42, settled.epoch);
     serve(const []);
     await pumpPanel(tester, size: const Size(1100, 700));
     await shoot(tester, 'card-07-sign-in');
@@ -1337,7 +1339,8 @@ void main() {
     shot('card-08-unconfirmed-$name', (tester) async {
       await seedManaged(const []);
       container.listen(settledConfigProfileProvider, (_, _) {});
-      container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.settle(42, settled.epoch);
       await pumpPanel(tester, size: const Size(1100, 700), themeMode: mode);
       await shoot(tester, 'card-08-unconfirmed-$name');
     });
@@ -1375,7 +1378,8 @@ void main() {
   }) async {
     await seedManaged(const [], saved: onFile);
     container.listen(settledConfigProfileProvider, (_, _) {});
-    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+    final settled = container.read(settledConfigProfileProvider.notifier);
+    settled.settle(42, settled.epoch);
     await pumpPanel(
       tester,
       size: size,
@@ -1410,6 +1414,21 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await pumpRetried(tester, size: const Size(360, 760), pixelRatio: 2);
     await shoot(tester, 'card-11-retried-narrow-large-text');
+  });
+
+  shot('card-14-reading', (tester) async {
+    await pumpRetried(tester);
+    final pending = Completer<List<TailscaleNode>>();
+    when(() => core.getTailscaleNodes()).thenAnswer((_) => pending.future);
+    await tester.tap(find.text('重新读取状态'));
+    // The spinner never settles: pump frames, not until idle.
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.byKey(const ValueKey('ts-unconfirmed-reading')), findsOne);
+    await shoot(tester, 'card-14-reading');
+    pending.complete(const []);
+    await settle(tester);
   });
 
   shot('card-13-retried-narrow', (tester) async {

@@ -20,6 +20,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:prism_ui/icons/icons.dart' show GlyphIcon, Glyphs;
@@ -33,6 +34,8 @@ import 'package:prism_ui/prism_ui.dart'
         Chip,
         ColorSchemeExtension,
         ElasticPress,
+        FilledButton,
+        ActivityIndicator,
         ElasticHover,
         IconButton,
         LiquidGlass,
@@ -83,20 +86,25 @@ void main() {
   late List<Uri> opened;
   late bool browserOpens;
 
+  ProviderContainer makeContainer({List<Override> extra = const []}) {
+    return ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        proxiesActionProvider.overrideWith(_TrackingProxiesAction.new),
+        currentProfileProvider.overrideWithValue(tsProfile),
+        coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+        ...extra,
+      ],
+    );
+  }
+
   setUp(() async {
     await mockPreferences();
     core = _MockCore();
     opened = [];
     browserOpens = true;
     _TrackingProxiesAction.refreshes = 0;
-    container = ProviderContainer(
-      overrides: [
-        profilesProvider.overrideWith(TestProfiles.new),
-        proxiesActionProvider.overrideWith(_TrackingProxiesAction.new),
-        currentProfileProvider.overrideWithValue(tsProfile),
-        coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
-      ],
-    );
+    container = makeContainer();
     globalState.container = container;
     container.read(viewSizeProvider.notifier).update((_) => _size);
     container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
@@ -166,10 +174,169 @@ void main() {
       container.read(currentProfileIdProvider.notifier).value = id;
     }
 
-    void settleSetup(int? id) {
+    void settleSetup(int? id, {bool failed = false}) {
       final settled = container.read(settledConfigProfileProvider.notifier);
-      settled.settle(id, settled.epoch);
+      settled.settle(id, settled.epoch, failed: failed);
     }
+
+    void verifyNoAccountCalls() {
+      verifyNever(
+        () => core.loginTailscale(any(), reauth: any(named: 'reauth')),
+      );
+      verifyNever(() => core.logoutTailscale(any()));
+      verifyNever(() => core.forgetTailscaleRoutes(any()));
+      expect(container.read(tailscaleManagedRecordsProvider), isEmpty);
+    }
+
+    testWidgets('a failed setup then an empty list is never 登录', (
+      tester,
+    ) async {
+      holdProfile(42);
+      // No account on record: the profile's own YAML may hold Tailscale.
+      settleSetup(42, failed: true);
+      serve(const []);
+      await pumpPanel(tester);
+
+      expect(find.text('登录 Tailscale'), findsNothing);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(find.text('重新读取状态'), findsOneWidget);
+      expect(find.text('添加 Tailscale 账号'), findsNothing);
+
+      // A read still finds nothing: the failed setup still says nothing.
+      await tester.tap(find.text('重新读取状态'));
+      await settle(tester);
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(find.text('登录 Tailscale'), findsNothing);
+
+      // Only a completed setup makes the empty list 登录.
+      settleSetup(42);
+      await settle(tester);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
+      verifyNoAccountCalls();
+      await teardownView(tester);
+    });
+
+    testWidgets('a setup of another profile beginning makes A pending again '
+        '(A → B → A)', (tester) async {
+      holdProfile(42);
+      settleSetup(42);
+      serve(const []);
+      await pumpPanel(tester);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
+
+      // B's setup begins and pushes B's config; the user goes back to A
+      // before it settles: the Core runs B, so A's settle no longer counts.
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.begin(7, settled.epoch);
+      await settle(tester);
+      expect(container.read(settledConfigProfileProvider), isNull);
+      expect(find.text('正在启动…'), findsOneWidget);
+      expect(find.text('登录 Tailscale'), findsNothing);
+
+      // B settles while A is current: still pending for A.
+      settled.settle(7, settled.epoch);
+      await settle(tester);
+      expect(find.text('正在启动…'), findsOneWidget);
+
+      // A's own setup begins and settles.
+      settled.begin(42, settled.epoch);
+      expect(container.read(settledConfigProfileProvider), isNull);
+      settled.settle(42, settled.epoch);
+      await settle(tester);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
+      verifyNoAccountCalls();
+      await teardownView(tester);
+    });
+
+    test('a setup of the settled profile beginning keeps it settled', () {
+      container.listen(settledConfigProfileProvider, (_, _) {});
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.settle(42, settled.epoch, failed: true);
+      settled.begin(42, settled.epoch);
+      expect(container.read(settledConfigProfileProvider), (
+        profileId: 42,
+        failed: true,
+      ));
+      // One from an older Core changes nothing.
+      settled.begin(7, settled.epoch - 1);
+      expect(container.read(settledConfigProfileProvider), isNotNull);
+    });
+
+    test('a Core going away forgets the applied config md5', () {
+      container.listen(settledConfigProfileProvider, (_, _) {});
+      globalState.lastConfigMd5 = 'applied';
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      expect(globalState.lastConfigMd5, isNull);
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+
+      globalState.lastConfigMd5 = 'applied';
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      expect(globalState.lastConfigMd5, isNull);
+    });
+
+    for (final unavailable in [false, true]) {
+      testWidgets('a failed re-read of an empty list is not the empty list '
+          '(core unavailable: $unavailable)', (tester) async {
+        holdProfile(42);
+        settleSetup(42);
+        serve(const []);
+        await pumpPanel(tester);
+        expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
+
+        // The error keeps the previous [] as its value.
+        when(() => core.getTailscaleNodes()).thenThrow(
+          CoreMethodException(
+            code: unavailable ? 'core_unavailable' : 'tailscale_failed',
+            message: 'read failed',
+          ),
+        );
+        container.invalidate(tailscaleNodesProvider);
+        await settle(tester);
+        final value = container.read(tailscaleNodesProvider);
+        expect(value.hasError, isTrue);
+        expect(value.value, isEmpty);
+
+        expect(find.text('登录 Tailscale'), findsNothing);
+        expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+        if (unavailable) {
+          expect(find.text('状态加载失败'), findsNothing);
+        } else {
+          expect(find.text('状态加载失败'), findsOneWidget);
+        }
+        verifyNoAccountCalls();
+        await teardownView(tester);
+      });
+    }
+
+    testWidgets('records not loaded yet are never 登录', (tester) async {
+      container.dispose();
+      container = makeContainer(
+        extra: [
+          tailscaleManagedRecordsProvider.overrideWithBuild((_, _) => null),
+        ],
+      );
+      globalState.container = container;
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      container.read(currentPageLabelProvider.notifier).value =
+          PageLabel.tailscale;
+      holdProfile(42);
+      settleSetup(42);
+      serve(const []);
+      await pumpPanel(tester);
+
+      expect(container.read(tailscaleManagedRecordsProvider), isNull);
+      expect(find.text('登录 Tailscale'), findsNothing);
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(find.text('重新读取状态'), findsOneWidget);
+      // Nothing on file to list, even after a read.
+      await tester.tap(find.text('重新读取状态'));
+      await settle(tester);
+      expect(find.text('查看账号'), findsNothing);
+      expect(find.text('登录 Tailscale'), findsNothing);
+      await teardownView(tester);
+    });
 
     testWidgets('a Core whose setup is pending shows 正在启动, not 登录', (
       tester,
@@ -994,7 +1161,8 @@ void main() {
       hold();
       container.read(currentProfileIdProvider.notifier).value = 42;
       container.listen(settledConfigProfileProvider, (_, _) {});
-      container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.settle(42, settled.epoch);
       serve(const []);
       await pumpPanel(tester);
       verifyNever(
@@ -2555,7 +2723,8 @@ void main() {
           .read(tailscaleManagedRecordsProvider.notifier)
           .modify((_) => saved);
       container.listen(settledConfigProfileProvider, (_, _) {});
-      container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.settle(42, settled.epoch);
       serve(const []);
       await pumpPanel(tester, themeMode: themeMode, size: size);
     }
@@ -2602,6 +2771,16 @@ void main() {
       // Not while the read runs.
       expect(manage, findsNothing);
       expect(find.text('已找到账号记录，但暂时无法读取节点状态。'), findsNothing);
+      // The read keeps 状态待确认 with a busy, disabled button.
+      expect(find.text('状态待确认'), findsOneWidget);
+      expect(find.text('正在启动…'), findsNothing);
+      final busy = find.byKey(const ValueKey('ts-unconfirmed-reading'));
+      expect(busy, findsOneWidget);
+      expect(tester.widget<FilledButton>(busy).onPressed, isNull);
+      expect(
+        find.descendant(of: busy, matching: find.byType(ActivityIndicator)),
+        findsOneWidget,
+      );
       pending.complete(const []);
       await settle(tester);
 
@@ -2793,7 +2972,8 @@ void main() {
           CoreStatus.disconnected;
       await settle(tester);
       container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
-      container.read(settledConfigProfileProvider.notifier).settle(42, 1);
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.settle(42, settled.epoch);
       container.invalidate(tailscaleNodesProvider);
       await settle(tester);
 

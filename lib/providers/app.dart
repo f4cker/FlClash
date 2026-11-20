@@ -9,6 +9,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/plugins/mac_updater.dart';
 import 'package:fl_clash/providers/core.dart';
+import 'package:fl_clash/state.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -618,9 +619,7 @@ class RulesLookupRequest extends _$RulesLookupRequest
   }
 }
 
-enum RulesLocateSource {
-  tailscaleManaged,
-}
+enum RulesLocateSource { tailscaleManaged }
 
 typedef RulesLocateAsk = ({RulesLocateSource source, int serial});
 
@@ -1003,10 +1002,11 @@ class RunningFindProcessMode extends _$RunningFindProcessMode
   }
 }
 
-/// The profile whose setup last settled (applied, or finished failing) on the
-/// Core that runs now; null from the moment the Core stops or restarts until
-/// the next setup settles. A fresh Core runs no config, so what it lists
-/// before then says nothing about the profile.
+/// The profile whose setup last settled on the Core that runs now, and
+/// whether that setup failed; null from the moment the Core stops or
+/// restarts, or a setup for another profile begins, until the next setup
+/// settles. A fresh Core runs no config, so what it lists before then says
+/// nothing about the profile; nor does it after a failed setup.
 @Riverpod(keepAlive: true)
 class SettledConfigProfile extends _$SettledConfigProfile
     with AutoDisposeNotifierMixin {
@@ -1016,21 +1016,33 @@ class SettledConfigProfile extends _$SettledConfigProfile
   int get epoch => _epoch;
 
   @override
-  ({int? profileId})? build() {
+  ({int? profileId, bool failed})? build() {
     ref.listen(coreStatusProvider, (_, next) {
       if (next != CoreStatus.connected) {
         _epoch++;
         state = null;
+        // A Core started anew holds no config: the next setup on it must
+        // push one rather than match the last applied one.
+        globalState.lastConfigMd5 = null;
       }
     });
     return null;
   }
 
-  void settle(int? profileId, int epoch) {
+  /// A setup of [profileId] starts: until it settles, nothing applied for
+  /// another profile stands for the Core's config.
+  void begin(int? profileId, int epoch) {
+    if (epoch != _epoch || state == null || state!.profileId == profileId) {
+      return;
+    }
+    state = null;
+  }
+
+  void settle(int? profileId, int epoch, {bool failed = false}) {
     if (epoch != _epoch) {
       return;
     }
-    state = (profileId: profileId);
+    state = (profileId: profileId, failed: failed);
   }
 }
 

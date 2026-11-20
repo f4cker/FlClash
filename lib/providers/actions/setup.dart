@@ -1022,6 +1022,7 @@ class SetupAction extends _$SetupAction {
       final settled = ref.read(settledConfigProfileProvider.notifier);
       final epoch = settled.epoch;
       final profileId = ref.read(currentProfileIdProvider);
+      settled.begin(profileId, epoch);
       var outcome = _SetupTaskResult.failed;
       try {
         outcome = await _setupConfig(
@@ -1042,11 +1043,16 @@ class SetupAction extends _$SetupAction {
         return outcome;
       } finally {
         // A handoff is settled by the restart's own setup; a superseded one
-        // by the setup that took over.
+        // by the setup that took over. A failed one is not applied: what
+        // the Core lists after it says nothing about the profile.
         if (outcome != _SetupTaskResult.handoffToCoreRestart &&
             (owns?.call() ?? true) &&
             ref.mounted) {
-          settled.settle(profileId, epoch);
+          settled.settle(
+            profileId,
+            epoch,
+            failed: outcome != _SetupTaskResult.completed,
+          );
         }
       }
     });

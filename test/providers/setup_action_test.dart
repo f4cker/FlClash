@@ -2289,6 +2289,7 @@ void main() {
 
       expect(scoped.read(settledConfigProfileProvider), (
         profileId: profile.id,
+        failed: false,
       ));
       scoped.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
       expect(scoped.read(settledConfigProfileProvider), isNull);
@@ -2326,6 +2327,75 @@ void main() {
       await applying;
 
       expect(scoped.read(settledConfigProfileProvider), isNull);
+    });
+
+    test('a failed setup settles as failed, never as applied', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenThrow(
+        const CoreMethodException(code: 'config_rejected', message: 'no'),
+      );
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(settledConfigProfileProvider, (_, _) {});
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+
+      await scoped.read(setupActionProvider.notifier).applyProfile(force: true);
+
+      expect(scoped.read(settledConfigProfileProvider), (
+        profileId: profile.id,
+        failed: true,
+      ));
+    });
+
+    test('a setup of another profile clears the settled one until it settles '
+        '(A → B → A)', () async {
+      final a = Profile.normal(label: 'a', url: 'http://127.0.0.1:9/');
+      final b = Profile.normal(label: 'b', url: 'http://127.0.0.1:9/b');
+      final core = _MockCoreHandlerInterface();
+      var held = Completer<void>()..complete();
+      var reached = Completer<void>();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {
+        if (!reached.isCompleted) reached.complete();
+        await held.future;
+      });
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([a, b])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => a.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(settledConfigProfileProvider, (_, _) {});
+      scoped.listen(currentProfileIdProvider, (_, _) {});
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      final setup = scoped.read(setupActionProvider.notifier);
+      await setup.applyProfile(force: true);
+      expect(scoped.read(settledConfigProfileProvider)?.profileId, a.id);
+
+      held = Completer<void>();
+      reached = Completer<void>();
+      scoped.read(currentProfileIdProvider.notifier).value = b.id;
+      final applyingB = setup.applyProfile(force: true);
+      await reached.future;
+      // B's config is on the Core; back to A before B settles.
+      expect(scoped.read(settledConfigProfileProvider), isNull);
+      scoped.read(currentProfileIdProvider.notifier).value = a.id;
+      expect(scoped.read(settledConfigProfileProvider), isNull);
+      held.complete();
+      await applyingB;
+      expect(scoped.read(settledConfigProfileProvider)?.profileId, isNot(a.id));
     });
 
     test(

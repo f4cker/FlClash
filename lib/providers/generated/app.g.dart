@@ -2944,24 +2944,31 @@ abstract class _$RunningFindProcessMode extends $Notifier<String?> {
   }
 }
 
-/// The profile whose setup last settled (applied, or finished failing) on the
-/// Core that runs now; null from the moment the Core stops or restarts until
-/// the next setup settles. A fresh Core runs no config, so what it lists
-/// before then says nothing about the profile.
+/// The profile whose setup last settled on the Core that runs now, and
+/// whether that setup failed; null from the moment the Core stops or
+/// restarts, or a setup for another profile begins, until the next setup
+/// settles. A fresh Core runs no config, so what it lists before then says
+/// nothing about the profile; nor does it after a failed setup.
 
 @ProviderFor(SettledConfigProfile)
 final settledConfigProfileProvider = SettledConfigProfileProvider._();
 
-/// The profile whose setup last settled (applied, or finished failing) on the
-/// Core that runs now; null from the moment the Core stops or restarts until
-/// the next setup settles. A fresh Core runs no config, so what it lists
-/// before then says nothing about the profile.
+/// The profile whose setup last settled on the Core that runs now, and
+/// whether that setup failed; null from the moment the Core stops or
+/// restarts, or a setup for another profile begins, until the next setup
+/// settles. A fresh Core runs no config, so what it lists before then says
+/// nothing about the profile; nor does it after a failed setup.
 final class SettledConfigProfileProvider
-    extends $NotifierProvider<SettledConfigProfile, ({int? profileId})?> {
-  /// The profile whose setup last settled (applied, or finished failing) on the
-  /// Core that runs now; null from the moment the Core stops or restarts until
-  /// the next setup settles. A fresh Core runs no config, so what it lists
-  /// before then says nothing about the profile.
+    extends
+        $NotifierProvider<
+          SettledConfigProfile,
+          ({bool failed, int? profileId})?
+        > {
+  /// The profile whose setup last settled on the Core that runs now, and
+  /// whether that setup failed; null from the moment the Core stops or
+  /// restarts, or a setup for another profile begins, until the next setup
+  /// settles. A fresh Core runs no config, so what it lists before then says
+  /// nothing about the profile; nor does it after a failed setup.
   SettledConfigProfileProvider._()
     : super(
         from: null,
@@ -2981,33 +2988,45 @@ final class SettledConfigProfileProvider
   SettledConfigProfile create() => SettledConfigProfile();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(({int? profileId})? value) {
+  Override overrideWithValue(({bool failed, int? profileId})? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<({int? profileId})?>(value),
+      providerOverride: $SyncValueProvider<({bool failed, int? profileId})?>(
+        value,
+      ),
     );
   }
 }
 
 String _$settledConfigProfileHash() =>
-    r'e9f17b3d775598eaa3b0eab5d3d892d310fd670e';
+    r'98243b62f6edd3117d028d7e8b2a98d4892bd317';
 
-/// The profile whose setup last settled (applied, or finished failing) on the
-/// Core that runs now; null from the moment the Core stops or restarts until
-/// the next setup settles. A fresh Core runs no config, so what it lists
-/// before then says nothing about the profile.
+/// The profile whose setup last settled on the Core that runs now, and
+/// whether that setup failed; null from the moment the Core stops or
+/// restarts, or a setup for another profile begins, until the next setup
+/// settles. A fresh Core runs no config, so what it lists before then says
+/// nothing about the profile; nor does it after a failed setup.
 
-abstract class _$SettledConfigProfile extends $Notifier<({int? profileId})?> {
-  ({int? profileId})? build();
+abstract class _$SettledConfigProfile
+    extends $Notifier<({bool failed, int? profileId})?> {
+  ({bool failed, int? profileId})? build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<({int? profileId})?, ({int? profileId})?>;
+    final ref =
+        this.ref
+            as $Ref<
+              ({bool failed, int? profileId})?,
+              ({bool failed, int? profileId})?
+            >;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<({int? profileId})?, ({int? profileId})?>,
-              ({int? profileId})?,
+              AnyNotifier<
+                ({bool failed, int? profileId})?,
+                ({bool failed, int? profileId})?
+              >,
+              ({bool failed, int? profileId})?,
               Object?,
               Object?
             >;

@@ -793,17 +793,26 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final panels = ref.watch(tailscalePanelNodesProvider);
     final legacyStates = ref.watch(tailscaleLegacyStatesProvider);
     final nodes = nodesValue.value;
+    Widget readFailed() {
+      final error = nodesValue.error;
+      if (error is CoreMethodException && error.isCoreUnavailable) {
+        return _page(context, body: _coreStopped(context));
+      }
+      return _page(context, body: _nodesFailed(context));
+    }
+
     if (nodes == null) {
       if (nodesValue.hasError) {
-        final error = nodesValue.error;
-        if (error is CoreMethodException && error.isCoreUnavailable) {
-          return _page(context, body: _coreStopped(context));
-        }
-        return _page(context, body: _nodesFailed(context));
+        return readFailed();
       }
       return _page(context, body: const Center(child: ActivityIndicator()));
     }
     if (nodes.isEmpty) {
+      // A failed read keeps the previous empty list, also while it is
+      // retried: the read failed, the list is not known to be empty.
+      if (nodesValue.hasError) {
+        return readFailed();
+      }
       return _page(context, body: _emptyNodes(context, nodesValue));
     }
     final node = _currentNode(nodes);
@@ -1313,9 +1322,10 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
   }
 
-  /// An empty list is 登录 only once the profile's setup has settled on this
-  /// Core and no panel-added account of the profile is on record. Before
-  /// then a fresh Core lists nothing because nothing was applied yet.
+  /// An empty list is 登录 only once the profile's setup has completed on
+  /// this Core and no panel-added account of the profile is on record.
+  /// Before then a fresh Core lists nothing because nothing was applied yet;
+  /// after a failed setup the list says nothing either, so it is 状态待确认.
   Widget _emptyNodes(
     BuildContext context,
     AsyncValue<List<TailscaleNode>> nodesValue,
@@ -1330,13 +1340,27 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final applied =
         profileId == null ||
         (settled != null && settled.profileId == profileId);
-    if (!applied || nodesValue.isLoading) {
+    if (!applied) {
       return _applyingNodes(context);
     }
+    final failed = profileId != null && settled!.failed;
     final hasRecords =
         records == null ||
         records.any((record) => record.profileId == profileId);
-    if (hasRecords) {
+    final unconfirmed = failed || hasRecords;
+    if (nodesValue.isLoading) {
+      // A read the user asked for on 状态待确认 keeps it, button busy.
+      if (unconfirmed && profileId != null && profileId == _retriedProfile) {
+        return _nodesUnavailable(
+          context,
+          profileId: profileId,
+          records: null,
+          reading: true,
+        );
+      }
+      return _applyingNodes(context);
+    }
+    if (unconfirmed) {
       return _nodesUnavailable(
         context,
         profileId: profileId,
@@ -1381,8 +1405,10 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     BuildContext context, {
     required int? profileId,
     required List<TailscaleManagedRecord>? records,
+    bool reading = false,
   }) {
     return _UnconfirmedStatus(
+      reading: reading,
       onRead: () {
         setState(() => _retriedProfile = profileId);
         ref.invalidate(tailscaleNodesProvider);
@@ -1557,12 +1583,19 @@ bool tailscaleRecordAccountUnknown(TailscaleManagedRecord record) =>
 
 /// 状态待确认 of an empty node list: a quiet grey mark, no decorations.
 class _UnconfirmedStatus extends StatelessWidget {
-  const _UnconfirmedStatus({required this.onRead, this.manage});
+  const _UnconfirmedStatus({
+    required this.onRead,
+    this.manage,
+    this.reading = false,
+  });
 
   static const markSize = 72.0;
   static const minButtonHeight = 44.0;
 
   final VoidCallback onRead;
+
+  /// A read the user asked for runs: the button is busy and disabled.
+  final bool reading;
 
   /// 查看账号, 8 under 重新读取状态; always stacked, never beside it. Shown
   /// once a read the user asked for still lists no node, which also words
@@ -1624,10 +1657,21 @@ class _UnconfirmedStatus extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               FilledButton(
-                key: const ValueKey('ts-unconfirmed-read'),
+                // A button of its own while busy: disabling the one just
+                // pressed would update it in the middle of its build.
+                key: ValueKey(
+                  reading ? 'ts-unconfirmed-reading' : 'ts-unconfirmed-read',
+                ),
                 style: const ButtonStyle(minimumSize: Size(0, minButtonHeight)),
-                onPressed: onRead,
-                child: Text(appLocalizations.tsReadStatus),
+                onPressed: reading ? null : onRead,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 8,
+                  children: [
+                    if (reading) tailscaleBusyIcon(context),
+                    Text(appLocalizations.tsReadStatus),
+                  ],
+                ),
               ),
               if (manage case final manage?) ...[
                 const SizedBox(height: 8),
