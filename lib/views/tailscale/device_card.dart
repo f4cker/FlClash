@@ -2,11 +2,13 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
+import 'address_menu.dart';
 import 'legacy_notice.dart';
 import 'state.dart';
 import 'widgets.dart';
@@ -142,7 +144,8 @@ class TailscaleDeviceCard extends StatelessWidget {
       spacing: 14,
       children: [?_address(context), if (!offers) ?_meta(context), ...banners],
     );
-    final buttons = _actions(context);
+    final headerAction = _headerAction(context);
+    final buttons = headerAction == null ? _actions(context) : const <Widget>[];
     return Semantics(
       container: true,
       label: [
@@ -157,10 +160,9 @@ class TailscaleDeviceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 14,
           children: [
-            DashboardCardHeader(
-              glyph: AppGlyphs.devices,
-              title: appLocalizations.tsCurrentDevice,
-              leading: [
+            KeyedSubtree(
+              key: const ValueKey('ts-current-device-header'),
+              child: _header(context, headerAction, [
                 if (_source case final source?) TailscaleTag(label: source),
                 Semantics(
                   label: appLocalizations.tsStatusOf(chipLabel),
@@ -184,7 +186,7 @@ class TailscaleDeviceCard extends StatelessWidget {
                     ],
                   ),
                 ),
-              ],
+              ]),
             ),
             if (wide)
               Row(
@@ -207,6 +209,103 @@ class TailscaleDeviceCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// 当前设备 with its tags, and [action] at the end of the same row. Where
+  /// the row cannot hold them all, the tags wrap under the title instead of
+  /// being cut; the button takes at most two fifths of the row.
+  Widget _header(BuildContext context, Widget? action, List<Widget> tags) {
+    final title = context.appLocalizations.tsCurrentDevice;
+    if (action == null) {
+      return DashboardCardHeader(
+        glyph: AppGlyphs.devices,
+        title: title,
+        leading: tags,
+      );
+    }
+    final mobile = !DashboardDensityScope.of(context).isDesktop;
+    return Row(
+      // Both sides loose: the button keeps the row's end however short the
+      // title and tags are.
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      spacing: 12,
+      children: [
+        Flexible(
+          flex: 3,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  GlyphIcon(
+                    AppGlyphs.devices,
+                    size: DashboardCardHeader.glyphSize,
+                    color: context.colorScheme.onSurfaceVariant,
+                  ),
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mobile
+                          ? DashboardText.mobileCardTitle(context)
+                          : DashboardText.cardTitle(context),
+                    ),
+                  ),
+                ],
+              ),
+              ...tags,
+            ],
+          ),
+        ),
+        Flexible(flex: 2, child: action),
+      ],
+    );
+  }
+
+  /// 退出 of a connected node, up at the header's end: the button
+  /// [_actions] would otherwise show alone. It opens the same confirmation.
+  Widget? _headerAction(BuildContext context) {
+    if (phase != TailscalePhase.connected ||
+        legacyView != TailscaleLegacyView.hidden) {
+      return null;
+    }
+    final appLocalizations = context.appLocalizations;
+    final managed = this.managed;
+    if (managed != null) {
+      final panel = managed.panel;
+      if (panel.removing ||
+          managed.unsettled ||
+          panel.preparing ||
+          const {
+            TailscaleAttachState.attaching,
+            TailscaleAttachState.failed,
+            TailscaleAttachState.duplicate,
+          }.contains(panel.attach)) {
+        return null;
+      }
+    }
+    if (loggingOut) {
+      return FilledButton.icon(
+        // Its own key: a pressed button never turns into this one in place.
+        key: const ValueKey('ts-logging-out'),
+        onPressed: null,
+        icon: tailscaleBusyIcon(context),
+        label: Text(appLocalizations.tsLoggingOut),
+      );
+    }
+    return TonalButton(
+      key: const ValueKey('ts-logout'),
+      size: TonalButtonSize.bar,
+      label: managed != null
+          ? appLocalizations.tsSignOutAccount
+          : appLocalizations.tsLogout,
+      onPressed: actions.onLogout,
     );
   }
 
@@ -272,6 +371,8 @@ class TailscaleDeviceCard extends StatelessWidget {
     };
   }
 
+  /// The IPv4 address large, and while it is usable, 复制地址 beside it
+  /// with every address in its menu.
   Widget? _address(BuildContext context) {
     final self = status?.self;
     final ipv4 = tailscaleAddressOf(self);
@@ -280,78 +381,23 @@ class TailscaleDeviceCard extends StatelessWidget {
       return null;
     }
     final colorScheme = context.colorScheme;
-    final appLocalizations = context.appLocalizations;
-    final ipv6 = tailscaleIpv6Of(self);
-    final dnsName = self == null
-        ? null
-        : tailscaleMagicDnsName(
-            self,
-            enabled: status?.tailnet?.magicDnsEnabled == true,
-          );
     final muted = usable ? colorScheme.onSurface : colorScheme.onSurfaceVariant;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 2,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Row(
-          spacing: 4,
-          children: [
-            Flexible(
-              child: Text(
-                ipv4,
-                maxLines: 1,
-                style: AppTextStyle.title1
-                    .of(context, emphasized: true)
-                    .toTabular
-                    .copyWith(color: muted),
-              ),
-            ),
-            if (usable)
-              IconButton(
-                tooltip: appLocalizations.tsCopyAddress,
-                onPressed: () => actions.onCopy(ipv4),
-                icon: const GlyphIcon(AppGlyphs.copy, size: 18),
-              ),
-          ],
+        Text(
+          ipv4,
+          style: AppTextStyle.title1
+              .of(context, emphasized: true)
+              .toTabular
+              .copyWith(color: muted),
         ),
-        if (ipv6 != null)
-          Semantics(
-            button: usable,
-            label: usable ? '${appLocalizations.tsCopyAddress} $ipv6' : null,
-            child: GestureDetector(
-              onTap: usable ? () => actions.onCopy(ipv6) : null,
-              child: Text(
-                ipv6,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyle.footnote
-                    .of(context)
-                    .toTabular
-                    .copyWith(color: colorScheme.onSurfaceVariant),
-              ),
-            ),
-          ),
-        if (dnsName != null)
-          Row(
-            spacing: 4,
-            children: [
-              Flexible(
-                child: Text(
-                  dnsName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyle.footnote
-                      .of(context)
-                      .copyWith(color: colorScheme.onSurfaceVariant),
-                ),
-              ),
-              if (usable)
-                IconButton(
-                  tooltip: appLocalizations.tsCopyName,
-                  onPressed: () => actions.onCopy(dnsName),
-                  icon: const GlyphIcon(AppGlyphs.copy, size: 18),
-                ),
-            ],
+        if (usable)
+          TailscaleAddressMenu(
+            entries: tailscaleAddressEntries(context, status),
+            onCopy: actions.onCopy,
           ),
       ],
     );

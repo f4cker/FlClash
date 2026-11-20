@@ -712,8 +712,21 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     }
   }
 
+  /// Says copied only once the clipboard took the whole text.
   Future<void> _copy(String text, {String? message}) async {
-    await Clipboard.setData(ClipboardData(text: text));
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } catch (error) {
+      commonPrint.log(
+        'tailscale copy failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      dialogs.showBanner(
+        currentAppLocalizations.tsCopyFailed,
+        level: BannerLevel.error,
+      );
+      return;
+    }
     dialogs.showBanner(
       message ?? currentAppLocalizations.tsAddressCopied,
       level: BannerLevel.success,

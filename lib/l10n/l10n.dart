@@ -7854,6 +7854,30 @@ abstract class AppLocalizations {
   /// **'Address copied'**
   String get tsAddressCopied;
 
+  /// No description provided for @tsShortHostname.
+  ///
+  /// In en, this message translates to:
+  /// **'Short hostname'**
+  String get tsShortHostname;
+
+  /// No description provided for @tsFullDnsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full DNS name'**
+  String get tsFullDnsName;
+
+  /// No description provided for @tsCopyFieldValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy {field}, {value}'**
+  String tsCopyFieldValue(String field, String value);
+
+  /// No description provided for @tsCopyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t copy. Try again.'**
+  String get tsCopyFailed;
+
   /// No description provided for @tsLogin.
   ///
   /// In en, this message translates to:

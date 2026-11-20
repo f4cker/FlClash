@@ -672,6 +672,8 @@ void main() {
   shot('31-sign-in-no-node', (tester) async {
     container.listen(currentProfileIdProvider, (_, _) {});
     container.read(currentProfileIdProvider.notifier).value = 42;
+    container.listen(settledConfigProfileProvider, (_, _) {});
+    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
     serve(const []);
     await pumpPanel(tester, size: const Size(1100, 700));
     await shoot(tester, '31-sign-in-no-node');
@@ -1239,5 +1241,100 @@ void main() {
   shot('exit-05-proxies-unavailable', (tester) async {
     await pumpExitProxies(tester, unavailable);
     await shoot(tester, 'exit-05-proxies-unavailable');
+  });
+
+  // The current-device card and its 复制地址 menu. Fictitious names and
+  // documentation addresses only.
+  TailscaleStatus cardStatus({TailscaleNode? node}) {
+    final status = tsConnectedStatus(node: node, manyPeers: true);
+    return status.copyWith(
+      self:
+          TailscalePeer.fromJson({
+            ...status.self!.toJson(),
+            'dns-name': 'work-mac.example-net.ts.net.',
+          }).copyWith(
+            hostName: 'work-mac',
+            addresses: const ['100.64.12.34', '2001:db8::12:34'],
+          ),
+      tailnet: const TailscaleTailnet(
+        name: 'example-net.ts.net',
+        magicDnsSuffix: 'example-net.ts.net',
+        magicDnsEnabled: true,
+      ),
+    );
+  }
+
+  Future<void> openAddressMenu(WidgetTester tester) async {
+    await settle(tester);
+    await tester.tap(find.text('复制地址'));
+    await settle(tester);
+    expect(find.text('work-mac.example-net.ts.net'), findsOneWidget);
+  }
+
+  for (final (name, mode) in [
+    ('light', ThemeMode.light),
+    ('dark', ThemeMode.dark),
+  ]) {
+    shot('card-01-closed-$name', (tester) async {
+      serve([tsConnectedNode], cardStatus());
+      await pumpPanel(tester, size: const Size(1100, 700), themeMode: mode);
+      await shoot(tester, 'card-01-closed-$name');
+    });
+
+    shot('card-02-open-$name', (tester) async {
+      serve([tsConnectedNode], cardStatus());
+      await pumpPanel(tester, size: const Size(1100, 700), themeMode: mode);
+      await openAddressMenu(tester);
+      await shoot(tester, 'card-02-open-$name');
+    });
+  }
+
+  shot('card-03-phone-closed', (tester) async {
+    serve([tsConnectedNode], cardStatus());
+    await pumpPanel(tester, size: const Size(390, 844), pixelRatio: 2);
+    await shoot(tester, 'card-03-phone-closed');
+  });
+
+  shot('card-04-phone-open', (tester) async {
+    serve([tsConnectedNode], cardStatus());
+    await pumpPanel(tester, size: const Size(390, 844), pixelRatio: 2);
+    await openAddressMenu(tester);
+    await shoot(tester, 'card-04-phone-open');
+  });
+
+  shot('card-05-managed', (tester) async {
+    final node = tsManagedNode('m1');
+    await seedManaged([node]);
+    when(
+      () => core.getTailscaleStatus(any()),
+    ).thenAnswer((_) async => cardStatus(node: node));
+    await pumpPanel(tester, size: const Size(1100, 900));
+    await shoot(tester, 'card-05-managed');
+  });
+
+  shot('card-06-applying', (tester) async {
+    container.listen(currentProfileIdProvider, (_, _) {});
+    container.read(currentProfileIdProvider.notifier).value = 42;
+    serve(const []);
+    await pumpPanel(tester, size: const Size(1100, 700));
+    await shoot(tester, 'card-06-applying');
+  });
+
+  shot('card-07-sign-in', (tester) async {
+    container.listen(currentProfileIdProvider, (_, _) {});
+    container.read(currentProfileIdProvider.notifier).value = 42;
+    container.listen(settledConfigProfileProvider, (_, _) {});
+    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+    serve(const []);
+    await pumpPanel(tester, size: const Size(1100, 700));
+    await shoot(tester, 'card-07-sign-in');
+  });
+
+  shot('card-08-unconfirmed', (tester) async {
+    await seedManaged(const []);
+    container.listen(settledConfigProfileProvider, (_, _) {});
+    container.read(settledConfigProfileProvider.notifier).settle(42, 0);
+    await pumpPanel(tester, size: const Size(1100, 700));
+    await shoot(tester, 'card-08-unconfirmed');
   });
 }

@@ -1376,14 +1376,25 @@ void main() {
       serve([tsConnectedNode], tsConnectedStatus());
       await pumpPanel(tester);
 
-      final header = find.ancestor(
-        of: find.text('当前设备'),
-        matching: find.byType(DashboardCardHeader),
-      );
+      // A connected node carries 退出 in the header, which then is no
+      // DashboardCardHeader: find it by its key.
+      final header = find.byKey(const ValueKey('ts-current-device-header'));
       expect(header, findsOneWidget);
       expect(
+        find.descendant(of: header, matching: find.text('当前设备')),
+        findsOneWidget,
+      );
+      // 节点 appears only in the 退出 button, never beside the title.
+      expect(
         find.descendant(of: header, matching: find.textContaining('节点')),
-        findsNothing,
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('ts-logout')),
+          matching: find.textContaining('节点'),
+        ),
+        findsOneWidget,
       );
       expect(
         find.descendant(of: header, matching: find.textContaining('·')),

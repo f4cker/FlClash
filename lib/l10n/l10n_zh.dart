@@ -4249,6 +4249,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsAddressCopied => '地址已复制';
 
   @override
+  String get tsShortHostname => '短主机名';
+
+  @override
+  String get tsFullDnsName => '完整 DNS 名';
+
+  @override
+  String tsCopyFieldValue(String field, String value) {
+    return '复制$field，$value';
+  }
+
+  @override
+  String get tsCopyFailed => '未能复制，请重试。';
+
+  @override
   String get tsLogin => '登录 Tailscale';
 
   @override

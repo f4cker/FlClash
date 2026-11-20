@@ -4531,6 +4531,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tsAddressCopied => 'Address copied';
 
   @override
+  String get tsShortHostname => 'Short hostname';
+
+  @override
+  String get tsFullDnsName => 'Full DNS name';
+
+  @override
+  String tsCopyFieldValue(String field, String value) {
+    return 'Copy $field, $value';
+  }
+
+  @override
+  String get tsCopyFailed => 'Couldn\'t copy. Try again.';
+
+  @override
   String get tsLogin => 'Log in to Tailscale';
 
   @override
