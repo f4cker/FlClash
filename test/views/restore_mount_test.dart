@@ -822,6 +822,75 @@ void main() {
       });
     }
 
+    for (final (name, plan) in [
+      ('with mount data', _overridePlan()),
+      ('without mount data', _legacyPlan()),
+    ]) {
+      testWidgets('an override has one callout; its mount lines are plain '
+          'text 12 below it and 8 above the counts: $name', (tester) async {
+        await host(
+          tester,
+          () => RestoreMountConfirmSheet(plan: plan),
+          size: const Size(900, 1400),
+        );
+        final l10n = currentAppLocalizations;
+        final callout = find.byWidgetPredicate(
+          (w) => w.runtimeType.toString() == '_Callout',
+        );
+        expect(callout, findsOne);
+        expect(
+          find.descendant(
+            of: callout,
+            matching: find.text(l10n.restoreOverrideDeletesLocal),
+          ),
+          findsOne,
+        );
+        final lead = plan.mountsCarried
+            ? l10n.restoreMountOverrideLead
+            : l10n.restoreMountLegacyLead;
+        expect(
+          find.ancestor(of: find.text(lead), matching: callout),
+          findsNothing,
+        );
+        final explanation = find.byKey(
+          const ValueKey('restore-mount-explanation'),
+        );
+        expect(
+          find.descendant(of: explanation, matching: find.text(lead)),
+          findsOne,
+        );
+        final chips = find.ancestor(
+          of: find.text(l10n.restoreMountRemoveCount('${plan.removalCount}')),
+          matching: find.byType(Wrap),
+        );
+        final text = tester.getRect(explanation);
+        expect(text.top - tester.getRect(callout).bottom, 12);
+        expect(tester.getRect(chips).top - text.bottom, 8);
+      });
+    }
+
+    testWidgets('a compatible sheet keeps its mount callout', (tester) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _mergePlan()),
+        size: const Size(900, 1400),
+      );
+      final l10n = currentAppLocalizations;
+      expect(
+        find.ancestor(
+          of: find.text(l10n.restoreMountMergeLead),
+          matching: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_Callout',
+          ),
+        ),
+        findsOne,
+      );
+      expect(
+        find.byKey(const ValueKey('restore-mount-explanation')),
+        findsNothing,
+      );
+    });
+
     testWidgets('a compatible restore never shows the override line', (
       tester,
     ) async {

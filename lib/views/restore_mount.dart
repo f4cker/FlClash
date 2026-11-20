@@ -868,9 +868,24 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                 ),
               ],
               if (!mitmOnly) ...[
-                SizedBox(height: plan.isOverride ? 12 : 20),
-                _Callout(lead: lead, note: note, warning: plan.mountsCarried),
-                const SizedBox(height: 16),
+                // An override has one callout, the deletion line; what it
+                // does to mounts reads as plain text above the counts.
+                if (plan.isOverride) ...[
+                  const SizedBox(height: 12),
+                  Column(
+                    key: const ValueKey('restore-mount-explanation'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(lead, style: _body(context, p)),
+                      Text(note, style: _body(context, p)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ] else ...[
+                  const SizedBox(height: 20),
+                  _Callout(lead: lead, note: note, warning: plan.mountsCarried),
+                  const SizedBox(height: 16),
+                ],
                 counts,
                 if (plan.isEmpty)
                   Padding(
