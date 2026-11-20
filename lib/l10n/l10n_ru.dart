@@ -1213,6 +1213,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trayTunMode => 'Режим TUN';
 
   @override
+  String get trayMitm => 'Расшифровка MITM';
+
+  @override
+  String get trayMitmCapture => 'Записывать содержимое запросов';
+
+  @override
+  String get trayMitmCaptureNeedsMitm => 'Сначала включите расшифровку MITM';
+
+  @override
   String get trayCopyProxyCommand => 'Копировать команду прокси для терминала';
 
   @override

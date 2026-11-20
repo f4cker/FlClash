@@ -1185,6 +1185,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get trayTunMode => 'TUN 모드';
 
   @override
+  String get trayMitm => 'MITM 복호화';
+
+  @override
+  String get trayMitmCapture => '요청 내용 기록';
+
+  @override
+  String get trayMitmCaptureNeedsMitm => '먼저 MITM 복호화를 켜세요';
+
+  @override
   String get trayCopyProxyCommand => '터미널 프록시 명령 복사';
 
   @override

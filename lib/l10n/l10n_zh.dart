@@ -1172,6 +1172,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get trayTunMode => 'TUN 模式';
 
   @override
+  String get trayMitm => 'MITM 解密';
+
+  @override
+  String get trayMitmCapture => '记录请求内容';
+
+  @override
+  String get trayMitmCaptureNeedsMitm => '需先开启 MITM 解密';
+
+  @override
   String get trayCopyProxyCommand => '复制终端代理命令';
 
   @override

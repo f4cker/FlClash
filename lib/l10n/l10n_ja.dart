@@ -1188,6 +1188,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get trayTunMode => 'TUN モード';
 
   @override
+  String get trayMitm => 'MITM 復号';
+
+  @override
+  String get trayMitmCapture => 'リクエスト内容を記録';
+
+  @override
+  String get trayMitmCaptureNeedsMitm => '先に MITM 復号をオンにしてください';
+
+  @override
   String get trayCopyProxyCommand => 'ターミナルのプロキシコマンドをコピー';
 
   @override

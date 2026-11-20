@@ -262,17 +262,19 @@ class AppTray implements TrayPort {
       ...groupMenu,
       if (trayState.isStart) ...[
         TrayMenuCheckbox(
-          label: appLocalizations.trayTunMode,
-          checked: trayState.tunEnable,
-          detail: shortcut(HotAction.tun),
-          onSelected: systemAction.updateTun,
-        ),
-        TrayMenuCheckbox(
           label: appLocalizations.systemProxy,
           checked: trayState.systemProxy,
           detail: shortcut(HotAction.proxy),
           onSelected: systemAction.updateSystemProxy,
         ),
+        TrayMenuCheckbox(
+          label: appLocalizations.trayTunMode,
+          checked: trayState.tunEnable,
+          detail: shortcut(HotAction.tun),
+          onSelected: systemAction.updateTun,
+        ),
+        if (isMacOS && mitmFeature)
+          ..._buildMitmItems(read: read, showsStatus: mitmIndicator != null),
         const TrayMenuSeparator(),
       ],
       TrayMenuCheckbox(
@@ -493,6 +495,52 @@ class AppTray implements TrayPort {
 
     await Future.wait([for (var i = 0; i < 4; i++) readNext()]);
     return icons;
+  }
+
+  /// Decryption and recording request content, as saved: the settings
+  /// page's switches, and their reasons when one cannot be used from here.
+  List<TrayMenuItem> _buildMitmItems({
+    required ProviderReader read,
+    required bool showsStatus,
+  }) {
+    final l10n = currentAppLocalizations;
+    final systemAction = read(systemActionProvider.notifier);
+    final mitm = read(patchClashConfigProvider).mitm;
+    final idle = read(trayMitmPendingProvider) == null;
+    final trusted = mitm.trustedFingerprint != null;
+    return [
+      TrayMenuCheckbox(
+        label: l10n.trayMitm,
+        checked: mitm.enable,
+        enabled: idle,
+        onSelected: () => _observe(systemAction.toggleMitmForTray()),
+      ),
+      TrayMenuCheckbox(
+        label: l10n.trayMitmCapture,
+        checked: mitm.capture,
+        enabled: idle && mitm.enable,
+        onSelected: () => _observe(systemAction.toggleMitmCaptureForTray()),
+      ),
+      if (!mitm.enable) ...[
+        if (!trusted)
+          TrayMenuAction.status(
+            statusKey: 'mitm-trust',
+            label: l10n.mitmPauseNotTrusted,
+          ),
+        TrayMenuAction.status(
+          statusKey: 'mitm-capture',
+          label: l10n.trayMitmCaptureNeedsMitm,
+        ),
+      ],
+      // While on, the status that leads the menu opens the settings.
+      if (!showsStatus)
+        TrayMenuAction(
+          label: l10n.mitmIndicatorOpenSettings,
+          onSelected: () {
+            if (mitmSettingsPort case final open?) unawaited(open());
+          },
+        ),
+    ];
   }
 
   void _observe(Future<void> operation) {
