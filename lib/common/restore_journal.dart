@@ -590,7 +590,15 @@ enum RestoreRecoveryOutcome {
 }
 
 /// What the user can do about a [RestoreRecoveryReport].
-enum RestoreFollowUp { none, nextLaunch, retryNow, restoreAgain }
+enum RestoreFollowUp {
+  none,
+  nextLaunch,
+
+  /// Left for the next launch, with nothing confirmed for it to act on.
+  nextLaunchUnconfirmed,
+  retryNow,
+  restoreAgain,
+}
 
 class RestoreRecoveryReport {
   final RestoreRecoveryOutcome outcome;
@@ -635,6 +643,12 @@ class RestoreRecoveryReport {
   /// [mitmLockNotSavedRetryKept], the journal is confirmed kept for the
   /// next launch.
   final bool mitmLockNotSaved;
+
+  /// Recovery as a whole failed and every module is stopped; with
+  /// [recoveryErrorRetryKept], the next launch has a confirmed basis to
+  /// handle it again.
+  final bool recoveryError;
+  final bool recoveryErrorRetryKept;
   final bool mitmLockNotSavedRetryKept;
 
   const RestoreRecoveryReport(
@@ -651,6 +665,8 @@ class RestoreRecoveryReport {
     this.mitmLockKept = false,
     this.mitmLockKeptConfirmed = false,
     this.mitmLockNotSaved = false,
+    this.recoveryError = false,
+    this.recoveryErrorRetryKept = false,
     this.mitmLockNotSavedRetryKept = false,
   });
 
@@ -671,6 +687,8 @@ class RestoreRecoveryReport {
     bool? mitmLockKept,
     bool? mitmLockKeptConfirmed,
     bool? mitmLockNotSaved,
+    bool? recoveryError,
+    bool? recoveryErrorRetryKept,
     bool? mitmLockNotSavedRetryKept,
   }) => RestoreRecoveryReport(
     outcome ?? this.outcome,
@@ -686,6 +704,9 @@ class RestoreRecoveryReport {
     mitmLockKept: mitmLockKept ?? this.mitmLockKept,
     mitmLockKeptConfirmed: mitmLockKeptConfirmed ?? this.mitmLockKeptConfirmed,
     mitmLockNotSaved: mitmLockNotSaved ?? this.mitmLockNotSaved,
+    recoveryError: recoveryError ?? this.recoveryError,
+    recoveryErrorRetryKept:
+        recoveryErrorRetryKept ?? this.recoveryErrorRetryKept,
     mitmLockNotSavedRetryKept:
         mitmLockNotSavedRetryKept ?? this.mitmLockNotSavedRetryKept,
   );
@@ -716,6 +737,12 @@ class RestoreRecoveryReport {
   );
 
   RestoreRecoveryReport withMitmStopped() => _copy(mitmStopped: true);
+
+  RestoreRecoveryReport withRecoveryError(bool retryKept) => _copy(
+    outcome: _unfinished,
+    recoveryError: true,
+    recoveryErrorRetryKept: retryKept,
+  );
 
   /// Never called finished either.
   RestoreRecoveryReport withMitmLockNotSaved(bool retryKept) => _copy(
@@ -1089,6 +1116,29 @@ class RestoreRecovery {
   bool _lockGateRetryKept = false;
   bool _lockGateSaid = false;
 
+  /// Whether the next launch has something confirmed to act on: the lock
+  /// file known durable, or any journal, read now. False on any error.
+  Future<bool> _nextLaunchBasisConfirmed() async {
+    if (await _lockRetryConfirmed()) return true;
+    try {
+      return (await RestoreJournal.pending(await _homeDirPath())).isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Recovery as a whole failed: every module is stopped and the lock
+  /// written; the report says so, and says the next launch handles it only
+  /// if there is a confirmed basis for that.
+  Future<void> failAtLaunch(Object error) async {
+    await stopMitmModules(error, said: false);
+    reports.add(
+      const RestoreRecoveryReport(
+        RestoreRecoveryOutcome.mitmOnly,
+      ).withRecoveryError(await _nextLaunchBasisConfirmed()),
+    );
+  }
+
   /// Whether a journal the lock stands in for is confirmed still pending,
   /// for the next launch to handle again.
   Future<bool> _evidenceConfirmed() async {
@@ -1202,7 +1252,10 @@ class RestoreRecovery {
     }
     releaseMitm(_lockHold);
     _lockKeptAfterOff = true;
-    _lockKeptConfirmed = true;
+    // Kept for a journal still pending: the next launch is confirmed to
+    // turn modules off only if the lock file or that journal reads now.
+    _lockKeptConfirmed =
+        await _lockRetryConfirmed() || await _evidenceConfirmed();
     if (await _lockEvidencePending()) return;
     // Cleared only once neither copy reads, nor fails to read, as there.
     if (await _lock.clear() && !await _lock.present()) {
@@ -1723,10 +1776,12 @@ class RestoreRecovery {
         'restore recovery finish failed: $error',
         logLevel: LogLevel.error,
       );
-      const report = RestoreRecoveryReport(
+      final report = RestoreRecoveryReport(
         RestoreRecoveryOutcome.pending,
-        skippedSteps: [RestoreStep.mitm],
-        followUp: RestoreFollowUp.nextLaunch,
+        skippedSteps: const [RestoreStep.mitm],
+        followUp: await _nextLaunchBasisConfirmed()
+            ? RestoreFollowUp.nextLaunch
+            : RestoreFollowUp.nextLaunchUnconfirmed,
       );
       reports.add(
         _mitmOffFailed.isNotEmpty
@@ -1783,7 +1838,11 @@ class RestoreRecovery {
     if (_lockActive && _lockKeptAfterOff && !_lockOffFailed) {
       _lockKeptAfterOff = false;
       attach((report) => report.withMitmLockKept(_lockKeptConfirmed));
-      for (var i = 1; i < taken.length; i++) {
+    }
+    // While the lock stands, for whatever reason, no report is called
+    // finished.
+    if (_lockActive) {
+      for (var i = 0; i < taken.length; i++) {
         taken[i] = taken[i].unfinished();
       }
     }
@@ -1802,6 +1861,8 @@ String restoreFollowUpText(RestoreFollowUp followUp, AppLocalizations l10n) =>
     switch (followUp) {
       RestoreFollowUp.none => '',
       RestoreFollowUp.nextLaunch => l10n.restoreActionNextLaunch,
+      RestoreFollowUp.nextLaunchUnconfirmed =>
+        l10n.restoreActionNextLaunchUnconfirmed,
       RestoreFollowUp.retryNow => l10n.restoreActionRetry,
       RestoreFollowUp.restoreAgain => l10n.restoreActionRestoreAgain,
     };
@@ -1843,6 +1904,10 @@ String restoreRecoveryMessage(
   };
   return [
     ...lines,
+    if (report.recoveryError)
+      report.recoveryErrorRetryKept
+          ? l10n.restoreRecoveryCheckFailed
+          : l10n.restoreRecoveryCheckFailedNoRetry,
     if (report.mitmAllOff) l10n.restoreRecoveryMitmAllOff,
     if (report.mitmOffFailed)
       report.mitmOffRetryKept
@@ -1880,9 +1945,6 @@ Future<void> recoverAtLaunch([RestoreRecovery? recovery]) async {
       'restore recovery failed: $error',
       logLevel: LogLevel.error,
     );
-    await target.stopMitmModules(error);
-    target.reports.add(
-      const RestoreRecoveryReport(RestoreRecoveryOutcome.failed),
-    );
+    await target.failAtLaunch(error);
   }
 }

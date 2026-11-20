@@ -2360,6 +2360,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se continuarán automáticamente la próxima vez que se inicie la app.';
 
   @override
+  String get restoreActionNextLaunchUnconfirmed =>
+      'No se puede confirmar si se completará automáticamente la próxima vez que se inicie la app.';
+
+  @override
   String get restoreActionRetry =>
       'Elige “Continuar” para volver a intentar ahora los pasos restantes.';
 
@@ -2402,6 +2406,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
       'No se puede determinar qué módulos MITM incluyó la última restauración y tampoco se pudo guardar de forma fiable el registro de seguridad, por lo que no se cambió el estado activado/desactivado de ningún módulo. Por seguridad, se impide que se ejecute cualquier módulo MITM mientras la app esté abierta; no se puede confirmar si se volverá a tratar en el próximo inicio.';
+
+  @override
+  String get restoreRecoveryCheckFailed =>
+      'Se produjo un error al comprobar la restauración. Por seguridad, se impide que se ejecute cualquier módulo MITM mientras la app esté abierta; se volverá a tratar en el próximo inicio.';
+
+  @override
+  String get restoreRecoveryCheckFailedNoRetry =>
+      'Se produjo un error al comprobar la restauración. Por seguridad, se impide que se ejecute cualquier módulo MITM mientras la app esté abierta; no se puede confirmar si se volverá a tratar en el próximo inicio.';
 
   @override
   String get restoreContinue => 'Continuar';

@@ -2279,6 +2279,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restoreActionNextLaunch => '다음에 앱을 시작할 때 자동으로 이어서 진행합니다.';
 
   @override
+  String get restoreActionNextLaunchUnconfirmed =>
+      '다음에 앱을 실행할 때 자동으로 완료될지는 확인할 수 없습니다.';
+
+  @override
   String get restoreActionRetry => '“계속”을 선택하면 남은 단계를 지금 다시 시도합니다.';
 
   @override
@@ -2319,6 +2323,14 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
       '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고 안전 기록도 확실하게 저장하지 못해, 모듈의 켜짐/꺼짐 상태를 변경하지 않았습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈의 실행을 막습니다. 다음 실행 시 다시 처리할지는 확인할 수 없습니다.';
+
+  @override
+  String get restoreRecoveryCheckFailed =>
+      '복원을 확인하는 중 오류가 발생했습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈의 실행을 막습니다. 다음 실행 시 다시 처리합니다.';
+
+  @override
+  String get restoreRecoveryCheckFailedNoRetry =>
+      '복원을 확인하는 중 오류가 발생했습니다. 안전을 위해 앱이 실행되는 동안 모든 복호화 모듈의 실행을 막습니다. 다음 실행 시 다시 처리할지는 확인할 수 없습니다.';
 
   @override
   String get restoreContinue => '계속';

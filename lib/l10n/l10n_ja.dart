@@ -2231,6 +2231,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreActionNextLaunch => '次回アプリを起動したときに自動で続行します。';
 
   @override
+  String get restoreActionNextLaunchUnconfirmed =>
+      '次回アプリを起動したときに自動で完了するかどうかは確認できません。';
+
+  @override
   String get restoreActionRetry => '「続行」を選ぶと、残りの手順を今すぐ再試行します。';
 
   @override
@@ -2271,6 +2275,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
       '前回の復元がどの復号モジュールに関係したか判別できず、安全記録も確実に保存できなかったため、モジュールのオン／オフ状態は変更していません。安全のため、アプリの実行中はすべての復号モジュールの実行を阻止しています。次回の起動時にもう一度処理するかどうかは確認できません。';
+
+  @override
+  String get restoreRecoveryCheckFailed =>
+      '復元の確認中にエラーが発生しました。安全のため、アプリの実行中はすべての復号モジュールの実行を阻止しています。次回の起動時にもう一度処理します。';
+
+  @override
+  String get restoreRecoveryCheckFailedNoRetry =>
+      '復元の確認中にエラーが発生しました。安全のため、アプリの実行中はすべての復号モジュールの実行を阻止しています。次回の起動時にもう一度処理するかどうかは確認できません。';
 
   @override
   String get restoreContinue => '続行';

@@ -1593,6 +1593,26 @@ void main() {
         await pumpEventQueue();
       }
 
+      /// A second journal beside the first, one id later, with the same
+      /// commit marker: old-format (no module list) unless [current].
+      Future<void> twin({bool current = false}) async {
+        final [dir] = journals();
+        final id = int.parse(basename(dir.path));
+        final copy = Directory(join(dir.parent.path, '${id + 1}'))
+          ..createSync(recursive: true);
+        _copyTree(Directory(dir.path), copy);
+        final file = File(join(copy.path, 'journal.json'));
+        final map = jsonDecode(file.readAsStringSync()) as Map;
+        map['id'] = id + 1;
+        if (current) map['mitmModules'] = [_module.id];
+        file.writeAsStringSync(jsonEncode(map));
+        await database.customStatement(
+          'INSERT INTO restore_commits (id, created_at, fingerprint) '
+          'SELECT ?, created_at, fingerprint FROM restore_commits WHERE id = ?',
+          [id + 1, id],
+        );
+      }
+
       /// Off until consented to here, then it runs.
       Future<void> expectOffUntilConsent() async {
         final third = await launch();
@@ -1765,6 +1785,131 @@ void main() {
         expect(report.mitmLockKeptConfirmed, isTrue, reason: 'file reads');
         expectNone(await reaching());
       });
+
+      test('a lock not saved for one journal: a second journal in the same '
+          'launch is not called finished either, and no on/off state '
+          'changes', () async {
+        await oldCrash(_Crash.afterCommit);
+        await twin(current: true);
+        final before = await states();
+        restoreRecovery.clearMitmHolds();
+        restoreRecovery.onLockStep = (copy, step) async {
+          if (copy == MitmLockCopy.file && step != 'read') {
+            throw StateError('file');
+          }
+        };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final [first, second] = restoreRecovery.takeReports();
+        expect(await states(), before);
+        expect(first.mitmLockNotSaved, isTrue);
+        expect(second.mitmLockNotSaved, isFalse);
+        expect(second.outcome, RestoreRecoveryOutcome.pending);
+        final en = currentAppLocalizations;
+        for (final report in [first, second]) {
+          expect(
+            restoreRecoveryMessage(report, en),
+            isNot(contains(en.restoreRecoveryCompleted)),
+          );
+        }
+      });
+
+      test('A saves the lock durably, then B fails to rewrite it in the same '
+          'launch: the durable file still reads, so B turns modules off and '
+          'nothing says a lock was not saved', () async {
+        await oldCrash(_Crash.afterCommit);
+        await twin();
+        restoreRecovery.clearMitmHolds();
+        var saved = 0;
+        var turnOffs = 0;
+        restoreRecovery
+          ..onMitmOff = (committed) async {
+            if (!committed) turnOffs++;
+          }
+          ..onLockStep = (copy, step) async {
+            if (copy != MitmLockCopy.file) return;
+            if (step == 'confirmed') saved++;
+            if (saved > 0 && step == 'written') throw StateError('file');
+          };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final reports = restoreRecovery.takeReports();
+        expect(saved, 1, reason: 'only A saved it');
+        expect(turnOffs, greaterThanOrEqualTo(2), reason: 'A and B');
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(restoreRecovery.mitmStopped, isFalse);
+        expect(reports.any((r) => r.mitmLockNotSaved), isFalse);
+        expect(reports.any((r) => r.mitmOffFailed), isFalse);
+        expect(journals(), isEmpty);
+        expectNone(await reaching());
+      });
+
+      test('the lock kept for a pending journal, the journal list unreadable '
+          'and no lock file: the restriction line never says the next '
+          'launch is confirmed', () async {
+        await preferences.writeMitmSafetyLock('{"reason":"earlier"}');
+        await database.mitmModulesDao.putAll([other.toCompanion(1)]);
+        final root = Directory(RestoreJournal.rootOf(home.path))
+          ..createSync(recursive: true);
+        addTearDown(() => Process.runSync('chmod', ['755', root.path]));
+        await relaunch();
+        restoreRecovery.clearMitmHolds();
+        restoreRecovery.onMitmOff = (committed) async {
+          if (!committed) Process.runSync('chmod', ['000', root.path]);
+        };
+        await restoreRecovery.run();
+        final [report] = restoreRecovery.takeReports();
+        Process.runSync('chmod', ['755', root.path]);
+        expect(await states(), {50: (false, false)});
+        expect(report.mitmLockKept, isTrue);
+        expect(report.mitmLockKeptConfirmed, isFalse);
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryMitmLockKeptUnconfirmed));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmLockKept)));
+      });
+
+      for (final (name, keepJournal) in [
+        ('a journal still reads', true),
+        ('nothing left to act on', false),
+      ]) {
+        test('finishing fails as a whole at startup, $name: it says the next '
+            'launch continues only with a confirmed basis', () async {
+          await oldCrash(_Crash.afterCommit, keepKey: true);
+          final recovery = _FinishThrows(home, dropJournals: !keepJournal);
+          await recovery.run();
+          expect(recovery.needsMitm, isTrue);
+          final shown = <RestoreRecoveryReport>[];
+          await recovery.completeAtStartup(
+            mitm: () async {},
+            startBackgroundWork: () {},
+            show: (report) async => shown.add(report),
+          );
+          final [report] = shown;
+          expect(report.outcome, RestoreRecoveryOutcome.pending);
+          expect(
+            report.followUp,
+            keepJournal
+                ? RestoreFollowUp.nextLaunch
+                : RestoreFollowUp.nextLaunchUnconfirmed,
+          );
+          final en = currentAppLocalizations;
+          final message = restoreRecoveryMessage(report, en);
+          if (keepJournal) {
+            expect(message, contains(en.restoreActionNextLaunch));
+          } else {
+            expect(message, contains(en.restoreActionNextLaunchUnconfirmed));
+            expect(message, isNot(contains(en.restoreActionNextLaunch)));
+            expect(
+              restoreRecoveryMessage(
+                report,
+                lookupAppLocalizations(const Locale('zh')),
+              ),
+              contains('无法确认下次启动应用时是否会自动继续完成。'),
+            );
+          }
+        });
+      }
 
       test('only the setting copy is confirmed and the journal goes too: '
           'the retry is never said confirmed; the setting copy still makes '
@@ -2281,11 +2426,51 @@ void main() {
         expect(failing.mitmStopped, isTrue);
         expect(await lock(), (file: true, prefs: true));
         final [report] = failing.takeReports();
-        expect(report.outcome, RestoreRecoveryOutcome.failed);
-        expect(report.mitmStopped, isTrue);
+        expect(report.outcome, isNot(RestoreRecoveryOutcome.completed));
+        expect(report.recoveryError, isTrue);
+        expect(report.recoveryErrorRetryKept, isTrue, reason: 'lock file');
+        expect(report.mitmStopped, isFalse, reason: 'its own line says it');
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryCheckFailed));
+        expect(lines, isNot(contains(en.restoreRecoveryMitmStopped)));
+        expect(lines, isNot(contains(en.restoreRecoveryFailed)));
+        expect(
+          restoreRecoveryMessage(
+            report,
+            lookupAppLocalizations(const Locale('zh')),
+          ).split('\n'),
+          contains(
+            '恢复检查出错。为安全起见，本次运行期间已阻止所有解密模块运行；'
+            '下次启动时会再次处理。',
+          ),
+        );
 
         await expectSecondLaunchTurnsOff();
         await expectOffUntilConsent();
+      });
+
+      test('recovery failing as a whole with no lock file saved and no '
+          'journal: it never says the next launch handles it', () async {
+        await oldCrash(_Crash.afterCommit, keepKey: true);
+        for (final dir in journals()) {
+          dir.deleteSync(recursive: true);
+        }
+        final failing = _ThrowingRecovery(home)
+          ..onLockStep = (copy, step) async {
+            if (copy == MitmLockCopy.file && step != 'read') {
+              throw StateError('file');
+            }
+          };
+        await recoverAtLaunch(failing);
+        expect(failing.mitmStopped, isTrue);
+        final [report] = failing.takeReports();
+        expect(report.recoveryError, isTrue);
+        expect(report.recoveryErrorRetryKept, isFalse);
+        final en = currentAppLocalizations;
+        final lines = restoreRecoveryMessage(report, en).split('\n');
+        expect(lines, contains(en.restoreRecoveryCheckFailedNoRetry));
+        expect(lines, isNot(contains(en.restoreRecoveryCheckFailed)));
       });
 
       test('mid-session, in a live container: a hold or a stop takes module '
@@ -2478,6 +2663,28 @@ class _ThrowingRecovery extends RestoreRecovery {
 
   @override
   Future<void> run() async => throw StateError('recovery');
+}
+
+/// Finishing throws as a whole, after optionally removing every journal.
+class _FinishThrows extends RestoreRecovery {
+  final bool dropJournals;
+  final Directory home;
+
+  _FinishThrows(this.home, {required this.dropJournals})
+    : super(
+        db: () => database,
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+
+  @override
+  Future<void> finish(Future<void> Function() mitm) async {
+    if (dropJournals) {
+      final root = Directory(RestoreJournal.rootOf(home.path));
+      if (root.existsSync()) root.deleteSync(recursive: true);
+    }
+    throw StateError('finish');
+  }
 }
 
 void _copyTree(Directory from, Directory to) {
