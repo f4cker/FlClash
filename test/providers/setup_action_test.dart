@@ -2267,6 +2267,67 @@ void main() {
       },
     );
 
+    test('a setup that ends settles its profile on the running Core', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {});
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(settledConfigProfileProvider, (_, _) {});
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      expect(scoped.read(settledConfigProfileProvider), isNull);
+
+      await scoped.read(setupActionProvider.notifier).applyProfile(force: true);
+
+      expect(scoped.read(settledConfigProfileProvider), (
+        profileId: profile.id,
+      ));
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      expect(scoped.read(settledConfigProfileProvider), isNull);
+    });
+
+    test('a setup begun before a Core restart settles nothing', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      final held = Completer<void>();
+      final reached = Completer<void>();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {
+        reached.complete();
+        await held.future;
+      });
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(settledConfigProfileProvider, (_, _) {});
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+
+      final applying = scoped
+          .read(setupActionProvider.notifier)
+          .applyProfile(force: true);
+      await reached.future;
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      scoped.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      held.complete();
+      await applying;
+
+      expect(scoped.read(settledConfigProfileProvider), isNull);
+    });
+
     test(
       'a failed build preserves confirmed file and metadata without setup',
       () async {

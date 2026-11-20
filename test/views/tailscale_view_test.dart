@@ -156,6 +156,139 @@ void main() {
   }
 
   group('page states', () {
+    void holdProfile(int id) {
+      container.listen(currentProfileIdProvider, (_, _) {});
+      container.listen(settledConfigProfileProvider, (_, _) {});
+      container.read(currentProfileIdProvider.notifier).value = id;
+    }
+
+    void settleSetup(int? id) {
+      final settled = container.read(settledConfigProfileProvider.notifier);
+      settled.settle(id, settled.epoch);
+    }
+
+    testWidgets('a Core whose setup is pending shows 正在启动, not 登录', (
+      tester,
+    ) async {
+      holdProfile(42);
+      serve(const []);
+      await pumpPanel(tester);
+
+      expect(find.text('正在启动…'), findsOneWidget);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+      expect(find.text('登录 Tailscale'), findsNothing);
+
+      settleSetup(42);
+      await settle(tester);
+      expect(find.text('正在启动…'), findsNothing);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a Core restart goes back to 正在启动 until setup settles', (
+      tester,
+    ) async {
+      holdProfile(42);
+      settleSetup(42);
+      serve([tsConnectedNode], tsConnectedStatus());
+      await pumpPanel(tester);
+      expect(find.text('当前设备'), findsOneWidget);
+
+      // The fresh Core lists nothing until the profile is applied again.
+      serve(const []);
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      container.invalidate(tailscaleNodesProvider);
+      await settle(tester);
+      expect(find.text('正在启动…'), findsOneWidget);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+
+      serve([tsConnectedNode], tsConnectedStatus());
+      container.invalidate(tailscaleNodesProvider);
+      settleSetup(42);
+      await settle(tester);
+      expect(find.text('正在启动…'), findsNothing);
+      expect(find.text('当前设备'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('setup settled for another profile is still pending', (
+      tester,
+    ) async {
+      holdProfile(42);
+      settleSetup(7);
+      serve(const []);
+      await pumpPanel(tester);
+
+      expect(find.text('正在启动…'), findsOneWidget);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+      await teardownView(tester);
+    });
+
+    for (final settled in [false, true]) {
+      testWidgets('accounts on record with no node are never 登录 '
+          '(settled: $settled)', (tester) async {
+        holdProfile(42);
+        await container
+            .read(tailscaleManagedRecordsProvider.notifier)
+            .modify(
+              (_) => const [
+                TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+              ],
+            );
+        if (settled) {
+          settleSetup(42);
+        }
+        serve(const []);
+        await pumpPanel(tester);
+
+        expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+        if (settled) {
+          expect(find.text('状态待确认'), findsOneWidget);
+          expect(find.text('重新读取状态'), findsOneWidget);
+          expect(find.text('添加 Tailscale 账号'), findsOneWidget);
+          expect(find.text('正在启动…'), findsNothing);
+        } else {
+          expect(find.text('正在启动…'), findsOneWidget);
+          expect(find.text('状态待确认'), findsNothing);
+        }
+        await teardownView(tester);
+      });
+    }
+
+    testWidgets('settled with no account on record is the real 登录 page', (
+      tester,
+    ) async {
+      holdProfile(42);
+      await container
+          .read(tailscaleManagedRecordsProvider.notifier)
+          .modify(
+            (_) => const [
+              TailscaleManagedRecord(id: 'x', profileId: 7, attached: true),
+            ],
+          );
+      settleSetup(42);
+      serve(const []);
+      await pumpPanel(tester);
+
+      expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
+      expect(find.text('正在启动…'), findsNothing);
+      expect(find.text('状态待确认'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('nodes listed show the card whatever the setup state', (
+      tester,
+    ) async {
+      holdProfile(42);
+      serve([tsConnectedNode], tsConnectedStatus());
+      await pumpPanel(tester);
+
+      expect(find.text('当前设备'), findsOneWidget);
+      expect(find.text('正在启动…'), findsNothing);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsNothing);
+      await teardownView(tester);
+    });
     testWidgets('core stopped shows its own page', (tester) async {
       container.read(coreStatusProvider.notifier).value =
           CoreStatus.disconnected;
@@ -855,6 +988,8 @@ void main() {
     ) async {
       hold();
       container.read(currentProfileIdProvider.notifier).value = 42;
+      container.listen(settledConfigProfileProvider, (_, _) {});
+      container.read(settledConfigProfileProvider.notifier).settle(42, 0);
       serve(const []);
       await pumpPanel(tester);
       verifyNever(

@@ -776,7 +776,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       return _page(context, body: const Center(child: ActivityIndicator()));
     }
     if (nodes.isEmpty) {
-      return _page(context, body: _noNodes(context));
+      return _page(context, body: _emptyNodes(context, nodesValue));
     }
     final node = _currentNode(nodes);
     if (node == null) {
@@ -1281,6 +1281,87 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       action: FilledButton(
         onPressed: () => ref.read(coreActionProvider.notifier).restartCore(),
         child: Text(appLocalizations.tsStartCore),
+      ),
+    );
+  }
+
+  /// An empty list is 登录 only once the profile's setup has settled on this
+  /// Core and no panel-added account of the profile is on record. Before
+  /// then a fresh Core lists nothing because nothing was applied yet.
+  Widget _emptyNodes(
+    BuildContext context,
+    AsyncValue<List<TailscaleNode>> nodesValue,
+  ) {
+    if (_adding) {
+      // The add flow's own apply runs behind its busy sign-in button.
+      return _noNodes(context);
+    }
+    final profileId = ref.watch(currentProfileIdProvider);
+    final settled = ref.watch(settledConfigProfileProvider);
+    final records = ref.watch(tailscaleManagedRecordsProvider);
+    final applied =
+        profileId == null ||
+        (settled != null && settled.profileId == profileId);
+    if (!applied || nodesValue.isLoading) {
+      return _applyingNodes(context);
+    }
+    final hasRecords =
+        records == null ||
+        records.any((record) => record.profileId == profileId);
+    if (hasRecords) {
+      return _nodesUnavailable(context);
+    }
+    return _noNodes(context);
+  }
+
+  /// The profile's nodes are still being set up on the Core.
+  Widget _applyingNodes(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return Semantics(
+      liveRegion: true,
+      label: appLocalizations.tsStateStarting,
+      excludeSemantics: true,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 12,
+          children: [
+            const ActivityIndicator(),
+            Text(
+              appLocalizations.tsStateStarting,
+              style: AppTextStyle.subheadline
+                  .of(context)
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Accounts are on record, yet the applied config lists no node for them:
+  /// said as it is, never as not signed in. Adding another account stays
+  /// possible, so a draft that never built cannot trap the page.
+  Widget _nodesUnavailable(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return NullStatus(
+      illustration: NullStatusIllustration.error,
+      label: appLocalizations.tsStateUnconfirmed,
+      description: appLocalizations.tsUnconfirmedTip,
+      action: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          FilledButton(
+            onPressed: () => ref.invalidate(tailscaleNodesProvider),
+            child: Text(appLocalizations.tsReadStatus),
+          ),
+          TonalButton(
+            label: appLocalizations.tsAddAccount,
+            onPressed: _adding ? null : _addAccount,
+          ),
+        ],
       ),
     );
   }

@@ -2944,6 +2944,77 @@ abstract class _$RunningFindProcessMode extends $Notifier<String?> {
   }
 }
 
+/// The profile whose setup last settled (applied, or finished failing) on the
+/// Core that runs now; null from the moment the Core stops or restarts until
+/// the next setup settles. A fresh Core runs no config, so what it lists
+/// before then says nothing about the profile.
+
+@ProviderFor(SettledConfigProfile)
+final settledConfigProfileProvider = SettledConfigProfileProvider._();
+
+/// The profile whose setup last settled (applied, or finished failing) on the
+/// Core that runs now; null from the moment the Core stops or restarts until
+/// the next setup settles. A fresh Core runs no config, so what it lists
+/// before then says nothing about the profile.
+final class SettledConfigProfileProvider
+    extends $NotifierProvider<SettledConfigProfile, ({int? profileId})?> {
+  /// The profile whose setup last settled (applied, or finished failing) on the
+  /// Core that runs now; null from the moment the Core stops or restarts until
+  /// the next setup settles. A fresh Core runs no config, so what it lists
+  /// before then says nothing about the profile.
+  SettledConfigProfileProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'settledConfigProfileProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$settledConfigProfileHash();
+
+  @$internal
+  @override
+  SettledConfigProfile create() => SettledConfigProfile();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(({int? profileId})? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<({int? profileId})?>(value),
+    );
+  }
+}
+
+String _$settledConfigProfileHash() =>
+    r'e9f17b3d775598eaa3b0eab5d3d892d310fd670e';
+
+/// The profile whose setup last settled (applied, or finished failing) on the
+/// Core that runs now; null from the moment the Core stops or restarts until
+/// the next setup settles. A fresh Core runs no config, so what it lists
+/// before then says nothing about the profile.
+
+abstract class _$SettledConfigProfile extends $Notifier<({int? profileId})?> {
+  ({int? profileId})? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<({int? profileId})?, ({int? profileId})?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<({int? profileId})?, ({int? profileId})?>,
+              ({int? profileId})?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(Query)
 final queryProvider = QueryFamily._();
 

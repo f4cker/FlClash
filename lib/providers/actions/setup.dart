@@ -1017,23 +1017,38 @@ class SetupAction extends _$SetupAction {
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
   }) async {
-    final result = await _setupScheduler.run(() {
-      if (!(owns?.call() ?? true)) return Future.value(_SetupTaskResult.failed);
-      return _setupConfig(
-        trayMode: trayMode,
-        owns: owns,
-        automatic: automatic,
-        force: force,
-        silence: silence,
-        preloadInvoke: preloadInvoke,
-        onUpdated: () async {
-          if (ref.exists(tailscaleNodesProvider)) {
-            ref.invalidate(tailscaleNodesProvider);
-          }
-          await ref.read(proxiesActionProvider.notifier).updateGroups();
-          await ref.read(providersProvider.notifier).syncProviders();
-        },
-      );
+    final result = await _setupScheduler.run(() async {
+      if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
+      final settled = ref.read(settledConfigProfileProvider.notifier);
+      final epoch = settled.epoch;
+      final profileId = ref.read(currentProfileIdProvider);
+      var outcome = _SetupTaskResult.failed;
+      try {
+        outcome = await _setupConfig(
+          trayMode: trayMode,
+          owns: owns,
+          automatic: automatic,
+          force: force,
+          silence: silence,
+          preloadInvoke: preloadInvoke,
+          onUpdated: () async {
+            if (ref.exists(tailscaleNodesProvider)) {
+              ref.invalidate(tailscaleNodesProvider);
+            }
+            await ref.read(proxiesActionProvider.notifier).updateGroups();
+            await ref.read(providersProvider.notifier).syncProviders();
+          },
+        );
+        return outcome;
+      } finally {
+        // A handoff is settled by the restart's own setup; a superseded one
+        // by the setup that took over.
+        if (outcome != _SetupTaskResult.handoffToCoreRestart &&
+            (owns?.call() ?? true) &&
+            ref.mounted) {
+          settled.settle(profileId, epoch);
+        }
+      }
     });
     if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     if (result != _SetupTaskResult.handoffToCoreRestart) {

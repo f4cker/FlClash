@@ -1003,6 +1003,37 @@ class RunningFindProcessMode extends _$RunningFindProcessMode
   }
 }
 
+/// The profile whose setup last settled (applied, or finished failing) on the
+/// Core that runs now; null from the moment the Core stops or restarts until
+/// the next setup settles. A fresh Core runs no config, so what it lists
+/// before then says nothing about the profile.
+@Riverpod(keepAlive: true)
+class SettledConfigProfile extends _$SettledConfigProfile
+    with AutoDisposeNotifierMixin {
+  int _epoch = 0;
+
+  /// Bumped on every reset; a setup begun in an older epoch settles nothing.
+  int get epoch => _epoch;
+
+  @override
+  ({int? profileId})? build() {
+    ref.listen(coreStatusProvider, (_, next) {
+      if (next != CoreStatus.connected) {
+        _epoch++;
+        state = null;
+      }
+    });
+    return null;
+  }
+
+  void settle(int? profileId, int epoch) {
+    if (epoch != _epoch) {
+      return;
+    }
+    state = (profileId: profileId);
+  }
+}
+
 @riverpod
 class Query extends _$Query with AutoDisposeNotifierMixin {
   @override
