@@ -395,40 +395,62 @@ void main() {
       expect(items[2]['label'], l10n.show);
     });
 
-    test('reads on, with no reason, for the Core\'s standing caveat', () async {
-      await update(
-        _trayState(
-          mitmIndicator: mitmIndicatorOf(
-            enabled: true,
-            coreConnected: true,
-            coreRefused: false,
-            status: const MitmStatus(
-              enable: true,
-              paused: 'partialConnections',
-            ),
-            trusted: true,
-            hostsListed: true,
-          ),
-        ),
-      );
-
+    test('needs action when unconfirmed or not applied', () async {
       final l10n = currentAppLocalizations;
-      final labels = _labels(showCall());
-      expect(labels.first, l10n.mitmIndicatorOn);
-      expect(labels, isNot(contains(l10n.mitmPartialConnections)));
-      expect(
-        labels.where((label) => label.contains(l10n.mitmIndicatorPaused)),
-        isEmpty,
-      );
+      for (final (indicator, label) in [
+        (const MitmIndicator.unconfirmed(), l10n.mitmIndicatorUnconfirmed),
+        (
+          const MitmIndicator.paused(MitmPauseReason.notApplied),
+          l10n.mitmNotApplied,
+        ),
+      ]) {
+        await update(_trayState(mitmIndicator: indicator));
+
+        final items = _items(showCall());
+        expect(items.first['label'], label, reason: '$indicator');
+        expect(items[1]['type'], 'separator');
+        expect(items[2]['label'], l10n.show);
+      }
     });
 
-    test('says when it decrypts', () async {
-      await update(_trayState(mitmIndicator: const MitmIndicator.decrypting()));
+    test('is absent while plainly on or decrypting', () async {
+      final l10n = currentAppLocalizations;
+      for (final indicator in [
+        const MitmIndicator.on(),
+        const MitmIndicator.decrypting(),
+      ]) {
+        await update(_trayState(mitmIndicator: indicator));
 
-      expect(
-        _labels(showCall()).first,
-        currentAppLocalizations.mitmIndicatorDecrypting,
-      );
+        final labels = _labels(showCall());
+        expect(labels.first, l10n.show, reason: '$indicator');
+        expect(labels, isNot(contains(l10n.mitmIndicatorOn)));
+        expect(labels, isNot(contains(l10n.mitmIndicatorDecrypting)));
+      }
+    });
+
+    test('is absent for the Core\'s standing caveat', () async {
+      final l10n = currentAppLocalizations;
+      for (final indicator in [
+        mitmIndicatorOf(
+          enabled: true,
+          coreConnected: true,
+          coreRefused: false,
+          status: const MitmStatus(enable: true, paused: 'partialConnections'),
+          trusted: true,
+          hostsListed: true,
+        ),
+        const MitmIndicator.paused(MitmPauseReason.partialConnections),
+      ]) {
+        await update(_trayState(mitmIndicator: indicator));
+
+        final labels = _labels(showCall());
+        expect(labels.first, l10n.show, reason: '$indicator');
+        expect(labels, isNot(contains(l10n.mitmPartialConnections)));
+        expect(
+          labels.where((label) => label.contains(l10n.mitmIndicatorPaused)),
+          isEmpty,
+        );
+      }
     });
   });
 
@@ -950,7 +972,11 @@ void main() {
     var opened = 0;
     mitmSettingsPort = () async => opened++;
     addTearDown(() => mitmSettingsPort = null);
-    await update(_trayState(mitmIndicator: const MitmIndicator.decrypting()));
+    await update(
+      _trayState(
+        mitmIndicator: const MitmIndicator.paused(MitmPauseReason.liveness),
+      ),
+    );
 
     await select(_items(showCall()).first);
 

@@ -52,3 +52,16 @@ String mitmIndicatorText(AppLocalizations l, MitmIndicator indicator) =>
       ),
       null => mitmIndicatorLabel(l, indicator),
     };
+
+/// Whether the status asks for action rather than restating that decryption
+/// runs. The Core's partialConnections caveat is information, not a fault.
+bool mitmIndicatorNeedsAttention(MitmIndicator indicator) =>
+    switch (indicator) {
+      MitmIndicator(reason: MitmPauseReason.partialConnections) => false,
+      MitmIndicator(
+        kind: MitmIndicatorKind.on || MitmIndicatorKind.decrypting,
+        reason: null,
+      ) =>
+        false,
+      _ => true,
+    };

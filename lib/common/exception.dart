@@ -7,6 +7,30 @@ final class MessageException implements Exception {
   String toString() => message;
 }
 
+enum RestoreBlockedReason {
+  mountPending,
+  overrideWithMountGuards,
+  mergeWithMountGuards,
+  mergeWithMountLinks,
+}
+
+/// Still a [StateError], so callers of the database guards keep working.
+final class RestoreBlockedError extends StateError {
+  final RestoreBlockedReason reason;
+
+  RestoreBlockedError(this.reason)
+    : super(switch (reason) {
+        RestoreBlockedReason.mountPending =>
+          'Cannot restore while a mount operation is pending',
+        RestoreBlockedReason.overrideWithMountGuards =>
+          'Cannot override restore while mount guards exist',
+        RestoreBlockedReason.mergeWithMountGuards =>
+          'Cannot merge profiles with mount guards',
+        RestoreBlockedReason.mergeWithMountLinks =>
+          'Cannot merge profiles with mount links',
+      });
+}
+
 final class AgeSecretKeyRequiredException implements Exception {
   const AgeSecretKeyRequiredException();
 }

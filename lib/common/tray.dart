@@ -190,12 +190,16 @@ class AppTray implements TrayPort {
     final corePending =
         read(trayCoreTogglePendingProvider) ||
         read(coreStatusProvider) == CoreStatus.connecting;
-    final mitmIndicator = trayState.mitmIndicator;
+    final mitmStatus = switch (trayState.mitmIndicator) {
+      final indicator? when mitmIndicatorNeedsAttention(indicator) => indicator,
+      _ => null,
+    };
     return [
-      // Decryption is said first, whenever it is on.
-      if (mitmIndicator != null) ...[
+      // Only a state that needs action leads the menu; plain "on" is already
+      // the toggle's check mark and the tray dot.
+      if (mitmStatus != null) ...[
         TrayMenuAction(
-          label: mitmIndicatorText(appLocalizations, mitmIndicator),
+          label: mitmIndicatorText(appLocalizations, mitmStatus),
           onSelected: () {
             if (mitmSettingsPort case final open?) unawaited(open());
           },
@@ -274,7 +278,7 @@ class AppTray implements TrayPort {
           onSelected: systemAction.updateTun,
         ),
         if (isMacOS && mitmFeature)
-          ..._buildMitmItems(read: read, showsStatus: mitmIndicator != null),
+          ..._buildMitmItems(read: read, showsStatus: mitmStatus != null),
         const TrayMenuSeparator(),
       ],
       TrayMenuCheckbox(
@@ -521,7 +525,7 @@ class AppTray implements TrayPort {
           label: l10n.trayMitmCaptureNeedsMitm,
         ),
       ],
-      // While on, the status that leads the menu opens the settings.
+      // A status leading the menu already opens the settings.
       if (!showsStatus)
         TrayMenuAction(
           label: l10n.mitmIndicatorOpenSettings,

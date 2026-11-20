@@ -1954,6 +1954,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get invalidBackupFile => 'Fichier de sauvegarde non valide';
 
   @override
+  String get restoreBlockedOverrideMounts =>
+      'Un profil de cet appareil a eu des abonnements montés (l’enregistrement subsiste après le démontage) : la sauvegarde ne peut donc pas être restaurée avec « Écraser ». Aucune donnée existante n’a été modifiée. Vous pouvez passer la stratégie de restauration à « Compatible » et réessayer.';
+
+  @override
+  String get restoreBlockedMergeMounts =>
+      'Certains profils de la sauvegarde ont eu des abonnements montés sur cet appareil, ou sont montés comme abonnements : ils ne peuvent donc pas être fusionnés. Aucune donnée existante n’a été modifiée.';
+
+  @override
+  String get restoreBlockedMountPending =>
+      'Le résultat d’une opération de montage n’est pas encore confirmé : la restauration est donc indisponible pour le moment. Aucune donnée existante n’a été modifiée. Réessayez une fois l’état du montage confirmé.';
+
+  @override
   String get pruneCache => 'Nettoyer le cache';
 
   @override

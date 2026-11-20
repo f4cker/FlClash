@@ -1954,6 +1954,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get invalidBackupFile => 'Archivo de copia de seguridad no válido';
 
   @override
+  String get restoreBlockedOverrideMounts =>
+      'Un perfil de este dispositivo ha tenido suscripciones montadas (el registro se conserva tras desmontarlas), así que la copia de seguridad no se puede restaurar con «Sobrescribir». No se ha modificado ningún dato existente. Puedes cambiar la estrategia de restauración a «Compatible» e intentarlo de nuevo.';
+
+  @override
+  String get restoreBlockedMergeMounts =>
+      'Algunos perfiles de la copia de seguridad han tenido suscripciones montadas en este dispositivo o están montados como suscripciones, así que no se pueden combinar. No se ha modificado ningún dato existente.';
+
+  @override
+  String get restoreBlockedMountPending =>
+      'El resultado de una operación de montaje aún no está confirmado, así que por ahora no se puede restaurar. No se ha modificado ningún dato existente. Inténtalo de nuevo cuando se confirme el estado del montaje.';
+
+  @override
   String get pruneCache => 'Depurar caché';
 
   @override

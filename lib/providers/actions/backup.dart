@@ -128,21 +128,29 @@ class BackupAction extends _$BackupAction {
               // Staged files replace live ones a mount apply may be reading,
               // so none is published before the guards pass, and no mount
               // operation starts between that check and the commit.
-              await ref.read(mountActionProvider.notifier).runExclusive(
-                () async {
-                  await writeRows(checkOnly: true);
-                  await beforeRestorePublish?.call();
-                  final putBack = stagingDirPath == null
-                      ? null
-                      : await _copyStagedFiles(data, stagingDirPath);
-                  try {
-                    await writeRows(checkOnly: false);
-                  } catch (_) {
-                    await putBack?.call();
-                    rethrow;
-                  }
-                },
-              );
+              try {
+                await ref.read(mountActionProvider.notifier).runExclusive(
+                  () async {
+                    await writeRows(checkOnly: true);
+                    await beforeRestorePublish?.call();
+                    final putBack = stagingDirPath == null
+                        ? null
+                        : await _copyStagedFiles(data, stagingDirPath);
+                    try {
+                      await writeRows(checkOnly: false);
+                    } catch (_) {
+                      await putBack?.call();
+                      rethrow;
+                    }
+                  },
+                );
+              } on RestoreBlockedError catch (error, stack) {
+                // Thrown before any row, file or setting is written.
+                Error.throwWithStackTrace(
+                  MessageException(_restoreBlockedMessage(error.reason)),
+                  stack,
+                );
+              }
               // Keep both restore lanes until all dependent publication and
               // cleanup completes; a later restore must not overtake these.
               try {
@@ -186,6 +194,18 @@ class BackupAction extends _$BackupAction {
             },
           ),
         );
+  }
+
+  static String _restoreBlockedMessage(RestoreBlockedReason reason) {
+    final l10n = currentAppLocalizations;
+    return switch (reason) {
+      RestoreBlockedReason.mountPending => l10n.restoreBlockedMountPending,
+      RestoreBlockedReason.overrideWithMountGuards =>
+        l10n.restoreBlockedOverrideMounts,
+      RestoreBlockedReason.mergeWithMountGuards ||
+      RestoreBlockedReason.mergeWithMountLinks =>
+        l10n.restoreBlockedMergeMounts,
+    };
   }
 
   Future<void> _restoreMitmModules() async {

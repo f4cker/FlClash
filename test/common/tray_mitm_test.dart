@@ -121,14 +121,16 @@ void main() {
     await tester.runAsync(() => container.read(mitmCaProvider.future));
   }
 
-  Future<void> update({bool isStart = true}) => tray.update(
-    trayState: _trayState(
-      isStart: isStart,
-      mitmIndicator: saved().enable ? const MitmIndicator.on() : null,
-    ),
-    traffic: const Traffic(),
-    read: container.read,
-  );
+  Future<void> update({bool isStart = true, MitmIndicator? indicator}) =>
+      tray.update(
+        trayState: _trayState(
+          isStart: isStart,
+          mitmIndicator:
+              indicator ?? (saved().enable ? const MitmIndicator.on() : null),
+        ),
+        traffic: const Traffic(),
+        read: container.read,
+      );
 
   List<TrayItem> menu() => host.lastShown!.menu;
 
@@ -183,10 +185,18 @@ void main() {
     expect(item(l.trayMitm).checked, isTrue);
     expect(item(l.trayMitmCapture).checked, isTrue);
     expect(item(l.trayMitmCapture).enabled, isTrue);
-    // On, the status leading the menu opens the settings; no reasons.
-    final labels = menu().map((i) => i.label);
-    expect(labels.where((x) => x == l.mitmIndicatorOpenSettings), isEmpty);
+    final labels = menu().map((i) => i.label).toList();
+    expect(labels.first, l.show);
+    expect(labels, isNot(contains(l.mitmIndicatorOn)));
+    expect(labels.where((x) => x == l.mitmIndicatorOpenSettings), hasLength(1));
     expect(labels, isNot(contains(l.trayMitmCaptureNeedsMitm)));
+
+    await update(
+      indicator: const MitmIndicator.paused(MitmPauseReason.liveness),
+    );
+    final paused = menu().map((i) => i.label).toList();
+    expect(paused.first, l.mitmIndicatorPausedBecause(l.mitmPauseLiveness));
+    expect(paused, isNot(contains(l.mitmIndicatorOpenSettings)));
 
     // The settings page writes; the tray follows.
     container.read(systemActionProvider.notifier).setMitmCapture(false);

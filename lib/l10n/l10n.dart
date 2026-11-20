@@ -3558,6 +3558,24 @@ abstract class AppLocalizations {
   /// **'Invalid backup file'**
   String get invalidBackupFile;
 
+  /// No description provided for @restoreBlockedOverrideMounts.
+  ///
+  /// In en, this message translates to:
+  /// **'A profile on this device has had subscriptions mounted (the record stays after unmounting), so the backup can\'t be restored with “Override”. No existing data was changed. You can switch the restore strategy to “Compatible” and try again.'**
+  String get restoreBlockedOverrideMounts;
+
+  /// No description provided for @restoreBlockedMergeMounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Some profiles in the backup have had subscriptions mounted on this device, or are mounted as subscriptions, so they can\'t be merged. No existing data was changed.'**
+  String get restoreBlockedMergeMounts;
+
+  /// No description provided for @restoreBlockedMountPending.
+  ///
+  /// In en, this message translates to:
+  /// **'A mount operation\'s result isn\'t confirmed yet, so restoring is unavailable for now. No existing data was changed. Try again once the mount status is confirmed.'**
+  String get restoreBlockedMountPending;
+
   /// No description provided for @pruneCache.
   ///
   /// In en, this message translates to:

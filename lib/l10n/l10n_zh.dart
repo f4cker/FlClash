@@ -1823,6 +1823,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get invalidBackupFile => '无效备份文件';
 
   @override
+  String get restoreBlockedOverrideMounts =>
+      '本机有配置挂载过订阅（解除挂载后该记录仍会保留），无法用“覆盖”方式恢复。现有数据未做任何改动。可将恢复策略改为“兼容”后再试。';
+
+  @override
+  String get restoreBlockedMergeMounts =>
+      '备份中的部分配置在本机挂载过订阅，或正作为订阅被挂载，无法合并。现有数据未做任何改动。';
+
+  @override
+  String get restoreBlockedMountPending =>
+      '挂载操作的结果尚未确认，暂时无法恢复。现有数据未做任何改动。请在挂载状态确认后再试。';
+
+  @override
   String get pruneCache => '修剪缓存';
 
   @override

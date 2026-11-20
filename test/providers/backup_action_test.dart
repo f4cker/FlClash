@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -22,10 +23,12 @@ import '../helpers/preferences.dart';
 Profile _profile(int id, String label) =>
     Profile(id: id, label: label, autoUpdateDuration: Duration.zero);
 
-const _pendingMessage = 'Cannot restore while a mount operation is pending';
+String get _pendingMessage =>
+    currentAppLocalizations.restoreBlockedMountPending;
 
-Matcher _rejectedWith(String message) =>
-    throwsA(isA<StateError>().having((e) => e.message, 'message', message));
+Matcher _rejectedWith(String message) => throwsA(
+  isA<MessageException>().having((e) => e.message, 'message', message),
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -187,11 +190,97 @@ void main() {
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
         ),
-        _rejectedWith('Cannot merge profiles with mount guards'),
+        _rejectedWith(currentAppLocalizations.restoreBlockedMergeMounts),
       );
 
       expect(published(), isFalse);
       expect(live.readAsStringSync(), 'live');
+    });
+
+    Future<void> expectBlockedLeavesAllAlone({
+      required RestoreStrategy strategy,
+      required String Function(AppLocalizations l10n) message,
+    }) async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77751, 'Target').toCompanion(0),
+        _profile(77752, 'Source').toCompanion(1),
+      ]);
+      final targetFile = await liveProfile(77751);
+      final sourceFile = await liveProfile(77752);
+      final mount = await pendingMount(77751, [77752]);
+      await testDatabase.mountsDao.settle(77751, mount.version);
+      final settled = await testDatabase.mountsDao.target(77751);
+      stageProfile(77751);
+      stageProfile(77753);
+      final container = buildContainer();
+      container.read(currentProfileIdProvider.notifier).value = 77751;
+      container
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(restoreStrategy: strategy));
+      final configBefore = configMapOf(container);
+      final backupConfig = configMapOf(container)
+        ..['currentProfileId'] = 42
+        ..['appSettingProps'] = {
+          ...configBefore['appSettingProps']! as Map<String, Object?>,
+          'hideIp': true,
+        };
+      final action = actionOf(container);
+      var reachedPublish = false;
+      action.beforeRestorePublish = () async => reachedPublish = true;
+
+      await expectLater(
+        action.applyRestore(
+          MigrationData(
+            configMap: backupConfig,
+            profiles: [_profile(77751, 'Restored'), _profile(77753, 'New')],
+          ),
+          RestoreOption.all,
+          stagingDirPath: staging.path,
+        ),
+        _rejectedWith(message(currentAppLocalizations)),
+      );
+
+      expect(reachedPublish, isFalse);
+      expect(published(), isFalse);
+      expect(targetFile.readAsStringSync(), 'live');
+      expect(sourceFile.readAsStringSync(), 'live');
+      expect(File(await appPath.getProfilePath('77753')).existsSync(), isFalse);
+      expect(
+        {
+          for (final p in await testDatabase.profilesDao.query().get())
+            p.id: p.label,
+        },
+        {77751: 'Target', 77752: 'Source'},
+      );
+      expect(await testDatabase.mountsDao.target(77751), settled);
+      expect(configMapOf(container), configBefore);
+    }
+
+    test('an override blocked by a mount guard explains itself and changes '
+        'nothing', () async {
+      await expectBlockedLeavesAllAlone(
+        strategy: RestoreStrategy.override,
+        message: (l10n) => l10n.restoreBlockedOverrideMounts,
+      );
+    });
+
+    test('a merge overlapping a mount explains itself and changes '
+        'nothing', () async {
+      await expectBlockedLeavesAllAlone(
+        strategy: RestoreStrategy.compatible,
+        message: (l10n) => l10n.restoreBlockedMergeMounts,
+      );
+    });
+
+    test('a blocked restore reads in the app language', () async {
+      loadAppLocalizations(const Locale('zh'));
+      addTearDown(() => loadAppLocalizations(const Locale('en')));
+      await expectBlockedLeavesAllAlone(
+        strategy: RestoreStrategy.override,
+        message: (_) =>
+            '本机有配置挂载过订阅（解除挂载后该记录仍会保留），无法用“覆盖”方式恢复。'
+            '现有数据未做任何改动。可将恢复策略改为“兼容”后再试。',
+      );
     });
 
     test('a mount operation running first is seen by the guard', () async {

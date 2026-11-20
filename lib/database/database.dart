@@ -620,7 +620,7 @@ class Database extends _$Database {
       // unresolved mount operation is still applying.
       final mountStates = await mountsDao.targets();
       if (mountStates.values.any((state) => state.pending != null)) {
-        throw StateError('Cannot restore while a mount operation is pending');
+        throw RestoreBlockedError(RestoreBlockedReason.mountPending);
       }
       if (isEmpty) return;
       if (!isOverride && addedRuleSets.isNotEmpty) {
@@ -695,13 +695,17 @@ class Database extends _$Database {
       if (isOverride) {
         if (mountStates.isNotEmpty ||
             await profileMounts.count.getSingle() != 0) {
-          throw StateError('Cannot override restore while mount guards exist');
+          throw RestoreBlockedError(
+            RestoreBlockedReason.overrideWithMountGuards,
+          );
         }
       } else {
         for (final state in mountStates.values) {
           if (importedIds.contains(state.targetId) ||
               state.sourceIds.any(importedIds.contains)) {
-            throw StateError('Cannot merge profiles with mount guards');
+            throw RestoreBlockedError(
+              RestoreBlockedReason.mergeWithMountGuards,
+            );
           }
         }
         // Also reject inconsistent orphan links lacking a target guard.
@@ -712,7 +716,7 @@ class Database extends _$Database {
                   ))
                   .get();
           if (links.isNotEmpty) {
-            throw StateError('Cannot merge profiles with mount links');
+            throw RestoreBlockedError(RestoreBlockedReason.mergeWithMountLinks);
           }
         }
       }
