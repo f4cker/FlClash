@@ -888,5 +888,59 @@ void main() {
       expect(data.profiles, isEmpty);
       expect(data.scripts, isEmpty);
     });
+
+    test('a backup carries its mount relations, without their pending '
+        'records', () async {
+      await seedDatabase();
+      final raw = db.Database(NativeDatabase(File(databasePath)));
+      await raw.profilesDao.putAll([
+        const Profile(
+          id: 7,
+          label: 'Source',
+          type: ProfileType.url,
+          url: 'https://x.test/sub',
+          autoUpdateDuration: Duration.zero,
+        ).toCompanion(),
+      ]);
+      await raw.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: const [7],
+        pending: (v) =>
+            MountOperation(kind: MountOperationKind.save, version: v),
+      );
+      await raw.mountsDao.recordSourceResult(7, at: DateTime(2026));
+      await raw.close();
+
+      final data = await restore(await backup());
+
+      expect(data.mountsCarried, isTrue);
+      final target = data.mountTargets.single;
+      expect(target.targetId, 1);
+      expect(target.sourceIds, [7]);
+      expect(target.version, 1);
+      expect(target.pending, isNull);
+      expect(data.mountSourceStatuses.single.sourceId, 7);
+    });
+
+    test('a database without mount tables carries no mount data, not an '
+        'empty list', () async {
+      await seedDatabase();
+      final raw = db.Database(NativeDatabase(File(databasePath)));
+      for (final table in [
+        'mount_source_statuses',
+        'mount_targets',
+        'profile_mounts',
+      ]) {
+        await raw.customStatement('DROP TABLE $table');
+      }
+      await raw.close();
+
+      final data = await restore(await backup());
+
+      expect(data.mountsCarried, isFalse);
+      expect(data.mountTargets, isEmpty);
+      expect(data.profiles.single.label, 'Backed up');
+    });
   });
 }

@@ -264,6 +264,12 @@ abstract class MigrationData with _$MigrationData {
     @Default([]) List<ProxyDialer> proxyDialers,
     @Default([]) List<MitmModule> mitmModules,
     @Default([]) List<AddedRuleSet> addedRuleSets,
+
+    /// Whether the backup's database had mount tables at all. A backup
+    /// without them says nothing about mounts; it is not an empty list.
+    @Default(false) bool mountsCarried,
+    @Default([]) List<MountTargetState> mountTargets,
+    @Default([]) List<MountSourceRecord> mountSourceStatuses,
   }) = _MigrationData;
 }
 

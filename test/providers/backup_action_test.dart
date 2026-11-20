@@ -6,11 +6,12 @@ import 'package:archive/archive_io.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/restore_journal.dart';
+import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
+import 'package:fl_clash/providers/app.dart' show initProvider;
 import 'package:fl_clash/providers/config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
@@ -24,19 +25,21 @@ import '../helpers/preferences.dart';
 Profile _profile(int id, String label) =>
     Profile(id: id, label: label, autoUpdateDuration: Duration.zero);
 
-String get _pendingMessage =>
-    currentAppLocalizations.restoreBlockedMountPending;
+Profile _sub(int id, String label) => _profile(
+  id,
+  label,
+).copyWith(type: ProfileType.url, url: 'https://example.invalid/$id');
 
-Matcher _rejectedWith(String message) => throwsA(
-  isA<MessageException>().having((e) => e.message, 'message', message),
+/// Refused because a mount operation is pending; nothing was written.
+Matcher _pendingRefusal([List<int>? profileIds]) => throwsA(
+  isA<RestoreBlockedException>()
+      .having((e) => e.reason, 'reason', RestoreBlockedReason.mountPending)
+      .having(
+        (e) => e.profileIds,
+        'profileIds',
+        profileIds ?? isA<List<int>>(),
+      ),
 );
-
-Matcher _blockedWith(String message, {required List<int> profileIds}) =>
-    throwsA(
-      isA<RestoreBlockedException>()
-          .having((e) => e.message, 'message', message)
-          .having((e) => e.profileIds, 'profileIds', profileIds),
-    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -103,7 +106,7 @@ void main() {
         actionOf(
           container,
         ).applyRestore(MigrationData(configMap: config), RestoreOption.all),
-        _rejectedWith(_pendingMessage),
+        _pendingRefusal(),
       );
       expect(container.read(currentProfileIdProvider), 1);
       expect(await testDatabase.mountsDao.target(1), mount);
@@ -172,7 +175,7 @@ void main() {
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
         ),
-        _rejectedWith(_pendingMessage),
+        _pendingRefusal(),
       );
 
       expect(reachedPublish, isFalse);
@@ -186,158 +189,314 @@ void main() {
       );
     });
 
-    test('a mounted source leaves the live yaml untouched', () async {
+    Future<MountTargetState> settledMount(
+      int targetId,
+      List<int> sources,
+    ) async {
+      final mount = await pendingMount(targetId, sources);
+      await testDatabase.mountsDao.settle(targetId, mount.version);
+      return (await testDatabase.mountsDao.target(targetId))!;
+    }
+
+    ProviderContainer withStrategy(RestoreStrategy strategy) {
+      final container = buildContainer();
+      container
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(restoreStrategy: strategy));
+      return container;
+    }
+
+    test('a merge over a mounted source keeps the relation, bumps the '
+        'version and settles a target that is not running', () async {
       await testDatabase.profilesDao.putAll([
         _profile(77711, 'Target').toCompanion(0),
-        _profile(77712, 'Source').toCompanion(1),
+        _sub(77712, 'Source').toCompanion(1),
       ]);
       final live = await liveProfile(77712);
-      final mount = await pendingMount(77711, [77712]);
-      await testDatabase.mountsDao.settle(77711, mount.version);
+      final before = await settledMount(77711, [77712]);
       stageProfile(77712);
+      final action = actionOf(withStrategy(RestoreStrategy.compatible));
+      RestoreMountPlan? shown;
 
+      final result = await action.applyRestore(
+        MigrationData(profiles: [_sub(77712, 'Restored')]),
+        RestoreOption.onlyProfiles,
+        stagingDirPath: staging.path,
+        confirm: (plan) async {
+          shown = plan;
+          return true;
+        },
+      );
+
+      expect(shown, isNotNull, reason: 'a plan touching mounts is shown');
+      expect(shown!.hasLosses, isFalse);
+      expect(result!.plan.kept.single.origin, RestoreMountOrigin.local);
+      expect(result.stillPending, isEmpty);
+      expect(live.readAsStringSync(), 'from backup');
+      final after = (await testDatabase.mountsDao.target(77711))!;
+      expect(after.sourceIds, [77712]);
+      expect(after.version, before.version + 1);
+      expect(after.pending, isNull);
+      // A panel still holding the old version can no longer save.
       await expectLater(
-        actionOf(buildContainer()).applyRestore(
-          MigrationData(profiles: [_profile(77712, 'Restored')]),
+        testDatabase.mountsDao.save(
+          targetId: 77711,
+          expectedVersion: before.version,
+          sourceIds: const [],
+          pending: (v) =>
+              MountOperation(kind: MountOperationKind.save, version: v),
+        ),
+        throwsA(isA<MountVersionConflict>()),
+      );
+    });
+
+    test('an override that removes relations needs confirmation; cancel '
+        'writes nothing', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77751, 'Target').toCompanion(0),
+        _sub(77752, 'Source').toCompanion(1),
+      ]);
+      final targetFile = await liveProfile(77751);
+      final settled = await settledMount(77751, [77752]);
+      stageProfile(77751);
+      final action = actionOf(withStrategy(RestoreStrategy.override));
+      var reachedPublish = false;
+      action.beforeRestorePublish = () async => reachedPublish = true;
+      final data = MigrationData(
+        profiles: [_profile(77751, 'Restored')],
+        mountsCarried: true,
+        mountTargets: [
+          MountTargetState(targetId: 77751, sourceIds: [77752], version: 4),
+        ],
+      );
+
+      RestoreMountPlan? declined;
+      final cancelled = await action.applyRestore(
+        data,
+        RestoreOption.onlyProfiles,
+        stagingDirPath: staging.path,
+        confirm: (plan) async {
+          declined = plan;
+          return false;
+        },
+      );
+
+      expect(cancelled, isNull);
+      expect(
+        declined!.removals.single.reason,
+        RestoreMountReason.sourceMissing,
+      );
+      expect(declined!.removals.single.relation.source.label, 'Source');
+      expect(reachedPublish, isFalse);
+      expect(published(), isFalse);
+      expect(targetFile.readAsStringSync(), 'live');
+      expect(await testDatabase.mountsDao.target(77751), settled);
+      expect(
+        (await testDatabase.profilesDao.query().get()).map((p) => p.id),
+        unorderedEquals([77751, 77752]),
+      );
+
+      // Without a confirmer, losses are never written.
+      expect(
+        await action.applyRestore(
+          data,
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
         ),
-        _blockedWith(
-          currentAppLocalizations.restoreBlockedMergeMounts('Source'),
-          profileIds: [77712],
-        ),
+        isNull,
+      );
+      expect(published(), isFalse);
+
+      final result = await action.applyRestore(
+        data,
+        RestoreOption.onlyProfiles,
+        stagingDirPath: staging.path,
+        confirm: (_) async => true,
       );
 
+      expect(result!.plan.removals.single.reason.id, 'source-missing');
+      expect(targetFile.readAsStringSync(), 'from backup');
+      final after = (await testDatabase.mountsDao.target(77751))!;
+      expect(after.sourceIds, isEmpty, reason: 'the row stays as a guard');
+      expect(after.version, 5, reason: 'max(local 1, backup 4) + 1');
+      expect((await testDatabase.profilesDao.query().get()).map((p) => p.id), [
+        77751,
+      ]);
+    });
+
+    test(
+      'a compatible conflict is replaced by the backup, never merged',
+      () async {
+        await testDatabase.profilesDao.putAll([
+          _profile(77771, 'Target').toCompanion(0),
+          _sub(77772, 'A').toCompanion(1),
+          _sub(77773, 'X').toCompanion(2),
+          _sub(77774, 'Y').toCompanion(3),
+        ]);
+        await settledMount(77771, [77772, 77773]);
+        final action = actionOf(withStrategy(RestoreStrategy.compatible));
+        RestoreMountPlan? shown;
+
+        final result = await action.applyRestore(
+          MigrationData(
+            profiles: [_profile(77771, 'Target')],
+            mountsCarried: true,
+            mountTargets: [
+              MountTargetState(
+                targetId: 77771,
+                sourceIds: [77772, 77774],
+                version: 1,
+              ),
+            ],
+          ),
+          RestoreOption.onlyProfiles,
+          confirm: (plan) async {
+            shown = plan;
+            return true;
+          },
+        );
+
+        final replacement = shown!.replacements.single;
+        expect(replacement.before.map((p) => p.id), [77772, 77773]);
+        expect(replacement.after.map((p) => p.id), [77772, 77774]);
+        expect(shown!.removals, isEmpty);
+        expect(result, isNotNull);
+        expect((await testDatabase.mountsDao.target(77771))!.sourceIds, [
+          77772,
+          77774,
+        ]);
+      },
+    );
+
+    test('a backup without mount data keeps local relations', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77781, 'Target').toCompanion(0),
+        _sub(77782, 'Source').toCompanion(1),
+      ]);
+      final before = await settledMount(77781, [77782]);
+      final action = actionOf(withStrategy(RestoreStrategy.override));
+
+      final result = await action.applyRestore(
+        MigrationData(
+          profiles: [_profile(77781, 'Target'), _sub(77782, 'Source')],
+        ),
+        RestoreOption.onlyProfiles,
+      );
+
+      expect(result!.plan.mountsCarried, isFalse);
+      expect(result.plan.hasLosses, isFalse);
+      final after = (await testDatabase.mountsDao.target(77781))!;
+      expect(after.sourceIds, [77782]);
+      expect(after.version, before.version + 1);
+    });
+
+    test('mounts changing after confirmation stop the restore before any '
+        'write', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77791, 'Target').toCompanion(0),
+        _sub(77792, 'Source').toCompanion(1),
+      ]);
+      final live = await liveProfile(77792);
+      await settledMount(77791, [77792]);
+      stageProfile(77792);
+      final action = actionOf(withStrategy(RestoreStrategy.compatible));
+
+      await expectLater(
+        action.applyRestore(
+          MigrationData(profiles: [_sub(77792, 'Restored')]),
+          RestoreOption.onlyProfiles,
+          stagingDirPath: staging.path,
+          confirm: (_) async {
+            final current = await testDatabase.mountsDao.target(77791);
+            final saved = await testDatabase.mountsDao.save(
+              targetId: 77791,
+              expectedVersion: current!.version,
+              sourceIds: const [],
+              pending: (v) =>
+                  MountOperation(kind: MountOperationKind.save, version: v),
+            );
+            await testDatabase.mountsDao.settle(77791, saved.version);
+            return true;
+          },
+        ),
+        throwsA(
+          isA<RestoreBlockedException>().having(
+            (e) => e.reason,
+            'reason',
+            RestoreBlockedReason.mountStateChanged,
+          ),
+        ),
+      );
       expect(published(), isFalse);
       expect(live.readAsStringSync(), 'live');
     });
 
-    Future<void> expectBlockedLeavesAllAlone({
-      required RestoreStrategy strategy,
-      required String Function(AppLocalizations l10n) message,
-      required List<int> profileIds,
-      List<Profile>? imported,
-    }) async {
+    test('a running target stays locked until checked, and blocks the next '
+        'restore by name', () async {
       await testDatabase.profilesDao.putAll([
-        _profile(77751, 'Target').toCompanion(0),
-        _profile(77752, 'Source').toCompanion(1),
+        _profile(77801, 'Running').toCompanion(0),
+        _sub(77802, 'Source').toCompanion(1),
       ]);
-      final targetFile = await liveProfile(77751);
-      final sourceFile = await liveProfile(77752);
-      final mount = await pendingMount(77751, [77752]);
-      await testDatabase.mountsDao.settle(77751, mount.version);
-      final settled = await testDatabase.mountsDao.target(77751);
-      stageProfile(77751);
-      stageProfile(77752);
-      stageProfile(77753);
-      final container = buildContainer();
-      container.read(currentProfileIdProvider.notifier).value = 77751;
-      container
-          .read(appSettingProvider.notifier)
-          .update((state) => state.copyWith(restoreStrategy: strategy));
-      final configBefore = configMapOf(container);
-      final backupConfig = configMapOf(container)
-        ..['currentProfileId'] = 42
-        ..['appSettingProps'] = {
-          ...configBefore['appSettingProps']! as Map<String, Object?>,
-          'hideIp': true,
-        };
+      await settledMount(77801, [77802]);
+      final container = withStrategy(RestoreStrategy.compatible);
+      container.read(initProvider.notifier).value = true;
+      container.read(currentProfileIdProvider.notifier).value = 77801;
       final action = actionOf(container);
-      var reachedPublish = false;
-      action.beforeRestorePublish = () async => reachedPublish = true;
 
+      final result = await action.applyRestore(
+        MigrationData(profiles: [_sub(77802, 'Restored')]),
+        RestoreOption.onlyProfiles,
+      );
+
+      expect(result!.stillPending.map((p) => p.id), [77801]);
+      expect((await testDatabase.mountsDao.target(77801))!.pending, isNotNull);
       await expectLater(
         action.applyRestore(
-          MigrationData(
-            configMap: backupConfig,
-            profiles:
-                imported ??
-                [_profile(77751, 'Restored'), _profile(77753, 'New')],
-          ),
-          RestoreOption.all,
-          stagingDirPath: staging.path,
-        ),
-        _blockedWith(message(currentAppLocalizations), profileIds: profileIds),
-      );
-
-      expect(reachedPublish, isFalse);
-      expect(published(), isFalse);
-      expect(targetFile.readAsStringSync(), 'live');
-      expect(sourceFile.readAsStringSync(), 'live');
-      expect(File(await appPath.getProfilePath('77753')).existsSync(), isFalse);
-      expect(
-        {
-          for (final p in await testDatabase.profilesDao.query().get())
-            p.id: p.label,
-        },
-        {77751: 'Target', 77752: 'Source'},
-      );
-      expect(await testDatabase.mountsDao.target(77751), settled);
-      expect(configMapOf(container), configBefore);
-    }
-
-    test('an override blocked by a mount guard explains itself and changes '
-        'nothing', () async {
-      await expectBlockedLeavesAllAlone(
-        strategy: RestoreStrategy.override,
-        message: (l10n) => l10n.restoreBlockedOverrideMounts,
-        profileIds: [77751, 77752],
-      );
-    });
-
-    test('a merge overlapping a mount names the profile and changes '
-        'nothing', () async {
-      await expectBlockedLeavesAllAlone(
-        strategy: RestoreStrategy.compatible,
-        message: (l10n) => l10n.restoreBlockedMergeMounts('Target'),
-        profileIds: [77751],
-      );
-    });
-
-    test('a merge names every conflicting profile by its local name', () async {
-      await expectBlockedLeavesAllAlone(
-        strategy: RestoreStrategy.compatible,
-        imported: [
-          _profile(77752, 'Backup source'),
-          _profile(77751, 'Backup target'),
-          _profile(77753, 'New'),
-        ],
-        message: (l10n) => l10n.restoreBlockedMergeMounts('Target, Source'),
-        profileIds: [77751, 77752],
-      );
-    });
-
-    test('a merge conflict without a local profile names nothing', () async {
-      await testDatabase.customStatement('PRAGMA foreign_keys = OFF');
-      final mount = await pendingMount(77761, []);
-      await testDatabase.mountsDao.settle(77761, mount.version);
-      await testDatabase.customStatement('PRAGMA foreign_keys = ON');
-      final settled = await testDatabase.mountsDao.target(77761);
-
-      await expectLater(
-        actionOf(buildContainer()).applyRestore(
-          MigrationData(profiles: [_profile(77761, 'From backup')]),
+          MigrationData(profiles: [_sub(77802, 'Again')]),
           RestoreOption.onlyProfiles,
         ),
-        _blockedWith(
-          currentAppLocalizations.restoreBlockedMergeMountsUnnamed,
-          profileIds: [],
+        allOf(
+          _pendingRefusal([77801]),
+          throwsA(
+            isA<RestoreBlockedException>().having(
+              (e) => e.message,
+              'message',
+              contains('Running'),
+            ),
+          ),
         ),
       );
-
-      expect(await testDatabase.profilesDao.query().get(), isEmpty);
-      expect(await testDatabase.mountsDao.target(77761), settled);
     });
 
-    test('a blocked restore reads in the app language', () async {
-      loadAppLocalizations(const Locale('zh'));
-      addTearDown(() => loadAppLocalizations(const Locale('en')));
-      await expectBlockedLeavesAllAlone(
-        strategy: RestoreStrategy.compatible,
-        message: (_) => '无法兼容恢复。以下配置存在冲突：Target。解除挂载不会清除此限制，现有数据未改动。',
-        profileIds: [77751],
-      );
-    });
+    test(
+      'a failure inside the transaction rolls the mount rows back too',
+      () async {
+        await testDatabase.profilesDao.putAll([
+          _profile(77811, 'Target').toCompanion(0),
+          _sub(77812, 'Source').toCompanion(1),
+        ]);
+        final settled = await settledMount(77811, [77812]);
+        final action = actionOf(withStrategy(RestoreStrategy.compatible));
+        testDatabase.beforeRestoreCommit = () async => throw StateError('boom');
+        addTearDown(() => testDatabase.beforeRestoreCommit = null);
+
+        await expectLater(
+          action.applyRestore(
+            MigrationData(profiles: [_sub(77812, 'Restored')]),
+            RestoreOption.onlyProfiles,
+          ),
+          throwsA(isA<StateError>()),
+        );
+
+        expect(await testDatabase.mountsDao.target(77811), settled);
+        expect(
+          (await testDatabase.profilesDao.query().get())
+              .singleWhere((p) => p.id == 77812)
+              .label,
+          'Source',
+        );
+      },
+    );
 
     test('a mount operation running first is seen by the guard', () async {
       await testDatabase.profilesDao.putAll([
@@ -363,7 +522,7 @@ void main() {
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
         ),
-        _rejectedWith(_pendingMessage),
+        _pendingRefusal(),
       );
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(published(), isFalse);
@@ -681,7 +840,7 @@ void main() {
         actionOf(
           buildContainer(),
         ).restore(RestoreOption.onlyProfiles, (_) async => archivePath),
-        _rejectedWith(_pendingMessage),
+        _pendingRefusal(),
       );
 
       expect(live.readAsStringSync(), 'live');

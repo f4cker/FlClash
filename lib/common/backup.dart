@@ -12,6 +12,7 @@ import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 enum BackupFailure { invalid, newerVersion }
 
@@ -214,6 +215,9 @@ Future<MigrationData> readBackupArchive({
     return MigrationData(configMap: configMap);
   }
   final schemaVersion = await _readSchemaVersion(databaseFile);
+  // Read before drift opens the file: its migrations create empty mount
+  // tables, and "no mounts" could no longer be told from "no mount data".
+  final mountsCarried = _carriesMounts(databaseFile.path);
   final database = Database(
     driftDatabase(
       name: basenameWithoutExtension(backupDatabaseName),
@@ -252,6 +256,12 @@ Future<MigrationData> readBackupArchive({
       database.mitmModulesDao.query().get(),
       database.addedRuleSetsDao.queryAll().get(),
     ]);
+    final mountTargets = mountsCarried
+        ? await database.mountsDao.targets()
+        : const <int, MountTargetState>{};
+    final mountStatuses = mountsCarried
+        ? await database.mountsDao.statuses()
+        : const <int, MountSourceRecord>{};
     return MigrationData(
       configMap: configMap,
       profiles: results[0].cast<Profile>(),
@@ -264,6 +274,13 @@ Future<MigrationData> readBackupArchive({
       proxyDialers: results[7].cast<ProxyDialer>(),
       mitmModules: results[8].cast<MitmModule>(),
       addedRuleSets: results[9].cast<AddedRuleSet>(),
+      mountsCarried: mountsCarried,
+      // Another runtime's pending records mean nothing here.
+      mountTargets: [
+        for (final target in mountTargets.values)
+          target.copyWith(pending: null),
+      ],
+      mountSourceStatuses: mountStatuses.values.toList(),
     );
   } finally {
     await database.close();
@@ -330,6 +347,28 @@ Map<String, Object?> _decodeConfig(String source) {
     throw const BackupException(BackupFailure.invalid);
   }
   return decoded;
+}
+
+/// Whether the snapshot has both mount tables. Opened read-only, so nothing
+/// in the staged file changes.
+bool _carriesMounts(String path) {
+  final sqlite.Database db;
+  try {
+    db = sqlite.sqlite3.open(path, mode: sqlite.OpenMode.readOnly);
+  } on Object {
+    throw const BackupException(BackupFailure.invalid);
+  }
+  try {
+    final rows = db.select(
+      "SELECT name FROM sqlite_master WHERE type = 'table' "
+      "AND name IN ('mount_targets', 'profile_mounts')",
+    );
+    return rows.length == 2;
+  } on Object {
+    throw const BackupException(BackupFailure.invalid);
+  } finally {
+    db.close();
+  }
 }
 
 /// Opening the database through drift would already run its migrations, so the

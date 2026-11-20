@@ -1823,24 +1823,252 @@ class AppLocalizationsZh extends AppLocalizations {
   String get invalidBackupFile => '无效备份文件';
 
   @override
-  String get restoreBlockedOverrideMounts =>
-      '无法覆盖恢复。本机有配置曾挂载订阅，解除挂载后仍会保留相关记录。现有数据未改动。你可以尝试“兼容”恢复，但遇到冲突时仍可能无法恢复。';
-
-  @override
-  String restoreBlockedMergeMounts(Object profileNames) {
-    return '无法兼容恢复。以下配置存在冲突：$profileNames。解除挂载不会清除此限制，现有数据未改动。';
-  }
-
-  @override
-  String get restoreBlockedMergeMountsUnnamed =>
-      '无法兼容恢复。备份中的配置与本机的挂载记录存在冲突。解除挂载不会清除此限制，现有数据未改动。';
-
-  @override
   String get restoreBlockedMountPending =>
       '挂载操作的结果尚未确认，暂时无法恢复。现有数据未做任何改动。请在挂载状态确认后再试。';
 
   @override
   String get restoreBlockedViewProfiles => '打开配置页';
+
+  @override
+  String restoreBlockedMountPendingNamed(Object names) {
+    return '以下配置的挂载操作结果尚未确认，因此未开始恢复，未写入任何数据：$names。请先重新检查。解除挂载不能解除此保护。';
+  }
+
+  @override
+  String get restoreBlockedMountStateChanged =>
+      '确认后挂载关系发生了变化，因此未开始恢复，未写入任何数据。请重新查看清单。';
+
+  @override
+  String get restoreMountTitleOverride => '覆盖恢复备份？';
+
+  @override
+  String get restoreMountTitleMerge => '兼容恢复备份？';
+
+  @override
+  String get restoreIrreversible => '操作不可撤销，没有撤销或还原入口。';
+
+  @override
+  String get restoreMountOverrideLead => '移除当前挂载，并按备份重建。';
+
+  @override
+  String get restoreMountOverrideNote => '无效关系不会写入，均在下方逐条列出。';
+
+  @override
+  String get restoreMountMergeLead => '保留不冲突的有效本地挂载；冲突项以备份替换，不合并。';
+
+  @override
+  String get restoreMountMergeNote => '仅移除无法保留的无效关系；有效且不冲突的本地关系继续保留。';
+
+  @override
+  String get restoreMountLegacyLead => '备份不含挂载关系。仅移除无效关系，其余保持当前设置。';
+
+  @override
+  String get restoreMountLegacyNote => '不把缺少挂载数据解释为空列表；不清空本地关系。';
+
+  @override
+  String restoreMountRemoveCount(Object count) {
+    return '移除 $count 条';
+  }
+
+  @override
+  String restoreMountReplaceCount(Object count) {
+    return '替换 $count 项';
+  }
+
+  @override
+  String restoreMountKeepCount(Object count) {
+    return '保留 $count 条';
+  }
+
+  @override
+  String restoreMountCheckCount(Object count) {
+    return '恢复后待检查 $count 项';
+  }
+
+  @override
+  String restoreMountInvalidCount(Object count) {
+    return '不写入 $count 条';
+  }
+
+  @override
+  String restoreMountRemoveSection(Object count) {
+    return '将移除的当前挂载 · $count';
+  }
+
+  @override
+  String restoreMountReplaceSection(Object count) {
+    return '将以备份替换 · $count';
+  }
+
+  @override
+  String restoreMountKeepSection(Object count) {
+    return '保留的关系 · $count';
+  }
+
+  @override
+  String restoreMountCheckSection(Object count) {
+    return '恢复后待检查 · $count';
+  }
+
+  @override
+  String restoreMountInvalidSection(Object count) {
+    return '备份中不写入的关系 · $count';
+  }
+
+  @override
+  String restoreMountOwner(Object name) {
+    return '所属配置：$name';
+  }
+
+  @override
+  String restoreMountSource(Object name) {
+    return '来源：$name';
+  }
+
+  @override
+  String restoreMountWithId(Object id, Object name) {
+    return '$name（标识 $id）';
+  }
+
+  @override
+  String restoreMountNameUnavailable(Object id) {
+    return '名称不可用（标识 $id）';
+  }
+
+  @override
+  String get restoreMountReasonSelf => '无效关系：所属配置与来源相同。';
+
+  @override
+  String get restoreMountReasonNotSubscription => '无效关系：来源不是订阅。';
+
+  @override
+  String get restoreMountReasonMissing => '无效关系：来源不存在。保留已知名称与标识供核对。';
+
+  @override
+  String get restoreMountReasonTargetMissing => '所属配置不在备份中，将被删除。';
+
+  @override
+  String get restoreMountReasonNotInBackup => '备份中没有此关系。';
+
+  @override
+  String restoreMountBefore(Object names) {
+    return '替换前：$names';
+  }
+
+  @override
+  String restoreMountAfter(Object names) {
+    return '替换后：$names';
+  }
+
+  @override
+  String get restoreMountNone => '无';
+
+  @override
+  String get restoreMountTagRemove => '移除';
+
+  @override
+  String get restoreMountTagReplace => '替换';
+
+  @override
+  String get restoreMountTagKeep => '保留';
+
+  @override
+  String get restoreMountTagRestore => '来自备份';
+
+  @override
+  String get restoreMountTagCheck => '待检查';
+
+  @override
+  String get restoreMountTagInvalid => '不写入';
+
+  @override
+  String get restoreMountCheckNote => '重新检查前保持锁定；不会自动应用。';
+
+  @override
+  String get restoreMountNoChanges => '不涉及挂载关系变更。';
+
+  @override
+  String restoreMountAcknowledge(Object removals, Object replacements) {
+    return '我已了解上列 $removals 条移除、$replacements 项替换造成的丢失，并确认执行这些更改。';
+  }
+
+  @override
+  String get restoreCancelWritesNothing => '取消不会写入数据';
+
+  @override
+  String get restoreMountConfirmOverride => '恢复并覆盖';
+
+  @override
+  String get restoreMountConfirmMerge => '恢复并替换';
+
+  @override
+  String get restoreMountChecking => '正在检查恢复影响…';
+
+  @override
+  String get restoreResultNotStarted => '未开始恢复；未执行写入。';
+
+  @override
+  String get restoreResultRolledBack => '恢复未完成，已回滚；已回到写入前状态。';
+
+  @override
+  String get restoreResultUnverified => '恢复状态需要确认。';
+
+  @override
+  String get restoreResultUnverifiedDetail => '无法确认回滚是否完整。不要再次发起恢复。';
+
+  @override
+  String get restoreResultCompleted => '恢复已完成。';
+
+  @override
+  String get restoreResultNeedsCheck => '数据已恢复，配置仍需重新检查。';
+
+  @override
+  String get restoreResultNeedsCheckDetail =>
+      '以下配置在重新检查前保持锁定。打开对应配置的挂载页，点“重新读取状态”。';
+
+  @override
+  String get restoreResultRefused => '无法开始新的恢复；本次未写入。';
+
+  @override
+  String restoreResultLockedNote(Object count) {
+    return '当前仍有 $count 项未完成。不要再次发起恢复。';
+  }
+
+  @override
+  String restoreResultPendingSection(Object count) {
+    return '实际待处理项 · $count';
+  }
+
+  @override
+  String restoreResultSkippedSection(Object count) {
+    return '已跳过的步骤 · $count';
+  }
+
+  @override
+  String get restoreResultSkippedNote => '当前数据保持现状；跳过的步骤不会重放。';
+
+  @override
+  String get restoreResultUnknownItems => '无法读取待处理项，不能视为完成。';
+
+  @override
+  String get restoreResultNavigateOnly => '打开配置页仅导航；不检查、不修改。';
+
+  @override
+  String get restoreRecheckChecking => '正在检查…';
+
+  @override
+  String get restoreRecheckPassed => '检查通过';
+
+  @override
+  String restoreRecheckFailed(Object reason) {
+    return '检查未通过：$reason';
+  }
+
+  @override
+  String get restoreRecheckUnavailable => '暂时无法检查';
+
+  @override
+  String get restoreRecheckStillIncomplete => '即使检查通过，仍有待处理或跳过的项目时，结果仍为不完整。';
 
   @override
   String get restoreRecoveryRolledBack => '上次恢复被中断，尚未写入任何数据，已撤销。现有数据未改动。';

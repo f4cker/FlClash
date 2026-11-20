@@ -123,52 +123,21 @@ void main() {
     container.dispose();
   }
 
-  RestoreBlockedException override(AppLocalizations l10n) =>
+  RestoreBlockedException changed(AppLocalizations l10n) =>
       RestoreBlockedException(
-        l10n.restoreBlockedOverrideMounts,
-        reason: RestoreBlockedReason.overrideWithMountGuards,
+        l10n.restoreBlockedMountStateChanged,
+        reason: RestoreBlockedReason.mountStateChanged,
         profileIds: const [1, 2],
-      );
-
-  RestoreBlockedException merge(AppLocalizations l10n) =>
-      RestoreBlockedException(
-        l10n.restoreBlockedMergeMounts(
-          ['工作配置', 'Home Wi-Fi'].join(l10n.mountNameSeparator),
-        ),
-        reason: RestoreBlockedReason.mergeWithMountGuards,
-        profileIds: const [1, 2],
-      );
-
-  RestoreBlockedException unnamed(AppLocalizations l10n) =>
-      RestoreBlockedException(
-        l10n.restoreBlockedMergeMountsUnnamed,
-        reason: RestoreBlockedReason.mergeWithMountLinks,
       );
 
   for (final locale in const [Locale('zh'), Locale('en')]) {
     final tag = locale.languageCode;
-    testWidgets('override-$tag', skip: skip != null, (tester) async {
+    testWidgets('changed-$tag', skip: skip != null, (tester) async {
       await shoot(
         tester,
-        name: '01-override-$tag-light',
+        name: '01-mount-state-changed-$tag-light',
         locale: locale,
-        blocked: override,
-      );
-    });
-    testWidgets('merge-$tag', skip: skip != null, (tester) async {
-      await shoot(
-        tester,
-        name: '02-merge-$tag-light',
-        locale: locale,
-        blocked: merge,
-      );
-    });
-    testWidgets('merge-unnamed-$tag', skip: skip != null, (tester) async {
-      await shoot(
-        tester,
-        name: '03-merge-unnamed-$tag-light',
-        locale: locale,
-        blocked: unnamed,
+        blocked: changed,
       );
     });
   }

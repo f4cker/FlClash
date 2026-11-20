@@ -6,6 +6,19 @@ typedef BackupDelivery = Future<bool> Function(String archivePath);
 /// that downloads writes to [downloadPath], which is removed afterwards.
 typedef BackupFetch = Future<String?> Function(String downloadPath);
 
+/// Shown the mount plan of a restore before anything is written; false
+/// cancels it.
+typedef RestoreMountConfirm = Future<bool> Function(RestoreMountPlan plan);
+
+/// What a committed restore did to mounts. [stillPending] are the targets
+/// that stay locked until checked again.
+class RestoreMountResult {
+  final RestoreMountPlan plan;
+  final List<RestoreMountProfile> stillPending;
+
+  const RestoreMountResult(this.plan, this.stillPending);
+}
+
 @Riverpod(keepAlive: true)
 class BackupAction extends _$BackupAction {
   @override
@@ -37,7 +50,14 @@ class BackupAction extends _$BackupAction {
     });
   }
 
-  Future<bool> restore(RestoreOption option, BackupFetch fetch) {
+  /// False when the user backed out, before anything was written. A
+  /// committed restore hands what it did to mounts to [onResult].
+  Future<bool> restore(
+    RestoreOption option,
+    BackupFetch fetch, {
+    RestoreMountConfirm? confirm,
+    void Function(RestoreMountResult result)? onResult,
+  }) {
     return _withWorkDir((workDir) async {
       final archivePath = await fetch(join(workDir, 'download.zip'));
       if (archivePath == null) {
@@ -57,7 +77,14 @@ class BackupAction extends _$BackupAction {
             currentAppLocalizations.backupFromNewerVersion,
         });
       }
-      await applyRestore(data, option, stagingDirPath: stagingDirPath);
+      final result = await applyRestore(
+        data,
+        option,
+        stagingDirPath: stagingDirPath,
+        confirm: confirm,
+      );
+      if (result == null) return false;
+      onResult?.call(result);
       return true;
     });
   }
@@ -119,24 +146,58 @@ class BackupAction extends _$BackupAction {
     }
   }
 
+  /// Null when [confirm] declined the mount plan; nothing was written. A
+  /// plan with losses is never written unconfirmed.
   @visibleForTesting
-  Future<void> applyRestore(
+  Future<RestoreMountResult?> applyRestore(
     MigrationData data,
     RestoreOption option, {
     String? stagingDirPath,
+    RestoreMountConfirm? confirm,
   }) async {
     final configMap = data.configMap;
     final config = option == RestoreOption.onlyProfiles || configMap == null
         ? null
         : Config.fromJson(configMap);
+    final previewOverride =
+        ref.read(appSettingProvider).restoreStrategy ==
+        RestoreStrategy.override;
+    // Read outside the restore lanes: the user may take a while to decide.
+    final RestoreMountPlan preview;
+    try {
+      preview = await database.checkRestore(
+        data.profiles,
+        data.scripts,
+        data.rules,
+        data.disabledRules,
+        data.proxyGroups,
+        clashProviders: data.clashProviders,
+        customProxies: data.customProxies,
+        proxyDialers: data.proxyDialers,
+        mitmModules: data.mitmModules,
+        addedRuleSets: data.addedRuleSets,
+        isOverride: previewOverride,
+        mountsCarried: data.mountsCarried,
+        mountTargets: data.mountTargets,
+        mountSourceStatuses: data.mountSourceStatuses,
+      );
+    } on RestoreBlockedError catch (error, stack) {
+      Error.throwWithStackTrace(await _restoreBlocked(error), stack);
+    }
+    if (!preview.isEmpty) {
+      final accepted = switch (confirm) {
+        final confirm? => await confirm(preview),
+        null => !preview.hasLosses,
+      };
+      if (!accepted) return null;
+    }
+    var plan = preview;
     await ref
         .read(addedRulesActionProvider.notifier)
         .runRestoreInLane(
           () => ref.read(setupActionProvider.notifier).runRestoreBeforeApply(
             () async {
-              final isOverride =
-                  ref.read(appSettingProvider).restoreStrategy ==
-                  RestoreStrategy.override;
+              final isOverride = previewOverride;
               final homeDirPath = await appPath.homeDirPath;
               final restoredSets = await compute(reserveRestoredAddedCaches, (
                 homeDirPath,
@@ -148,7 +209,7 @@ class BackupAction extends _$BackupAction {
               late final RestoreJournal journal;
               Future<String?> writeRows({required bool checkOnly}) async {
                 if (checkOnly) {
-                  await database.checkRestore(
+                  final current = await database.checkRestore(
                     data.profiles,
                     data.scripts,
                     data.rules,
@@ -160,10 +221,20 @@ class BackupAction extends _$BackupAction {
                     mitmModules: data.mitmModules,
                     addedRuleSets: restoredSets,
                     isOverride: isOverride,
+                    mountsCarried: data.mountsCarried,
+                    mountTargets: data.mountTargets,
+                    mountSourceStatuses: data.mountSourceStatuses,
                   );
+                  // The list the user confirmed must still be the truth.
+                  if (current.digest != preview.digest) {
+                    throw RestoreBlockedError(
+                      RestoreBlockedReason.mountStateChanged,
+                      [for (final target in current.pendingCheck) target.id],
+                    );
+                  }
                   return null;
                 }
-                return database.restore(
+                final (fingerprint, written) = await database.restore(
                   data.profiles,
                   data.scripts,
                   data.rules,
@@ -175,8 +246,14 @@ class BackupAction extends _$BackupAction {
                   mitmModules: data.mitmModules,
                   addedRuleSets: restoredSets,
                   isOverride: isOverride,
+                  mountsCarried: data.mountsCarried,
+                  mountTargets: data.mountTargets,
+                  mountSourceStatuses: data.mountSourceStatuses,
+                  expectedMountDigest: preview.digest,
                   commitId: journal.id,
                 );
+                plan = written;
+                return fingerprint;
               }
 
               // Staged files replace live ones a mount apply may be reading,
@@ -186,6 +263,7 @@ class BackupAction extends _$BackupAction {
                 await ref.read(mountActionProvider.notifier).runExclusive(
                   () async {
                     await writeRows(checkOnly: true);
+                    _supersedeRestored(data, preview);
                     await beforeRestorePublish?.call();
                     if (config != null) {
                       final accessControlProps =
@@ -215,6 +293,9 @@ class BackupAction extends _$BackupAction {
                       restoredLocalProviderFiles: [
                         for (final provider in data.clashProviders)
                           if (!provider.isRemote) provider.fileName,
+                      ],
+                      mountTargets: [
+                        for (final write in preview.writes) write.targetId,
                       ],
                       appBuild: _appBuild,
                     );
@@ -296,6 +377,33 @@ class BackupAction extends _$BackupAction {
             },
           ),
         );
+    // Outside both lanes: settling takes the mount scheduler only.
+    final still = await ref.read(mountActionProvider.notifier).settleRestored([
+      for (final write in plan.writes) write.targetId,
+    ]);
+    return RestoreMountResult(plan, [
+      for (final target in plan.pendingCheck)
+        if (still.contains(target.id)) target,
+    ]);
+  }
+
+  /// Downloads and mount operations already under way for anything the
+  /// restore writes lose ownership, so none lands over the restored rows or
+  /// files afterwards.
+  void _supersedeRestored(MigrationData data, RestoreMountPlan plan) {
+    final profiles = ref.read(profilesActionProvider.notifier);
+    final ids = {
+      for (final profile in data.profiles) profile.id,
+      for (final write in plan.writes) ...[write.targetId, ...write.sourceIds],
+      for (final removal in plan.removals) ...[
+        removal.relation.target.id,
+        removal.relation.source.id,
+      ],
+    };
+    for (final id in ids) {
+      profiles.cancelSourceUpdate(id);
+    }
+    ref.read(mountActionProvider.notifier).supersedeTargets(ids);
   }
 
   static String _partialMessage(List<RestoreStep> steps) =>
@@ -410,18 +518,16 @@ class BackupAction extends _$BackupAction {
         .join(l10n.mountNameSeparator);
     return RestoreBlockedException(
       switch (error.reason) {
-        RestoreBlockedReason.mountPending => l10n.restoreBlockedMountPending,
-        RestoreBlockedReason.overrideWithMountGuards =>
-          l10n.restoreBlockedOverrideMounts,
-        RestoreBlockedReason.mergeWithMountGuards ||
-        RestoreBlockedReason.mergeWithMountLinks when local.isEmpty =>
-          l10n.restoreBlockedMergeMountsUnnamed,
-        RestoreBlockedReason.mergeWithMountGuards ||
-        RestoreBlockedReason.mergeWithMountLinks =>
-          l10n.restoreBlockedMergeMounts(names),
+        RestoreBlockedReason.mountPending when local.isEmpty =>
+          l10n.restoreBlockedMountPending,
+        RestoreBlockedReason.mountPending =>
+          l10n.restoreBlockedMountPendingNamed(names),
+        RestoreBlockedReason.mountStateChanged =>
+          l10n.restoreBlockedMountStateChanged,
       },
       reason: error.reason,
       profileIds: [for (final profile in local) profile.id],
+      profileNames: [for (final profile in local) profile.realLabel],
     );
   }
 

@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart' show Digest, sha256;
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -535,9 +536,10 @@ class Database extends _$Database {
   }
 
   /// Runs every guard [restore] runs and throws the same [StateError],
-  /// writing nothing. Live files a restore names may only be published once
-  /// this passes, with mount operations fenced until [restore] commits.
-  Future<void> checkRestore(
+  /// writing nothing, and returns what [restore] would do to mounts. Live
+  /// files a restore names may only be published once this passes, with
+  /// mount operations fenced until [restore] commits.
+  Future<RestoreMountPlan> checkRestore(
     List<Profile> profiles,
     List<Script> scripts,
     List<Rule> rules,
@@ -549,8 +551,11 @@ class Database extends _$Database {
     List<MitmModule> mitmModules = const [],
     List<AddedRuleSet> addedRuleSets = const [],
     bool isOverride = false,
+    bool mountsCarried = false,
+    List<MountTargetState> mountTargets = const [],
+    List<MountSourceRecord> mountSourceStatuses = const [],
   }) async {
-    await _restore(
+    final (_, plan) = await _restore(
       profiles,
       scripts,
       rules,
@@ -562,14 +567,23 @@ class Database extends _$Database {
       mitmModules: mitmModules,
       addedRuleSets: addedRuleSets,
       isOverride: isOverride,
+      mountsCarried: mountsCarried,
+      mountTargets: mountTargets,
+      mountSourceStatuses: mountSourceStatuses,
       write: false,
     );
+    return plan;
   }
 
   /// With a [commitId], the transaction also records that restore in
   /// [restoreCommitsTable] and returns [restoreFingerprint] as committed, so
   /// a journal can tell after a crash whether these rows were written.
-  Future<String?> restore(
+  ///
+  /// Mount rows are rebuilt in the same transaction, per the plan
+  /// [checkRestore] returns. With [expectedMountDigest], a plan that no
+  /// longer matches the confirmed one throws
+  /// [RestoreBlockedReason.mountStateChanged] and nothing is written.
+  Future<(String?, RestoreMountPlan)> restore(
     List<Profile> profiles,
     List<Script> scripts,
     List<Rule> rules,
@@ -581,6 +595,10 @@ class Database extends _$Database {
     List<MitmModule> mitmModules = const [],
     List<AddedRuleSet> addedRuleSets = const [],
     bool isOverride = false,
+    bool mountsCarried = false,
+    List<MountTargetState> mountTargets = const [],
+    List<MountSourceRecord> mountSourceStatuses = const [],
+    String? expectedMountDigest,
     int? commitId,
   }) => _restore(
     profiles,
@@ -594,6 +612,10 @@ class Database extends _$Database {
     mitmModules: mitmModules,
     addedRuleSets: addedRuleSets,
     isOverride: isOverride,
+    mountsCarried: mountsCarried,
+    mountTargets: mountTargets,
+    mountSourceStatuses: mountSourceStatuses,
+    expectedMountDigest: expectedMountDigest,
     write: true,
     commitId: commitId,
   );
@@ -696,7 +718,7 @@ class Database extends _$Database {
     ]);
   }
 
-  Future<String?> _restore(
+  Future<(String?, RestoreMountPlan)> _restore(
     List<Profile> profiles,
     List<Script> scripts,
     List<Rule> rules,
@@ -708,6 +730,10 @@ class Database extends _$Database {
     required List<MitmModule> mitmModules,
     required List<AddedRuleSet> addedRuleSets,
     required bool isOverride,
+    required bool mountsCarried,
+    required List<MountTargetState> mountTargets,
+    required List<MountSourceRecord> mountSourceStatuses,
+    String? expectedMountDigest,
     required bool write,
     int? commitId,
   }) async {
@@ -723,6 +749,7 @@ class Database extends _$Database {
         mitmModules.isEmpty &&
         addedRuleSets.isEmpty;
     String? fingerprint;
+    var plan = RestoreMountPlan.empty;
     Future<void> commit() async {
       if (commitId != null) {
         fingerprint = await _markRestoreCommit(commitId);
@@ -734,8 +761,15 @@ class Database extends _$Database {
       // Even settings-only restores can change the active profile while an
       // unresolved mount operation is still applying.
       final mountStates = await mountsDao.targets();
-      if (mountStates.values.any((state) => state.pending != null)) {
-        throw RestoreBlockedError(RestoreBlockedReason.mountPending);
+      final pendingIds = [
+        for (final state in mountStates.values)
+          if (state.pending != null) state.targetId,
+      ]..sort();
+      if (pendingIds.isNotEmpty) {
+        throw RestoreBlockedError(
+          RestoreBlockedReason.mountPending,
+          pendingIds,
+        );
       }
       if (isEmpty) {
         if (write) await commit();
@@ -807,66 +841,31 @@ class Database extends _$Database {
           }
         }
       }
-      // Restore has no mount journal. Never erase a version/operation guard:
-      // stale saves and in-flight applies could otherwise become current again.
+      // Stale saves and in-flight applies stay rejected: every rebuilt
+      // target gets a version above both sides and its own pending record.
       final importedIds = profiles.map((p) => p.id).toSet();
-      if (isOverride) {
-        if (mountStates.isNotEmpty ||
-            await profileMounts.count.getSingle() != 0) {
-          throw RestoreBlockedError(
-            RestoreBlockedReason.overrideWithMountGuards,
-            {
-              ...mountStates.keys,
-              for (final link in await profileMounts.select().get()) ...[
-                link.targetId,
-                link.sourceId,
-              ],
-            }.sorted((a, b) => a.compareTo(b)),
-          );
-        }
-      } else {
-        final guarded = <int>{};
-        for (final state in mountStates.values) {
-          if (importedIds.contains(state.targetId) ||
-              state.sourceIds.any(importedIds.contains)) {
-            guarded.addAll(
-              [state.targetId, ...state.sourceIds].where(importedIds.contains),
-            );
-          }
-        }
-        // Also reject inconsistent orphan links lacking a target guard.
-        final linked = <int>{};
-        for (final id in importedIds) {
-          final links =
-              await (profileMounts.select()..where(
-                    (t) => t.targetId.equals(id) | t.sourceId.equals(id),
-                  ))
-                  .get();
-          if (links.isNotEmpty) {
-            linked.add(id);
-          }
-        }
-        if (guarded.isNotEmpty) {
-          throw RestoreBlockedError(
-            RestoreBlockedReason.mergeWithMountGuards,
-            {...guarded, ...linked}.sorted((a, b) => a.compareTo(b)),
-          );
-        }
-        if (linked.isNotEmpty) {
-          throw RestoreBlockedError(
-            RestoreBlockedReason.mergeWithMountLinks,
-            linked.sorted((a, b) => a.compareTo(b)),
-          );
-        }
+      plan = planRestoreMounts(
+        isOverride: isOverride,
+        localTargets: mountStates,
+        localProfiles: await profilesDao.query().get(),
+        backupProfiles: profiles,
+        backupTargets: mountsCarried
+            ? {for (final target in mountTargets) target.targetId: target}
+            : null,
+      );
+      if (expectedMountDigest != null && plan.digest != expectedMountDigest) {
+        throw RestoreBlockedError(RestoreBlockedReason.mountStateChanged, [
+          for (final target in plan.pendingCheck) target.id,
+        ]);
       }
       if (!write) return;
       // Backups taken while foreign keys were off may carry orphaned rows.
       await customStatement('PRAGMA defer_foreign_keys = ON');
       if (isOverride) {
-        await mountSourceStatuses.deleteAll();
+        await this.mountSourceStatuses.deleteAll();
       } else {
         for (final id in importedIds) {
-          await mountSourceStatuses.remove((t) => t.sourceId.equals(id));
+          await this.mountSourceStatuses.remove((t) => t.sourceId.equals(id));
         }
       }
       await batch((b) {
@@ -896,10 +895,73 @@ class Database extends _$Database {
         mitmModulesDao.putAllWithBatch(b, mitmModules);
         addedRuleSetsDao.putAllWithBatch(b, addedRuleSets);
       });
+      await _writeRestoredMounts(
+        plan,
+        statuses: mountsCarried
+            ? [
+                for (final status in mountSourceStatuses)
+                  if (importedIds.contains(status.sourceId)) status,
+              ]
+            : const [],
+      );
       await _purgeOrphans();
       await commit();
     });
-    return fingerprint;
+    return (fingerprint, plan);
+  }
+
+  /// Runs inside [_restore]'s transaction, after the profile rows: an
+  /// override's rewrite has already cascaded the rows of removed profiles.
+  Future<void> _writeRestoredMounts(
+    RestoreMountPlan plan, {
+    required List<MountSourceRecord> statuses,
+  }) async {
+    for (final write in plan.writes) {
+      await (delete(
+        profileMounts,
+      )..where((t) => t.targetId.equals(write.targetId))).go();
+      await batch((b) {
+        b.insertAll(profileMounts, [
+          for (final (index, sourceId) in write.sourceIds.indexed)
+            ProfileMountsCompanion.insert(
+              targetId: write.targetId,
+              sourceId: sourceId,
+              position: index,
+            ),
+        ]);
+      });
+      await into(mountTargets).insertOnConflictUpdate(
+        MountTargetsCompanion.insert(
+          targetId: Value(write.targetId),
+          groups: const [],
+          version: write.version,
+          pending: Value(write.pending),
+        ),
+      );
+    }
+    // Relations naming a profile the restore removed go with it; the plan
+    // has listed each one.
+    final profileIds = selectOnly(profiles)..addColumns([profiles.id]);
+    await profileMounts.remove(
+      (t) =>
+          t.targetId.isNotInQuery(profileIds) |
+          t.sourceId.isNotInQuery(profileIds),
+    );
+    await mountTargets.remove((t) => t.targetId.isNotInQuery(profileIds));
+    await batch((b) {
+      b.insertAllOnConflictUpdate(mountSourceStatuses, [
+        for (final status in statuses)
+          MountSourceStatusesCompanion.insert(
+            sourceId: Value(status.sourceId),
+            failure: Value(status.failure),
+            failedAt: Value(status.failedAt),
+            succeededAt: Value(status.succeededAt),
+          ),
+      ]);
+    });
+    await this.mountSourceStatuses.remove(
+      (t) => t.sourceId.isNotInQuery(profileIds),
+    );
   }
 
   Future<void> deleteProfile(int profileId) {

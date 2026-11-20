@@ -320,8 +320,8 @@ void main() {
     }
 
     RestoreBlockedException merge() => RestoreBlockedException(
-      currentAppLocalizations.restoreBlockedMergeMounts('Target'),
-      reason: RestoreBlockedReason.mergeWithMountGuards,
+      currentAppLocalizations.restoreBlockedMountStateChanged,
+      reason: RestoreBlockedReason.mountStateChanged,
       profileIds: const [1],
     );
 
@@ -332,7 +332,7 @@ void main() {
       final l10n = currentAppLocalizations;
       final (shown,) = await show(tester, merge());
 
-      expect(find.text(l10n.restoreBlockedMergeMounts('Target')), findsOne);
+      expect(find.text(l10n.restoreBlockedMountStateChanged), findsOne);
       expect(find.textContaining(l10n.delete), findsNothing);
       await tester.tap(find.text(l10n.restoreBlockedViewProfiles));
       await tester.pumpAndSettle();
@@ -362,8 +362,8 @@ void main() {
       await show(
         tester,
         RestoreBlockedException(
-          l10n.restoreBlockedMergeMountsUnnamed,
-          reason: RestoreBlockedReason.mergeWithMountGuards,
+          l10n.restoreBlockedMountStateChanged,
+          reason: RestoreBlockedReason.mountStateChanged,
         ),
       );
 

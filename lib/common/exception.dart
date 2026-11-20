@@ -8,10 +8,12 @@ final class MessageException implements Exception {
 }
 
 enum RestoreBlockedReason {
+  /// A mount operation's outcome is unknown; nothing may replace its record.
   mountPending,
-  overrideWithMountGuards,
-  mergeWithMountGuards,
-  mergeWithMountLinks,
+
+  /// The mounts changed after the user confirmed what the restore does to
+  /// them; the confirmed list no longer holds.
+  mountStateChanged,
 }
 
 /// Still a [StateError], so callers of the database guards keep working.
@@ -25,12 +27,8 @@ final class RestoreBlockedError extends StateError {
     : super(switch (reason) {
         RestoreBlockedReason.mountPending =>
           'Cannot restore while a mount operation is pending',
-        RestoreBlockedReason.overrideWithMountGuards =>
-          'Cannot override restore while mount guards exist',
-        RestoreBlockedReason.mergeWithMountGuards =>
-          'Cannot merge profiles with mount guards',
-        RestoreBlockedReason.mergeWithMountLinks =>
-          'Cannot merge profiles with mount links',
+        RestoreBlockedReason.mountStateChanged =>
+          'Mounts changed after the restore was confirmed',
       });
 }
 
@@ -40,10 +38,14 @@ final class RestoreBlockedException extends MessageException {
   final RestoreBlockedReason reason;
   final List<int> profileIds;
 
+  /// The label of each of [profileIds], in the same order.
+  final List<String> profileNames;
+
   const RestoreBlockedException(
     super.message, {
     required this.reason,
     this.profileIds = const [],
+    this.profileNames = const [],
   });
 }
 

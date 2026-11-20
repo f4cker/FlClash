@@ -215,6 +215,7 @@ class RestoreJournal {
     required Map<String, Object?>? config,
     required List<String> previousProviderFiles,
     required List<String> restoredLocalProviderFiles,
+    List<int> mountTargets = const [],
     String? appBuild,
   }) async {
     final journal = RestoreJournal._(
@@ -225,6 +226,7 @@ class RestoreJournal {
       config: config,
       previousProviderFiles: previousProviderFiles,
       restoredLocalProviderFiles: restoredLocalProviderFiles,
+      mountTargets: mountTargets,
       entries: [],
       phase: RestorePhase.prepared,
     );

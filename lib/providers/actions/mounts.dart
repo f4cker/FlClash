@@ -562,6 +562,39 @@ class MountAction extends _$MountAction {
     });
   }
 
+  /// Makes every in-flight save, source update or apply for [targetIds] lose
+  /// ownership, so none of them lands over what a restore writes.
+  void supersedeTargets(Iterable<int> targetIds) {
+    for (final id in targetIds) {
+      _targetIntents[id] = (_targetIntents[id] ?? 0) + 1;
+    }
+  }
+
+  /// After a restore rebuilt [targetIds], each with its own pending record:
+  /// one the Core does not run has no outcome to wait for and is settled. A
+  /// running one stays pending until the user checks it again; nothing is
+  /// applied from here. Returns the ids still pending.
+  Future<List<int>> settleRestored(Iterable<int> targetIds) {
+    return _scheduler.run(() async {
+      final still = <int>[];
+      for (final id in targetIds) {
+        final current = await database.mountsDao.target(id);
+        final pending = current?.pending;
+        if (current == null || pending == null) continue;
+        if (_isRunning(id) || _applyingTargets.contains(id)) {
+          still.add(id);
+          continue;
+        }
+        if (await database.mountsDao.settle(id, pending.version)) {
+          ref.invalidate(setupStateProvider(id));
+        } else {
+          still.add(id);
+        }
+      }
+      return still;
+    });
+  }
+
   Future<MountSaveResult> _applyAndSettle(MountTargetState saved) async {
     try {
       if (!_isRunning(saved.targetId)) {

@@ -3558,24 +3558,6 @@ abstract class AppLocalizations {
   /// **'Invalid backup file'**
   String get invalidBackupFile;
 
-  /// No description provided for @restoreBlockedOverrideMounts.
-  ///
-  /// In en, this message translates to:
-  /// **'Can\'t restore with “Override”. A profile on this device has had subscriptions mounted, and the record stays after unmounting. No existing data was changed. You can try restoring with “Compatible”, but it may still fail if there are conflicts.'**
-  String get restoreBlockedOverrideMounts;
-
-  /// No description provided for @restoreBlockedMergeMounts.
-  ///
-  /// In en, this message translates to:
-  /// **'Can\'t restore with “Compatible”. These profiles conflict: {profileNames}. Unmounting doesn\'t remove this restriction. No existing data was changed.'**
-  String restoreBlockedMergeMounts(Object profileNames);
-
-  /// No description provided for @restoreBlockedMergeMountsUnnamed.
-  ///
-  /// In en, this message translates to:
-  /// **'Can\'t restore with “Compatible”. Profiles in the backup conflict with mount records on this device. Unmounting doesn\'t remove this restriction. No existing data was changed.'**
-  String get restoreBlockedMergeMountsUnnamed;
-
   /// No description provided for @restoreBlockedMountPending.
   ///
   /// In en, this message translates to:
@@ -3587,6 +3569,396 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Profiles'**
   String get restoreBlockedViewProfiles;
+
+  /// No description provided for @restoreBlockedMountPendingNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'A mount operation for these profiles hasn\'t been confirmed yet, so the restore didn\'t start and nothing was written: {names}. Check them again first. Unmounting doesn\'t lift this.'**
+  String restoreBlockedMountPendingNamed(Object names);
+
+  /// No description provided for @restoreBlockedMountStateChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts changed after you confirmed the restore, so it didn\'t start and nothing was written. Review the list again.'**
+  String get restoreBlockedMountStateChanged;
+
+  /// No description provided for @restoreMountTitleOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Override with this backup?'**
+  String get restoreMountTitleOverride;
+
+  /// No description provided for @restoreMountTitleMerge.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore this backup compatibly?'**
+  String get restoreMountTitleMerge;
+
+  /// No description provided for @restoreIrreversible.
+  ///
+  /// In en, this message translates to:
+  /// **'This can\'t be undone. There is no undo or revert.'**
+  String get restoreIrreversible;
+
+  /// No description provided for @restoreMountOverrideLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Current mounts are removed and rebuilt from the backup.'**
+  String get restoreMountOverrideLead;
+
+  /// No description provided for @restoreMountOverrideNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Relations that would be invalid are not written; each one is listed below.'**
+  String get restoreMountOverrideNote;
+
+  /// No description provided for @restoreMountMergeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid local mounts that don\'t conflict are kept; conflicts are replaced by the backup, not merged.'**
+  String get restoreMountMergeLead;
+
+  /// No description provided for @restoreMountMergeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Only invalid relations that can\'t be kept are removed; valid local relations without a conflict stay.'**
+  String get restoreMountMergeNote;
+
+  /// No description provided for @restoreMountLegacyLead.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup has no mount data. Only invalid relations are removed; everything else keeps its current setting.'**
+  String get restoreMountLegacyLead;
+
+  /// No description provided for @restoreMountLegacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing mount data is not read as an empty list; local relations are not cleared.'**
+  String get restoreMountLegacyNote;
+
+  /// No description provided for @restoreMountRemoveCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {count}'**
+  String restoreMountRemoveCount(Object count);
+
+  /// No description provided for @restoreMountReplaceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace {count}'**
+  String restoreMountReplaceCount(Object count);
+
+  /// No description provided for @restoreMountKeepCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep {count}'**
+  String restoreMountKeepCount(Object count);
+
+  /// No description provided for @restoreMountCheckCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Check after restore {count}'**
+  String restoreMountCheckCount(Object count);
+
+  /// No description provided for @restoreMountInvalidCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Not written {count}'**
+  String restoreMountInvalidCount(Object count);
+
+  /// No description provided for @restoreMountRemoveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Current mounts to remove · {count}'**
+  String restoreMountRemoveSection(Object count);
+
+  /// No description provided for @restoreMountReplaceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaced by the backup · {count}'**
+  String restoreMountReplaceSection(Object count);
+
+  /// No description provided for @restoreMountKeepSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Relations kept · {count}'**
+  String restoreMountKeepSection(Object count);
+
+  /// No description provided for @restoreMountCheckSection.
+  ///
+  /// In en, this message translates to:
+  /// **'To check after the restore · {count}'**
+  String restoreMountCheckSection(Object count);
+
+  /// No description provided for @restoreMountInvalidSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup relations not written · {count}'**
+  String restoreMountInvalidSection(Object count);
+
+  /// No description provided for @restoreMountOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile: {name}'**
+  String restoreMountOwner(Object name);
+
+  /// No description provided for @restoreMountSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {name}'**
+  String restoreMountSource(Object name);
+
+  /// No description provided for @restoreMountWithId.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (ID {id})'**
+  String restoreMountWithId(Object id, Object name);
+
+  /// No description provided for @restoreMountNameUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Name unavailable (ID {id})'**
+  String restoreMountNameUnavailable(Object id);
+
+  /// No description provided for @restoreMountReasonSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid: the profile is its own source.'**
+  String get restoreMountReasonSelf;
+
+  /// No description provided for @restoreMountReasonNotSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid: the source is not a subscription.'**
+  String get restoreMountReasonNotSubscription;
+
+  /// No description provided for @restoreMountReasonMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid: the source doesn\'t exist. Its known name and ID are kept for reference.'**
+  String get restoreMountReasonMissing;
+
+  /// No description provided for @restoreMountReasonTargetMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The profile isn\'t in the backup and will be deleted.'**
+  String get restoreMountReasonTargetMissing;
+
+  /// No description provided for @restoreMountReasonNotInBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'The backup doesn\'t have this relation.'**
+  String get restoreMountReasonNotInBackup;
+
+  /// No description provided for @restoreMountBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before: {names}'**
+  String restoreMountBefore(Object names);
+
+  /// No description provided for @restoreMountAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After: {names}'**
+  String restoreMountAfter(Object names);
+
+  /// No description provided for @restoreMountNone.
+  ///
+  /// In en, this message translates to:
+  /// **'none'**
+  String get restoreMountNone;
+
+  /// No description provided for @restoreMountTagRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get restoreMountTagRemove;
+
+  /// No description provided for @restoreMountTagReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get restoreMountTagReplace;
+
+  /// No description provided for @restoreMountTagKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get restoreMountTagKeep;
+
+  /// No description provided for @restoreMountTagRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'From backup'**
+  String get restoreMountTagRestore;
+
+  /// No description provided for @restoreMountTagCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'To check'**
+  String get restoreMountTagCheck;
+
+  /// No description provided for @restoreMountTagInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Not written'**
+  String get restoreMountTagInvalid;
+
+  /// No description provided for @restoreMountCheckNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked until checked again; nothing is applied automatically.'**
+  String get restoreMountCheckNote;
+
+  /// No description provided for @restoreMountNoChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No mount relations change.'**
+  String get restoreMountNoChanges;
+
+  /// No description provided for @restoreMountAcknowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand the loss from the {removals} removals and {replacements} replacements listed above, and want to make these changes.'**
+  String restoreMountAcknowledge(Object removals, Object replacements);
+
+  /// No description provided for @restoreCancelWritesNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelling writes nothing'**
+  String get restoreCancelWritesNothing;
+
+  /// No description provided for @restoreMountConfirmOverride.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore and override'**
+  String get restoreMountConfirmOverride;
+
+  /// No description provided for @restoreMountConfirmMerge.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore and replace'**
+  String get restoreMountConfirmMerge;
+
+  /// No description provided for @restoreMountChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking what the restore changes…'**
+  String get restoreMountChecking;
+
+  /// No description provided for @restoreResultNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore didn\'t start; nothing was written.'**
+  String get restoreResultNotStarted;
+
+  /// No description provided for @restoreResultRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore didn\'t finish and was rolled back to before it wrote.'**
+  String get restoreResultRolledBack;
+
+  /// No description provided for @restoreResultUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore\'s state needs to be confirmed.'**
+  String get restoreResultUnverified;
+
+  /// No description provided for @restoreResultUnverifiedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Whether the rollback is complete can\'t be confirmed. Don\'t start another restore.'**
+  String get restoreResultUnverifiedDetail;
+
+  /// No description provided for @restoreResultCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore is complete.'**
+  String get restoreResultCompleted;
+
+  /// No description provided for @restoreResultNeedsCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data has been restored, but profiles still need to be checked again.'**
+  String get restoreResultNeedsCheck;
+
+  /// No description provided for @restoreResultNeedsCheckDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'These profiles stay locked until checked again. Open each profile\'s mount page and choose “Read status again”.'**
+  String get restoreResultNeedsCheckDetail;
+
+  /// No description provided for @restoreResultRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'A new restore can\'t start; nothing was written.'**
+  String get restoreResultRefused;
+
+  /// No description provided for @restoreResultLockedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items are still unfinished. Don\'t start another restore.'**
+  String restoreResultLockedNote(Object count);
+
+  /// No description provided for @restoreResultPendingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Still pending · {count}'**
+  String restoreResultPendingSection(Object count);
+
+  /// No description provided for @restoreResultSkippedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped steps · {count}'**
+  String restoreResultSkippedSection(Object count);
+
+  /// No description provided for @restoreResultSkippedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The current data was kept as it is; skipped steps are not replayed.'**
+  String get restoreResultSkippedNote;
+
+  /// No description provided for @restoreResultUnknownItems.
+  ///
+  /// In en, this message translates to:
+  /// **'The pending items couldn\'t be read, so this isn\'t treated as complete.'**
+  String get restoreResultUnknownItems;
+
+  /// No description provided for @restoreResultNavigateOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening Profiles only navigates; it doesn\'t check or change anything.'**
+  String get restoreResultNavigateOnly;
+
+  /// No description provided for @restoreRecheckChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get restoreRecheckChecking;
+
+  /// No description provided for @restoreRecheckPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Check passed'**
+  String get restoreRecheckPassed;
+
+  /// No description provided for @restoreRecheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Check failed: {reason}'**
+  String restoreRecheckFailed(Object reason);
+
+  /// No description provided for @restoreRecheckUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t check right now'**
+  String get restoreRecheckUnavailable;
+
+  /// No description provided for @restoreRecheckStillIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Even after a passed check, the restore remains incomplete while items are pending or skipped.'**
+  String get restoreRecheckStillIncomplete;
 
   /// No description provided for @restoreRecoveryRolledBack.
   ///

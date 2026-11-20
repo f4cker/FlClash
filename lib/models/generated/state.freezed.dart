@@ -6127,7 +6127,9 @@ as Map<String, String>,
 /// @nodoc
 mixin _$MigrationData {
 
- Map<String, Object?>? get configMap; List<Rule> get rules; List<Script> get scripts; List<Profile> get profiles; List<DisabledRule> get disabledRules; List<ProxyGroup> get proxyGroups; List<ClashProvider> get clashProviders; List<CustomProxy> get customProxies; List<ProxyDialer> get proxyDialers; List<MitmModule> get mitmModules; List<AddedRuleSet> get addedRuleSets;
+ Map<String, Object?>? get configMap; List<Rule> get rules; List<Script> get scripts; List<Profile> get profiles; List<DisabledRule> get disabledRules; List<ProxyGroup> get proxyGroups; List<ClashProvider> get clashProviders; List<CustomProxy> get customProxies; List<ProxyDialer> get proxyDialers; List<MitmModule> get mitmModules; List<AddedRuleSet> get addedRuleSets;/// Whether the backup's database had mount tables at all. A backup
+/// without them says nothing about mounts; it is not an empty list.
+ bool get mountsCarried; List<MountTargetState> get mountTargets; List<MountSourceRecord> get mountSourceStatuses;
 /// Create a copy of MigrationData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -6139,20 +6141,20 @@ $MigrationDataCopyWith<MigrationData> get copyWith => _$MigrationDataCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as MigrationData;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MigrationData&&const DeepCollectionEquality().equals(other.configMap, _this.configMap)&&const DeepCollectionEquality().equals(other.rules, _this.rules)&&const DeepCollectionEquality().equals(other.scripts, _this.scripts)&&const DeepCollectionEquality().equals(other.profiles, _this.profiles)&&const DeepCollectionEquality().equals(other.disabledRules, _this.disabledRules)&&const DeepCollectionEquality().equals(other.proxyGroups, _this.proxyGroups)&&const DeepCollectionEquality().equals(other.clashProviders, _this.clashProviders)&&const DeepCollectionEquality().equals(other.customProxies, _this.customProxies)&&const DeepCollectionEquality().equals(other.proxyDialers, _this.proxyDialers)&&const DeepCollectionEquality().equals(other.mitmModules, _this.mitmModules)&&const DeepCollectionEquality().equals(other.addedRuleSets, _this.addedRuleSets));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MigrationData&&const DeepCollectionEquality().equals(other.configMap, _this.configMap)&&const DeepCollectionEquality().equals(other.rules, _this.rules)&&const DeepCollectionEquality().equals(other.scripts, _this.scripts)&&const DeepCollectionEquality().equals(other.profiles, _this.profiles)&&const DeepCollectionEquality().equals(other.disabledRules, _this.disabledRules)&&const DeepCollectionEquality().equals(other.proxyGroups, _this.proxyGroups)&&const DeepCollectionEquality().equals(other.clashProviders, _this.clashProviders)&&const DeepCollectionEquality().equals(other.customProxies, _this.customProxies)&&const DeepCollectionEquality().equals(other.proxyDialers, _this.proxyDialers)&&const DeepCollectionEquality().equals(other.mitmModules, _this.mitmModules)&&const DeepCollectionEquality().equals(other.addedRuleSets, _this.addedRuleSets)&&(identical(other.mountsCarried, _this.mountsCarried) || other.mountsCarried == _this.mountsCarried)&&const DeepCollectionEquality().equals(other.mountTargets, _this.mountTargets)&&const DeepCollectionEquality().equals(other.mountSourceStatuses, _this.mountSourceStatuses));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MigrationData;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.configMap),const DeepCollectionEquality().hash(_this.rules),const DeepCollectionEquality().hash(_this.scripts),const DeepCollectionEquality().hash(_this.profiles),const DeepCollectionEquality().hash(_this.disabledRules),const DeepCollectionEquality().hash(_this.proxyGroups),const DeepCollectionEquality().hash(_this.clashProviders),const DeepCollectionEquality().hash(_this.customProxies),const DeepCollectionEquality().hash(_this.proxyDialers),const DeepCollectionEquality().hash(_this.mitmModules),const DeepCollectionEquality().hash(_this.addedRuleSets));
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.configMap),const DeepCollectionEquality().hash(_this.rules),const DeepCollectionEquality().hash(_this.scripts),const DeepCollectionEquality().hash(_this.profiles),const DeepCollectionEquality().hash(_this.disabledRules),const DeepCollectionEquality().hash(_this.proxyGroups),const DeepCollectionEquality().hash(_this.clashProviders),const DeepCollectionEquality().hash(_this.customProxies),const DeepCollectionEquality().hash(_this.proxyDialers),const DeepCollectionEquality().hash(_this.mitmModules),const DeepCollectionEquality().hash(_this.addedRuleSets),_this.mountsCarried,const DeepCollectionEquality().hash(_this.mountTargets),const DeepCollectionEquality().hash(_this.mountSourceStatuses));
 }
 
 @override
 String toString() {
   final _this = this as MigrationData;
-  return 'MigrationData(configMap: ${_this.configMap}, rules: ${_this.rules}, scripts: ${_this.scripts}, profiles: ${_this.profiles}, disabledRules: ${_this.disabledRules}, proxyGroups: ${_this.proxyGroups}, clashProviders: ${_this.clashProviders}, customProxies: ${_this.customProxies}, proxyDialers: ${_this.proxyDialers}, mitmModules: ${_this.mitmModules}, addedRuleSets: ${_this.addedRuleSets})';
+  return 'MigrationData(configMap: ${_this.configMap}, rules: ${_this.rules}, scripts: ${_this.scripts}, profiles: ${_this.profiles}, disabledRules: ${_this.disabledRules}, proxyGroups: ${_this.proxyGroups}, clashProviders: ${_this.clashProviders}, customProxies: ${_this.customProxies}, proxyDialers: ${_this.proxyDialers}, mitmModules: ${_this.mitmModules}, addedRuleSets: ${_this.addedRuleSets}, mountsCarried: ${_this.mountsCarried}, mountTargets: ${_this.mountTargets}, mountSourceStatuses: ${_this.mountSourceStatuses})';
 }
 
 
@@ -6163,7 +6165,7 @@ abstract mixin class $MigrationDataCopyWith<$Res>  {
   factory $MigrationDataCopyWith(MigrationData value, $Res Function(MigrationData) _then) = _$MigrationDataCopyWithImpl;
 @useResult
 $Res call({
- Map<String, Object?>? configMap, List<Rule> rules, List<Script> scripts, List<Profile> profiles, List<DisabledRule> disabledRules, List<ProxyGroup> proxyGroups, List<ClashProvider> clashProviders, List<CustomProxy> customProxies, List<ProxyDialer> proxyDialers, List<MitmModule> mitmModules, List<AddedRuleSet> addedRuleSets
+ Map<String, Object?>? configMap, List<Rule> rules, List<Script> scripts, List<Profile> profiles, List<DisabledRule> disabledRules, List<ProxyGroup> proxyGroups, List<ClashProvider> clashProviders, List<CustomProxy> customProxies, List<ProxyDialer> proxyDialers, List<MitmModule> mitmModules, List<AddedRuleSet> addedRuleSets, bool mountsCarried, List<MountTargetState> mountTargets, List<MountSourceRecord> mountSourceStatuses
 });
 
 
@@ -6180,7 +6182,7 @@ class _$MigrationDataCopyWithImpl<$Res>
 
 /// Create a copy of MigrationData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? configMap = freezed,Object? rules = null,Object? scripts = null,Object? profiles = null,Object? disabledRules = null,Object? proxyGroups = null,Object? clashProviders = null,Object? customProxies = null,Object? proxyDialers = null,Object? mitmModules = null,Object? addedRuleSets = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? configMap = freezed,Object? rules = null,Object? scripts = null,Object? profiles = null,Object? disabledRules = null,Object? proxyGroups = null,Object? clashProviders = null,Object? customProxies = null,Object? proxyDialers = null,Object? mitmModules = null,Object? addedRuleSets = null,Object? mountsCarried = null,Object? mountTargets = null,Object? mountSourceStatuses = null,}) {
   return _then(MigrationData(
 configMap: freezed == configMap ? _self.configMap : configMap // ignore: cast_nullable_to_non_nullable
 as Map<String, Object?>?,rules: null == rules ? _self.rules : rules // ignore: cast_nullable_to_non_nullable
@@ -6193,7 +6195,10 @@ as List<ClashProvider>,customProxies: null == customProxies ? _self.customProxie
 as List<CustomProxy>,proxyDialers: null == proxyDialers ? _self.proxyDialers : proxyDialers // ignore: cast_nullable_to_non_nullable
 as List<ProxyDialer>,mitmModules: null == mitmModules ? _self.mitmModules : mitmModules // ignore: cast_nullable_to_non_nullable
 as List<MitmModule>,addedRuleSets: null == addedRuleSets ? _self.addedRuleSets : addedRuleSets // ignore: cast_nullable_to_non_nullable
-as List<AddedRuleSet>,
+as List<AddedRuleSet>,mountsCarried: null == mountsCarried ? _self.mountsCarried : mountsCarried // ignore: cast_nullable_to_non_nullable
+as bool,mountTargets: null == mountTargets ? _self.mountTargets : mountTargets // ignore: cast_nullable_to_non_nullable
+as List<MountTargetState>,mountSourceStatuses: null == mountSourceStatuses ? _self.mountSourceStatuses : mountSourceStatuses // ignore: cast_nullable_to_non_nullable
+as List<MountSourceRecord>,
   ));
 }
 
@@ -6278,10 +6283,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, Object?>? configMap,  List<Rule> rules,  List<Script> scripts,  List<Profile> profiles,  List<DisabledRule> disabledRules,  List<ProxyGroup> proxyGroups,  List<ClashProvider> clashProviders,  List<CustomProxy> customProxies,  List<ProxyDialer> proxyDialers,  List<MitmModule> mitmModules,  List<AddedRuleSet> addedRuleSets)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, Object?>? configMap,  List<Rule> rules,  List<Script> scripts,  List<Profile> profiles,  List<DisabledRule> disabledRules,  List<ProxyGroup> proxyGroups,  List<ClashProvider> clashProviders,  List<CustomProxy> customProxies,  List<ProxyDialer> proxyDialers,  List<MitmModule> mitmModules,  List<AddedRuleSet> addedRuleSets,  bool mountsCarried,  List<MountTargetState> mountTargets,  List<MountSourceRecord> mountSourceStatuses)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MigrationData() when $default != null:
-return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.disabledRules,_that.proxyGroups,_that.clashProviders,_that.customProxies,_that.proxyDialers,_that.mitmModules,_that.addedRuleSets);case _:
+return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.disabledRules,_that.proxyGroups,_that.clashProviders,_that.customProxies,_that.proxyDialers,_that.mitmModules,_that.addedRuleSets,_that.mountsCarried,_that.mountTargets,_that.mountSourceStatuses);case _:
   return orElse();
 
 }
@@ -6299,10 +6304,10 @@ return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.d
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, Object?>? configMap,  List<Rule> rules,  List<Script> scripts,  List<Profile> profiles,  List<DisabledRule> disabledRules,  List<ProxyGroup> proxyGroups,  List<ClashProvider> clashProviders,  List<CustomProxy> customProxies,  List<ProxyDialer> proxyDialers,  List<MitmModule> mitmModules,  List<AddedRuleSet> addedRuleSets)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, Object?>? configMap,  List<Rule> rules,  List<Script> scripts,  List<Profile> profiles,  List<DisabledRule> disabledRules,  List<ProxyGroup> proxyGroups,  List<ClashProvider> clashProviders,  List<CustomProxy> customProxies,  List<ProxyDialer> proxyDialers,  List<MitmModule> mitmModules,  List<AddedRuleSet> addedRuleSets,  bool mountsCarried,  List<MountTargetState> mountTargets,  List<MountSourceRecord> mountSourceStatuses)  $default,) {final _that = this;
 switch (_that) {
 case _MigrationData():
-return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.disabledRules,_that.proxyGroups,_that.clashProviders,_that.customProxies,_that.proxyDialers,_that.mitmModules,_that.addedRuleSets);case _:
+return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.disabledRules,_that.proxyGroups,_that.clashProviders,_that.customProxies,_that.proxyDialers,_that.mitmModules,_that.addedRuleSets,_that.mountsCarried,_that.mountTargets,_that.mountSourceStatuses);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -6319,10 +6324,10 @@ return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.d
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, Object?>? configMap,  List<Rule> rules,  List<Script> scripts,  List<Profile> profiles,  List<DisabledRule> disabledRules,  List<ProxyGroup> proxyGroups,  List<ClashProvider> clashProviders,  List<CustomProxy> customProxies,  List<ProxyDialer> proxyDialers,  List<MitmModule> mitmModules,  List<AddedRuleSet> addedRuleSets)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, Object?>? configMap,  List<Rule> rules,  List<Script> scripts,  List<Profile> profiles,  List<DisabledRule> disabledRules,  List<ProxyGroup> proxyGroups,  List<ClashProvider> clashProviders,  List<CustomProxy> customProxies,  List<ProxyDialer> proxyDialers,  List<MitmModule> mitmModules,  List<AddedRuleSet> addedRuleSets,  bool mountsCarried,  List<MountTargetState> mountTargets,  List<MountSourceRecord> mountSourceStatuses)?  $default,) {final _that = this;
 switch (_that) {
 case _MigrationData() when $default != null:
-return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.disabledRules,_that.proxyGroups,_that.clashProviders,_that.customProxies,_that.proxyDialers,_that.mitmModules,_that.addedRuleSets);case _:
+return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.disabledRules,_that.proxyGroups,_that.clashProviders,_that.customProxies,_that.proxyDialers,_that.mitmModules,_that.addedRuleSets,_that.mountsCarried,_that.mountTargets,_that.mountSourceStatuses);case _:
   return null;
 
 }
@@ -6334,7 +6339,7 @@ return $default(_that.configMap,_that.rules,_that.scripts,_that.profiles,_that.d
 
 
 class _MigrationData implements MigrationData {
-  const _MigrationData({ Map<String, Object?>? configMap,  List<Rule> rules = const [],  List<Script> scripts = const [],  List<Profile> profiles = const [],  List<DisabledRule> disabledRules = const [],  List<ProxyGroup> proxyGroups = const [],  List<ClashProvider> clashProviders = const [],  List<CustomProxy> customProxies = const [],  List<ProxyDialer> proxyDialers = const [],  List<MitmModule> mitmModules = const [],  List<AddedRuleSet> addedRuleSets = const []}): _configMap = configMap,_rules = rules,_scripts = scripts,_profiles = profiles,_disabledRules = disabledRules,_proxyGroups = proxyGroups,_clashProviders = clashProviders,_customProxies = customProxies,_proxyDialers = proxyDialers,_mitmModules = mitmModules,_addedRuleSets = addedRuleSets;
+  const _MigrationData({ Map<String, Object?>? configMap,  List<Rule> rules = const [],  List<Script> scripts = const [],  List<Profile> profiles = const [],  List<DisabledRule> disabledRules = const [],  List<ProxyGroup> proxyGroups = const [],  List<ClashProvider> clashProviders = const [],  List<CustomProxy> customProxies = const [],  List<ProxyDialer> proxyDialers = const [],  List<MitmModule> mitmModules = const [],  List<AddedRuleSet> addedRuleSets = const [], this.mountsCarried = false,  List<MountTargetState> mountTargets = const [],  List<MountSourceRecord> mountSourceStatuses = const []}): _configMap = configMap,_rules = rules,_scripts = scripts,_profiles = profiles,_disabledRules = disabledRules,_proxyGroups = proxyGroups,_clashProviders = clashProviders,_customProxies = customProxies,_proxyDialers = proxyDialers,_mitmModules = mitmModules,_addedRuleSets = addedRuleSets,_mountTargets = mountTargets,_mountSourceStatuses = mountSourceStatuses;
   
 
  final  Map<String, Object?>? _configMap;
@@ -6416,6 +6421,23 @@ class _MigrationData implements MigrationData {
   return EqualUnmodifiableListView(_addedRuleSets);
 }
 
+/// Whether the backup's database had mount tables at all. A backup
+/// without them says nothing about mounts; it is not an empty list.
+@override@JsonKey() final  bool mountsCarried;
+ final  List<MountTargetState> _mountTargets;
+@override@JsonKey() List<MountTargetState> get mountTargets {
+  if (_mountTargets is EqualUnmodifiableListView) return _mountTargets;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_mountTargets);
+}
+
+ final  List<MountSourceRecord> _mountSourceStatuses;
+@override@JsonKey() List<MountSourceRecord> get mountSourceStatuses {
+  if (_mountSourceStatuses is EqualUnmodifiableListView) return _mountSourceStatuses;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_mountSourceStatuses);
+}
+
 
 /// Create a copy of MigrationData
 /// with the given fields replaced by the non-null parameter values.
@@ -6427,18 +6449,18 @@ _$MigrationDataCopyWith<_MigrationData> get copyWith => __$MigrationDataCopyWith
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MigrationData&&const DeepCollectionEquality().equals(other.configMap, _configMap)&&const DeepCollectionEquality().equals(other.rules, _rules)&&const DeepCollectionEquality().equals(other.scripts, _scripts)&&const DeepCollectionEquality().equals(other.profiles, _profiles)&&const DeepCollectionEquality().equals(other.disabledRules, _disabledRules)&&const DeepCollectionEquality().equals(other.proxyGroups, _proxyGroups)&&const DeepCollectionEquality().equals(other.clashProviders, _clashProviders)&&const DeepCollectionEquality().equals(other.customProxies, _customProxies)&&const DeepCollectionEquality().equals(other.proxyDialers, _proxyDialers)&&const DeepCollectionEquality().equals(other.mitmModules, _mitmModules)&&const DeepCollectionEquality().equals(other.addedRuleSets, _addedRuleSets));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MigrationData&&const DeepCollectionEquality().equals(other.configMap, _configMap)&&const DeepCollectionEquality().equals(other.rules, _rules)&&const DeepCollectionEquality().equals(other.scripts, _scripts)&&const DeepCollectionEquality().equals(other.profiles, _profiles)&&const DeepCollectionEquality().equals(other.disabledRules, _disabledRules)&&const DeepCollectionEquality().equals(other.proxyGroups, _proxyGroups)&&const DeepCollectionEquality().equals(other.clashProviders, _clashProviders)&&const DeepCollectionEquality().equals(other.customProxies, _customProxies)&&const DeepCollectionEquality().equals(other.proxyDialers, _proxyDialers)&&const DeepCollectionEquality().equals(other.mitmModules, _mitmModules)&&const DeepCollectionEquality().equals(other.addedRuleSets, _addedRuleSets)&&(identical(other.mountsCarried, mountsCarried) || other.mountsCarried == mountsCarried)&&const DeepCollectionEquality().equals(other.mountTargets, _mountTargets)&&const DeepCollectionEquality().equals(other.mountSourceStatuses, _mountSourceStatuses));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_configMap),const DeepCollectionEquality().hash(_rules),const DeepCollectionEquality().hash(_scripts),const DeepCollectionEquality().hash(_profiles),const DeepCollectionEquality().hash(_disabledRules),const DeepCollectionEquality().hash(_proxyGroups),const DeepCollectionEquality().hash(_clashProviders),const DeepCollectionEquality().hash(_customProxies),const DeepCollectionEquality().hash(_proxyDialers),const DeepCollectionEquality().hash(_mitmModules),const DeepCollectionEquality().hash(_addedRuleSets));
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_configMap),const DeepCollectionEquality().hash(_rules),const DeepCollectionEquality().hash(_scripts),const DeepCollectionEquality().hash(_profiles),const DeepCollectionEquality().hash(_disabledRules),const DeepCollectionEquality().hash(_proxyGroups),const DeepCollectionEquality().hash(_clashProviders),const DeepCollectionEquality().hash(_customProxies),const DeepCollectionEquality().hash(_proxyDialers),const DeepCollectionEquality().hash(_mitmModules),const DeepCollectionEquality().hash(_addedRuleSets),mountsCarried,const DeepCollectionEquality().hash(_mountTargets),const DeepCollectionEquality().hash(_mountSourceStatuses));
 }
 
 @override
 String toString() {
-    return 'MigrationData(configMap: $configMap, rules: $rules, scripts: $scripts, profiles: $profiles, disabledRules: $disabledRules, proxyGroups: $proxyGroups, clashProviders: $clashProviders, customProxies: $customProxies, proxyDialers: $proxyDialers, mitmModules: $mitmModules, addedRuleSets: $addedRuleSets)';
+    return 'MigrationData(configMap: $configMap, rules: $rules, scripts: $scripts, profiles: $profiles, disabledRules: $disabledRules, proxyGroups: $proxyGroups, clashProviders: $clashProviders, customProxies: $customProxies, proxyDialers: $proxyDialers, mitmModules: $mitmModules, addedRuleSets: $addedRuleSets, mountsCarried: $mountsCarried, mountTargets: $mountTargets, mountSourceStatuses: $mountSourceStatuses)';
 }
 
 
@@ -6449,7 +6471,7 @@ abstract mixin class _$MigrationDataCopyWith<$Res> implements $MigrationDataCopy
   factory _$MigrationDataCopyWith(_MigrationData value, $Res Function(_MigrationData) _then) = __$MigrationDataCopyWithImpl;
 @override @useResult
 $Res call({
- Map<String, Object?>? configMap, List<Rule> rules, List<Script> scripts, List<Profile> profiles, List<DisabledRule> disabledRules, List<ProxyGroup> proxyGroups, List<ClashProvider> clashProviders, List<CustomProxy> customProxies, List<ProxyDialer> proxyDialers, List<MitmModule> mitmModules, List<AddedRuleSet> addedRuleSets
+ Map<String, Object?>? configMap, List<Rule> rules, List<Script> scripts, List<Profile> profiles, List<DisabledRule> disabledRules, List<ProxyGroup> proxyGroups, List<ClashProvider> clashProviders, List<CustomProxy> customProxies, List<ProxyDialer> proxyDialers, List<MitmModule> mitmModules, List<AddedRuleSet> addedRuleSets, bool mountsCarried, List<MountTargetState> mountTargets, List<MountSourceRecord> mountSourceStatuses
 });
 
 
@@ -6466,7 +6488,7 @@ class __$MigrationDataCopyWithImpl<$Res>
 
 /// Create a copy of MigrationData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? configMap = freezed,Object? rules = null,Object? scripts = null,Object? profiles = null,Object? disabledRules = null,Object? proxyGroups = null,Object? clashProviders = null,Object? customProxies = null,Object? proxyDialers = null,Object? mitmModules = null,Object? addedRuleSets = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? configMap = freezed,Object? rules = null,Object? scripts = null,Object? profiles = null,Object? disabledRules = null,Object? proxyGroups = null,Object? clashProviders = null,Object? customProxies = null,Object? proxyDialers = null,Object? mitmModules = null,Object? addedRuleSets = null,Object? mountsCarried = null,Object? mountTargets = null,Object? mountSourceStatuses = null,}) {
   return _then(_MigrationData(
 configMap: freezed == configMap ? _self._configMap : configMap // ignore: cast_nullable_to_non_nullable
 as Map<String, Object?>?,rules: null == rules ? _self._rules : rules // ignore: cast_nullable_to_non_nullable
@@ -6479,7 +6501,10 @@ as List<ClashProvider>,customProxies: null == customProxies ? _self._customProxi
 as List<CustomProxy>,proxyDialers: null == proxyDialers ? _self._proxyDialers : proxyDialers // ignore: cast_nullable_to_non_nullable
 as List<ProxyDialer>,mitmModules: null == mitmModules ? _self._mitmModules : mitmModules // ignore: cast_nullable_to_non_nullable
 as List<MitmModule>,addedRuleSets: null == addedRuleSets ? _self._addedRuleSets : addedRuleSets // ignore: cast_nullable_to_non_nullable
-as List<AddedRuleSet>,
+as List<AddedRuleSet>,mountsCarried: null == mountsCarried ? _self.mountsCarried : mountsCarried // ignore: cast_nullable_to_non_nullable
+as bool,mountTargets: null == mountTargets ? _self._mountTargets : mountTargets // ignore: cast_nullable_to_non_nullable
+as List<MountTargetState>,mountSourceStatuses: null == mountSourceStatuses ? _self._mountSourceStatuses : mountSourceStatuses // ignore: cast_nullable_to_non_nullable
+as List<MountSourceRecord>,
   ));
 }
 
