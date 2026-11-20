@@ -2146,11 +2146,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      'Une restauration par écrasement remplace par la sauvegarde les profils, scripts, règles, proxys, modules MITM et données similaires de cet appareil. Ceux de ces éléments absents de la sauvegarde, modules MITM compris, sont supprimés.';
+      'Une restauration par écrasement remplace par la sauvegarde les profils, scripts, règles, proxys, modules MITM et données similaires de cet appareil. Ceux de ces éléments absents de la sauvegarde sont supprimés.';
 
   @override
   String get restoreOverrideScopeNote =>
-      'Les réglages de l’app, les icônes et les certificats ne sont pas écrasés ; la restauration des réglages dépend de ce que vous avez choisi de restaurer.';
+      'Les icônes et les certificats ne sont pas concernés par l’écrasement. La restauration des réglages de l’app dépend de ce que vous avez choisi de restaurer.';
 
   @override
   String restoreMountSameCount(Object count) {
@@ -2364,7 +2364,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmAllOff =>
-      'Le journal de restauration provient d’une version antérieure : impossible de savoir quels modules MITM il a restaurés. Tous les modules MITM ont été désactivés et ne s’exécutent qu’une fois de nouveau acceptés sur cet appareil. Leurs réglages et fichiers sont conservés.';
+      'Impossible de déterminer quels modules MITM la dernière restauration concernait. Par sécurité, tous les modules MITM ont été désactivés ; ils ne s’exécutent qu’une fois de nouveau acceptés sur cet appareil. Leur configuration et leurs fichiers sont conservés.';
+
+  @override
+  String get restoreRecoveryMitmOffFailed =>
+      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et leur désactivation a échoué. Tous les modules MITM restent en pause tant que l’app est ouverte ; la désactivation sera retentée au prochain démarrage.';
 
   @override
   String get restoreContinue => 'Continuer';

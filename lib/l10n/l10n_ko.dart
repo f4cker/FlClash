@@ -2076,11 +2076,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      '덮어쓰기 복원은 이 기기의 프로필, 스크립트, 규칙, 프록시, 복호화 모듈 등의 데이터를 백업으로 바꿉니다. 백업에 없는 이러한 항목(복호화 모듈 포함)은 삭제됩니다.';
+      '덮어쓰기 복원은 이 기기의 프로필, 스크립트, 규칙, 프록시, 복호화 모듈 등의 데이터를 백업으로 바꿉니다. 백업에 없는 이러한 항목은 삭제됩니다.';
 
   @override
   String get restoreOverrideScopeNote =>
-      '앱 설정, 아이콘, 인증서는 덮어쓰지 않습니다. 설정 복원 여부는 선택한 복원 내용에 따라 다릅니다.';
+      '아이콘과 인증서는 덮어쓰기의 영향을 받지 않습니다. 앱 설정 복원 여부는 선택한 복원 내용에 따라 다릅니다.';
 
   @override
   String restoreMountSameCount(Object count) {
@@ -2280,7 +2280,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmAllOff =>
-      '복원 기록이 이전 버전의 것이라 어떤 MITM 모듈을 복원했는지 알 수 없습니다. 모든 MITM 모듈을 껐으며, 이 기기에서 다시 동의해야 실행됩니다. 모듈 설정과 파일은 유지됩니다.';
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없습니다. 안전을 위해 모든 복호화 모듈을 껐으며, 이 기기에서 다시 동의해야 실행됩니다. 모듈 설정과 파일은 유지됩니다.';
+
+  @override
+  String get restoreRecoveryMitmOffFailed =>
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 복호화 모듈을 끄지 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되며, 다음 실행 시 다시 끄기를 시도합니다.';
 
   @override
   String get restoreContinue => '계속';

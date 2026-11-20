@@ -2001,10 +2001,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      '覆盖恢复会用备份替换本机的配置、脚本、规则、代理与解密模块等数据。本机有而备份中没有的这些项目（包括解密模块）会被删除。';
+      '覆盖恢复会用备份替换本机的配置、脚本、规则、代理和解密模块等数据。本机有而备份中没有的这些项目会被删除。';
 
   @override
-  String get restoreOverrideScopeNote => '应用设置、图标和证书不受覆盖影响；设置是否恢复取决于所选的恢复内容。';
+  String get restoreOverrideScopeNote => '图标和证书不受覆盖影响。应用设置是否恢复取决于所选的恢复内容。';
 
   @override
   String restoreMountSameCount(Object count) {
@@ -2195,7 +2195,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmAllOff =>
-      '恢复记录来自旧版本，无法确定恢复了哪些解密模块，因此已关闭全部解密模块，需在本机重新同意后才能运行。模块的设置和文件均已保留。';
+      '无法确定上次恢复涉及哪些解密模块。为安全起见，已关闭全部解密模块；需要在本机重新同意后才能运行。模块的配置和文件已保留。';
+
+  @override
+  String get restoreRecoveryMitmOffFailed =>
+      '无法确定上次恢复涉及哪些解密模块，且未能关闭解密模块。本次运行期间全部解密模块保持暂停，下次启动时会再次尝试关闭。';
 
   @override
   String get restoreContinue => '继续完成';

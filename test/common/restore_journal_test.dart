@@ -1371,6 +1371,58 @@ void main() {
       expect(await states(), {41: (false, false), 50: (true, true)});
     });
 
+    for (final (name, trigger) in [
+      (
+        'the write fails',
+        'CREATE TRIGGER t_off BEFORE UPDATE ON mitm_modules '
+            "BEGIN SELECT RAISE(ABORT, 'disk'); END",
+      ),
+      (
+        'a row still reads on',
+        'CREATE TRIGGER t_off AFTER UPDATE ON mitm_modules WHEN NEW.id = 50 '
+            'BEGIN UPDATE mitm_modules SET enabled = 1 WHERE id = 50; END',
+      ),
+    ]) {
+      test('$name: says turning off failed, never that they are off; all '
+          'stay held this run and the next launch tries again', () async {
+        await oldCrash(_Crash.afterCommit);
+        await database.customStatement(trigger);
+        final recovery = RestoreRecovery(
+          db: () => database,
+          homeDirPath: () async => home.path,
+          store: () => preferences,
+        );
+        await recovery.run();
+        if (recovery.needsMitm) await recovery.finish(() async {});
+        final report = recovery.takeReports().single;
+
+        expect(report.mitmAllOff, isFalse);
+        expect(report.mitmOffFailed, isTrue);
+        expect(
+          report.outcome,
+          isNot(RestoreRecoveryOutcome.completed),
+          reason: 'never called finished',
+        );
+        final en = currentAppLocalizations;
+        final message = restoreRecoveryMessage(report, en);
+        expect(message, contains(en.restoreRecoveryMitmOffFailed));
+        expect(message, isNot(contains(en.restoreRecoveryMitmAllOff)));
+        for (final id in [41, 50, 999]) {
+          expect(recovery.mitmHold.value.holds(id), isTrue, reason: '$id');
+        }
+        expect(journals(), hasLength(1), reason: 'kept for the next launch');
+        expect(await markers(), hasLength(1));
+
+        await database.customStatement('DROP TRIGGER t_off');
+        await relaunch();
+        final next = await recover();
+        expect(next.single.mitmAllOff, isTrue);
+        expect(next.single.mitmOffFailed, isFalse);
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(journals(), isEmpty);
+      });
+    }
+
     test('a failed recheck keeps the journal in its old format, so the next '
         'launch turns them off again and says so', () async {
       await oldCrash(_Crash.afterCommit);

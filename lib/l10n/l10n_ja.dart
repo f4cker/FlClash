@@ -2029,11 +2029,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      '上書き復元では、この端末のプロファイル、スクリプト、ルール、プロキシ、復号モジュールなどのデータをバックアップで置き換えます。バックアップにないこれらの項目（復号モジュールを含む）は削除されます。';
+      '上書き復元では、この端末のプロファイル、スクリプト、ルール、プロキシ、復号モジュールなどのデータをバックアップで置き換えます。バックアップにないこれらの項目は削除されます。';
 
   @override
   String get restoreOverrideScopeNote =>
-      'アプリの設定、アイコン、証明書は上書きされません。設定を復元するかどうかは、選んだ復元内容によります。';
+      'アイコンと証明書は上書きの影響を受けません。アプリの設定を復元するかどうかは、選んだ復元内容によります。';
 
   @override
   String restoreMountSameCount(Object count) {
@@ -2232,7 +2232,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmAllOff =>
-      '復元の記録が旧バージョンのもので、どの MITM モジュールを復元したか判別できません。すべての MITM モジュールをオフにしました。この端末で再度同意するまで実行されません。設定とファイルは保持されています。';
+      '前回の復元がどの復号モジュールに関係したか判別できません。安全のため、すべての復号モジュールをオフにしました。この端末で再度同意するまで実行されません。モジュールの設定とファイルは保持されています。';
+
+  @override
+  String get restoreRecoveryMitmOffFailed =>
+      '前回の復元がどの復号モジュールに関係したか判別できず、復号モジュールをオフにできませんでした。アプリの実行中はすべての復号モジュールを一時停止し、次回の起動時にもう一度オフにします。';
 
   @override
   String get restoreContinue => '続行';

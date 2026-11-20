@@ -3831,13 +3831,13 @@ abstract class AppLocalizations {
   /// No description provided for @restoreOverrideDeletesLocal.
   ///
   /// In en, this message translates to:
-  /// **'An override restore replaces this device\'s profiles, scripts, rules, proxies, MITM modules and similar data with the backup. Those items here that the backup lacks, MITM modules included, are deleted.'**
+  /// **'An override restore replaces this device\'s profiles, scripts, rules, proxies, MITM modules and similar data with the backup. Those items here that the backup lacks are deleted.'**
   String get restoreOverrideDeletesLocal;
 
   /// No description provided for @restoreOverrideScopeNote.
   ///
   /// In en, this message translates to:
-  /// **'App settings, icons and certificates are not overridden; whether settings are restored depends on what you chose to restore.'**
+  /// **'Icons and certificates are not affected by the override. Whether app settings are restored depends on what you chose to restore.'**
   String get restoreOverrideScopeNote;
 
   /// No description provided for @restoreMountSameCount.
@@ -4161,8 +4161,14 @@ abstract class AppLocalizations {
   /// No description provided for @restoreRecoveryMitmAllOff.
   ///
   /// In en, this message translates to:
-  /// **'The restore record is from an older version, so which MITM modules it restored can\'t be told. All MITM modules were turned off and run only after you agree to them again on this device. Their settings and files were kept.'**
+  /// **'Which MITM modules the last restore involved can\'t be determined. To be safe, all MITM modules were turned off; they run only after you agree to them again on this device. Their configuration and files were kept.'**
   String get restoreRecoveryMitmAllOff;
+
+  /// No description provided for @restoreRecoveryMitmOffFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Which MITM modules the last restore involved can\'t be determined, and turning the MITM modules off failed. All MITM modules stay paused while the app runs, and turning them off is tried again at the next launch.'**
+  String get restoreRecoveryMitmOffFailed;
 
   /// No description provided for @restoreContinue.
   ///

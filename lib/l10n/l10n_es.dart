@@ -2147,11 +2147,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      'Una restauración con sobrescritura reemplaza con la copia los perfiles, scripts, reglas, proxies, módulos MITM y datos similares de este dispositivo. Se eliminan los de este tipo que la copia no tiene, incluidos los módulos MITM.';
+      'Una restauración con sobrescritura reemplaza con la copia los perfiles, scripts, reglas, proxies, módulos MITM y datos similares de este dispositivo. Se eliminan los de este tipo que la copia no tiene.';
 
   @override
   String get restoreOverrideScopeNote =>
-      'Los ajustes de la app, los iconos y los certificados no se sobrescriben; que se restauren los ajustes depende de lo que elegiste restaurar.';
+      'Los iconos y los certificados no se ven afectados por la sobrescritura. Que se restauren los ajustes de la app depende de lo que elegiste restaurar.';
 
   @override
   String restoreMountSameCount(Object count) {
@@ -2363,7 +2363,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmAllOff =>
-      'El registro de la restauración es de una versión anterior y no se puede saber qué módulos MITM restauró. Se desactivaron todos los módulos MITM y solo se ejecutan cuando vuelvas a aceptarlos en este dispositivo. Su configuración y sus archivos se conservaron.';
+      'No se puede determinar qué módulos MITM incluyó la última restauración. Por seguridad, se desactivaron todos los módulos MITM; solo se ejecutan cuando vuelvas a aceptarlos en este dispositivo. Su configuración y sus archivos se conservaron.';
+
+  @override
+  String get restoreRecoveryMitmOffFailed =>
+      'No se puede determinar qué módulos MITM incluyó la última restauración y no se pudieron desactivar. Todos los módulos MITM quedan en pausa mientras la app esté abierta y se volverá a intentar desactivarlos en el próximo inicio.';
 
   @override
   String get restoreContinue => 'Continuar';

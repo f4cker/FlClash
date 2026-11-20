@@ -585,6 +585,10 @@ class RestoreRecoveryReport {
   /// could not be told.
   final bool mitmAllOff;
 
+  /// Turning every module off was needed but failed: all stay held for
+  /// this run, and the next launch tries again.
+  final bool mitmOffFailed;
+
   const RestoreRecoveryReport(
     this.outcome, {
     this.keptFiles = const [],
@@ -593,11 +597,12 @@ class RestoreRecoveryReport {
     this.pendingMounts = const [],
     this.followUp = RestoreFollowUp.none,
     this.mitmAllOff = false,
+    this.mitmOffFailed = false,
   });
 
   /// With every module turned off the restore is never called finished:
   /// what ran before needs consent again here.
-  RestoreRecoveryReport withMitmAllOff() {
+  RestoreRecoveryReport withMitmAllOff({bool failed = false}) {
     final finished =
         outcome == RestoreRecoveryOutcome.completed ||
         (outcome == RestoreRecoveryOutcome.incomplete && skippedSteps.isEmpty);
@@ -608,7 +613,8 @@ class RestoreRecoveryReport {
       tornFiles: tornFiles,
       pendingMounts: pendingMounts,
       followUp: followUp,
-      mitmAllOff: true,
+      mitmAllOff: !failed,
+      mitmOffFailed: failed,
     );
   }
 
@@ -616,7 +622,8 @@ class RestoreRecoveryReport {
   String toString() =>
       'RestoreRecoveryReport($outcome, kept: $keptFiles, '
       'skipped: $skippedSteps, torn: $tornFiles, mounts: $pendingMounts, '
-      'followUp: $followUp, mitmAllOff: $mitmAllOff)';
+      'followUp: $followUp, mitmAllOff: $mitmAllOff, '
+      'mitmOffFailed: $mitmOffFailed)';
 }
 
 /// The restored mount targets among [targetIds] whose record is still
@@ -735,8 +742,16 @@ class RestoreRecovery {
   /// Old-format journals whose recovery turned every module off.
   final _mitmAllOff = <int>{};
 
-  void _report(int id, RestoreRecoveryReport report) =>
-      reports.add(_mitmAllOff.contains(id) ? report.withMitmAllOff() : report);
+  /// Old-format journals whose modules could not be turned off.
+  final _mitmOffFailed = <int>{};
+
+  void _report(int id, RestoreRecoveryReport report) => reports.add(
+    _mitmOffFailed.contains(id)
+        ? report.withMitmAllOff(failed: true)
+        : _mitmAllOff.contains(id)
+        ? report.withMitmAllOff()
+        : report,
+  );
 
   bool get needsMitm => _awaitingMitm.isNotEmpty;
 
@@ -865,14 +880,28 @@ class RestoreRecovery {
           committed != null &&
           journal.phase.index < RestorePhase.configSaved.index &&
           await db.restoreFingerprint() == (journal.dbFingerprint ?? committed);
-      await db.mitmModulesDao.turnAllOff();
+      try {
+        await db.mitmModulesDao.turnAllOff();
+        // Said only once every row reads off and declined.
+        for (final row in await db.mitmModulesDao.query().get()) {
+          if (row.enabled || row.accepted != false) {
+            throw StateError('module ${row.id} still on after turning off');
+          }
+        }
+      } catch (_) {
+        // Every module stays held for this run; the journal stays, so the
+        // next launch tries again.
+        holdMitm(id, null);
+        _mitmOffFailed.add(id);
+        rethrow;
+      }
+      _mitmAllOff.add(id);
       if (followsCommit) {
         await journal.advance(
           journal.phase,
           dbFingerprint: await db.restoreFingerprint(),
         );
       }
-      _mitmAllOff.add(id);
     }
     if (committed == null) {
       if (journal.phase.index <= RestorePhase.published.index) {
@@ -1086,7 +1115,13 @@ class RestoreRecovery {
         skippedSteps: [RestoreStep.mitm],
         followUp: RestoreFollowUp.nextLaunch,
       );
-      reports.add(_mitmAllOff.isEmpty ? report : report.withMitmAllOff());
+      reports.add(
+        _mitmOffFailed.isNotEmpty
+            ? report.withMitmAllOff(failed: true)
+            : _mitmAllOff.isNotEmpty
+            ? report.withMitmAllOff()
+            : report,
+      );
     }
     startBackgroundWork();
     for (final report in takeReports()) {
@@ -1154,6 +1189,7 @@ String restoreRecoveryMessage(
   return [
     ...lines,
     if (report.mitmAllOff) l10n.restoreRecoveryMitmAllOff,
+    if (report.mitmOffFailed) l10n.restoreRecoveryMitmOffFailed,
     if (report.pendingMounts.isNotEmpty)
       l10n.restorePendingMounts(report.pendingMounts.join(separator)),
     if (restoreFollowUpText(report.followUp, l10n) case final text
