@@ -2250,7 +2250,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailedNoRetry =>
-      '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。アプリの実行中はすべての復号モジュールを一時停止しますが、次回の起動時にもう一度オフにするかは確認できません。復号モジュールの画面を確認してください。';
+      '前回の復元がどの復号モジュールに関係したか判別できず、すべてのモジュールをオフにすることもできませんでした。アプリの実行中はすべての復号モジュールを一時停止しています。次回の起動時にもう一度オフにするかどうかは確認できません。';
 
   @override
   String get restoreRecoveryMitmStopped =>

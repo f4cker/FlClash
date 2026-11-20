@@ -584,9 +584,9 @@ enum RestoreRecoveryOutcome {
   /// committed; the journal stays for the next launch.
   failed,
 
-  /// Nothing to say but that every MITM module was stopped for this launch
-  /// ([RestoreRecoveryReport.mitmStopped]).
-  modulesStopped,
+  /// Nothing to say beyond the MITM lines: what the safety lock did, or
+  /// that every module was stopped for this launch.
+  mitmOnly,
 }
 
 /// What the user can do about a [RestoreRecoveryReport].
@@ -656,6 +656,24 @@ class RestoreRecoveryReport {
       mitmStopped: mitmStopped,
     );
   }
+
+  /// The safety lock's lines, said with whatever this report says.
+  RestoreRecoveryReport withMitmLines({
+    required bool allOff,
+    required bool offFailed,
+    required bool retryKept,
+  }) => RestoreRecoveryReport(
+    outcome,
+    keptFiles: keptFiles,
+    skippedSteps: skippedSteps,
+    tornFiles: tornFiles,
+    pendingMounts: pendingMounts,
+    followUp: followUp,
+    mitmAllOff: allOff,
+    mitmOffFailed: offFailed,
+    mitmOffRetryKept: offFailed && retryKept,
+    mitmStopped: mitmStopped,
+  );
 
   RestoreRecoveryReport withMitmStopped() => RestoreRecoveryReport(
     outcome,
@@ -773,6 +791,129 @@ class _OwedMitm {
   const _OwedMitm(this.id, this.journal, {this.torn = const [], this.skipped});
 }
 
+/// One of the two copies of a [MitmSafetyLock].
+enum MitmLockCopy { file, prefs }
+
+/// Says, outside the database and the journals, that some module rows may
+/// still carry consent this device never gave: the next launch turns every
+/// module off before any runs. Kept in two places, a file beside the
+/// journals and a settings key, so losing either still leaves the other.
+class MitmSafetyLock {
+  static const fileName = 'mitm-safety.lock';
+
+  final Future<String> Function() _homeDirPath;
+  final Preferences Function() _store;
+
+  /// Called at each step of a write or clear; a test throws or snapshots
+  /// the disk here.
+  final Future<void> Function(MitmLockCopy copy, String step) _step;
+
+  MitmSafetyLock(this._homeDirPath, this._store, this._step);
+
+  Future<File> _file() async => File(join(await _homeDirPath(), fileName));
+
+  /// Whether either copy is there; a copy that cannot be read counts as
+  /// there, so the lock fails closed.
+  Future<bool> present() async {
+    var found = false;
+    try {
+      await _step(MitmLockCopy.file, 'read');
+      if (await (await _file()).exists()) found = true;
+    } catch (_) {
+      found = true;
+    }
+    try {
+      await _step(MitmLockCopy.prefs, 'read');
+      if (await _store().readMitmSafetyLock() != null) found = true;
+    } catch (_) {
+      found = true;
+    }
+    return found;
+  }
+
+  /// Whether a copy was actually read back as there.
+  Future<bool> confirmedPresent() async {
+    try {
+      if (await (await _file()).exists()) return true;
+    } catch (_) {}
+    try {
+      if (await _store().readMitmSafetyLock() != null) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  /// Writes both copies. True once at least one is confirmed: the file
+  /// written, flushed, renamed into place, its directory synced and read
+  /// back; the setting saved and read back fresh from the store. Never
+  /// throws.
+  Future<bool> write(String reason) async {
+    final value = json.encode({
+      'reason': reason,
+      'at': DateTime.now().toUtc().toIso8601String(),
+    });
+    var saved = false;
+    try {
+      final file = await _file();
+      final temp = File('${file.path}.tmp');
+      await temp.writeAsString(value, flush: true);
+      await _step(MitmLockCopy.file, 'written');
+      await temp.rename(file.path);
+      await _step(MitmLockCopy.file, 'renamed');
+      syncDirectory(file.parent.path);
+      if (await file.readAsString() != value) {
+        throw StateError('lock file reads back otherwise');
+      }
+      await _step(MitmLockCopy.file, 'confirmed');
+      saved = true;
+    } catch (error) {
+      commonPrint.log('MITM lock file: $error', logLevel: LogLevel.error);
+    }
+    try {
+      await _step(MitmLockCopy.prefs, 'writing');
+      if (!await _store().writeMitmSafetyLock(value)) {
+        throw StateError('lock setting not saved');
+      }
+      await _step(MitmLockCopy.prefs, 'confirmed');
+      saved = true;
+    } catch (error) {
+      commonPrint.log('MITM lock setting: $error', logLevel: LogLevel.error);
+    }
+    return saved;
+  }
+
+  /// Removes the file, then the setting. True once both read back gone.
+  Future<bool> clear() async {
+    var cleared = true;
+    try {
+      await _step(MitmLockCopy.file, 'clearing');
+      final file = await _file();
+      if (await file.exists()) {
+        await file.delete();
+        syncDirectory(file.parent.path);
+      }
+      if (await file.exists()) throw StateError('lock file still there');
+      await _step(MitmLockCopy.file, 'cleared');
+    } catch (error) {
+      cleared = false;
+      commonPrint.log('MITM lock file clear: $error', logLevel: LogLevel.error);
+    }
+    try {
+      await _step(MitmLockCopy.prefs, 'clearing');
+      if (!await _store().clearMitmSafetyLock()) {
+        throw StateError('lock setting still there');
+      }
+      await _step(MitmLockCopy.prefs, 'cleared');
+    } catch (error) {
+      cleared = false;
+      commonPrint.log(
+        'MITM lock setting clear: $error',
+        logLevel: LogLevel.error,
+      );
+    }
+    return cleared;
+  }
+}
+
 /// Finishes or undoes a restore the app did not live to complete. [run]
 /// needs only the database, files and preferences, so it runs before the
 /// settings are loaded; the MITM step needs providers and runs in [finish].
@@ -805,9 +946,11 @@ class RestoreRecovery {
   /// retry.
   final _mitmOffRetryKept = <int>{};
 
-  /// Whether the journal of [id] is still there in the old format, with its
-  /// marker if it had one, for the next launch to try again.
+  /// Whether the next launch is confirmed to try again: the lock reads
+  /// back, or the journal of [id] is still there in the old format, with
+  /// its marker if it had one.
   Future<bool> _confirmOffRetry(int id, RestoreJournal journal) async {
+    if (await _lock.confirmedPresent()) return true;
     try {
       final file = File(join(journal.dirPath, _journalFileName));
       if (!await file.exists()) return false;
@@ -840,6 +983,121 @@ class RestoreRecovery {
 
   bool get needsMitm => _awaitingMitm.isNotEmpty;
 
+  /// Called at each step of writing or clearing the lock; a test throws or
+  /// snapshots the disk here.
+  @visibleForTesting
+  Future<void> Function(MitmLockCopy copy, String step)? onLockStep;
+
+  late final _lock = MitmSafetyLock(
+    _homeDirPath,
+    _preferences,
+    (copy, step) async => onLockStep?.call(copy, step),
+  );
+
+  /// The hold kept while the lock stands and no turn-off has been verified
+  /// since it was last written.
+  static const _lockHold = -2;
+
+  /// The lock may be on disk: found at launch, or written here.
+  bool _lockActive = false;
+
+  /// A copy was confirmed: found at launch, or written and read back here.
+  bool _lockSaved = false;
+
+  /// Lock writes started, and [_lockSeq] when the last verified turn-off
+  /// began: the lock is cleared only after a turn-off that followed every
+  /// write.
+  int _lockSeq = 0;
+  int _offVerifiedSeq = -1;
+  Future<void> _lockQueue = Future.value();
+
+  /// What [_settleLock] did, said once with the reports.
+  bool _lockTurnedOff = false;
+  bool _lockOffFailed = false;
+  bool _lockOffRetryKept = false;
+  bool _lockSaid = false;
+
+  /// Writes the lock and holds every module until a turn-off verified after
+  /// it. True once a copy is confirmed; otherwise every module is stopped
+  /// for this launch. Never throws.
+  Future<bool> _writeLock(String reason) {
+    _lockActive = true;
+    _lockSeq++;
+    _hold(_lockHold, null, persist: false);
+    final write = _lockQueue.then((_) => _lock.write(reason));
+    _lockQueue = write.then((_) {});
+    return write.then((saved) {
+      if (saved) {
+        _lockSaved = true;
+      } else {
+        stopMitmModules('safety lock not saved ($reason)', persist: false);
+      }
+      return saved;
+    });
+  }
+
+  /// Every module row reads off and declined.
+  Future<void> _verifyAllOff(Database db) async {
+    for (final row in await db.mitmModulesDao.query().get()) {
+      if (row.enabled || row.accepted != false) {
+        throw StateError('module ${row.id} still on after turning off');
+      }
+    }
+  }
+
+  /// A journal still pending that the lock stands in for: an old-format one
+  /// or one that cannot be read. Unknown counts as pending.
+  Future<bool> _lockEvidencePending() async {
+    try {
+      final found = await RestoreJournal.pending(await _homeDirPath());
+      return found.any(
+        (entry) =>
+            entry.$2 == null ||
+            (entry.$2!.mitmUnrecorded && entry.$2!.mitmModules == null),
+      );
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// With the lock standing: turns every module off unless a turn-off since
+  /// the last write was verified, then lifts the lock's hold, and clears
+  /// the lock once no journal it stands in for is left. Order: rows read off,
+  /// journal gone, then the lock; a crash anywhere leaves a journal or a
+  /// lock or both.
+  Future<void> _settleLock() async {
+    if (!_lockActive) return;
+    await _lockQueue;
+    // A journal's own turn-off failed this launch: its report says so, and
+    // the next launch tries again.
+    if (_mitmOffFailed.isNotEmpty) return;
+    final db = _db();
+    if (_offVerifiedSeq < _lockSeq) {
+      final seq = _lockSeq;
+      try {
+        await db.transaction(() async {
+          await db.mitmModulesDao.turnAllOff();
+          await _verifyAllOff(db);
+          await onMitmOff?.call(false);
+        });
+      } catch (error) {
+        commonPrint.log(
+          'MITM lock turn-off failed: $error',
+          logLevel: LogLevel.error,
+        );
+        _lockOffFailed = true;
+        _lockOffRetryKept = await _lock.confirmedPresent();
+        return;
+      }
+      _offVerifiedSeq = seq;
+      _lockTurnedOff = true;
+      await onMitmOff?.call(true);
+    }
+    releaseMitm(_lockHold);
+    if (await _lockEvidencePending()) return;
+    if (await _lock.clear()) _lockActive = false;
+  }
+
   final _mitmHolds = <int, List<int>?>{};
 
   /// What no MITM module may run under: every committed restore, in this
@@ -866,7 +1124,10 @@ class RestoreRecovery {
   /// Holds the [modules] restore [journalId] writes (all, when null) until
   /// [releaseMitm]. Set before the commit, so nothing runs in between. Never
   /// throws: a hold that cannot be confirmed stops every module instead.
-  void holdMitm(int journalId, List<int>? modules) {
+  void holdMitm(int journalId, List<int>? modules) =>
+      _hold(journalId, modules, persist: true);
+
+  void _hold(int journalId, List<int>? modules, {required bool persist}) {
     try {
       onHoldMitm?.call();
       _mitmHolds[journalId] = modules;
@@ -876,13 +1137,14 @@ class RestoreRecovery {
         throw StateError('hold not in effect: $hold');
       }
     } catch (error) {
-      stopMitmModules(error);
+      unawaited(stopMitmModules(error, persist: persist));
     }
   }
 
   /// Stops every module for the rest of this launch, for when what must not
-  /// run cannot be held, or cannot be known.
-  void stopMitmModules(Object reason) {
+  /// run cannot be held, or cannot be known; with [persist], also writes
+  /// the lock, so the next launch turns every module off first.
+  Future<void> stopMitmModules(Object reason, {bool persist = true}) async {
     commonPrint.log(
       'MITM modules stopped for this launch: $reason',
       logLevel: LogLevel.error,
@@ -893,6 +1155,7 @@ class RestoreRecovery {
     } catch (_) {
       // Every module reads [mitmStopped] itself as well.
     }
+    if (persist) await _writeLock('stopped: $reason');
   }
 
   /// Only once the recheck for [journalId] has completed, or its rows were
@@ -917,10 +1180,32 @@ class RestoreRecovery {
     _mitmOffFailed.clear();
     _mitmOffMarked.clear();
     _mitmOffRetryKept.clear();
+    onLockStep = null;
+    _lockActive = false;
+    _lockSaved = false;
+    _lockSeq = 0;
+    _offVerifiedSeq = -1;
+    _lockQueue = Future.value();
+    _lockTurnedOff = false;
+    _lockOffFailed = false;
+    _lockOffRetryKept = false;
+    _lockSaid = false;
     mitmHold.value = RestoreMitmHold.none;
   }
 
   Future<void> run() async {
+    // Before anything reads a module: a lock from an earlier launch holds
+    // every module until a turn-off is verified, journal or not.
+    if (await _lock.present()) {
+      _lockActive = true;
+      _lockSaved = true;
+      holdMitm(_lockHold, null);
+    }
+    await _runJournals();
+    await _settleLock();
+  }
+
+  Future<void> _runJournals() async {
     final List<(int, RestoreJournal?)> found;
     try {
       found = await RestoreJournal.pending(await _homeDirPath());
@@ -932,6 +1217,9 @@ class RestoreRecovery {
       // Whether a restore committed is unknown: no module runs until the
       // recheck, which needs no journal, has.
       holdMitm(-1, null);
+      // Rows an older build wrote on may be among them: every module is
+      // turned off before the lock goes, whatever the recheck finds.
+      await _writeLock('journals unreadable');
       _awaitingMitm.add(const _OwedMitm(-1, null));
       reports.add(const RestoreRecoveryReport(RestoreRecoveryOutcome.failed));
       return;
@@ -1004,6 +1292,10 @@ class RestoreRecovery {
       // runs; it never changes this report. The journal and marker stay
       // until it passed, so a failed one is retried at the next launch.
       holdMitm(id, null);
+      // Which rows it wrote, and whether on, is unknown: every module is
+      // turned off before the lock goes. Until a copy is confirmed the
+      // journal is not set aside.
+      await _writeLock('journal $id unreadable');
       _awaitingMitm.add(_OwedMitm(id, null));
       _report(
         id,
@@ -1031,18 +1323,22 @@ class RestoreRecovery {
       // Held, or else stopped, before trying: whether turning off works or
       // the journal survives, nothing runs on the old consent meanwhile.
       holdMitm(id, null);
+      var seq = 0;
       try {
+        // The lock outlives the journal: confirmed before anything that
+        // could lose the journal, or nothing more is done here.
+        if (!await _writeLock('old-format journal $id')) {
+          throw StateError('safety lock not saved');
+        }
+        // Every lock write so far, a stop's included, came before this.
+        seq = _lockSeq;
         // The new fingerprint is recorded before this commits, keeping the
         // old one too, so a crash at any point leaves a recorded database.
         await db.transaction(() async {
           final before = await db.restoreFingerprint();
           await db.mitmModulesDao.turnAllOff();
           // Said only once every row reads off and declined.
-          for (final row in await db.mitmModulesDao.query().get()) {
-            if (row.enabled || row.accepted != false) {
-              throw StateError('module ${row.id} still on after turning off');
-            }
-          }
+          await _verifyAllOff(db);
           if (followsCommit) {
             await journal.advance(
               journal.phase,
@@ -1062,6 +1358,7 @@ class RestoreRecovery {
       }
       // Every row reads off and declined: the hold is no longer what keeps
       // them from running. Whatever this journal still owes holds again.
+      if (_offVerifiedSeq < seq) _offVerifiedSeq = seq;
       releaseMitm(id);
       _mitmAllOff.add(id);
       await onMitmOff?.call(true);
@@ -1204,11 +1501,14 @@ class RestoreRecovery {
           logLevel: LogLevel.warning,
         );
       }
-      if (checked) releaseMitm(item.id);
+      // An unreadable journal stays, and so does its hold, until the lock
+      // standing in for it is confirmed.
+      if (checked && (journal != null || _lockSaved)) releaseMitm(item.id);
       if (journal == null) {
         // An unreadable journal whose restore committed: set aside only
-        // once its recheck passed.
-        if (checked && item.id >= 0) {
+        // once its recheck passed and the lock is confirmed; the lock goes
+        // only after every module reads off.
+        if (checked && _lockSaved && item.id >= 0) {
           await RestoreJournal._quarantineUnreadable(
             await _homeDirPath(),
             item.id,
@@ -1265,6 +1565,7 @@ class RestoreRecovery {
         ),
       );
     }
+    await _settleLock();
   }
 
   /// The launch-time remainder: every step a recovery owes completes before
@@ -1304,22 +1605,34 @@ class RestoreRecovery {
     }
   }
 
-  /// Reports are shown once; a stop is said once, with the first of them.
+  /// Reports are shown once. What the lock did, and a stop, are said once,
+  /// with the first of them, unless a report already says it.
   List<RestoreRecoveryReport> takeReports() {
     final taken = [...reports];
     reports.clear();
-    if (_mitmStopped && !_mitmStopSaid) {
-      _mitmStopSaid = true;
-      if (taken.isEmpty) {
-        taken.add(
-          const RestoreRecoveryReport(
-            RestoreRecoveryOutcome.modulesStopped,
-            mitmStopped: true,
+    void attach(RestoreRecoveryReport Function(RestoreRecoveryReport) add) {
+      taken.isEmpty
+          ? taken.add(
+              add(const RestoreRecoveryReport(RestoreRecoveryOutcome.mitmOnly)),
+            )
+          : taken[0] = add(taken[0]);
+    }
+
+    if ((_lockTurnedOff || _lockOffFailed) && !_lockSaid) {
+      _lockSaid = true;
+      if (!taken.any((r) => r.mitmAllOff || r.mitmOffFailed)) {
+        attach(
+          (report) => report.withMitmLines(
+            allOff: !_lockOffFailed,
+            offFailed: _lockOffFailed,
+            retryKept: _lockOffRetryKept,
           ),
         );
-      } else {
-        taken[0] = taken[0].withMitmStopped();
       }
+    }
+    if (_mitmStopped && !_mitmStopSaid) {
+      _mitmStopSaid = true;
+      attach((report) => report.withMitmStopped());
     }
     return taken;
   }
@@ -1373,7 +1686,7 @@ String restoreRecoveryMessage(
       l10n.restoreResultUnknownItems,
     ],
     RestoreRecoveryOutcome.failed => [l10n.restoreRecoveryFailed],
-    RestoreRecoveryOutcome.modulesStopped => const <String>[],
+    RestoreRecoveryOutcome.mitmOnly => const <String>[],
   };
   return [
     ...lines,
@@ -1392,3 +1705,23 @@ String restoreRecoveryMessage(
 }
 
 final restoreRecovery = RestoreRecovery();
+
+/// The launch-time recovery, before any provider exists. If it fails as a
+/// whole, whether a restore left modules on another device's consent is
+/// unknown: every module is stopped, and the lock written for the next
+/// launch.
+Future<void> recoverAtLaunch([RestoreRecovery? recovery]) async {
+  final target = recovery ?? restoreRecovery;
+  try {
+    await target.run();
+  } catch (error) {
+    commonPrint.log(
+      'restore recovery failed: $error',
+      logLevel: LogLevel.error,
+    );
+    await target.stopMitmModules(error);
+    target.reports.add(
+      const RestoreRecoveryReport(RestoreRecoveryOutcome.failed),
+    );
+  }
+}

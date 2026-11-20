@@ -18,6 +18,7 @@ import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/app_paths.dart';
 import '../helpers/preferences.dart';
@@ -720,9 +721,12 @@ void main() {
       loadAppLocalizations(const Locale('zh'));
       addTearDown(() => loadAppLocalizations(const Locale('en')));
       final zh = currentAppLocalizations;
+      // Which modules it wrote, and whether on, is unknown: every one was
+      // turned off before the journal was set aside.
       expect(restoreRecoveryMessage(report, zh).split('\n'), [
         '已确认：本次恢复的数据已写入数据库。',
         '无法读取待处理项，暂不能确认后续处理是否完成。',
+        zh.restoreRecoveryMitmAllOff,
       ]);
     });
 
@@ -1439,8 +1443,9 @@ void main() {
       expect(await states(), {41: (false, false), 50: (true, true)});
     });
 
-    test('when the retry cannot be confirmed kept, every module is still '
-        'held, and it never says the next launch tries again', () async {
+    test('when neither the lock nor the journal can be confirmed kept, '
+        'every module is still held, and it never says the next launch '
+        'tries again', () async {
       await oldCrash(_Crash.afterCommit);
       final [dir] = journals();
       final recovery =
@@ -1452,6 +1457,8 @@ void main() {
             ..onMitmOff = (committed) async {
               if (!committed) {
                 dir.deleteSync(recursive: true);
+                File(join(home.path, MitmSafetyLock.fileName)).deleteSync();
+                await preferences.clearMitmSafetyLock();
                 throw StateError('disk');
               }
             };
@@ -1477,14 +1484,13 @@ void main() {
         ).split('\n'),
         contains(
           '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，'
-          '所有解密模块保持暂停；但无法确认下次启动时会再次尝试关闭。'
-          '请前往解密模块页面检查。',
+          '所有解密模块已暂停；无法确认下次启动时是否会再次尝试关闭。',
         ),
       );
     });
 
-    group('a failed turn-off or hold: no module reaches the profile or the '
-        'runtime this launch', () {
+    group('the MITM safety lock: no module that ran on old consent runs '
+        'again until a turn-off is verified, journal or not', () {
       setUp(() => mitmFeature = true);
       tearDown(() {
         mitmFeature = false;
@@ -1498,11 +1504,18 @@ void main() {
           '[MITM]\n'
           'hostname = %APPEND% m$id.example.com\n';
 
-      /// What the app would run now, from a fresh container on the current
-      /// database: the Core's module rules, the modules' contents, and the
+      File lockFile() => File(join(home.path, MitmSafetyLock.fileName));
+
+      Future<({bool file, bool prefs})> lock() async => (
+        file: lockFile().existsSync(),
+        prefs: await preferences.readMitmSafetyLock() != null,
+      );
+
+      /// Everything that would run module 50 now, from a fresh container on
+      /// the current database: the Core's module rules and MITM setup, the
+      /// hosts a signing would sign for, the modules' contents, and the
       /// profile's module routing.
-      Future<({List<String> hosts, List<String> modules, List<int?> routed})>
-      reaching() async {
+      Future<Map<String, bool>> reaching() async {
         final dir = Directory(await appPath.mitmModulesDirPath)
           ..createSync(recursive: true);
         for (final id in [41, 50]) {
@@ -1517,6 +1530,7 @@ void main() {
           container.listen(enabledMitmModuleRulesProvider, (_, _) {}),
           container.listen(enabledMitmModulesProvider, (_, _) {}),
           container.listen(setupStateProvider(null), (_, _) {}),
+          container.listen(mitmSetupProvider, (_, _) {}),
         ];
         addTearDown(() {
           for (final sub in keep) {
@@ -1528,124 +1542,479 @@ void main() {
         );
         final modules = await container.read(enabledMitmModulesProvider.future);
         final setup = await container.read(setupStateProvider(null).future);
-        return (
-          hosts: [...rules.hostname],
-          modules: [for (final module in modules) module.name],
-          routed: [for (final source in setup.mitmModules) source.id],
-        );
+        await pumpEventQueue();
+        final core =
+            (container.read(mitmSetupProvider)?['hostname'] as List?) ??
+            const [];
+        final signing = await container
+            .read(mitmSignActionProvider.notifier)
+            .signingHostnames();
+        return {
+          'rules': rules.hostname.contains('m50.example.com'),
+          'core': core.contains('m50.example.com'),
+          'signing': signing.contains('m50.example.com'),
+          'contents': modules.any((module) => module.name == other.name),
+          'routing': setup.mitmModules.any((source) => source.id == 50),
+        };
       }
 
-      void expectNone(
-        ({List<String> hosts, List<String> modules, List<int?> routed}) got,
-      ) {
-        expect(got.hosts, isEmpty, reason: 'Core module rules');
-        expect(got.modules, isEmpty, reason: 'module contents');
-        expect(got.routed, isEmpty, reason: 'profile module routing');
-      }
+      void expectNone(Map<String, bool> got) =>
+          expect(got.values, everyElement(isFalse), reason: '$got');
 
-      /// The same rows run once nothing holds or stops them: what kept them
-      /// out above was the block.
-      Future<void> expectRunsUnblocked() async {
+      void expectAll(Map<String, bool> got) =>
+          expect(got.values, everyElement(isTrue), reason: '$got');
+
+      /// A fresh launch on the same files: nothing kept in memory, every
+      /// turn-off recording whether every module was held while it ran.
+      Future<({List<RestoreRecoveryReport> reports, List<bool> heldDuring})>
+      launch() async {
+        await relaunch();
         restoreRecovery.clearMitmHolds();
-        final got = await reaching();
-        expect(got.hosts, contains('m50.example.com'));
-        expect(got.modules, contains(other.name));
-        expect(got.routed, contains(50));
+        final held = <bool>[];
+        restoreRecovery.onMitmOff = (committed) async {
+          if (!committed) held.add(restoreRecovery.effectiveMitmHold.all);
+        };
+        await recoverAtLaunch();
+        if (restoreRecovery.needsMitm) {
+          await restoreRecovery.finish(() async {});
+        }
+        restoreRecovery.onMitmOff = null;
+        return (reports: restoreRecovery.takeReports(), heldDuring: held);
       }
 
-      void deleteJournalAndFail() {
+      /// Off until consented to here, then it runs.
+      Future<void> expectOffUntilConsent() async {
+        final third = await launch();
+        expect(third.reports, isEmpty);
+        expect(third.heldDuring, isEmpty, reason: 'nothing left to turn off');
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expectNone(await reaching());
+        final container = buildContainer();
+        final keep = container.listen(mitmModulesProvider, (_, _) {});
+        addTearDown(keep.close);
+        await container.read(mitmModulesProvider.future);
+        await container
+            .read(mitmModulesActionProvider.notifier)
+            .recordConsent(other.id, asksConsent: true, agreed: true);
+        await pumpEventQueue();
+        expect((await states())[50], (true, true));
+        expectAll(await reaching());
+      }
+
+      /// The second launch after a fault: every module held while turned
+      /// off, then off, the lock and journal gone, and the turn-off said.
+      Future<void> expectSecondLaunchTurnsOff() async {
+        final second = await launch();
+        expect(second.heldDuring, isNotEmpty, reason: 'turned off again');
+        expect(second.heldDuring, everyElement(isTrue));
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(await lock(), (file: false, prefs: false));
+        expect(journals(), isEmpty);
+        expectNone(await reaching());
+        final [report] = second.reports;
+        expect(report.mitmAllOff, isTrue);
+        expect(report.mitmOffFailed, isFalse);
+      }
+
+      void failTurnOffAndLoseJournal() {
         final [dir] = journals();
         restoreRecovery.onMitmOff = (committed) async {
           if (!committed) {
-            dir.deleteSync(recursive: true);
+            if (dir.existsSync()) dir.deleteSync(recursive: true);
             throw StateError('disk');
           }
         };
       }
 
-      test('turning off throws and the journal goes with it: every module '
-          'stays held; only the retry is said unconfirmed', () async {
-        await oldCrash(_Crash.afterCommit);
-        deleteJournalAndFail();
-        await restoreRecovery.run();
-        final report = restoreRecovery.takeReports().single;
+      for (final (name, turnOffFails, holdFails) in [
+        ('turning off fails and the journal goes', true, false),
+        ('the hold fails', false, true),
+        ('both', true, true),
+      ]) {
+        test('$name: blocked this launch; the next launch, journal gone, '
+            'turns every module off first; then off until consented', () async {
+          await oldCrash(_Crash.afterCommit);
+          restoreRecovery.clearMitmHolds();
+          if (turnOffFails) failTurnOffAndLoseJournal();
+          if (holdFails) {
+            restoreRecovery.onHoldMitm = () => throw StateError('hold');
+          }
+          // Crashes before the consent recheck: only run().
+          await restoreRecovery.run();
+          final [report] = restoreRecovery.takeReports();
+          final en = currentAppLocalizations;
+          final lines = restoreRecoveryMessage(report, en).split('\n');
 
+          expect(await lock(), (file: true, prefs: true));
+          expect(restoreRecovery.mitmStopped, holdFails);
+          expect(report.mitmStopped, holdFails);
+          expect(lines.contains(en.restoreRecoveryMitmStopped), holdFails);
+          if (turnOffFails) {
+            expect(await states(), {41: (true, true), 50: (true, true)});
+            expect(restoreRecovery.effectiveMitmHold.all, isTrue);
+            expect(report.mitmOffFailed, isTrue);
+            expect(report.mitmOffRetryKept, isTrue, reason: 'the lock reads');
+            expect(lines, contains(en.restoreRecoveryMitmOffFailed));
+            expect(
+              lines,
+              isNot(contains(en.restoreRecoveryMitmOffFailedNoRetry)),
+            );
+          } else {
+            expect(await states(), {41: (false, false), 50: (false, false)});
+            expect(report.mitmAllOff, isTrue);
+          }
+          expectNone(await reaching());
+
+          // The journal is lost before the next launch.
+          for (final dir in journals()) {
+            dir.deleteSync(recursive: true);
+          }
+          await expectSecondLaunchTurnsOff();
+          await expectOffUntilConsent();
+        });
+      }
+
+      for (final failing in MitmLockCopy.values) {
+        test('the ${failing.name} copy of the lock cannot be written: the '
+            'other one alone makes the next launch turn every module '
+            'off', () async {
+          await oldCrash(_Crash.afterCommit);
+          restoreRecovery.clearMitmHolds();
+          failTurnOffAndLoseJournal();
+          restoreRecovery.onLockStep = (copy, step) async {
+            if (copy == failing && step != 'read') {
+              throw StateError('$copy');
+            }
+          };
+          await restoreRecovery.run();
+          final [report] = restoreRecovery.takeReports();
+          expect(report.mitmOffRetryKept, isTrue);
+          expect(report.mitmStopped, isFalse);
+          expect(await lock(), (
+            file: failing != MitmLockCopy.file,
+            prefs: failing != MitmLockCopy.prefs,
+          ));
+          expectNone(await reaching());
+          await expectSecondLaunchTurnsOff();
+          await expectOffUntilConsent();
+        });
+      }
+
+      test('neither copy can be written: nothing that could lose the '
+          'journal is done, every module is stopped and that is said; the '
+          'journal turns them off at the next launch', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        var turnOffs = 0;
+        restoreRecovery
+          ..onMitmOff = (_) async {
+            turnOffs++;
+          }
+          ..onLockStep = (copy, step) async {
+            if (step != 'read') throw StateError('$copy');
+          };
+        await restoreRecovery.run();
+        final [report] = restoreRecovery.takeReports();
+
+        expect(turnOffs, 0, reason: 'not tried without the lock');
         expect(await states(), {41: (true, true), 50: (true, true)});
-        expect(journals(), isEmpty);
-        expect(restoreRecovery.mitmStopped, isFalse);
-        expect(restoreRecovery.mitmHold.value.all, isTrue);
-        expect(report.mitmOffFailed, isTrue);
-        expect(report.mitmOffRetryKept, isFalse);
-        expect(report.mitmStopped, isFalse);
-        final en = currentAppLocalizations;
-        final message = restoreRecoveryMessage(report, en);
-        expect(message, contains(en.restoreRecoveryMitmOffFailedNoRetry));
-        expect(message, isNot(contains(en.restoreRecoveryMitmStopped)));
-        expectNone(await reaching());
-        await expectRunsUnblocked();
-      });
-
-      test('the hold throws: every module is stopped for this launch, even '
-          'one turned on afterwards, and it says so', () async {
-        await oldCrash(_Crash.afterCommit);
-        restoreRecovery.onHoldMitm = () => throw StateError('hold');
-        await restoreRecovery.run();
-        final report = restoreRecovery.takeReports().single;
-
+        expect(journals(), hasLength(1), reason: 'the journal is the evidence');
+        expect(await lock(), (file: false, prefs: false));
         expect(restoreRecovery.mitmStopped, isTrue);
         expect(report.mitmStopped, isTrue);
-        final en = currentAppLocalizations;
-        expect(
-          restoreRecoveryMessage(report, en),
-          contains(en.restoreRecoveryMitmStopped),
-        );
-        // Turned on again, as another writer could.
-        await database.mitmModulesDao.putAll([other.toCompanion(1)]);
-        final [row] = [
-          for (final row in await database.mitmModulesDao.query().get())
-            if (row.id == 50) row,
-        ];
-        expect(row.runsUnder(RestoreMitmHold.none), isFalse);
-        expectNone(await reaching());
-        // Released holds do not lift the stop.
-        restoreRecovery.releaseMitm(-1);
-        expect(restoreRecovery.mitmStopped, isTrue);
-        await expectRunsUnblocked();
-      });
-
-      test('both: turning off and the hold throw and the journal goes: '
-          'every module is stopped, and both are said', () async {
-        await oldCrash(_Crash.afterCommit);
-        deleteJournalAndFail();
-        restoreRecovery.onHoldMitm = () => throw StateError('hold');
-        await restoreRecovery.run();
-        final report = restoreRecovery.takeReports().single;
-
-        expect(await states(), {41: (true, true), 50: (true, true)});
-        expect(journals(), isEmpty);
-        expect(restoreRecovery.mitmStopped, isTrue);
         expect(report.mitmOffFailed, isTrue);
-        expect(report.mitmOffRetryKept, isFalse);
-        expect(report.mitmStopped, isTrue);
+        expect(report.mitmOffRetryKept, isTrue, reason: 'the journal reads');
         final en = currentAppLocalizations;
         final lines = restoreRecoveryMessage(report, en).split('\n');
-        expect(lines, contains(en.restoreRecoveryMitmOffFailedNoRetry));
         expect(lines, contains(en.restoreRecoveryMitmStopped));
-        expect(lines, isNot(contains(en.restoreRecoveryMitmOffFailed)));
+        expect(lines, contains(en.restoreRecoveryMitmOffFailed));
         expectNone(await reaching());
-        await expectRunsUnblocked();
+
+        final second = await launch();
+        expect(second.heldDuring, [true]);
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(await lock(), (file: false, prefs: false));
+        expect(journals(), isEmpty);
+        expect(second.reports.single.mitmAllOff, isTrue);
+        await expectOffUntilConsent();
       });
 
-      test('a stop with nothing else to report is still said, once', () {
-        restoreRecovery.stopMitmModules('test');
+      // A crash at each point, then the next launch from the disk as it was
+      // there: either the journal or the lock or both is left, so every
+      // module is held and turned off before any runs.
+      for (final (point, copy, step, rowsOn) in [
+        (
+          'the lock file written, not yet renamed',
+          MitmLockCopy.file,
+          'written',
+          true,
+        ),
+        (
+          'the lock file renamed, its folder not yet synced',
+          MitmLockCopy.file,
+          'renamed',
+          true,
+        ),
+        ('the lock setting being written', MitmLockCopy.prefs, 'writing', true),
+        ('inside the turn-off', null, 'off', true),
+        (
+          'the turn-off committed, the lock not yet cleared',
+          null,
+          'committed',
+          false,
+        ),
+        (
+          'the journal gone, the lock not yet cleared',
+          MitmLockCopy.file,
+          'clearing',
+          false,
+        ),
+        (
+          'one copy of the lock cleared, the other not',
+          MitmLockCopy.prefs,
+          'clearing',
+          false,
+        ),
+        ('both copies cleared', MitmLockCopy.prefs, 'cleared', false),
+      ]) {
+        test('a crash with $point: the next launch keeps every module off '
+            'until consented', () async {
+          await oldCrash(_Crash.afterCommit);
+          restoreRecovery.clearMitmHolds();
+          Directory? saved;
+          Map<String, Object>? savedPrefs;
+          Future<void> snapshot() async {
+            if (saved != null) return;
+            final to = Directory.systemTemp.createTempSync('flash-crash-');
+            addTearDown(() => to.deleteSync(recursive: true));
+            _copyTree(home, to);
+            final store = await SharedPreferences.getInstance();
+            await store.reload();
+            savedPrefs = {
+              for (final key in store.getKeys()) key: store.get(key)!,
+            };
+            saved = to;
+          }
+
+          restoreRecovery
+            ..onLockStep = (c, s) async {
+              if (c == copy && s == step) await snapshot();
+            }
+            ..onMitmOff = (committed) async {
+              if ((step == 'off' && !committed) ||
+                  (step == 'committed' && committed)) {
+                await snapshot();
+              }
+            };
+          await restoreRecovery.run();
+          if (restoreRecovery.needsMitm) {
+            await restoreRecovery.finish(() async {});
+          }
+          expect(saved, isNotNull, reason: 'the point was reached');
+          expect(await states(), {41: (false, false), 50: (false, false)});
+
+          // The crash: the disk as it was at the point.
+          await db.close();
+          for (final entity in home.listSync()) {
+            entity.deleteSync(recursive: true);
+          }
+          _copyTree(saved!, home);
+          await mockPreferences(savedPrefs!);
+          db = Database(NativeDatabase(dbFile));
+          database = db;
+          expect(
+            await states(),
+            rowsOn
+                ? {41: (true, true), 50: (true, true)}
+                : {41: (false, false), 50: (false, false)},
+          );
+          final left = await lock();
+          expect(
+            journals().isNotEmpty || left.file || left.prefs || !rowsOn,
+            isTrue,
+            reason: 'a journal or a lock is left while rows may be on',
+          );
+
+          final second = await launch();
+          expect(second.heldDuring, everyElement(isTrue));
+          if (rowsOn) expect(second.heldDuring, isNotEmpty);
+          expect(await states(), {41: (false, false), 50: (false, false)});
+          expect(await lock(), (file: false, prefs: false));
+          expect(journals(), isEmpty);
+          expectNone(await reaching());
+          await expectOffUntilConsent();
+        });
+      }
+
+      test('residual: the lock and the journal both removed from outside '
+          'mid turn-off: it says the retry is unconfirmed, and nothing is '
+          'left for the next launch to act on', () async {
+        await oldCrash(_Crash.afterCommit);
+        restoreRecovery.clearMitmHolds();
+        final [dir] = journals();
+        restoreRecovery.onMitmOff = (committed) async {
+          if (!committed) {
+            dir.deleteSync(recursive: true);
+            lockFile().deleteSync();
+            await preferences.clearMitmSafetyLock();
+            throw StateError('disk');
+          }
+        };
+        await restoreRecovery.run();
         final [report] = restoreRecovery.takeReports();
-        expect(report.outcome, RestoreRecoveryOutcome.modulesStopped);
-        final en = currentAppLocalizations;
+        expect(report.mitmOffRetryKept, isFalse);
+        final zh = lookupAppLocalizations(const Locale('zh'));
         expect(
-          restoreRecoveryMessage(report, en),
-          en.restoreRecoveryMitmStopped,
+          restoreRecoveryMessage(report, zh).split('\n'),
+          contains(
+            '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，'
+            '所有解密模块已暂停；无法确认下次启动时是否会再次尝试关闭。',
+          ),
         );
-        expect(restoreRecovery.takeReports(), isEmpty);
+        expectNone(await reaching());
+
+        final second = await launch();
+        expect(second.reports, isEmpty);
+        expect(await states(), {41: (true, true), 50: (true, true)});
+      });
+
+      test('an unreadable journal whose restore committed: rows an older '
+          'build wrote on are turned off before the journal is set aside '
+          'and the lock goes', () async {
+        await oldCrash(_Crash.afterCommit);
+        final [dir] = journals();
+        File(join(dir.path, 'journal.json')).writeAsStringSync('{broken');
+        await database.mitmModulesDao.putAll([
+          _module.toCompanion(0),
+          other.toCompanion(1),
+        ]);
+        expect(await states(), {41: (true, true), 50: (true, true)});
+
+        final first = await launch();
+        expect(first.heldDuring, [true]);
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(journals(), isEmpty);
+        expect(quarantined(), hasLength(1));
+        expect(await lock(), (file: false, prefs: false));
+        final [report] = first.reports;
+        expect(report.outcome, RestoreRecoveryOutcome.committedUnconfirmed);
+        expect(report.mitmAllOff, isTrue);
+        expectNone(await reaching());
+        await expectOffUntilConsent();
+      });
+
+      test('an unreadable journal, the lock not saved: it is not set aside, '
+          'every module is stopped, and the next launch tries again', () async {
+        await oldCrash(_Crash.afterCommit);
+        final [dir] = journals();
+        File(join(dir.path, 'journal.json')).writeAsStringSync('{broken');
+        await database.mitmModulesDao.putAll([other.toCompanion(1)]);
+        await relaunch();
+        restoreRecovery.clearMitmHolds();
+        restoreRecovery.onLockStep = (copy, step) async {
+          if (step != 'read') throw StateError('$copy');
+        };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final [report] = restoreRecovery.takeReports();
+        expect(report.mitmStopped, isTrue);
+        expect(journals(), hasLength(1), reason: 'not set aside');
+        expect(quarantined(), isEmpty);
+        expectNone(await reaching());
+
+        final second = await launch();
+        expect(journals(), isEmpty);
+        expect(await lock(), (file: false, prefs: false));
+        expect(second.reports.single.mitmAllOff, isTrue);
+        await expectOffUntilConsent();
+      });
+
+      test('the journal folder cannot be read: every module is turned off, '
+          'and the lock stays while it cannot', () async {
+        await oldCrash(_Crash.afterCommit, keepKey: true);
+        await database.mitmModulesDao.putAll([other.toCompanion(1)]);
+        final root = Directory(RestoreJournal.rootOf(home.path));
+        // Listed, but its entries cannot be read.
+        Process.runSync('chmod', ['000', root.path]);
+        addTearDown(() => Process.runSync('chmod', ['755', root.path]));
+
+        final first = await launch();
+        expect(first.heldDuring, [true]);
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(await lock(), (file: true, prefs: true));
+        expect(first.reports.first.mitmAllOff, isTrue);
+        expectNone(await reaching());
+
+        Process.runSync('chmod', ['755', root.path]);
+        final second = await launch();
+        expect(await lock(), (file: false, prefs: false));
+        expect(second.reports.single.mitmAllOff, isTrue);
+        await expectOffUntilConsent();
+      });
+
+      test('recovery failing as a whole stops every module and writes the '
+          'lock; the next launch turns every module off', () async {
+        await oldCrash(_Crash.afterCommit, keepKey: true);
+        await database.mitmModulesDao.putAll([other.toCompanion(1)]);
+        for (final dir in journals()) {
+          dir.deleteSync(recursive: true);
+        }
+        await database.clearRestoreCommit(
+          (await markers()).isEmpty ? 0 : (await markers()).single,
+        );
+        final failing = _ThrowingRecovery(home);
+        await recoverAtLaunch(failing);
+        expect(failing.mitmStopped, isTrue);
+        expect(await lock(), (file: true, prefs: true));
+        final [report] = failing.takeReports();
+        expect(report.outcome, RestoreRecoveryOutcome.failed);
+        expect(report.mitmStopped, isTrue);
+
+        await expectSecondLaunchTurnsOff();
+        await expectOffUntilConsent();
+      });
+
+      test('mid-session, in a live container: a hold or a stop takes module '
+          '50 out of the Core setup and the signing list at once; a release '
+          'never lifts a stop', () async {
+        await database.mitmModulesDao.putAll([other.toCompanion(0)]);
+        final dir = Directory(await appPath.mitmModulesDirPath)
+          ..createSync(recursive: true);
+        File(join(dir.path, '50.txt')).writeAsStringSync(moduleText(50));
+        final container = buildContainer();
+        container.listen(patchClashConfigProvider, (_, _) {});
+        container.read(patchClashConfigProvider.notifier).value =
+            const PatchClashConfig(mitm: Mitm(enable: true));
+        container.listen(mitmModulesProvider, (_, _) {});
+        container.listen(mitmSetupProvider, (_, _) {});
+        Future<(bool, bool)> live() async {
+          await pumpEventQueue();
+          await container.read(enabledMitmModuleRulesProvider.future);
+          await pumpEventQueue();
+          final core =
+              (container.read(mitmSetupProvider)?['hostname'] as List?) ??
+              const [];
+          final signing = await container
+              .read(mitmSignActionProvider.notifier)
+              .signingHostnames();
+          return (
+            core.contains('m50.example.com'),
+            signing.contains('m50.example.com'),
+          );
+        }
+
+        expect(await live(), (true, true));
+        restoreRecovery.holdMitm(77, null);
+        expect(await live(), (false, false));
+        restoreRecovery.releaseMitm(77);
+        expect(await live(), (true, true));
+        restoreRecovery.holdMitm(78, const [50]);
+        expect(await live(), (false, false));
+        await restoreRecovery.stopMitmModules('test');
+        restoreRecovery.releaseMitm(78);
+        restoreRecovery.releaseMitm(-2);
+        expect(await live(), (false, false));
+        expect(await lock(), (file: true, prefs: true));
       });
     });
 
@@ -1771,5 +2140,39 @@ class _FailingSave implements Preferences {
   Future<bool> saveConfig(Config config) async => false;
 
   @override
+  Future<String?> readMitmSafetyLock() => _inner.readMitmSafetyLock();
+
+  @override
+  Future<bool> writeMitmSafetyLock(String value) =>
+      _inner.writeMitmSafetyLock(value);
+
+  @override
+  Future<bool> clearMitmSafetyLock() => _inner.clearMitmSafetyLock();
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A recovery that fails as a whole, as at launch it could.
+class _ThrowingRecovery extends RestoreRecovery {
+  _ThrowingRecovery(Directory home)
+    : super(
+        db: () => database,
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+
+  @override
+  Future<void> run() async => throw StateError('recovery');
+}
+
+void _copyTree(Directory from, Directory to) {
+  for (final entity in from.listSync()) {
+    final target = join(to.path, basename(entity.path));
+    if (entity is Directory) {
+      _copyTree(entity, Directory(target)..createSync(recursive: true));
+    } else if (entity is File) {
+      entity.copySync(target);
+    }
+  }
 }

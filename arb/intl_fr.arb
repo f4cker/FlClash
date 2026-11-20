@@ -703,7 +703,7 @@
   "restoreRecoveryFailed": "La dernière restauration a été interrompue et n’a pas pu être traitée au démarrage. Son journal a été conservé et sera repris au prochain démarrage de l’app.",
   "restoreRecoveryMitmAllOff": "Impossible de déterminer quels modules MITM la dernière restauration concernait. Par sécurité, tous les modules MITM ont été désactivés ; ils ne s’exécutent qu’une fois de nouveau acceptés sur cet appareil. Leur configuration et leurs fichiers sont conservés.",
   "restoreRecoveryMitmOffFailed": "Impossible de déterminer quels modules MITM la dernière restauration concernait, et tous n’ont pas pu être désactivés. Tous les modules MITM restent en pause tant que l’app est ouverte ; la désactivation sera retentée au prochain démarrage.",
-  "restoreRecoveryMitmOffFailedNoRetry": "Impossible de déterminer quels modules MITM la dernière restauration concernait, et tous n’ont pas pu être désactivés. Tous les modules MITM restent en pause tant que l’app est ouverte, mais il est impossible de confirmer que la désactivation sera retentée au prochain démarrage. Vérifiez la page des modules MITM.",
+  "restoreRecoveryMitmOffFailedNoRetry": "Impossible de déterminer quels modules MITM la dernière restauration concernait, et tous n’ont pas pu être désactivés. Tous les modules MITM sont en pause tant que l’app est ouverte ; impossible de confirmer si la désactivation sera retentée au prochain démarrage.",
   "restoreRecoveryMitmStopped": "Une erreur s’est produite lors de la mise en pause des modules MITM. Par sécurité, tous les modules MITM sont arrêtés tant que l’app est ouverte.",
   "restoreContinue": "Continuer",
   "pruneCache": "Nettoyer le cache",

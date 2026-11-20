@@ -2213,7 +2213,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailedNoRetry =>
-      '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，所有解密模块保持暂停；但无法确认下次启动时会再次尝试关闭。请前往解密模块页面检查。';
+      '无法确定上次恢复涉及哪些解密模块，也未能关闭全部模块。本次运行期间，所有解密模块已暂停；无法确认下次启动时是否会再次尝试关闭。';
 
   @override
   String get restoreRecoveryMitmStopped => '暂停解密模块时出错。为安全起见，本次运行期间已停止所有解密模块。';

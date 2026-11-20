@@ -277,22 +277,7 @@ class Bootstrap {
     }
   }
 
-  Future<void> _recoverInterruptedRestore() async {
-    try {
-      await restoreRecovery.run();
-    } catch (error) {
-      commonPrint.log(
-        'restore recovery failed: $error',
-        logLevel: LogLevel.error,
-      );
-      // Whether a restore left modules on another device's consent is
-      // unknown: none runs this launch.
-      restoreRecovery.stopMitmModules(error);
-      restoreRecovery.reports.add(
-        const RestoreRecoveryReport(RestoreRecoveryOutcome.failed),
-      );
-    }
-  }
+  Future<void> _recoverInterruptedRestore() => recoverAtLaunch();
 
   Future<void> _showCrashRecoveryTip() async {
     switch (_bootDecision.recovery) {

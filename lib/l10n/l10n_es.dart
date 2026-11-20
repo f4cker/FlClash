@@ -2381,7 +2381,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailedNoRetry =>
-      'No se puede determinar qué módulos MITM incluyó la última restauración y no se pudieron desactivar todos. Todos los módulos MITM quedan en pausa mientras la app esté abierta, pero no se puede confirmar que en el próximo inicio se vuelva a intentar desactivarlos. Revisa la página de módulos MITM.';
+      'No se puede determinar qué módulos MITM incluyó la última restauración y no se pudieron desactivar todos. Todos los módulos MITM están en pausa mientras la app esté abierta; no se puede confirmar si en el próximo inicio se volverá a intentar desactivarlos.';
 
   @override
   String get restoreRecoveryMitmStopped =>

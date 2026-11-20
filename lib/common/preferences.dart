@@ -50,6 +50,35 @@ class Preferences {
     return _instance!;
   }
 
+  static const mitmSafetyLockKey = 'mitmSafetyLock';
+
+  /// The settings copy of the MITM safety lock, read fresh from the store;
+  /// null when the store cannot be opened.
+  Future<String?> readMitmSafetyLock() async {
+    final store = await _store.value;
+    if (store == null) return null;
+    await store.reload();
+    return store.getString(mitmSafetyLockKey);
+  }
+
+  /// Whether [value] was saved and reads back fresh from the store.
+  Future<bool> writeMitmSafetyLock(String value) async {
+    final store = await _store.value;
+    if (store == null) return false;
+    if (!await store.setString(mitmSafetyLockKey, value)) return false;
+    await store.reload();
+    return store.getString(mitmSafetyLockKey) == value;
+  }
+
+  /// Whether the lock is gone, read back fresh from the store.
+  Future<bool> clearMitmSafetyLock() async {
+    final store = await _store.value;
+    if (store == null) return true;
+    await store.remove(mitmSafetyLockKey);
+    await store.reload();
+    return !store.containsKey(mitmSafetyLockKey);
+  }
+
   Future<String?> getReleaseHistoryCache() async => (await _store.value)
       ?.getString('releaseHistoryCache:$releaseHistoryRepository');
 

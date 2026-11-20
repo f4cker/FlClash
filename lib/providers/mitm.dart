@@ -387,6 +387,13 @@ class MitmSignAction extends _$MitmSignAction {
   @visibleForTesting
   static Duration modulesWait = const Duration(seconds: 2);
 
+  /// What a signing now would sign for: the hosts [_hostnames] reads.
+  @visibleForTesting
+  Future<List<String>> signingHostnames() async => (await _hostnames(
+    ref.read(patchClashConfigProvider).mitm,
+    modulesWait,
+  )).hostnames;
+
   /// The list the Core decrypts with [mitm], the modules' part read fresh: a
   /// module just turned off is gone from it even before the Core hears. While
   /// the modules cannot be read only the user's hosts sign, never more than

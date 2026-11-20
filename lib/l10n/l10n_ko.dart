@@ -2298,7 +2298,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmOffFailedNoRetry =>
-      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되지만, 다음 실행 시 다시 끄기를 시도할지는 확인할 수 없습니다. 복호화 모듈 페이지를 확인하세요.';
+      '지난 복원이 어떤 복호화 모듈과 관련되었는지 알 수 없고, 모든 모듈을 끄지도 못했습니다. 앱이 실행되는 동안 모든 복호화 모듈은 일시 중지되었습니다. 다음 실행 시 다시 끄기를 시도할지는 확인할 수 없습니다.';
 
   @override
   String get restoreRecoveryMitmStopped =>
