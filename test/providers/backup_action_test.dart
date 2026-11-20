@@ -222,7 +222,7 @@ void main() {
         MigrationData(profiles: [_sub(77712, 'Restored')]),
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (plan, {restoresMitm = false}) async {
+        confirm: (plan, {mitmModules = const []}) async {
           shown = plan;
           return true;
         },
@@ -273,19 +273,24 @@ void main() {
           ),
         ],
       );
-      final asked = <(bool, bool)>[];
+      final asked = <(bool, List<(int, String)>)>[];
       var reachedPublish = false;
       action.beforeRestorePublish = () async => reachedPublish = true;
       final result = await action.applyRestore(
         data,
         RestoreOption.all,
-        confirm: (plan, {restoresMitm = false}) async {
-          asked.add((plan.isEmpty, restoresMitm));
+        confirm: (plan, {mitmModules = const []}) async {
+          asked.add((
+            plan.isEmpty,
+            [for (final m in mitmModules) (m.id, m.name)],
+          ));
           return false;
         },
       );
       expect(result, isNull);
-      expect(asked, [(true, true)], reason: 'asked once, before any write');
+      expect(asked, hasLength(1), reason: 'asked once, before any write');
+      expect(asked.single.$1, isTrue);
+      expect(asked.single.$2, [(88802, 'From backup')]);
       expect(reachedPublish, isFalse);
       final rows = await testDatabase.mitmModulesDao.query().get();
       expect(rows.map((m) => (m.id, m.enabled, m.accepted)), [
@@ -300,6 +305,40 @@ void main() {
         isEmpty,
         reason: 'no journal was started',
       );
+    });
+
+    test('confirming a MITM-only restore never consents: the module is '
+        'written off and not accepted', () async {
+      final container = buildContainer();
+      final action = actionOf(container);
+      final listed = <int>[];
+      final result = await action.applyRestore(
+        MigrationData(
+          mitmModules: [
+            for (final id in [88811, 88811, 88812])
+              MitmModule(
+                id: id,
+                name: 'From backup $id',
+                enabled: true,
+                accepted: true,
+                lastUpdateTime: DateTime(2026),
+              ),
+          ],
+        ),
+        RestoreOption.all,
+        confirm: (plan, {mitmModules = const []}) async {
+          listed.addAll([for (final m in mitmModules) m.id]);
+          return true;
+        },
+      );
+      expect(result, isNotNull);
+      expect(listed, [88811, 88812], reason: 'each module listed once');
+      final rows = {
+        for (final m in await testDatabase.mitmModulesDao.query().get())
+          m.id: (m.enabled, m.accepted),
+      };
+      expect(rows[88811], (false, false));
+      expect(rows[88812], (false, false));
     });
 
     test('an override that removes relations needs confirmation; cancel '
@@ -331,7 +370,7 @@ void main() {
         data,
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (plan, {restoresMitm = false}) async {
+        confirm: (plan, {mitmModules = const []}) async {
           declined = plan;
           return false;
         },
@@ -367,7 +406,7 @@ void main() {
         data,
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (_, {restoresMitm = false}) async => true,
+        confirm: (_, {mitmModules = const []}) async => true,
       );
 
       expect(result!.plan.removals.single.reason.id, 'source-missing');
@@ -406,7 +445,7 @@ void main() {
             ],
           ),
           RestoreOption.onlyProfiles,
-          confirm: (plan, {restoresMitm = false}) async {
+          confirm: (plan, {mitmModules = const []}) async {
             shown = plan;
             return true;
           },
@@ -462,7 +501,7 @@ void main() {
           MigrationData(profiles: [_sub(77792, 'Restored')]),
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
-          confirm: (_, {restoresMitm = false}) async {
+          confirm: (_, {mitmModules = const []}) async {
             final current = await testDatabase.mountsDao.target(77791);
             final saved = await testDatabase.mountsDao.save(
               targetId: 77791,

@@ -132,6 +132,13 @@ RestoreMountPlan _overridePlan() => planRestoreMounts(
   },
 );
 
+/// MITM modules a backup carries; two share a name.
+const _mitm = [
+  RestoreMitmModule(41, '广告过滤'),
+  RestoreMitmModule(42, '广告过滤'),
+  RestoreMitmModule(50, '比价助手'),
+];
+
 /// An old backup without mount data, as in the narrow mockup.
 RestoreMountPlan _legacyPlan() => planRestoreMounts(
   isOverride: true,
@@ -363,6 +370,40 @@ void main() {
       expect(find.text('来自备份'), findsOne);
     });
 
+    testWidgets('an override says same before and after, never kept', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      final rows = restoreMountRows(_overridePlan(), l10n);
+      String pair(RestoreMountRow r) => '${r.owner!.label}←${r.source}';
+      expect(rows[RestoreMountGroup.keep], isEmpty);
+      expect(
+        {for (final r in rows[RestoreMountGroup.same]!) pair(r)},
+        {'晨光配置←海岸订阅', '远行配置←远行订阅'},
+      );
+      expect(
+        {for (final r in rows[RestoreMountGroup.same]!) r.tag},
+        {l10n.restoreMountTagSame},
+      );
+      // A merge never uses the override's wording.
+      expect(
+        restoreMountRows(_mergePlan(), l10n)[RestoreMountGroup.same],
+        isEmpty,
+      );
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _overridePlan()),
+        locale: const Locale('zh'),
+        size: const Size(860, 1400),
+      );
+      expect(find.text('恢复前后相同 2 条'), findsOne);
+      expect(find.text('恢复前后相同 · 2'), findsOne);
+      expect(find.text('前后相同'), findsNWidgets(2));
+      expect(find.textContaining('保留的关系'), findsNothing);
+      expect(find.textContaining(RegExp(r'^保留 \d+ 条$')), findsNothing);
+      expect(find.text('保留'), findsNothing);
+    });
+
     testWidgets('a plan with nothing new from the backup shows no restore '
         'chip or group', (tester) async {
       await host(
@@ -569,39 +610,100 @@ void main() {
       );
     });
 
-    testWidgets('the MITM re-consent line shows only when the backup '
-        'carries modules', (tester) async {
-      const line = '从备份恢复的解密模块需要在本机重新同意后才会运行。';
+    test('MITM rows: backup order, a shared or missing name carries the '
+        'id, each off after the restore', () {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      final rows = restoreMitmRows([
+        ..._mitm,
+        const RestoreMitmModule(60, ''),
+      ], l10n);
+      expect(
+        [for (final r in rows) r.title],
+        ['广告过滤（标识 41）', '广告过滤（标识 42）', '比价助手', '名称不可用（标识 60）'],
+      );
+      expect({for (final r in rows) r.tag}, {'恢复后关闭'});
+    });
+
+    testWidgets('with mount changes the MITM modules are their own group, '
+        'and absent without modules', (tester) async {
       await host(
         tester,
-        () => RestoreMountConfirmSheet(plan: _mergePlan(), restoresMitm: true),
+        () => RestoreMountConfirmSheet(plan: _mergePlan(), mitmModules: _mitm),
         locale: const Locale('zh'),
+        size: const Size(860, 2000),
       );
-      expect(find.text(line), findsOne);
+      expect(find.text('需要在本机重新同意的解密模块 · 3'), findsOne);
+      expect(find.text('这些模块恢复后默认关闭，需在本机重新同意后才能运行。'), findsOne);
+      expect(find.text('比价助手'), findsOne);
+      expect(find.text('恢复后关闭'), findsNWidgets(3));
+      // The mount parts and their action stay as they are.
+      expect(find.text('保留 2 条'), findsOne);
+      expect(find.text('恢复并替换'), findsOne);
+      expect(find.byType(Checkbox), findsOne);
       await host(
         tester,
         () => RestoreMountConfirmSheet(plan: _mergePlan()),
         locale: const Locale('zh'),
       );
-      expect(find.text(line), findsNothing);
+      expect(find.textContaining('解密模块'), findsNothing);
+      expect(find.text('恢复后关闭'), findsNothing);
     });
 
-    testWidgets('a MITM-only restore shows the line with no mount changes, '
-        'and cancel pops false', (tester) async {
+    testWidgets('a MITM-only restore shows only the modules: no mount '
+        'banner, chips or no-change line; plain Restore, no checkbox; '
+        'cancel pops false', (tester) async {
       final popped = await pushSheet(
         tester,
         const RestoreMountConfirmSheet(
           plan: RestoreMountPlan(isOverride: false, mountsCarried: true),
-          restoresMitm: true,
+          mitmModules: _mitm,
         ),
       );
       final l10n = currentAppLocalizations;
-      expect(find.text(l10n.restoreMitmReconsent), findsOne);
-      expect(find.text(l10n.restoreMountNoChanges), findsOne);
+      expect(find.text(l10n.restoreMitmSection('3')), findsOne);
+      expect(find.text(l10n.restoreMitmNote), findsOne);
+      expect(find.text(l10n.restoreMitmTagOff), findsNWidgets(3));
+      expect(find.text(l10n.restoreIrreversible), findsOne);
+      expect(find.text(l10n.restoreMountMergeLead), findsNothing);
+      expect(find.text(l10n.restoreMountNoChanges), findsNothing);
+      expect(find.text(l10n.restoreMountKeepCount('0')), findsNothing);
+      expect(find.text(l10n.restoreMountRemoveCount('0')), findsNothing);
+      expect(find.text(l10n.restoreMountConfirmMerge), findsNothing);
+      expect(find.text(l10n.restoreOverrideDeletesLocal), findsNothing);
       expect(find.byType(Checkbox), findsNothing);
       await tester.tap(find.text(l10n.cancel));
       await tester.pumpAndSettle();
       expect(popped, [false]);
+    });
+
+    testWidgets('a MITM-only restore confirms with plain Restore', (
+      tester,
+    ) async {
+      final popped = await pushSheet(
+        tester,
+        const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: false, mountsCarried: true),
+          mitmModules: _mitm,
+        ),
+      );
+      await tester.tap(find.text(currentAppLocalizations.restoreMitmConfirm));
+      await tester.pumpAndSettle();
+      expect(popped, [true]);
+    });
+
+    testWidgets('a MITM-only override still says it deletes what the '
+        'backup lacks', (tester) async {
+      await pushSheet(
+        tester,
+        const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: true, mountsCarried: true),
+          mitmModules: _mitm,
+        ),
+      );
+      final l10n = currentAppLocalizations;
+      expect(find.text(l10n.restoreOverrideDeletesLocal), findsOne);
+      expect(find.text(l10n.restoreMountOverrideLead), findsNothing);
+      expect(find.text(l10n.restoreMitmConfirm), findsOne);
     });
 
     testWidgets('an empty plan says no relation changes', (tester) async {
@@ -1059,7 +1161,7 @@ void main() {
         () => RestoreMountConfirmSheet(
           plan: _mergePlan(),
           backupName: '示例备份 · 2026年11月18日 10:30',
-          restoresMitm: true,
+          mitmModules: _mitm,
         ),
         locale: const Locale('zh'),
         size: const Size(860, 1240),
@@ -1096,7 +1198,7 @@ void main() {
     testWidgets('confirm dark zh', skip: !shots, (tester) async {
       await host(
         tester,
-        () => RestoreMountConfirmSheet(plan: _mergePlan(), restoresMitm: true),
+        () => RestoreMountConfirmSheet(plan: _mergePlan(), mitmModules: _mitm),
         locale: const Locale('zh'),
         size: const Size(860, 1240),
         themeMode: ThemeMode.dark,
@@ -1185,15 +1287,79 @@ void main() {
       await shoot(tester, 'restore-confirm-narrow-zh-200');
     });
 
+    testWidgets(
+      'confirm narrow zh 200% scrolled to the actions',
+      skip: !shots,
+      (tester) async {
+        await host(
+          tester,
+          () => RestoreMountConfirmSheet(
+            plan: _mergePlan(),
+            backupName: '示例备份 · 2026年11月18日 10:30',
+            mitmModules: _mitm,
+          ),
+          locale: const Locale('zh'),
+          size: const Size(393, 852),
+          textScale: 2,
+        );
+        final scrollable = find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        final position = tester.state<ScrollableState>(scrollable).position;
+        // Lazy rows refine the extent as they are built: go to the end
+        // until it holds.
+        for (var i = 0; i < 20; i++) {
+          position.jumpTo(position.maxScrollExtent);
+          await tester.pumpAndSettle();
+          if (find.byType(Checkbox).evaluate().isNotEmpty &&
+              position.pixels == position.maxScrollExtent) {
+            break;
+          }
+        }
+        expect(position.pixels, greaterThan(0));
+        // The whole action area is on screen: checkbox and both buttons.
+        final screen = Offset.zero & const Size(393, 852);
+        for (final part in [
+          find.byType(Checkbox),
+          find.text('取消'),
+          find.text('恢复并替换'),
+        ]) {
+          final rect = tester.getRect(part);
+          expect(
+            rect.top >= screen.top && rect.bottom <= screen.bottom,
+            isTrue,
+            reason: '$part at $rect',
+          );
+        }
+        // The primary label is laid out whole, not cut.
+        final label = tester.renderObject<RenderParagraph>(find.text('恢复并替换'));
+        expect(label.didExceedMaxLines, isFalse);
+        final text = tester.getRect(find.text('恢复并替换'));
+        final button = tester.getRect(find.byType(FilledButton));
+        expect(
+          button.contains(text.topLeft) &&
+              button.contains(text.bottomRight - const Offset(0.5, 0.5)),
+          isTrue,
+          reason: 'label $text inside button $button',
+        );
+        expect(tester.takeException(), isNull);
+        await shoot(tester, 'restore-confirm-narrow-zh-200-bottom');
+      },
+    );
+
     testWidgets('confirm MITM only zh', skip: !shots, (tester) async {
       await host(
         tester,
         () => const RestoreMountConfirmSheet(
           plan: RestoreMountPlan(isOverride: false, mountsCarried: true),
-          restoresMitm: true,
+          backupName: '示例备份 · 2026年11月18日 10:30',
+          mitmModules: _mitm,
         ),
         locale: const Locale('zh'),
-        size: const Size(860, 560),
+        size: const Size(860, 640),
       );
       await shoot(tester, 'restore-confirm-mitm-only-zh');
     });

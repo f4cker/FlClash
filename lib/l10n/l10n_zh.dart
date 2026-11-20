@@ -1866,9 +1866,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreMountLegacyNote => '不把缺少挂载数据解释为空列表；不清空本地关系。';
 
   @override
-  String get restoreMitmReconsent => '从备份恢复的解密模块需要在本机重新同意后才会运行。';
-
-  @override
   String restoreMountRemoveCount(Object count) {
     return '移除 $count 条';
   }
@@ -1987,6 +1984,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreMountTagRestore => '来自备份';
+
+  @override
+  String restoreMitmSection(Object count) {
+    return '需要在本机重新同意的解密模块 · $count';
+  }
+
+  @override
+  String get restoreMitmNote => '这些模块恢复后默认关闭，需在本机重新同意后才能运行。';
+
+  @override
+  String get restoreMitmTagOff => '恢复后关闭';
+
+  @override
+  String get restoreMitmConfirm => '恢复';
+
+  @override
+  String get restoreOverrideDeletesLocal =>
+      '覆盖恢复会以备份替换本机数据；本机有而备份中没有的项目（包括解密模块）会被删除。';
+
+  @override
+  String restoreMountSameCount(Object count) {
+    return '恢复前后相同 $count 条';
+  }
+
+  @override
+  String restoreMountSameSection(Object count) {
+    return '恢复前后相同 · $count';
+  }
+
+  @override
+  String get restoreMountTagSame => '前后相同';
 
   @override
   String get restoreMountTagCheck => '待检查';

@@ -3636,12 +3636,6 @@ abstract class AppLocalizations {
   /// **'Missing mount data is not read as an empty list; local relations are not cleared.'**
   String get restoreMountLegacyNote;
 
-  /// No description provided for @restoreMitmReconsent.
-  ///
-  /// In en, this message translates to:
-  /// **'MITM modules restored from the backup run only after you agree to them again on this device.'**
-  String get restoreMitmReconsent;
-
   /// No description provided for @restoreMountRemoveCount.
   ///
   /// In en, this message translates to:
@@ -3809,6 +3803,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'From backup'**
   String get restoreMountTagRestore;
+
+  /// No description provided for @restoreMitmSection.
+  ///
+  /// In en, this message translates to:
+  /// **'MITM modules to agree to again on this device · {count}'**
+  String restoreMitmSection(Object count);
+
+  /// No description provided for @restoreMitmNote.
+  ///
+  /// In en, this message translates to:
+  /// **'These modules are off after the restore and run only after you agree to them again on this device.'**
+  String get restoreMitmNote;
+
+  /// No description provided for @restoreMitmTagOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off after restore'**
+  String get restoreMitmTagOff;
+
+  /// No description provided for @restoreMitmConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restoreMitmConfirm;
+
+  /// No description provided for @restoreOverrideDeletesLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'An override restore replaces the data on this device with the backup; items here that the backup lacks, MITM modules included, are deleted.'**
+  String get restoreOverrideDeletesLocal;
+
+  /// No description provided for @restoreMountSameCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Same before and after {count}'**
+  String restoreMountSameCount(Object count);
+
+  /// No description provided for @restoreMountSameSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Same before and after · {count}'**
+  String restoreMountSameSection(Object count);
+
+  /// No description provided for @restoreMountTagSame.
+  ///
+  /// In en, this message translates to:
+  /// **'Unchanged'**
+  String get restoreMountTagSame;
 
   /// No description provided for @restoreMountTagCheck.
   ///

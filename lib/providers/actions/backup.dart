@@ -7,10 +7,14 @@ typedef BackupDelivery = Future<bool> Function(String archivePath);
 typedef BackupFetch = Future<String?> Function(String downloadPath);
 
 /// Shown the mount plan of a restore before anything is written; false
-/// cancels it. [restoresMitm] says the backup carries MITM modules, which
-/// the restore writes turned off until consented to on this device.
+/// cancels it. [mitmModules] are the backup's MITM modules the restore
+/// writes, each turned off until consented to on this device; confirming
+/// never consents to them.
 typedef RestoreMountConfirm =
-    Future<bool> Function(RestoreMountPlan plan, {bool restoresMitm});
+    Future<bool> Function(
+      RestoreMountPlan plan, {
+      List<RestoreMitmModule> mitmModules,
+    });
 
 /// What a committed restore did to mounts. [stillPending] are the targets
 /// that stay locked until checked again.
@@ -188,10 +192,14 @@ class BackupAction extends _$BackupAction {
     }
     // MITM modules are written off until consented to here, which is said
     // before the restore even when no mount changes.
-    final restoresMitm = data.mitmModules.isNotEmpty;
-    if (!preview.isEmpty || restoresMitm) {
+    // Every module in the backup is written, by id, so each is listed once.
+    final mitmModules = [
+      for (final m in {for (final m in data.mitmModules) m.id: m}.values)
+        RestoreMitmModule(m.id, m.name),
+    ];
+    if (!preview.isEmpty || mitmModules.isNotEmpty) {
       final accepted = switch (confirm) {
-        final confirm? => await confirm(preview, restoresMitm: restoresMitm),
+        final confirm? => await confirm(preview, mitmModules: mitmModules),
         null => !preview.hasLosses,
       };
       if (!accepted) return null;

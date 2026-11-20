@@ -1896,10 +1896,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'Missing mount data is not read as an empty list; local relations are not cleared.';
 
   @override
-  String get restoreMitmReconsent =>
-      'MITM modules restored from the backup run only after you agree to them again on this device.';
-
-  @override
   String restoreMountRemoveCount(Object count) {
     return 'Remove $count';
   }
@@ -2023,6 +2019,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreMountTagRestore => 'From backup';
+
+  @override
+  String restoreMitmSection(Object count) {
+    return 'この端末で再度同意が必要な復号モジュール · $count';
+  }
+
+  @override
+  String get restoreMitmNote => 'これらのモジュールは復元後にオフになり、この端末で再度同意するまで実行されません。';
+
+  @override
+  String get restoreMitmTagOff => '復元後オフ';
+
+  @override
+  String get restoreMitmConfirm => '復元';
+
+  @override
+  String get restoreOverrideDeletesLocal =>
+      '上書き復元では、この端末のデータをバックアップで置き換えます。バックアップにない項目（復号モジュールを含む）は削除されます。';
+
+  @override
+  String restoreMountSameCount(Object count) {
+    return '復元前後で同じ $count 件';
+  }
+
+  @override
+  String restoreMountSameSection(Object count) {
+    return '復元前後で同じ · $count';
+  }
+
+  @override
+  String get restoreMountTagSame => '変更なし';
 
   @override
   String get restoreMountTagCheck => 'To check';

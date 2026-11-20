@@ -98,6 +98,15 @@ class RestoreMountReplacement {
   };
 }
 
+/// A MITM module a restore writes, as the confirmation lists it. Every one
+/// is written turned off and not consented to.
+class RestoreMitmModule {
+  final int id;
+  final String name;
+
+  const RestoreMitmModule(this.id, this.name);
+}
+
 enum RestoreMountOrigin { local, backup }
 
 class RestoreMountKept {

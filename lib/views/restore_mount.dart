@@ -139,8 +139,20 @@ String restoreMountReasonText(
   RestoreMountReason.notInBackup => l10n.restoreMountReasonNotInBackup,
 };
 
-/// One group of the confirmation list, with its true total.
-enum RestoreMountGroup { remove, replace, keep, restore, check, invalid }
+/// One group of the confirmation list, with its true total. [keep] is a
+/// merge's local relations left untouched; [same] is an override's
+/// relations rebuilt exactly as they were. The two never mix. [mitm] lists
+/// the MITM modules the restore writes turned off.
+enum RestoreMountGroup {
+  remove,
+  replace,
+  keep,
+  same,
+  restore,
+  check,
+  invalid,
+  mitm,
+}
 
 /// A row as the list shows it; the confirmation sheet and its tests read
 /// the same data.
@@ -179,8 +191,9 @@ class RestoreMountRow {
        reasonId = null;
 }
 
-/// Groups the plan for the list: remove, replace, keep (local relations
-/// left as they are), restore (relations the backup brings), then to
+/// Groups the plan for the list: remove, replace, keep (a merge's local
+/// relations left as they are) or same (an override's relations rebuilt
+/// identical to before), restore (relations the backup brings), then to
 /// check, and last the backup relations that are not written.
 Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
   RestoreMountPlan plan,
@@ -230,14 +243,27 @@ Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
           tag: l10n.restoreMountTagReplace,
         ),
     ],
+    // An override rebuilds every target it touches, so a relation that is
+    // there before and after was not left alone: it is the same, not kept.
     RestoreMountGroup.keep: [
-      for (final k in plan.keptLocally)
-        RestoreMountRow(
-          group: RestoreMountGroup.keep,
-          owner: k.relation.target,
-          source: name(k.relation.source),
-          tag: l10n.restoreMountTagKeep,
-        ),
+      if (!plan.isOverride)
+        for (final k in plan.keptLocally)
+          RestoreMountRow(
+            group: RestoreMountGroup.keep,
+            owner: k.relation.target,
+            source: name(k.relation.source),
+            tag: l10n.restoreMountTagKeep,
+          ),
+    ],
+    RestoreMountGroup.same: [
+      if (plan.isOverride)
+        for (final k in plan.keptLocally)
+          RestoreMountRow(
+            group: RestoreMountGroup.same,
+            owner: k.relation.target,
+            source: name(k.relation.source),
+            tag: l10n.restoreMountTagSame,
+          ),
     ],
     RestoreMountGroup.restore: [
       for (final k in plan.restoredFromBackup)
@@ -262,6 +288,28 @@ Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
       for (final r in plan.invalid) removal(r, RestoreMountGroup.invalid),
     ],
   };
+}
+
+/// The MITM modules a restore writes, in backup order. A name shared by
+/// two modules, or a missing one, carries the module's id.
+List<RestoreMountRow> restoreMitmRows(
+  List<RestoreMitmModule> modules,
+  AppLocalizations l10n,
+) {
+  bool dup(RestoreMitmModule m) =>
+      modules.any((o) => o.id != m.id && o.name == m.name);
+  return [
+    for (final m in modules)
+      RestoreMountRow.step(
+        group: RestoreMountGroup.mitm,
+        title: m.name.isEmpty
+            ? l10n.restoreMountNameUnavailable('${m.id}')
+            : dup(m)
+            ? l10n.restoreMountWithId(m.name, '${m.id}')
+            : m.name,
+        tag: l10n.restoreMitmTagOff,
+      ),
+  ];
 }
 
 /// Lays out a sheet: on a wide, tall window the details scroll on their
@@ -493,8 +541,9 @@ class _Chip extends StatelessWidget {
 List<Widget> _groupSlivers(
   BuildContext context,
   String heading,
-  List<RestoreMountRow> rows,
-) {
+  List<RestoreMountRow> rows, {
+  String? note,
+}) {
   if (rows.isEmpty) return const [];
   final p = _Palette.of(context);
   final l10n = AppLocalizations.of(context);
@@ -502,10 +551,23 @@ List<Widget> _groupSlivers(
   return [
     SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 8),
-        child: Semantics(
-          header: true,
-          child: Text(heading, style: _group(context, p)),
+        padding: EdgeInsets.only(top: 20, bottom: note == null ? 8 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              header: true,
+              child: Text(heading, style: _group(context, p)),
+            ),
+            if (note != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  note,
+                  style: _body(context, p).copyWith(color: p.secondary),
+                ),
+              ),
+          ],
         ),
       ),
     ),
@@ -522,10 +584,13 @@ List<Widget> _groupSlivers(
               row.group == RestoreMountGroup.check;
           final tag = Text(
             row.tag,
-            style: _aux(
-              context,
-              p,
-            ).copyWith(color: danger ? p.danger : p.accent),
+            style: _aux(context, p).copyWith(
+              color: danger
+                  ? p.danger
+                  : row.group == RestoreMountGroup.mitm
+                  ? p.secondary
+                  : p.accent,
+            ),
           );
           final details = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,15 +655,15 @@ class RestoreMountConfirmSheet extends StatefulWidget {
   /// The backup's name, as the user picked it, when known.
   final String? backupName;
 
-  /// The backup carries MITM modules; they are written turned off until
-  /// consented to on this device.
-  final bool restoresMitm;
+  /// The backup's MITM modules the restore writes, each turned off until
+  /// consented to on this device. Confirming never consents to them.
+  final List<RestoreMitmModule> mitmModules;
 
   const RestoreMountConfirmSheet({
     super.key,
     required this.plan,
     this.backupName,
-    this.restoresMitm = false,
+    this.mitmModules = const [],
   });
 
   @override
@@ -624,6 +689,9 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
     final l10n = AppLocalizations.of(context);
     final p = _Palette.of(context);
     final rows = restoreMountRows(plan, l10n);
+    final mitmRows = restoreMitmRows(widget.mitmModules, l10n);
+    // Only MITM modules and no mount change: nothing about mounts is shown.
+    final mitmOnly = plan.isEmpty && mitmRows.isNotEmpty;
     final title = plan.isOverride
         ? l10n.restoreMountTitleOverride
         : l10n.restoreMountTitleMerge;
@@ -646,7 +714,9 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
           l10n.restoreMountReplaceCount('${plan.replacementCount}'),
           loss: plan.replacementCount > 0,
         ),
-        _Chip(l10n.restoreMountKeepCount('${plan.keptLocally.length}')),
+        plan.isOverride
+            ? _Chip(l10n.restoreMountSameCount('${plan.keptLocally.length}'))
+            : _Chip(l10n.restoreMountKeepCount('${plan.keptLocally.length}')),
         if (plan.restoredFromBackup.isNotEmpty)
           _Chip(
             l10n.restoreMountRestoreCount('${plan.restoredFromBackup.length}'),
@@ -704,7 +774,9 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
     final confirm = FilledButton(
       onPressed: enabled ? _confirm : null,
       child: Text(
-        plan.isOverride
+        mitmOnly
+            ? l10n.restoreMitmConfirm
+            : plan.isOverride
             ? l10n.restoreMountConfirmOverride
             : l10n.restoreMountConfirmMerge,
       ),
@@ -717,13 +789,30 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
         if (narrow) ...[
           Text(l10n.restoreCancelWritesNothing, style: _aux(context, p)),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(child: SizedBox(height: 44, child: cancel)),
-              const SizedBox(width: 10),
-              Expanded(child: SizedBox(height: 44, child: confirm)),
-            ],
-          ),
+          // Large text gets the full width per button, so no label is cut.
+          if (MediaQuery.textScalerOf(context).scale(16) > 24)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: cancel,
+                ),
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: confirm,
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(child: SizedBox(height: 44, child: cancel)),
+                const SizedBox(width: 10),
+                Expanded(child: SizedBox(height: 44, child: confirm)),
+              ],
+            ),
         ] else
           Row(
             children: [
@@ -768,19 +857,24 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                 title: title,
                 lines: [?widget.backupName, l10n.restoreIrreversible],
               ),
-              const SizedBox(height: 20),
-              _Callout(lead: lead, note: note, warning: plan.mountsCarried),
-              if (widget.restoresMitm) ...[
-                const SizedBox(height: 12),
-                Text(l10n.restoreMitmReconsent),
+              if (mitmOnly) ...[
+                // The mount banner is gone here, so an override still says
+                // what else it does.
+                if (plan.isOverride) ...[
+                  const SizedBox(height: 20),
+                  _Callout(lead: l10n.restoreOverrideDeletesLocal),
+                ],
+              ] else ...[
+                const SizedBox(height: 20),
+                _Callout(lead: lead, note: note, warning: plan.mountsCarried),
+                const SizedBox(height: 16),
+                counts,
+                if (plan.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Text(l10n.restoreMountNoChanges),
+                  ),
               ],
-              const SizedBox(height: 16),
-              counts,
-              if (plan.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: Text(l10n.restoreMountNoChanges),
-                ),
             ],
             slivers: (_) => [
               ..._groupSlivers(
@@ -806,6 +900,13 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
               ),
               ..._groupSlivers(
                 context,
+                l10n.restoreMountSameSection(
+                  '${rows[RestoreMountGroup.same]!.length}',
+                ),
+                rows[RestoreMountGroup.same]!,
+              ),
+              ..._groupSlivers(
+                context,
                 l10n.restoreMountRestoreSection(
                   '${rows[RestoreMountGroup.restore]!.length}',
                 ),
@@ -824,6 +925,12 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                   '${rows[RestoreMountGroup.invalid]!.length}',
                 ),
                 rows[RestoreMountGroup.invalid]!,
+              ),
+              ..._groupSlivers(
+                context,
+                l10n.restoreMitmSection('${mitmRows.length}'),
+                mitmRows,
+                note: l10n.restoreMitmNote,
               ),
             ],
             footer: footer,
