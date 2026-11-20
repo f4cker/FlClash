@@ -2001,20 +2001,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      '覆盖恢复会以备份替换本机数据；本机有而备份中没有的项目（包括解密模块）会被删除。';
+      '覆盖恢复会用备份替换本机的配置、脚本、规则、代理与解密模块等数据。本机有而备份中没有的这些项目（包括解密模块）会被删除。';
+
+  @override
+  String get restoreOverrideScopeNote => '应用设置、图标和证书不受覆盖影响；设置是否恢复取决于所选的恢复内容。';
 
   @override
   String restoreMountSameCount(Object count) {
-    return '恢复前后相同 $count 条';
+    return '恢复前后相同的关系 $count 条';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return '恢复前后相同 · $count';
+    return '恢复前后相同的关系 · $count';
   }
 
   @override
-  String get restoreMountTagSame => '前后相同';
+  String get restoreMountTagSame => '关系相同';
 
   @override
   String get restoreMountTagCheck => '待检查';

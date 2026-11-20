@@ -243,10 +243,12 @@ Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
           tag: l10n.restoreMountTagReplace,
         ),
     ],
-    // An override rebuilds every target it touches, so a relation that is
-    // there before and after was not left alone: it is the same, not kept.
+    // An override with mount data rewrites every target it touches from the
+    // backup, so a relation with the same target and source before and after
+    // was not left alone: it is the same, not kept. An old backup without
+    // mount data keeps the local relations, as a merge does.
     RestoreMountGroup.keep: [
-      if (!plan.isOverride)
+      if (!plan.rewritesFromBackup)
         for (final k in plan.keptLocally)
           RestoreMountRow(
             group: RestoreMountGroup.keep,
@@ -256,7 +258,7 @@ Map<RestoreMountGroup, List<RestoreMountRow>> restoreMountRows(
           ),
     ],
     RestoreMountGroup.same: [
-      if (plan.isOverride)
+      if (plan.rewritesFromBackup)
         for (final k in plan.keptLocally)
           RestoreMountRow(
             group: RestoreMountGroup.same,
@@ -714,7 +716,7 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
           l10n.restoreMountReplaceCount('${plan.replacementCount}'),
           loss: plan.replacementCount > 0,
         ),
-        plan.isOverride
+        plan.rewritesFromBackup
             ? _Chip(l10n.restoreMountSameCount('${plan.keptLocally.length}'))
             : _Chip(l10n.restoreMountKeepCount('${plan.keptLocally.length}')),
         if (plan.restoredFromBackup.isNotEmpty)
@@ -855,14 +857,23 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                 icon: AppGlyphs.undo,
                 iconColor: p.accent,
                 title: title,
-                lines: [?widget.backupName, l10n.restoreIrreversible],
+                // No name or date: no line for it, and no gap.
+                lines: [
+                  if (widget.backupName?.trim() case final name?
+                      when name.isNotEmpty)
+                    name,
+                  l10n.restoreIrreversible,
+                ],
               ),
               if (mitmOnly) ...[
                 // The mount banner is gone here, so an override still says
                 // what else it does.
                 if (plan.isOverride) ...[
                   const SizedBox(height: 20),
-                  _Callout(lead: l10n.restoreOverrideDeletesLocal),
+                  _Callout(
+                    lead: l10n.restoreOverrideDeletesLocal,
+                    note: l10n.restoreOverrideScopeNote,
+                  ),
                 ],
               ] else ...[
                 const SizedBox(height: 20),

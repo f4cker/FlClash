@@ -2036,20 +2036,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      '上書き復元では、この端末のデータをバックアップで置き換えます。バックアップにない項目（復号モジュールを含む）は削除されます。';
+      '上書き復元では、この端末のプロファイル、スクリプト、ルール、プロキシ、復号モジュールなどのデータをバックアップで置き換えます。バックアップにないこれらの項目（復号モジュールを含む）は削除されます。';
+
+  @override
+  String get restoreOverrideScopeNote =>
+      'アプリの設定、アイコン、証明書は上書きされません。設定を復元するかどうかは、選んだ復元内容によります。';
 
   @override
   String restoreMountSameCount(Object count) {
-    return '復元前後で同じ $count 件';
+    return '復元前後で同じ関係 $count 件';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return '復元前後で同じ · $count';
+    return '復元前後で同じ関係 · $count';
   }
 
   @override
-  String get restoreMountTagSame => '変更なし';
+  String get restoreMountTagSame => '関係は同じ';
 
   @override
   String get restoreMountTagCheck => 'To check';

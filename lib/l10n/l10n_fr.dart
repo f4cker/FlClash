@@ -2145,20 +2145,24 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      'Une restauration par écrasement remplace les données de cet appareil par la sauvegarde ; les éléments absents de la sauvegarde, modules MITM compris, sont supprimés.';
+      'Une restauration par écrasement remplace par la sauvegarde les profils, scripts, règles, proxys, modules MITM et données similaires de cet appareil. Ceux de ces éléments absents de la sauvegarde, modules MITM compris, sont supprimés.';
+
+  @override
+  String get restoreOverrideScopeNote =>
+      'Les réglages de l’app, les icônes et les certificats ne sont pas écrasés ; la restauration des réglages dépend de ce que vous avez choisi de restaurer.';
 
   @override
   String restoreMountSameCount(Object count) {
-    return 'Identiques avant et après $count';
+    return 'Relations identiques avant et après $count';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return 'Identiques avant et après · $count';
+    return 'Relations identiques avant et après · $count';
   }
 
   @override
-  String get restoreMountTagSame => 'Inchangé';
+  String get restoreMountTagSame => 'Relation identique';
 
   @override
   String get restoreMountTagCheck => 'To check';

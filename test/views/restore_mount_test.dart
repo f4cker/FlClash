@@ -396,12 +396,43 @@ void main() {
         locale: const Locale('zh'),
         size: const Size(860, 1400),
       );
-      expect(find.text('恢复前后相同 2 条'), findsOne);
-      expect(find.text('恢复前后相同 · 2'), findsOne);
-      expect(find.text('前后相同'), findsNWidgets(2));
+      expect(find.text('恢复前后相同的关系 2 条'), findsOne);
+      expect(find.text('恢复前后相同的关系 · 2'), findsOne);
+      expect(find.text('关系相同'), findsNWidgets(2));
       expect(find.textContaining('保留的关系'), findsNothing);
       expect(find.textContaining(RegExp(r'^保留 \d+ 条$')), findsNothing);
       expect(find.text('保留'), findsNothing);
+    });
+
+    test('the same group is exactly the override relations with the same '
+        'target and source before and after, rewritten from the backup', () {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+      final plan = _overridePlan();
+      expect(plan.rewritesFromBackup, isTrue);
+      final same = restoreMountRows(plan, l10n)[RestoreMountGroup.same]!;
+      expect(
+        {for (final r in same) (r.owner!.id, r.source)},
+        {(10, '海岸订阅'), (40, '远行订阅')},
+      );
+      for (final k in plan.keptLocally) {
+        expect(
+          plan.writes.any(
+            (w) =>
+                w.targetId == k.relation.target.id &&
+                w.sourceIds.contains(k.relation.source.id),
+          ),
+          isTrue,
+          reason: '$k is rewritten',
+        );
+      }
+      // An old backup without mount data keeps the local relations, as a
+      // merge does; that is kept, not same.
+      final legacy = _legacyPlan();
+      expect(legacy.isOverride, isTrue);
+      expect(legacy.rewritesFromBackup, isFalse);
+      final rows = restoreMountRows(legacy, l10n);
+      expect(rows[RestoreMountGroup.same], isEmpty);
+      expect(rows[RestoreMountGroup.keep]!.length, legacy.keptLocally.length);
     });
 
     testWidgets('a plan with nothing new from the backup shows no restore '
@@ -676,6 +707,49 @@ void main() {
       expect(popped, [false]);
     });
 
+    testWidgets('without a backup name or date the identity line is gone, '
+        'leaving no gap', (tester) async {
+      double gap() =>
+          tester.getTopLeft(find.text('操作不可撤销，没有撤销或还原入口。')).dy -
+          tester.getBottomLeft(find.text('兼容恢复备份？')).dy;
+      await host(
+        tester,
+        () => const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: false, mountsCarried: true),
+          backupName: '示例备份 · 2026年11月18日 10:30',
+          mitmModules: _mitm,
+        ),
+        locale: const Locale('zh'),
+      );
+      expect(find.text('示例备份 · 2026年11月18日 10:30'), findsOne);
+      final header = find.ancestor(
+        of: find.text('兼容恢复备份？'),
+        matching: find.byType(Column),
+      );
+      int lines() => find
+          .descendant(of: header.first, matching: find.byType(Text))
+          .evaluate()
+          .length;
+      expect(lines(), 3);
+      for (final name in [null, '', '  ']) {
+        await host(
+          tester,
+          () => RestoreMountConfirmSheet(
+            plan: const RestoreMountPlan(
+              isOverride: false,
+              mountsCarried: true,
+            ),
+            backupName: name,
+            mitmModules: _mitm,
+          ),
+          locale: const Locale('zh'),
+        );
+        expect(lines(), 2, reason: 'title and irreversible line only: $name');
+        // Only the line's own top spacing, as when it follows the title.
+        expect(gap(), 4, reason: 'no gap for $name');
+      }
+    });
+
     testWidgets('a MITM-only restore confirms with plain Restore', (
       tester,
     ) async {
@@ -702,6 +776,7 @@ void main() {
       );
       final l10n = currentAppLocalizations;
       expect(find.text(l10n.restoreOverrideDeletesLocal), findsOne);
+      expect(find.text(l10n.restoreOverrideScopeNote), findsOne);
       expect(find.text(l10n.restoreMountOverrideLead), findsNothing);
       expect(find.text(l10n.restoreMitmConfirm), findsOne);
     });

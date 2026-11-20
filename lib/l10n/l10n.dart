@@ -3831,25 +3831,31 @@ abstract class AppLocalizations {
   /// No description provided for @restoreOverrideDeletesLocal.
   ///
   /// In en, this message translates to:
-  /// **'An override restore replaces the data on this device with the backup; items here that the backup lacks, MITM modules included, are deleted.'**
+  /// **'An override restore replaces this device\'s profiles, scripts, rules, proxies, MITM modules and similar data with the backup. Those items here that the backup lacks, MITM modules included, are deleted.'**
   String get restoreOverrideDeletesLocal;
+
+  /// No description provided for @restoreOverrideScopeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'App settings, icons and certificates are not overridden; whether settings are restored depends on what you chose to restore.'**
+  String get restoreOverrideScopeNote;
 
   /// No description provided for @restoreMountSameCount.
   ///
   /// In en, this message translates to:
-  /// **'Same before and after {count}'**
+  /// **'Same relations before and after {count}'**
   String restoreMountSameCount(Object count);
 
   /// No description provided for @restoreMountSameSection.
   ///
   /// In en, this message translates to:
-  /// **'Same before and after · {count}'**
+  /// **'Relations the same before and after · {count}'**
   String restoreMountSameSection(Object count);
 
   /// No description provided for @restoreMountTagSame.
   ///
   /// In en, this message translates to:
-  /// **'Unchanged'**
+  /// **'Same relation'**
   String get restoreMountTagSame;
 
   /// No description provided for @restoreMountTagCheck.

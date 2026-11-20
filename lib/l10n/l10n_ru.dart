@@ -2121,20 +2121,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      'Восстановление с перезаписью заменяет данные на этом устройстве резервной копией; элементы, которых в ней нет, включая модули MITM, удаляются.';
+      'Восстановление с перезаписью заменяет профили, скрипты, правила, прокси, модули MITM и подобные данные на этом устройстве резервной копией. Такие элементы, которых нет в копии, включая модули MITM, удаляются.';
+
+  @override
+  String get restoreOverrideScopeNote =>
+      'Настройки приложения, значки и сертификаты не перезаписываются; восстановятся ли настройки, зависит от выбранного содержимого.';
 
   @override
   String restoreMountSameCount(Object count) {
-    return 'Без изменений $count';
+    return 'Те же связи до и после $count';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return 'Без изменений после восстановления · $count';
+    return 'Связи, не изменившиеся после восстановления · $count';
   }
 
   @override
-  String get restoreMountTagSame => 'Без изменений';
+  String get restoreMountTagSame => 'Та же связь';
 
   @override
   String get restoreMountTagCheck => 'To check';

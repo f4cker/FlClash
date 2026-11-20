@@ -193,6 +193,11 @@ class RestoreMountPlan {
 
   int get replacementCount => replacements.length;
 
+  /// An override with mount data: every target it touches is rewritten from
+  /// the backup, so [keptLocally] are relations the same before and after,
+  /// not ones left alone.
+  bool get rewritesFromBackup => isOverride && mountsCarried;
+
   /// Relations that exist locally now and stay as they are.
   List<RestoreMountKept> get keptLocally => [
     for (final k in kept)

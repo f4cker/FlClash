@@ -2083,20 +2083,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      '덮어쓰기 복원은 이 기기의 데이터를 백업으로 바꿉니다. 백업에 없는 항목(복호화 모듈 포함)은 삭제됩니다.';
+      '덮어쓰기 복원은 이 기기의 프로필, 스크립트, 규칙, 프록시, 복호화 모듈 등의 데이터를 백업으로 바꿉니다. 백업에 없는 이러한 항목(복호화 모듈 포함)은 삭제됩니다.';
+
+  @override
+  String get restoreOverrideScopeNote =>
+      '앱 설정, 아이콘, 인증서는 덮어쓰지 않습니다. 설정 복원 여부는 선택한 복원 내용에 따라 다릅니다.';
 
   @override
   String restoreMountSameCount(Object count) {
-    return '복원 전후 동일 $count개';
+    return '복원 전후 동일한 관계 $count개';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return '복원 전후 동일 · $count';
+    return '복원 전후 동일한 관계 · $count';
   }
 
   @override
-  String get restoreMountTagSame => '변경 없음';
+  String get restoreMountTagSame => '관계 동일';
 
   @override
   String get restoreMountTagCheck => 'To check';

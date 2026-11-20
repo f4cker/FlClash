@@ -2145,20 +2145,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      'Una restauración con sobrescritura reemplaza los datos de este dispositivo por la copia; se eliminan los elementos que la copia no tiene, incluidos los módulos MITM.';
+      'Una restauración con sobrescritura reemplaza con la copia los perfiles, scripts, reglas, proxies, módulos MITM y datos similares de este dispositivo. Se eliminan los de este tipo que la copia no tiene, incluidos los módulos MITM.';
+
+  @override
+  String get restoreOverrideScopeNote =>
+      'Los ajustes de la app, los iconos y los certificados no se sobrescriben; que se restauren los ajustes depende de lo que elegiste restaurar.';
 
   @override
   String restoreMountSameCount(Object count) {
-    return 'Igual antes y después $count';
+    return 'Relaciones iguales antes y después $count';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return 'Igual antes y después · $count';
+    return 'Relaciones iguales antes y después · $count';
   }
 
   @override
-  String get restoreMountTagSame => 'Sin cambios';
+  String get restoreMountTagSame => 'Relación igual';
 
   @override
   String get restoreMountTagCheck => 'To check';

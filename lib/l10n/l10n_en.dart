@@ -2125,20 +2125,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreOverrideDeletesLocal =>
-      'An override restore replaces the data on this device with the backup; items here that the backup lacks, MITM modules included, are deleted.';
+      'An override restore replaces this device\'s profiles, scripts, rules, proxies, MITM modules and similar data with the backup. Those items here that the backup lacks, MITM modules included, are deleted.';
+
+  @override
+  String get restoreOverrideScopeNote =>
+      'App settings, icons and certificates are not overridden; whether settings are restored depends on what you chose to restore.';
 
   @override
   String restoreMountSameCount(Object count) {
-    return 'Same before and after $count';
+    return 'Same relations before and after $count';
   }
 
   @override
   String restoreMountSameSection(Object count) {
-    return 'Same before and after · $count';
+    return 'Relations the same before and after · $count';
   }
 
   @override
-  String get restoreMountTagSame => 'Unchanged';
+  String get restoreMountTagSame => 'Same relation';
 
   @override
   String get restoreMountTagCheck => 'To check';
