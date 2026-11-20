@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
@@ -351,6 +352,96 @@ void main() {
     expect(calls.map((call) => call.method), ['certificate', 'delete']);
     expect(container.read(mitmCaProvider).value, isNull);
     verifyNever(() => core.getMitmCertificate());
+  });
+
+  group('the trust check before a signing', () {
+    Map<String, Object?> root(String fingerprint) => {
+      'pem': 'PEM',
+      'fingerprint': fingerprint,
+      'subject': 'Test',
+      'notBefore': 0,
+      'notAfter': 4102444800000,
+    };
+
+    // A refusal must leave no error behind: the root read and the check leaf
+    // run together, and the one not awaited must still be observed.
+    Future<List<Object>> signGuarded(String host) async {
+      final stray = <Object>[];
+      final done = Completer<void>();
+      runZonedGuarded(() {
+        unawaited(sign(host).whenComplete(done.complete));
+      }, (error, _) => stray.add(error));
+      await done.future;
+      await pumpEventQueue();
+      return stray;
+    }
+
+    void expectRefused(List<Object> stray) {
+      expect(stray, isEmpty);
+      expect(sent.single, {'reqId': 7, 'error': 'trustUnavailable'});
+      expect(calls.where((call) => call.method == 'sign'), isEmpty);
+    }
+
+    test('a root other than the trusted one refuses', () async {
+      answer = (call) => switch (call.method) {
+        'certificate' => root('EF:01'),
+        'checkCertificate' => throw PlatformException(code: 'noRoot'),
+        _ => defaultAnswer(call),
+      };
+      expectRefused(await signGuarded('api.example.com'));
+      verifyNever(() => trust.check(any(), any()));
+    });
+
+    for (final (name, certificate) in [
+      ('no root', (MethodCall _) => null),
+      (
+        'a root read that fails',
+        (MethodCall _) => throw PlatformException(code: 'keychain'),
+      ),
+    ]) {
+      test('$name, with a check leaf that fails too, refuses', () async {
+        answer = (call) => switch (call.method) {
+          'certificate' => certificate(call),
+          'checkCertificate' => throw PlatformException(code: 'noRoot'),
+          _ => defaultAnswer(call),
+        };
+        expectRefused(await signGuarded('api.example.com'));
+        verifyNever(() => trust.check(any(), any()));
+      });
+    }
+
+    test('a root replaced during the check refuses', () async {
+      var reads = 0;
+      answer = (call) => call.method == 'certificate'
+          ? root(++reads == 1 ? 'AB:CD' : 'EF:01')
+          : defaultAnswer(call);
+      expectRefused(await signGuarded('api.example.com'));
+      expect(reads, 2);
+      verify(() => trust.check(any(), any())).called(1);
+    });
+
+    test('a check leaf that fails refuses before verify-cert runs', () async {
+      final ran = <List<String>>[];
+      final store = MacOSMitmTrustStore(
+        home: '/nonexistent',
+        run: (executable, arguments) async {
+          ran.add(arguments);
+          return ProcessResult(0, 0, '', '');
+        },
+        writeTemp: (_) async => '/nonexistent/leaf.pem',
+      );
+      when(() => trust.check(any(), any())).thenAnswer(
+        (call) => store.check(
+          call.positionalArguments[0] as MitmCertificate,
+          call.positionalArguments[1] as Future<String> Function(),
+        ),
+      );
+      answer = (call) => call.method == 'checkCertificate'
+          ? throw PlatformException(code: 'noRoot')
+          : defaultAnswer(call);
+      expectRefused(await signGuarded('api.example.com'));
+      expect(ran, isEmpty);
+    });
   });
 
   group('the macOS root', () {

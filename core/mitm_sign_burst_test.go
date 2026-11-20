@@ -35,7 +35,7 @@ import (
 //   - each native call is one Flutter platform-channel round trip (hop each
 //     way, main thread) onto ONE serial dispatch queue, where it costs its own
 //     time (keychain reads, csops, ECDSA);
-//   - sign is one more native call; more than 16 in flight are refused
+//   - sign is one more native call; more than signCap in flight are refused
 //     (signBusy);
 //   - results go back one frame at a time through the relay's serial send
 //     (sendEach) and reach the Core relayOut later.
@@ -47,6 +47,9 @@ type burstModel struct {
 	checkSign, sign, verify     time.Duration
 	// The fix in _checkTrust: certificate and checkCertificate in one round.
 	batchedCheck bool
+	// The app's _maxConcurrentSigns (16); 0 models no cap, for a run that
+	// measures the Core alone.
+	signCap int64
 }
 
 type burstOp struct {
@@ -138,7 +141,7 @@ func (app *burstApp) answer(request MitmSignRequest) {
 	time.Sleep(app.model.relayIn)
 	app.trustCheck()
 	result := MitmSignResultParams{ReqID: request.ReqID}
-	if app.signing.Add(1) > 16 {
+	if signing := app.signing.Add(1); app.model.signCap > 0 && signing > app.model.signCap {
 		app.signing.Add(-1)
 		app.busy.Add(1)
 		result.Error = "signBusy"
@@ -164,6 +167,7 @@ type burstWave struct {
 	livenessFailed    int64
 	busy, checks      int64
 	requestToWritten  []time.Duration
+	batchedToWritten  []time.Duration
 	replyToChecked    []time.Duration
 	issueStartToQueue []time.Duration
 }
@@ -198,17 +202,29 @@ func runMitmSignBurst(t *testing.T, model burstModel, size, waves, k int, gap ti
 	state := make(chan Message, messageQueueSize)
 	priority := make(chan Message, messageQueueSize)
 	bulk := make(chan Message, messageQueueSize)
-	go runMessageBatcher(state, priority, bulk, func(batch []Message) {
-		for _, message := range batch {
-			if request, ok := message.Data.(*MitmSignRequest); ok {
-				app.answers.Add(1)
-				go app.answer(*request)
+	batcherDone := make(chan struct{})
+	go func() {
+		defer close(batcherDone)
+		runMessageBatcher(state, priority, bulk, func(batch []Message) {
+			for _, message := range batch {
+				if request, ok := message.Data.(*MitmSignRequest); ok {
+					app.answers.Add(1)
+					go app.answer(*request)
+				}
 			}
-		}
-	})
-	defer close(priority)
-	defer close(state)
-	defer close(bulk)
+		})
+	}()
+	// Runs after sendMitmSign is restored (defers run last first), so no
+	// issuance enqueues on a closed queue. The batcher has returned before
+	// the answers are awaited, so no Add races the Wait, and every answer
+	// (which uses t) has ended before this returns.
+	defer func() {
+		close(priority)
+		close(state)
+		close(bulk)
+		<-batcherDone
+		app.answers.Wait()
+	}()
 	previous := sendMitmSign
 	sendMitmSign = func(request *MitmSignRequest) bool {
 		return enqueueLatest(priority, Message{Type: MitmSignMessage, Data: request})
@@ -335,6 +351,11 @@ func runMitmSignBurst(t *testing.T, model burstModel, size, waves, k int, gap ti
 				summary.requestToWritten = append(summary.requestToWritten, time.Duration(written-queued))
 			}
 		}
+		if batched, ok := m[mitmStageRequestBatched]; ok {
+			if written, ok := m[mitmStageRequestWritten]; ok {
+				summary.batchedToWritten = append(summary.batchedToWritten, time.Duration(written-batched))
+			}
+		}
 		if received, ok := m[mitmStageReplyReceived]; ok && okChecked {
 			summary.replyToChecked = append(summary.replyToChecked, time.Duration(checked-received))
 		}
@@ -389,16 +410,21 @@ func TestMitmSignBurstCoreAloneIsFast(t *testing.T) {
 	}
 }
 
-// The signing requests are not held for the batch interval.
+// The signing requests are not held for the batch interval. Measured from
+// the batcher's own take (not from sendMitmSign's return, which the batcher
+// can beat): a request that waits for the interval waits all of it, from
+// the timer the batch's first message started, so a held burst has a
+// median near messageBatchInterval and a flushed one near zero. Half the
+// interval separates them with room on either side.
 func TestMitmSignBurstRequestIsWrittenWithoutTheBatchInterval(t *testing.T) {
 	model := burstModel{name: "core-only"}
-	waves := runMitmSignBurst(t, model, 6, 2, 0, 100*time.Millisecond)
+	waves := runMitmSignBurst(t, model, 6, 3, 0, 100*time.Millisecond)
 	last := waves[len(waves)-1]
-	if len(last.requestToWritten) == 0 {
-		t.Fatal("no request was timed")
+	if len(last.batchedToWritten) < 6 {
+		t.Fatalf("%d requests timed", len(last.batchedToWritten))
 	}
-	if p95 := burstPercentile(last.requestToWritten, 0.95); p95 >= messageBatchInterval {
-		t.Fatalf("queued→written p95 %v, not under the %v batch interval", p95, messageBatchInterval)
+	if p50 := burstPercentile(last.batchedToWritten, 0.5); p50 >= messageBatchInterval/2 {
+		t.Fatalf("batched→written median %v, not under half the %v batch interval", p50, messageBatchInterval)
 	}
 }
 
@@ -411,9 +437,9 @@ func TestMitmSignBurstSweep(t *testing.T) {
 	// Process.run, p50 4.9 ms, max 15 ms (60 ms cold). Keychain reads,
 	// main-thread hops and relay times are not measurable here: swept.
 	idle := burstModel{relayIn: 2 * ms, relayOut: 2 * ms, sendEach: 1 * ms, hop: 1 * ms,
-		identity: 1 * ms, certRead: 3 * ms, checkSign: 4 * ms, sign: 5 * ms, verify: 10 * ms}
+		identity: 1 * ms, certRead: 3 * ms, checkSign: 4 * ms, sign: 5 * ms, verify: 10 * ms, signCap: 16}
 	busy := burstModel{relayIn: 10 * ms, relayOut: 10 * ms, sendEach: 3 * ms, hop: 8 * ms,
-		identity: 2 * ms, certRead: 15 * ms, checkSign: 17 * ms, sign: 18 * ms, verify: 60 * ms}
+		identity: 2 * ms, certRead: 15 * ms, checkSign: 17 * ms, sign: 18 * ms, verify: 60 * ms, signCap: 16}
 	var models []burstModel
 	for _, base := range []struct {
 		name  string
