@@ -1926,7 +1926,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String restoreMountWithId(Object id, Object name) {
+  String restoreMountWithId(Object name, Object id) {
     return '$name（标识 $id）';
   }
 

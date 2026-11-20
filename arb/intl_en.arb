@@ -625,6 +625,16 @@
   "restoreMountOwner": "Profile: {name}",
   "restoreMountSource": "Source: {name}",
   "restoreMountWithId": "{name} (ID {id})",
+  "@restoreMountWithId": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
   "restoreMountNameUnavailable": "Name unavailable (ID {id})",
   "restoreMountReasonSelf": "Invalid: the profile is its own source.",
   "restoreMountReasonNotSubscription": "Invalid: the source is not a subscription.",
@@ -643,6 +653,16 @@
   "restoreMountCheckNote": "Locked until checked again; nothing is applied automatically.",
   "restoreMountNoChanges": "No mount relations change.",
   "restoreMountAcknowledge": "I understand the loss from the {removals} removals and {replacements} replacements listed above, and want to make these changes.",
+  "@restoreMountAcknowledge": {
+    "placeholders": {
+      "removals": {
+        "type": "Object"
+      },
+      "replacements": {
+        "type": "Object"
+      }
+    }
+  },
   "restoreCancelWritesNothing": "Cancelling writes nothing",
   "restoreMountConfirmOverride": "Restore and override",
   "restoreMountConfirmMerge": "Restore and replace",

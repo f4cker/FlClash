@@ -3712,7 +3712,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{name} (ID {id})'**
-  String restoreMountWithId(Object id, Object name);
+  String restoreMountWithId(Object name, Object id);
 
   /// No description provided for @restoreMountNameUnavailable.
   ///

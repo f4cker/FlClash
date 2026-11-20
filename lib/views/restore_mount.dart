@@ -90,20 +90,26 @@ class _Palette {
   }
 }
 
-TextStyle _body(_Palette p) =>
-    TextStyle(fontSize: 14, height: 21 / 14, color: p.text);
+// The design's sizes sit off the Dynamic Type scale; AppTextStyle.custom
+// builds them on the theme's font and its CJK fallback.
+TextStyle _body(BuildContext context, _Palette p) =>
+    AppTextStyle.custom(context, size: 14, leading: 21).copyWith(color: p.text);
 
-TextStyle _aux(_Palette p) =>
-    TextStyle(fontSize: 12, height: 18 / 12, color: p.secondary);
+TextStyle _aux(BuildContext context, _Palette p) => AppTextStyle.custom(
+  context,
+  size: 12,
+  leading: 18,
+).copyWith(color: p.secondary);
 
-TextStyle _title(_Palette p) => TextStyle(
-  fontSize: 22,
-  height: 28.6 / 22,
-  fontWeight: FontWeight.w600,
-  color: p.text,
-);
+TextStyle _title(BuildContext context, _Palette p) => AppTextStyle.custom(
+  context,
+  size: 22,
+  leading: 28.6,
+  weight: FontWeight.w600,
+).copyWith(color: p.text);
 
-TextStyle _group(_Palette p) => _body(p).copyWith(fontWeight: FontWeight.w600);
+TextStyle _group(BuildContext context, _Palette p) =>
+    _body(context, p).merge(AppTextStyle.emphasis);
 
 /// A profile's full name, with its id when the name may not be unique, and
 /// never a guessed name.
@@ -116,8 +122,7 @@ String restoreProfileName(
   if (label == null || label.isEmpty) {
     return l10n.restoreMountNameUnavailable('${profile.id}');
   }
-  // gen-l10n orders placeholders by name: (id, name).
-  return withId ? l10n.restoreMountWithId('${profile.id}', label) : label;
+  return withId ? l10n.restoreMountWithId(label, '${profile.id}') : label;
 }
 
 String restoreMountReasonText(
@@ -321,7 +326,7 @@ class _SheetFrame extends StatelessWidget {
           namesRoute: true,
           explicitChildNodes: true,
           label: title,
-          child: ClipRRect(
+          child: ClipRSuperellipse(
             borderRadius: BorderRadius.circular(
               width <= restoreNarrowWidth ? 12 : 14,
             ),
@@ -330,10 +335,7 @@ class _SheetFrame extends StatelessWidget {
               // Built on the theme's body style: a sheet may sit above
               // any DefaultTextStyle, and the user's font and its CJK
               // fallback must carry through.
-              child: DefaultTextStyle(
-                style: Theme.of(context).bodyTextStyle.merge(_body(p)),
-                child: content,
-              ),
+              child: DefaultTextStyle(style: _body(context, p), child: content),
             ),
           ),
         ),
@@ -365,7 +367,10 @@ class _Header extends StatelessWidget {
     final heading = Focus(
       focusNode: titleFocus,
       autofocus: true,
-      child: Semantics(header: true, child: Text(title, style: _title(p))),
+      child: Semantics(
+        header: true,
+        child: Text(title, style: _title(context, p)),
+      ),
     );
     final text = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,7 +379,10 @@ class _Header extends StatelessWidget {
         for (final line in lines)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(line, style: _body(p).copyWith(color: p.secondary)),
+            child: Text(
+              line,
+              style: _body(context, p).copyWith(color: p.secondary),
+            ),
           ),
       ],
     );
@@ -386,9 +394,9 @@ class _Header extends StatelessWidget {
           child: Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: p.infoFill,
-              borderRadius: BorderRadius.circular(9),
+              shape: AppShape.all(9),
             ),
             child: Center(child: GlyphIcon(icon, size: 22, color: iconColor)),
           ),
@@ -413,20 +421,18 @@ class _Callout extends StatelessWidget {
     final color = warning ? p.warning : p.info;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: warning ? p.warningFill : p.infoFill,
-        border: Border.all(color: warning ? p.warningBorder : p.infoBorder),
-        borderRadius: BorderRadius.circular(9),
+        shape: AppShape.all(9).copyWith(
+          side: BorderSide(color: warning ? p.warningBorder : p.infoBorder),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            lead,
-            style: _body(p).copyWith(color: color, fontWeight: FontWeight.w600),
-          ),
+          Text(lead, style: _group(context, p).copyWith(color: color)),
           if (note case final note?)
-            Text(note, style: _body(p).copyWith(color: color)),
+            Text(note, style: _body(context, p).copyWith(color: color)),
         ],
       ),
     );
@@ -444,13 +450,13 @@ class _Chip extends StatelessWidget {
     final p = _Palette.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: loss ? p.warningFill : p.grey,
-        borderRadius: BorderRadius.circular(6),
+        shape: AppShape.all(6),
       ),
       child: Text(
         label,
-        style: _aux(p).copyWith(color: loss ? p.warning : p.text),
+        style: _aux(context, p).copyWith(color: loss ? p.warning : p.text),
       ),
     );
   }
@@ -472,17 +478,18 @@ List<Widget> _groupSlivers(
     SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.only(top: 20, bottom: 8),
-        child: Semantics(header: true, child: Text(heading, style: _group(p))),
+        child: Semantics(
+          header: true,
+          child: Text(heading, style: _group(context, p)),
+        ),
       ),
     ),
     DecoratedSliver(
-      decoration: BoxDecoration(
-        border: Border.all(color: p.separator),
-        borderRadius: BorderRadius.circular(9),
+      decoration: ShapeDecoration(
+        shape: AppShape.all(9).copyWith(side: BorderSide(color: p.separator)),
       ),
-      sliver: SliverList.separated(
+      sliver: SliverPrismList(
         itemCount: rows.length,
-        separatorBuilder: (_, _) => Container(height: 1, color: p.separator),
         itemBuilder: (context, index) {
           final row = rows[index];
           final danger =
@@ -490,14 +497,17 @@ List<Widget> _groupSlivers(
               row.group == RestoreMountGroup.check;
           final tag = Text(
             row.tag,
-            style: _aux(p).copyWith(color: danger ? p.danger : p.accent),
+            style: _aux(
+              context,
+              p,
+            ).copyWith(color: danger ? p.danger : p.accent),
           );
           final details = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 l10n.restoreMountOwner(restoreProfileName(row.owner, l10n)),
-                style: _group(p),
+                style: _group(context, p),
               ),
               if (row.source.isNotEmpty)
                 Text(
@@ -505,26 +515,38 @@ List<Widget> _groupSlivers(
                       ? row.source
                       : l10n.restoreMountSource(row.source),
                 ),
-              if (row.note case final note?) Text(note, style: _aux(p)),
+              if (row.note case final note?)
+                Text(note, style: _aux(context, p)),
             ],
           );
-          return MergeSemantics(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              // Narrow: the tag goes under the text, which keeps the width.
-              child: narrow
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [details, const SizedBox(height: 6), tag],
-                    )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: details),
-                        const SizedBox(width: 12),
-                        tag,
-                      ],
-                    ),
+          // Rows after the first carry the separator above them.
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              border: index == 0
+                  ? null
+                  : Border(top: BorderSide(color: p.separator)),
+            ),
+            child: MergeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                // Narrow: the tag goes under the text, which keeps the width.
+                child: narrow
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [details, const SizedBox(height: 6), tag],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: details),
+                          const SizedBox(width: 12),
+                          tag,
+                        ],
+                      ),
+              ),
             ),
           );
         },
@@ -608,7 +630,7 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // The box keeps its 48 px target centred on the
+                  // The box keeps its 48 dp target centred on the
                   // 18 × 22 slot; it must not be shifted out of the row,
                   // or taps on it miss.
                   SizedBox(
@@ -657,7 +679,7 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
       children: [
         if (checkbox != null) ...[checkbox, const SizedBox(height: 12)],
         if (narrow) ...[
-          Text(l10n.restoreCancelWritesNothing, style: _aux(p)),
+          Text(l10n.restoreCancelWritesNothing, style: _aux(context, p)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -670,7 +692,10 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
           Row(
             children: [
               Expanded(
-                child: Text(l10n.restoreCancelWritesNothing, style: _aux(p)),
+                child: Text(
+                  l10n.restoreCancelWritesNothing,
+                  style: _aux(context, p),
+                ),
               ),
               ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 36),
@@ -848,7 +873,7 @@ class _RestoreRecheckButtonState extends State<RestoreRecheckButton> {
             liveRegion: true,
             child: Text(
               status,
-              style: _aux(p).copyWith(
+              style: _aux(context, p).copyWith(
                 color: _state == RestoreRecheckState.failed
                     ? p.danger
                     : p.secondary,
@@ -1077,7 +1102,10 @@ class _RestoreResultViewState extends State<RestoreResultView> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text(l10n.restoreResultNavigateOnly, style: _aux(p)),
+              child: Text(
+                l10n.restoreResultNavigateOnly,
+                style: _aux(context, p),
+              ),
             ),
           ),
       ],
