@@ -1374,7 +1374,7 @@ void main() {
           backupName: '示例备份 · 2026年11月18日 10:30',
         ),
         locale: const Locale('zh'),
-        size: const Size(860, 1100),
+        size: const Size(860, 1220),
       );
       expect(tester.takeException(), isNull);
       await shoot(tester, 'restore-confirm-override-zh');
@@ -1560,6 +1560,21 @@ void main() {
       await shoot(tester, 'restore-confirm-mitm-only-zh');
     });
 
+    testWidgets('confirm MITM only override zh', skip: !shots, (tester) async {
+      await host(
+        tester,
+        () => const RestoreMountConfirmSheet(
+          plan: RestoreMountPlan(isOverride: true, mountsCarried: true),
+          backupName: '示例备份 · 2026年11月18日 10:30',
+          mitmModules: _mitm,
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 760),
+      );
+      expect(tester.takeException(), isNull);
+      await shoot(tester, 'restore-confirm-override-mitm-only-zh');
+    });
+
     testWidgets('confirm empty zh', skip: !shots, (tester) async {
       await host(
         tester,
@@ -1567,7 +1582,7 @@ void main() {
           plan: RestoreMountPlan(isOverride: true, mountsCarried: true),
         ),
         locale: const Locale('zh'),
-        size: const Size(860, 520),
+        size: const Size(860, 640),
       );
       await shoot(tester, 'restore-confirm-empty-zh');
     });
