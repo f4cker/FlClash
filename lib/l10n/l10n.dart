@@ -3969,7 +3969,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreRecoveryUnreadable.
   ///
   /// In en, this message translates to:
-  /// **'The last restore was interrupted and its record couldn\'t be read. The database holds no commit from it; files such as profiles may have been partly replaced, which can\'t be checked, so nothing was done automatically. If your data looks wrong, restore the backup again.'**
+  /// **'The last restore was interrupted and its record couldn\'t be read. No commit of this restore was found in the database; some files may have been replaced, which can\'t be confirmed now. To avoid overwriting your current data, nothing was done automatically.'**
   String get restoreRecoveryUnreadable;
 
   /// No description provided for @restoreResultUnknownItems.
@@ -3977,6 +3977,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The pending items couldn\'t be read, so this isn\'t treated as complete.'**
   String get restoreResultUnknownItems;
+
+  /// No description provided for @restoreResultCommitKnown.
+  ///
+  /// In en, this message translates to:
+  /// **'Known: this restore\'s data was committed to the database.'**
+  String get restoreResultCommitKnown;
 
   /// No description provided for @restoreResultNavigateOnly.
   ///

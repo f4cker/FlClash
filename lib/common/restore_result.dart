@@ -16,8 +16,8 @@ enum RestoreResultKind {
   /// Committed, but follow-up steps are still owed or unknown.
   committedLocked,
 
-  /// Committed; another (older) version changed the data and steps were
-  /// skipped.
+  /// Committed; another (older) version changed the data and the steps in
+  /// [RestoreEvidence.skippedSteps], known and not empty, were skipped.
   foreignSkipped,
 
   /// Committed, every step confirmed, nothing skipped, pending or to check.
@@ -80,9 +80,12 @@ class RestoreEvidence {
   RestoreResultKind get kind {
     if (refusedForPending) return RestoreResultKind.refusedPending;
     if (committed == true) {
-      if (foreignWrites) return RestoreResultKind.foreignSkipped;
       final pending = pendingSteps;
       final skipped = skippedSteps;
+      // Said only when a change was seen and steps were really skipped.
+      if (foreignWrites && skipped != null && skipped.isNotEmpty) {
+        return RestoreResultKind.foreignSkipped;
+      }
       if (pending == null ||
           skipped == null ||
           pending.isNotEmpty ||

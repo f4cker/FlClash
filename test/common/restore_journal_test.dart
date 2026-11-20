@@ -531,8 +531,13 @@ void main() {
     File(join(dir.path, 'journal.json')).writeAsStringSync('{not json');
     final reports = await recover();
     expect(reports.single.outcome, RestoreRecoveryOutcome.unreadable);
+    expect(
+      reports.single.followUp,
+      RestoreFollowUp.none,
+      reason: 'no re-restore is offered',
+    );
     expect(journals(), isEmpty);
-    expect(quarantined(), ['77']);
+    expect(quarantined(), ['77.unreadable']);
   });
 
   test('a backup never carries the commit marker', () async {
@@ -653,9 +658,25 @@ void main() {
         const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
         zh,
       ),
-      allOf(contains('没有这次恢复的提交记录'), contains('可能已被部分替换')),
+      '上次恢复被中断，恢复记录无法读取。数据库中未找到本次恢复的提交记录；'
+      '部分文件可能已被替换，当前无法确认。为避免覆盖现有数据，未进行自动处理。',
+      reason: 'the approved copy, with no re-restore guidance after it',
     );
-    expect(incomplete, contains('重新检查 MITM 模块'));
+    expect(
+      restoreRecoveryMessage(
+        const RestoreRecoveryReport(
+          RestoreRecoveryOutcome.incomplete,
+          followUp: RestoreFollowUp.restoreAgain,
+        ),
+        zh,
+      ),
+      allOf(isNot(contains('恢复后数据又被修改过')), isNot(contains('已跳过'))),
+      reason: 'said only when steps were really skipped',
+    );
+    expect(incomplete.split('\n').take(2), [
+      '恢复后数据又被修改过，为保留这些修改，已跳过部分恢复步骤。',
+      '已跳过：重新检查 MITM 模块。当前数据保持现状。',
+    ], reason: 'followed by the steps it actually skipped');
     expect(incomplete, contains('重新恢复备份'));
   });
 
@@ -786,14 +807,67 @@ void main() {
       expect(leftover.existsSync(), isFalse);
     });
 
-    test('unreadable journals keep only the newest few', () async {
+    test('unreadable journals are set aside whole: nothing is deleted, '
+        'not their replaced files nor any earlier quarantine', () async {
+      final quarantine = join(RestoreJournal.rootOf(home.path), 'quarantine');
+      for (var id = 10; id <= 13; id++) {
+        File(join(quarantine, '$id', 'journal.json'))
+          ..createSync(recursive: true)
+          ..writeAsStringSync('{}');
+      }
+      File(join(quarantine, '3.unreadable', 'journal.json'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('?');
       for (var id = 1; id <= 5; id++) {
         final dir = Directory(join(RestoreJournal.rootOf(home.path), '$id'))
           ..createSync(recursive: true);
         File(join(dir.path, 'journal.json')).writeAsStringSync('?');
+        File(join(dir.path, 'replaced', 'profiles', '$id.yaml'))
+          ..createSync(recursive: true)
+          ..writeAsStringSync('original-$id');
       }
-      await recover();
-      expect(quarantined()..sort(), ['3', '4', '5']);
+      final reports = await recover();
+      expect(
+        {for (final r in reports) r.outcome},
+        {RestoreRecoveryOutcome.unreadable},
+      );
+      expect(quarantined()..sort(), [
+        '1.unreadable',
+        '10',
+        '11',
+        '12',
+        '13',
+        '2.unreadable',
+        '3.unreadable',
+        '3.unreadable.2',
+        '4.unreadable',
+        '5.unreadable',
+      ]);
+      for (var id = 1; id <= 5; id++) {
+        final name = id == 3 ? '3.unreadable.2' : '$id.unreadable';
+        expect(
+          File(
+            join(quarantine, name, 'replaced', 'profiles', '$id.yaml'),
+          ).readAsStringSync(),
+          'original-$id',
+        );
+      }
+    });
+
+    test('unreadable is said only once the database was checked', () async {
+      final dir = Directory(join(RestoreJournal.rootOf(home.path), '78'))
+        ..createSync(recursive: true);
+      File(join(dir.path, 'journal.json')).writeAsStringSync('{not json');
+      final recovery = RestoreRecovery(
+        db: () => throw StateError('database unavailable'),
+        homeDirPath: () async => home.path,
+        store: () => preferences,
+      );
+      await recovery.run();
+      final [report] = recovery.takeReports();
+      expect(report.outcome, RestoreRecoveryOutcome.failed);
+      expect(journals(), hasLength(1), reason: 'left in place, untouched');
+      expect(quarantined(), isEmpty);
     });
 
     test('a recovery that fails at launch after the commit says the data '

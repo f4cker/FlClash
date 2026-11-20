@@ -430,6 +430,19 @@ class RestoreJournal {
   /// Kept for diagnosis rather than acted on; only the newest few stay.
   Future<void> quarantine() => _quarantine(homeDirPath, id);
 
+  /// Sets aside a journal that cannot be read. Nothing is deleted: not its
+  /// replaced files, nor an earlier one set aside, nor any other quarantine.
+  /// The name is not a bare id, so no later pruning ever takes it.
+  static Future<void> _quarantineUnreadable(String homeDirPath, int id) async {
+    final root = join(rootOf(homeDirPath), _quarantineDirectoryName);
+    await Directory(root).create(recursive: true);
+    var target = Directory(join(root, '$id.unreadable'));
+    for (var n = 2; await target.exists(); n++) {
+      target = Directory(join(root, '$id.unreadable.$n'));
+    }
+    await Directory(join(rootOf(homeDirPath), '$id')).rename(target.path);
+  }
+
   static Future<void> _quarantine(String homeDirPath, int id) async {
     final root = join(rootOf(homeDirPath), _quarantineDirectoryName);
     await Directory(root).create(recursive: true);
@@ -530,7 +543,8 @@ enum RestoreRecoveryOutcome {
   /// remaining steps were skipped.
   incomplete,
 
-  /// The journal could not be read and nothing had committed.
+  /// The journal could not be read, the database was checked and holds no
+  /// commit for it, and nothing was done beyond setting it aside intact.
   unreadable,
 
   /// Recovery itself failed before it could tell whether anything had
@@ -772,7 +786,7 @@ class RestoreRecovery {
     final db = _db();
     final committed = await db.restoreCommit(id);
     if (journal == null) {
-      await RestoreJournal._quarantine(await _homeDirPath(), id);
+      await RestoreJournal._quarantineUnreadable(await _homeDirPath(), id);
       if (committed == null) {
         reports.add(
           const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
@@ -927,16 +941,25 @@ class RestoreRecovery {
           await db.clearRestoreCommit(item.id);
           await journal.quarantine();
         }
+        final left = [
+          for (final step in skipped)
+            if (step != RestoreStep.mitm || !checked) step,
+        ];
+        final mounts = await pendingMountLabels(db, journal.mountTargets);
+        // Data changed since, but no step ended up skipped: nothing to
+        // say about skipping.
         reports.add(
-          RestoreRecoveryReport(
-            RestoreRecoveryOutcome.incomplete,
-            skippedSteps: [
-              for (final step in skipped)
-                if (step != RestoreStep.mitm || !checked) step,
-            ],
-            pendingMounts: await pendingMountLabels(db, journal.mountTargets),
-            followUp: RestoreFollowUp.restoreAgain,
-          ),
+          left.isEmpty
+              ? RestoreRecoveryReport(
+                  RestoreRecoveryOutcome.completed,
+                  pendingMounts: mounts,
+                )
+              : RestoreRecoveryReport(
+                  RestoreRecoveryOutcome.incomplete,
+                  skippedSteps: left,
+                  pendingMounts: mounts,
+                  followUp: RestoreFollowUp.restoreAgain,
+                ),
         );
         continue;
       }
@@ -1034,10 +1057,12 @@ String restoreRecoveryMessage(
       if (report.tornFiles.isNotEmpty)
         l10n.restoreTornFiles(report.tornFiles.join(separator)),
     ],
-    RestoreRecoveryOutcome.incomplete => [
+    // Said only with the steps it skipped, right after it.
+    RestoreRecoveryOutcome.incomplete when report.skippedSteps.isNotEmpty => [
       l10n.restoreDataChangedSkipped,
-      if (report.skippedSteps.isNotEmpty) l10n.restoreSkippedSteps(steps()),
+      l10n.restoreSkippedSteps(steps()),
     ],
+    RestoreRecoveryOutcome.incomplete => [l10n.restoreRecoveryCompleted],
     RestoreRecoveryOutcome.unreadable => [l10n.restoreRecoveryUnreadable],
     RestoreRecoveryOutcome.failed => [l10n.restoreRecoveryFailed],
   };

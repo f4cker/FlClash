@@ -2172,11 +2172,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      '지난 복원이 중단되었고 복원 기록을 읽을 수 없습니다. 데이터베이스에는 이 복원의 커밋 기록이 없습니다. 프로필 등의 파일은 일부 교체되었을 수 있으나 확인할 수 없어 자동으로 아무 작업도 하지 않았습니다. 데이터가 이상하면 백업을 다시 복원하세요.';
+      '지난 복원이 중단되었고 복원 기록을 읽을 수 없습니다. 데이터베이스에서 이 복원의 커밋 기록을 찾지 못했습니다. 일부 파일이 교체되었을 수 있으나 지금은 확인할 수 없습니다. 현재 데이터를 덮어쓰지 않도록 자동으로 아무 작업도 하지 않았습니다.';
 
   @override
   String get restoreResultUnknownItems =>
       'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+
+  @override
+  String get restoreResultCommitKnown =>
+      'Known: this restore\'s data was committed to the database.';
 
   @override
   String get restoreResultNavigateOnly =>

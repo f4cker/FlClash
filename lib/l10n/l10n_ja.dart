@@ -2125,11 +2125,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      '前回の復元は中断され、その記録を読み取れませんでした。データベースにはこの復元のコミット記録がありません。プロファイルなどのファイルは一部置き換えられている可能性があり、確認できないため、自動では何も行いませんでした。データがおかしい場合はバックアップをもう一度復元してください。';
+      '前回の復元は中断され、その記録を読み取れませんでした。データベースにこの復元のコミット記録は見つかりませんでした。一部のファイルが置き換えられている可能性がありますが、現時点では確認できません。現在のデータを上書きしないよう、自動では何も行っていません。';
 
   @override
   String get restoreResultUnknownItems =>
       'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+
+  @override
+  String get restoreResultCommitKnown =>
+      'Known: this restore\'s data was committed to the database.';
 
   @override
   String get restoreResultNavigateOnly =>

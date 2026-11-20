@@ -1172,7 +1172,9 @@ class _RestoreResultViewState extends State<RestoreResultView> {
           const SizedBox(height: 20),
           _Callout(lead: l10n.restoreContinueFailed),
         ],
-        if (locked && stepRows.length + checkRows.length > 0) ...[
+        // An unknown list is never counted: a partial total would read as
+        // the whole, and none as done.
+        if (locked && !unknown && stepRows.length + checkRows.length > 0) ...[
           const SizedBox(height: 20),
           _Callout(
             lead: l10n.restoreResultLockedNote(
@@ -1182,36 +1184,46 @@ class _RestoreResultViewState extends State<RestoreResultView> {
         ],
         if (unknown) ...[
           const SizedBox(height: 20),
-          _Callout(lead: l10n.restoreResultUnknownItems),
+          // What is known is said on its own: the rows did commit.
+          _Callout(
+            lead: l10n.restoreResultUnknownItems,
+            note: l10n.restoreResultCommitKnown,
+          ),
         ],
       ],
-      slivers: (_) => [
-        ..._groupSlivers(
-          context,
-          l10n.restoreResultStepsSection('${stepRows.length}'),
-          stepRows,
-        ),
-        ..._groupSlivers(
-          context,
-          l10n.restoreResultChecksSection('${checkRows.length}'),
-          checkRows,
-        ),
-        ..._groupSlivers(
+      slivers: (_) {
+        final skipped = _groupSlivers(
           context,
           l10n.restoreResultSkippedSection('${skippedRows.length}'),
           skippedRows,
-        ),
-        if (committed && widget.onOpenProfiles != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                l10n.restoreResultNavigateOnly,
-                style: _aux(context, p),
+        );
+        // Data changed since: the skipped steps follow the title first.
+        final skippedFirst = kind == RestoreResultKind.foreignSkipped;
+        return [
+          if (skippedFirst) ...skipped,
+          ..._groupSlivers(
+            context,
+            l10n.restoreResultStepsSection('${stepRows.length}'),
+            stepRows,
+          ),
+          ..._groupSlivers(
+            context,
+            l10n.restoreResultChecksSection('${checkRows.length}'),
+            checkRows,
+          ),
+          if (!skippedFirst) ...skipped,
+          if (committed && widget.onOpenProfiles != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  l10n.restoreResultNavigateOnly,
+                  style: _aux(context, p),
+                ),
               ),
             ),
-          ),
-      ],
+        ];
+      },
       footer: Wrap(
         alignment: WrapAlignment.end,
         spacing: 10,

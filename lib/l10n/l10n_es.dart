@@ -2233,11 +2233,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      'La última restauración se interrumpió y no se pudo leer su registro. La base de datos no tiene ninguna confirmación suya; archivos como los perfiles pueden haberse reemplazado en parte, lo que no se puede comprobar, así que no se hizo nada automáticamente. Si tus datos parecen incorrectos, vuelve a restaurar la copia.';
+      'La última restauración se interrumpió y no se pudo leer su registro. No se encontró en la base de datos ninguna confirmación de esta restauración; puede que algunos archivos se hayan reemplazado, lo que ahora no se puede confirmar. Para no sobrescribir tus datos actuales, no se hizo nada automáticamente.';
 
   @override
   String get restoreResultUnknownItems =>
       'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+
+  @override
+  String get restoreResultCommitKnown =>
+      'Known: this restore\'s data was committed to the database.';
 
   @override
   String get restoreResultNavigateOnly =>

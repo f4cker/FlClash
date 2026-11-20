@@ -2233,11 +2233,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      'La dernière restauration a été interrompue et son journal est illisible. La base de données ne contient aucune validation de sa part ; des fichiers comme les profils ont pu être en partie remplacés, ce qui ne peut pas être vérifié : rien n’a donc été fait automatiquement. Si vos données semblent incorrectes, restaurez de nouveau la sauvegarde.';
+      'La dernière restauration a été interrompue et son journal est illisible. Aucune validation de cette restauration n’a été trouvée dans la base de données ; certains fichiers ont pu être remplacés, ce qui ne peut pas être confirmé pour l’instant. Pour ne pas écraser vos données actuelles, rien n’a été fait automatiquement.';
 
   @override
   String get restoreResultUnknownItems =>
       'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+
+  @override
+  String get restoreResultCommitKnown =>
+      'Known: this restore\'s data was committed to the database.';
 
   @override
   String get restoreResultNavigateOnly =>

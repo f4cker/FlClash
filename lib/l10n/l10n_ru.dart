@@ -2209,11 +2209,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      'Последнее восстановление было прервано, а его журнал не удалось прочитать. В базе данных нет его фиксации; файлы, например профили, могли быть частично заменены, и это нельзя проверить, поэтому ничего не сделано автоматически. Если данные выглядят неверно, восстановите резервную копию ещё раз.';
+      'Последнее восстановление было прервано, а его журнал не удалось прочитать. Фиксация этого восстановления в базе данных не найдена; некоторые файлы могли быть заменены, и сейчас это нельзя подтвердить. Чтобы не перезаписать текущие данные, ничего не сделано автоматически.';
 
   @override
   String get restoreResultUnknownItems =>
       'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+
+  @override
+  String get restoreResultCommitKnown =>
+      'Known: this restore\'s data was committed to the database.';
 
   @override
   String get restoreResultNavigateOnly =>

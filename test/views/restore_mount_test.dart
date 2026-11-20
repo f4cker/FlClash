@@ -800,6 +800,81 @@ void main() {
       );
       expect(find.text('无法读取待处理项，不能视为完成。'), findsOne);
       expect(find.textContaining('待检查配置'), findsNothing);
+      expect(
+        find.text('已确认：本次恢复的数据已提交到数据库。'),
+        findsOne,
+        reason: 'the known commit state is said on its own',
+      );
+      expect(
+        find.textContaining('当前仍有'),
+        findsNothing,
+        reason: 'a partly known list is never given a total',
+      );
+      expect(find.text('恢复已完成。'), findsNothing);
+      expect(find.textContaining('· 0'), findsNothing);
+    });
+
+    testWidgets('nothing known at all still never reads as zero items or '
+        'completed', (tester) async {
+      const evidence = RestoreEvidence(writeStarted: true, committed: true);
+      expect(evidence.kind, isNot(RestoreResultKind.completed));
+      await host(
+        tester,
+        () => const RestoreResultView(evidence: evidence),
+        locale: const Locale('zh'),
+        size: const Size(860, 600),
+      );
+      expect(find.text('数据已恢复，后续处理尚未完成。'), findsOne);
+      expect(find.text('无法读取待处理项，不能视为完成。'), findsOne);
+      expect(find.text('已确认：本次恢复的数据已提交到数据库。'), findsOne);
+      expect(find.textContaining('· 0'), findsNothing);
+      expect(find.textContaining('0 项'), findsNothing);
+    });
+
+    test('the data-changed title needs a change seen and steps really '
+        'skipped', () {
+      RestoreEvidence foreign(List<RestoreStep>? skipped) => RestoreEvidence(
+        writeStarted: true,
+        committed: true,
+        foreignWrites: true,
+        pendingSteps: const [],
+        skippedSteps: skipped,
+        pendingChecks: const [],
+      );
+      expect(
+        foreign([RestoreStep.settings]).kind,
+        RestoreResultKind.foreignSkipped,
+      );
+      expect(foreign(const []).kind, RestoreResultKind.completed);
+      expect(foreign(null).kind, RestoreResultKind.committedLocked);
+    });
+
+    testWidgets('the data-changed title is followed by the steps it '
+        'skipped', (tester) async {
+      await host(
+        tester,
+        () => const RestoreResultView(
+          evidence: RestoreEvidence(
+            writeStarted: true,
+            committed: true,
+            foreignWrites: true,
+            pendingSteps: [RestoreStep.mitm],
+            skippedSteps: [RestoreStep.settings],
+            pendingChecks: [],
+          ),
+        ),
+        locale: const Locale('zh'),
+        size: const Size(860, 900),
+      );
+      final title = find.text('恢复后数据又被修改过，为保留这些修改，已跳过部分恢复步骤。');
+      expect(title, findsOne);
+      final skipped = find.text('已跳过的步骤 · 1');
+      final steps = find.text('后续步骤 · 1');
+      expect(
+        tester.getTopLeft(skipped).dy,
+        lessThan(tester.getTopLeft(steps).dy),
+      );
+      expect(find.text('应用备份中的设置'), findsOne);
     });
 
     RestoreEvidence partial({List<RestoreMountProfile> checks = const []}) =>

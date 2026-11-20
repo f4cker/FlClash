@@ -2079,10 +2079,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      '上次恢复被中断，且恢复记录无法读取。数据库中没有这次恢复的提交记录；配置文件等可能已被部分替换，无法确认，因此未做任何自动处理。如数据异常，请重新恢复备份。';
+      '上次恢复被中断，恢复记录无法读取。数据库中未找到本次恢复的提交记录；部分文件可能已被替换，当前无法确认。为避免覆盖现有数据，未进行自动处理。';
 
   @override
   String get restoreResultUnknownItems => '无法读取待处理项，不能视为完成。';
+
+  @override
+  String get restoreResultCommitKnown => '已确认：本次恢复的数据已提交到数据库。';
 
   @override
   String get restoreResultNavigateOnly => '打开配置页仅导航；不检查、不修改。';

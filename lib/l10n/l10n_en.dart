@@ -2213,11 +2213,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreRecoveryUnreadable =>
-      'The last restore was interrupted and its record couldn\'t be read. The database holds no commit from it; files such as profiles may have been partly replaced, which can\'t be checked, so nothing was done automatically. If your data looks wrong, restore the backup again.';
+      'The last restore was interrupted and its record couldn\'t be read. No commit of this restore was found in the database; some files may have been replaced, which can\'t be confirmed now. To avoid overwriting your current data, nothing was done automatically.';
 
   @override
   String get restoreResultUnknownItems =>
       'The pending items couldn\'t be read, so this isn\'t treated as complete.';
+
+  @override
+  String get restoreResultCommitKnown =>
+      'Known: this restore\'s data was committed to the database.';
 
   @override
   String get restoreResultNavigateOnly =>
