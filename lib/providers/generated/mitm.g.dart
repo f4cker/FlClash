@@ -277,7 +277,7 @@ final class MitmSignActionProvider
   }
 }
 
-String _$mitmSignActionHash() => r'fe7e7ae871761e4f4d64c737fe63584f9046f97f';
+String _$mitmSignActionHash() => r'6fb586a11ab0305774748e489a9ae6b4d717dfad';
 
 /// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
 /// decrypts (the user's hostnames, then the enabled modules', see
@@ -627,7 +627,7 @@ final class MitmBodyProvider
   }
 }
 
-String _$mitmBodyHash() => r'b96c6f3c64f32a3a6f3492ed9c1f3e06f92ea71d';
+String _$mitmBodyHash() => r'96c5b1536b3ef845f285b8f6e4ff60e6b4772ce7';
 
 final class MitmBodyFamily extends $Family
     with
