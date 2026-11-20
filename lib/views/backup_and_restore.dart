@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/dav_client.dart';
+import 'package:fl_clash/common/restore_journal.dart';
+import 'package:fl_clash/common/restore_mount_plan.dart';
+import 'package:fl_clash/common/restore_result.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -12,6 +15,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
+import 'package:fl_clash/views/restore_mount.dart';
 import 'package:fl_clash/widgets/config_item.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -57,6 +61,7 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
     required String title,
     required String successMessage,
     required Future<bool> Function() task,
+    bool Function()? announceSuccess,
   }) async {
     final res = await globalState.loadingRun<bool>(
       task,
@@ -64,6 +69,7 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
       title: title,
     );
     if (res != true) return;
+    if (announceSuccess != null && !announceSuccess()) return;
     unawaited(
       dialogs.showAlert(
         title: title,
@@ -84,23 +90,58 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
   Future<void> _restore(RestoreOption option, BackupFetch fetch) async {
     final appLocalizations = context.appLocalizations;
     RestoreBlockedException? blocked;
+    RestoreMountResult? result;
+    RestorePartialException? partial;
     await _run(
       title: appLocalizations.restore,
       successMessage: appLocalizations.restoreSuccess,
+      // A restore that touched mounts says what it did instead.
+      announceSuccess: () => result == null || result!.plan.isEmpty,
       task: () async {
         try {
           return await ref
               .read(backupActionProvider.notifier)
-              .restore(option, fetch);
+              .restore(
+                option,
+                fetch,
+                confirm: (plan) async =>
+                    await dialogs.showCommonDialog<bool>(
+                      child: RestoreMountConfirmSheet(plan: plan),
+                      dismissible: false,
+                    ) ??
+                    false,
+                onResult: (value) => result = value,
+              );
         } on RestoreBlockedException catch (e) {
-          if (e.reason == RestoreBlockedReason.mountPending) rethrow;
           blocked = e;
+          return false;
+        } on RestorePartialException catch (e) {
+          partial = e;
           return false;
         }
       },
     );
-    if (blocked case final blocked? when mounted) {
+    if (!mounted) return;
+    if (blocked case final blocked?) {
       await showRestoreBlocked(blocked, ref.read);
+    } else if (partial case final partial?) {
+      await showRestoreResult(
+        RestoreEvidence(
+          writeStarted: true,
+          committed: true,
+          pendingSteps: partial.steps.whereType<RestoreStep>().toList(),
+          skippedSteps: const [],
+          canContinue: true,
+        ),
+        ref.read,
+        onContinue: () =>
+            ref.read(backupActionProvider.notifier).resumeRestore(),
+      );
+    } else if (result case final result? when !result.plan.isEmpty) {
+      await showRestoreResult(
+        RestoreEvidence.committed(pendingChecks: result.stillPending),
+        ref.read,
+      );
     }
   }
 
@@ -353,17 +394,94 @@ class _RestoreOptionsDialogState extends State<RestoreOptionsDialog> {
   }
 }
 
-/// Viewing only opens the profiles page; nothing is changed from here.
+void _openProfiles(ProviderReader read) {
+  rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  read(currentPageLabelProvider.notifier).toProfiles();
+}
+
+/// Viewing only opens the profiles page; nothing is changed from here. A
+/// pending mount operation offers only an explicit check.
 Future<void> showRestoreBlocked(
   RestoreBlockedException blocked,
   ProviderReader read,
 ) async {
+  if (blocked.reason == RestoreBlockedReason.mountPending) {
+    await dialogs.showCommonDialog<void>(
+      child: RestorePendingRefusal(
+        profiles: [
+          for (final (index, id) in blocked.profileIds.indexed)
+            RestoreMountProfile(
+              id,
+              label: index < blocked.profileNames.length
+                  ? blocked.profileNames[index]
+                  : null,
+            ),
+        ],
+        onCheck: () => recheckPendingMounts(read, blocked.profileIds),
+      ),
+    );
+    return;
+  }
   final view = await dialogs.showCommonDialog<bool>(
     child: RestoreBlockedDialog(blocked: blocked),
   );
   if (view != true) return;
-  rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
-  read(currentPageLabelProvider.notifier).toProfiles();
+  _openProfiles(read);
+}
+
+/// Checks each pending target once, on the user's request. A result the
+/// Core could not confirm never counts as passed.
+Future<RestoreRecheckOutcome> recheckPendingMounts(
+  ProviderReader read,
+  List<int> targetIds,
+) async {
+  final mounts = read(mountActionProvider.notifier);
+  var state = RestoreRecheckState.passed;
+  String? failure;
+  for (final id in targetIds) {
+    final result = await mounts.recheck(id);
+    switch (result.outcome) {
+      case MountSaveOutcome.unknown || MountSaveOutcome.locked:
+        if (state == RestoreRecheckState.passed) {
+          state = RestoreRecheckState.unavailable;
+        }
+      // The mount page's own wording, never an internal code.
+      case MountSaveOutcome.applyFailed:
+        state = RestoreRecheckState.failed;
+        failure = currentAppLocalizations.mountApplyFailed;
+      case MountSaveOutcome.applyFailedBlocked:
+        state = RestoreRecheckState.failed;
+        failure = currentAppLocalizations.mountApplyBlocked;
+      case MountSaveOutcome.applyFailedKept:
+        state = RestoreRecheckState.failed;
+        failure = currentAppLocalizations.mountApplyKept;
+      default:
+        break;
+    }
+  }
+  return (state: state, failure: failure);
+}
+
+/// The result of a restore, titled by what is known about it.
+Future<void> showRestoreResult(
+  RestoreEvidence evidence,
+  ProviderReader read, {
+  Future<void> Function()? onContinue,
+}) async {
+  var open = false;
+  await dialogs.showCommonDialog<void>(
+    child: Builder(
+      builder: (context) => RestoreResultView(
+        evidence: evidence,
+        onContinue: onContinue,
+        onOpenProfiles: () {
+          open = true;
+          Navigator.of(context).pop();
+        },
+      ),
+    ),
+  );
+  if (open) _openProfiles(read);
 }
 
 class RestoreBlockedDialog extends StatelessWidget {
