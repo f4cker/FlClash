@@ -959,7 +959,7 @@ class Database extends _$Database {
           ),
       ]);
     });
-    await this.mountSourceStatuses.remove(
+    await mountSourceStatuses.remove(
       (t) => t.sourceId.isNotInQuery(profileIds),
     );
   }

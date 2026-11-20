@@ -266,7 +266,11 @@ void main() {
         profiles: [_profile(77751, 'Restored')],
         mountsCarried: true,
         mountTargets: [
-          MountTargetState(targetId: 77751, sourceIds: [77752], version: 4),
+          const MountTargetState(
+            targetId: 77751,
+            sourceIds: [77752],
+            version: 4,
+          ),
         ],
       );
 
@@ -342,7 +346,7 @@ void main() {
             profiles: [_profile(77771, 'Target')],
             mountsCarried: true,
             mountTargets: [
-              MountTargetState(
+              const MountTargetState(
                 targetId: 77771,
                 sourceIds: [77772, 77774],
                 version: 1,
