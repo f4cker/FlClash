@@ -197,7 +197,9 @@ class BackupAction extends _$BackupAction {
       for (final m in {for (final m in data.mitmModules) m.id: m}.values)
         RestoreMitmModule(m.id, m.name),
     ];
-    if (!preview.isEmpty || mitmModules.isNotEmpty) {
+    // An override deletes local items the backup lacks, so it is always
+    // confirmed; a compatible restore with nothing listed is not asked.
+    if (previewOverride || !preview.isEmpty || mitmModules.isNotEmpty) {
       final accepted = switch (confirm) {
         final confirm? => await confirm(preview, mitmModules: mitmModules),
         null => !preview.hasLosses,

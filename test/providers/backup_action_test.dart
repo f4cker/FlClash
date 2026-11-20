@@ -307,6 +307,60 @@ void main() {
       );
     });
 
+    test('an override with no mount change and no backup modules still '
+        'asks first, since it deletes local modules; a compatible one with '
+        'nothing to list does not', () async {
+      final local = MitmModule(
+        id: 88811,
+        name: 'Local',
+        enabled: true,
+        accepted: true,
+        lastUpdateTime: DateTime(2026),
+      );
+      await testDatabase.mitmModulesDao.putAll([local.toCompanion(0)]);
+      final data = MigrationData(profiles: [_profile(88812, 'From backup')]);
+      Future<List<int>> moduleIds() async => [
+        for (final m in await testDatabase.mitmModulesDao.query().get()) m.id,
+      ];
+
+      final compatible = actionOf(withStrategy(RestoreStrategy.compatible));
+      var askedCompatible = 0;
+      await compatible.applyRestore(
+        data,
+        RestoreOption.all,
+        confirm: (_, {mitmModules = const []}) async {
+          askedCompatible++;
+          return true;
+        },
+      );
+      expect(askedCompatible, 0, reason: 'nothing to list: written as is');
+      expect(await moduleIds(), [88811], reason: 'a merge keeps it');
+
+      final override = actionOf(withStrategy(RestoreStrategy.override));
+      final asked = <(bool, bool, int)>[];
+      Future<bool> answer(
+        RestoreMountPlan plan, {
+        List<RestoreMitmModule> mitmModules = const [],
+      }) async {
+        asked.add((plan.isOverride, plan.isEmpty, mitmModules.length));
+        return false;
+      }
+
+      expect(
+        await override.applyRestore(data, RestoreOption.all, confirm: answer),
+        isNull,
+      );
+      expect(asked, [(true, true, 0)]);
+      expect(await moduleIds(), [88811], reason: 'cancel deletes nothing');
+
+      await override.applyRestore(
+        data,
+        RestoreOption.all,
+        confirm: (_, {mitmModules = const []}) async => true,
+      );
+      expect(await moduleIds(), isEmpty, reason: 'confirmed: deleted');
+    });
+
     test('confirming a MITM-only restore never consents: the module is '
         'written off and not accepted', () async {
       final container = buildContainer();
