@@ -82,12 +82,14 @@ class Dialogs {
     required InlineSpan message,
     String? title,
     bool? dismissible,
+    String? confirmText,
   }) {
     return _showMessage(
       message: message,
       title: title,
       dismissible: dismissible,
       cancelable: false,
+      confirmText: confirmText,
     );
   }
 

@@ -2156,11 +2156,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get restoreResultUnknownItems =>
-      'The pending items couldn\'t be read, so whether the remaining steps finished can\'t be confirmed yet.';
+      '保留中の項目を読み取れないため、残りの処理が完了したかどうかはまだ確認できません。';
 
   @override
-  String get restoreResultCommitKnown =>
-      'Confirmed: this restore\'s data was written to the database.';
+  String get restoreResultCommitKnown => '確認済み：今回の復元データはデータベースに書き込まれました。';
 
   @override
   String get restoreResultNavigateOnly =>

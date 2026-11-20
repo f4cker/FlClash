@@ -2241,11 +2241,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get restoreResultUnknownItems =>
-      'The pending items couldn\'t be read, so whether the remaining steps finished can\'t be confirmed yet.';
+      'Не удалось прочитать ожидающие элементы, поэтому пока нельзя подтвердить, что оставшиеся шаги завершены.';
 
   @override
   String get restoreResultCommitKnown =>
-      'Confirmed: this restore\'s data was written to the database.';
+      'Подтверждено: данные этого восстановления записаны в базу данных.';
 
   @override
   String get restoreResultNavigateOnly =>

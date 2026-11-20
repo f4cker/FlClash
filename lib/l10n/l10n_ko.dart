@@ -2203,11 +2203,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restoreResultUnknownItems =>
-      'The pending items couldn\'t be read, so whether the remaining steps finished can\'t be confirmed yet.';
+      '대기 중인 항목을 읽을 수 없어 남은 처리가 완료되었는지 아직 확인할 수 없습니다.';
 
   @override
-  String get restoreResultCommitKnown =>
-      'Confirmed: this restore\'s data was written to the database.';
+  String get restoreResultCommitKnown => '확인됨: 이번 복원의 데이터가 데이터베이스에 기록되었습니다.';
 
   @override
   String get restoreResultNavigateOnly =>

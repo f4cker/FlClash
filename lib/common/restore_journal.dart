@@ -547,6 +547,12 @@ enum RestoreRecoveryOutcome {
   /// commit for it, and nothing was done beyond setting it aside intact.
   unreadable,
 
+  /// The journal could not be read, but the database holds the restore's
+  /// commit: the data is restored, and whether the later steps ran is
+  /// unknown. Nothing can check them without the journal, so nothing is
+  /// offered beyond closing; data, backups and the set-aside journal stay.
+  committedUnconfirmed,
+
   /// Recovery itself failed before it could tell whether anything had
   /// committed; the journal stays for the next launch.
   failed,
@@ -793,16 +799,16 @@ class RestoreRecovery {
         );
         return;
       }
-      // Which steps ran is unknown; none can be redone without the record.
-      // The consent recheck needs none of it, so that one still runs.
+      // Which steps ran is unknown; none can be redone or verified without
+      // the record, so no step is claimed done or owed and no action is
+      // offered. The consent recheck needs none of it, so that one still
+      // runs; it never changes this report.
       await db.clearRestoreCommit(id);
       holdMitm(id, null);
       _awaitingMitm.add(_OwedMitm(id, null));
       reports.add(
         const RestoreRecoveryReport(
-          RestoreRecoveryOutcome.pending,
-          skippedSteps: RestoreStep.values,
-          followUp: RestoreFollowUp.restoreAgain,
+          RestoreRecoveryOutcome.committedUnconfirmed,
         ),
       );
       return;
@@ -1064,6 +1070,10 @@ String restoreRecoveryMessage(
     ],
     RestoreRecoveryOutcome.incomplete => [l10n.restoreRecoveryCompleted],
     RestoreRecoveryOutcome.unreadable => [l10n.restoreRecoveryUnreadable],
+    RestoreRecoveryOutcome.committedUnconfirmed => [
+      l10n.restoreResultCommitKnown,
+      l10n.restoreResultUnknownItems,
+    ],
     RestoreRecoveryOutcome.failed => [l10n.restoreRecoveryFailed],
   };
   return [

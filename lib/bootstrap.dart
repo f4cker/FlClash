@@ -189,6 +189,11 @@ class Bootstrap {
         message: TextSpan(
           text: restoreRecoveryMessage(report, currentAppLocalizations),
         ),
+        // Nothing to act on: the only way out says so.
+        confirmText:
+            report.outcome == RestoreRecoveryOutcome.committedUnconfirmed
+            ? currentAppLocalizations.close
+            : null,
       ),
     );
     await _handleFailedPreference();

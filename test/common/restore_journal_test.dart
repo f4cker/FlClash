@@ -694,19 +694,54 @@ void main() {
       File(join(dir.path, 'journal.json')).writeAsStringSync('{broken');
       await relaunch();
 
-      final reports = await recover();
+      var rechecked = 0;
+      // recover() runs the consent recheck too; it must not change what
+      // is said, since no step can be verified without the journal.
+      final reports = await recover(mitm: () => rechecked++);
 
-      expect(reports.single.outcome, RestoreRecoveryOutcome.pending);
-      expect(reports.single.skippedSteps, RestoreStep.values);
+      expect(rechecked, 1, reason: 'the consent recheck still runs');
+      expect(reports, hasLength(1), reason: 'the recheck adds no success');
+      final report = reports.single;
+      expect(report.outcome, RestoreRecoveryOutcome.committedUnconfirmed);
+      expect(report.followUp, RestoreFollowUp.none, reason: 'no restoreAgain');
+      expect(report.skippedSteps, isEmpty, reason: 'no step claimed owed');
       expect(await markers(), isEmpty);
       expect(journals(), isEmpty);
-      expect(quarantined(), hasLength(1));
-      final message = restoreRecoveryMessage(
-        reports.single,
-        currentAppLocalizations,
+      expect(quarantined(), hasLength(1), reason: 'the journal is kept');
+      final en = currentAppLocalizations;
+      final message = restoreRecoveryMessage(report, en);
+      expect(message, contains(en.restoreResultCommitKnown));
+      expect(message, contains(en.restoreResultUnknownItems));
+      expect(message, isNot(contains(en.restoreActionRestoreAgain)));
+      expect(message, isNot(contains(en.restoreRecoveryCompleted)));
+      loadAppLocalizations(const Locale('zh'));
+      addTearDown(() => loadAppLocalizations(const Locale('en')));
+      final zh = currentAppLocalizations;
+      expect(restoreRecoveryMessage(report, zh).split('\n'), [
+        '已确认：本次恢复的数据已写入数据库。',
+        '无法读取待处理项，暂不能确认后续处理是否完成。',
+      ]);
+    });
+
+    test('an unreadable committed journal stays unconfirmed even when the '
+        'consent recheck fails', () async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        _Crash.afterCommit,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
       );
-      expect(message, contains('has been restored'));
-      expect(message, isNot(contains('nothing was done')));
+      final [dir] = journals();
+      File(join(dir.path, 'journal.json')).writeAsStringSync('{broken');
+      await relaunch();
+
+      final reports = await recover(mitm: () => throw StateError('no'));
+
+      expect(
+        [for (final r in reports) r.outcome],
+        [RestoreRecoveryOutcome.committedUnconfirmed],
+      );
     });
 
     test('a published file torn after the commit is reported, not called '
