@@ -191,7 +191,7 @@ class RuleRow extends StatelessWidget {
   /// Lit for a moment after the rule was saved.
   final bool flashing;
 
-  /// Names the row as one a locate went to; the row is outlined while set.
+  /// Names the row as one a locate went to, its only mark.
   final String? association;
 
   bool get editable => onDelete != null;
@@ -434,22 +434,6 @@ class RuleRow extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  if (association != null)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          decoration: ShapeDecoration(
-                            shape: RoundedSuperellipseBorder(
-                              borderRadius: corners,
-                              side: BorderSide(
-                                color: colorScheme.primary,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                   if (highlighted)
                     Positioned(
                       left: 0,

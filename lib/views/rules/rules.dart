@@ -1507,6 +1507,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
   ) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
+    final fill = locateStripFill(colorScheme);
     final style = AppTextStyle.footnote
         .of(context)
         .copyWith(color: colorScheme.onSurface);
@@ -1535,7 +1536,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
         key: RulesView.locateKey,
         padding: const EdgeInsets.all(12),
         decoration: ShapeDecoration(
-          color: colorScheme.secondaryContainer,
+          color: fill,
           shape: RoundedSuperellipseBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -1568,6 +1569,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
               child: TextButton(
                 key: RulesView.locateShowAllKey,
                 onPressed: _endLocate,
+                style: ButtonStyle.from(
+                  foregroundColor: locateLinkColor(colorScheme, fill),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  minimumSize: const Size(44, 44),
+                ),
                 child: Text(appLocalizations.rulesLocateShowAll),
               ),
             ),
@@ -2135,6 +2141,28 @@ class _RulesViewState extends ConsumerState<RulesView> {
       ),
     );
   }
+}
+
+/// The locate strip's fill: primary at 6% over the page.
+@visibleForTesting
+Color locateStripFill(ColorScheme colorScheme) => Color.alphaBlend(
+  colorScheme.primary.withValues(alpha: 0.06),
+  SurfaceLevel.page.colorOf(colorScheme),
+);
+
+/// Primary taken toward the text color until it reads at 4.5:1 on [fill]:
+/// in light themes primary alone falls short on its own 6% tint.
+@visibleForTesting
+Color locateLinkColor(ColorScheme colorScheme, Color fill) {
+  for (var step = 0; step <= 20; step++) {
+    final color = Color.lerp(
+      colorScheme.primary,
+      colorScheme.onSurface,
+      step / 20,
+    )!;
+    if (contrastRatio(color, fill) >= 4.5) return color;
+  }
+  return colorScheme.onSurface;
 }
 
 class _CoreStopped {

@@ -128,7 +128,10 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  Future<void> pumpRules(WidgetTester tester) async {
+  Future<void> pumpRules(
+    WidgetTester tester, {
+    ThemeMode themeMode = ThemeMode.light,
+  }) async {
     const size = Size(1000, 900);
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
@@ -190,6 +193,23 @@ void main() {
     expect(find.textContaining('已命中'), findsNothing);
     expect([for (final row in rows(tester)) row.rule.index], [0, 1]);
     expect(rows(tester).every((row) => row.association == '关联规则'), isTrue);
+    // The label is the only mark: no outline and no selected look.
+    expect(rows(tester).every((row) => !row.highlighted), isTrue);
+    expect(
+      find.descendant(
+        of: find.byType(RuleRow),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is DecoratedBox &&
+              widget.decoration is ShapeDecoration &&
+              ((widget.decoration as ShapeDecoration).shape as OutlinedBorder?)
+                      ?.side
+                      .style !=
+                  BorderStyle.none,
+        ),
+      ),
+      findsNothing,
+    );
     expect(find.text('关联规则'), findsNWidgets(2));
     expect(find.text('DOMAIN-SUFFIX,github.com'), findsNothing);
     final showAll = tester.getSize(find.byKey(RulesView.locateShowAllKey));
@@ -203,6 +223,35 @@ void main() {
     expect(rows(tester).every((row) => row.association == null), isTrue);
     await teardown(tester);
   });
+
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets('the strip is a 6% primary tint and its link reads at '
+        '4.5:1 (${mode.name})', (tester) async {
+      await pumpRules(tester, themeMode: mode);
+      await locate(tester);
+
+      final context = tester.element(find.byKey(RulesView.locateKey));
+      final colorScheme = context.colorScheme;
+      final fill = Color.alphaBlend(
+        colorScheme.primary.withValues(alpha: 0.06),
+        SurfaceLevel.page.colorOf(colorScheme),
+      );
+      final strip = tester.widget<Container>(find.byKey(RulesView.locateKey));
+      expect((strip.decoration! as ShapeDecoration).color, fill);
+      for (final text in ['当前设备的规则', '已找到 2 条关联规则']) {
+        expect(
+          tester.widget<Text>(find.text(text)).style?.color,
+          colorScheme.onSurface,
+        );
+      }
+      final link = DefaultTextStyle.of(
+        tester.element(find.text('显示全部')),
+      ).style.color!;
+      expect(link, locateLinkColor(colorScheme, fill));
+      expect(contrastRatio(link, fill), greaterThanOrEqualTo(4.5));
+      await teardown(tester);
+    });
+  }
 
   testWidgets('one managed row reads as one', (tester) async {
     list = () => _managedList(managed: 1);
