@@ -2293,6 +2293,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '지난 복원이 중단되었고 시작할 때 처리하지 못했습니다. 복원 기록은 남겨 두었으며 다음에 앱을 시작할 때 다시 시도합니다.';
 
   @override
+  String get restoreRecoveryMitmAllOff =>
+      '복원 기록이 이전 버전의 것이라 어떤 MITM 모듈을 복원했는지 알 수 없습니다. 모든 MITM 모듈을 껐으며, 이 기기에서 다시 동의해야 실행됩니다. 모듈 설정과 파일은 유지됩니다.';
+
+  @override
   String get restoreContinue => '계속';
 
   @override

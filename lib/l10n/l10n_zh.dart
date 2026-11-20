@@ -2194,6 +2194,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreRecoveryFailed => '上次恢复被中断，启动时未能处理。恢复记录已保留，下次启动时会再次尝试。';
 
   @override
+  String get restoreRecoveryMitmAllOff =>
+      '恢复记录来自旧版本，无法确定恢复了哪些解密模块，因此已关闭全部解密模块，需在本机重新同意后才能运行。模块的设置和文件均已保留。';
+
+  @override
   String get restoreContinue => '继续完成';
 
   @override

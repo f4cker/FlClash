@@ -2360,6 +2360,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'La dernière restauration a été interrompue et n’a pas pu être traitée au démarrage. Son journal a été conservé et sera repris au prochain démarrage de l’app.';
 
   @override
+  String get restoreRecoveryMitmAllOff =>
+      'Le journal de restauration provient d’une version antérieure : impossible de savoir quels modules MITM il a restaurés. Tous les modules MITM ont été désactivés et ne s’exécutent qu’une fois de nouveau acceptés sur cet appareil. Leurs réglages et fichiers sont conservés.';
+
+  @override
   String get restoreContinue => 'Continuer';
 
   @override

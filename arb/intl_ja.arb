@@ -699,6 +699,7 @@
   "restoreActionRetry": "「続行」を選ぶと、残りの手順を今すぐ再試行します。",
   "restoreActionRestoreAgain": "これらの手順を完了するには、バックアップをもう一度復元してください。",
   "restoreRecoveryFailed": "前回の復元は中断され、起動時に処理できませんでした。記録は残してあり、次回の起動時に再試行します。",
+  "restoreRecoveryMitmAllOff": "復元の記録が旧バージョンのもので、どの MITM モジュールを復元したか判別できません。すべての MITM モジュールをオフにしました。この端末で再度同意するまで実行されません。設定とファイルは保持されています。",
   "restoreContinue": "続行",
   "pruneCache": "キャッシュを整理",
   "backupAndRestore": "バックアップと復元",

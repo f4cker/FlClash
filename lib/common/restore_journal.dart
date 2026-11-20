@@ -193,6 +193,10 @@ class RestoreJournal {
   /// every module.
   final List<int>? mitmModules;
 
+  /// Read from a journal written by a development build before
+  /// [mitmModules] was recorded: the key is absent, not null.
+  final bool mitmUnrecorded;
+
   RestoreJournal._({
     required this.homeDirPath,
     required this.id,
@@ -208,6 +212,7 @@ class RestoreJournal {
     this.prefsTarget,
     this.mountTargets = const [],
     this.mitmModules,
+    this.mitmUnrecorded = false,
   });
 
   static String rootOf(String homeDirPath) =>
@@ -299,6 +304,7 @@ class RestoreJournal {
     prefsTarget: json['prefsTarget'] as String?,
     mountTargets: [...?(json['mountTargets'] as List?)?.cast<int>()],
     mitmModules: (json['mitmModules'] as List?)?.cast<int>(),
+    mitmUnrecorded: !json.containsKey('mitmModules'),
   );
 
   Map<String, Object?> toJson() => {
@@ -314,7 +320,8 @@ class RestoreJournal {
     'dbFingerprint': dbFingerprint,
     'prefsTarget': prefsTarget,
     'mountTargets': mountTargets,
-    'mitmModules': mitmModules,
+    // Left out as it was read, so a later launch still knows the format.
+    if (!mitmUnrecorded) 'mitmModules': mitmModules,
   };
 
   Future<void> _write() async {
@@ -574,6 +581,10 @@ class RestoreRecoveryReport {
   final List<String> pendingMounts;
   final RestoreFollowUp followUp;
 
+  /// Every MITM module was turned off, since which ones the restore wrote
+  /// could not be told.
+  final bool mitmAllOff;
+
   const RestoreRecoveryReport(
     this.outcome, {
     this.keptFiles = const [],
@@ -581,13 +592,31 @@ class RestoreRecoveryReport {
     this.tornFiles = const [],
     this.pendingMounts = const [],
     this.followUp = RestoreFollowUp.none,
+    this.mitmAllOff = false,
   });
+
+  /// With every module turned off the restore is never called finished:
+  /// what ran before needs consent again here.
+  RestoreRecoveryReport withMitmAllOff() {
+    final finished =
+        outcome == RestoreRecoveryOutcome.completed ||
+        (outcome == RestoreRecoveryOutcome.incomplete && skippedSteps.isEmpty);
+    return RestoreRecoveryReport(
+      finished ? RestoreRecoveryOutcome.pending : outcome,
+      keptFiles: keptFiles,
+      skippedSteps: skippedSteps,
+      tornFiles: tornFiles,
+      pendingMounts: pendingMounts,
+      followUp: followUp,
+      mitmAllOff: true,
+    );
+  }
 
   @override
   String toString() =>
       'RestoreRecoveryReport($outcome, kept: $keptFiles, '
       'skipped: $skippedSteps, torn: $tornFiles, mounts: $pendingMounts, '
-      'followUp: $followUp)';
+      'followUp: $followUp, mitmAllOff: $mitmAllOff)';
 }
 
 /// The restored mount targets among [targetIds] whose record is still
@@ -703,6 +732,12 @@ class RestoreRecovery {
   final _awaitingMitm = <_OwedMitm>[];
   final reports = <RestoreRecoveryReport>[];
 
+  /// Old-format journals whose recovery turned every module off.
+  final _mitmAllOff = <int>{};
+
+  void _report(int id, RestoreRecoveryReport report) =>
+      reports.add(_mitmAllOff.contains(id) ? report.withMitmAllOff() : report);
+
   bool get needsMitm => _awaitingMitm.isNotEmpty;
 
   final _mitmHolds = <int, List<int>?>{};
@@ -758,7 +793,7 @@ class RestoreRecovery {
           'restore recovery $id failed: $error\n$stack',
           logLevel: LogLevel.error,
         );
-        reports.add(await _failure(id, journal));
+        _report(id, await _failure(id, journal));
       }
     }
   }
@@ -794,7 +829,8 @@ class RestoreRecovery {
     if (journal == null) {
       await RestoreJournal._quarantineUnreadable(await _homeDirPath(), id);
       if (committed == null) {
-        reports.add(
+        _report(
+          id,
           const RestoreRecoveryReport(RestoreRecoveryOutcome.unreadable),
         );
         return;
@@ -806,17 +842,43 @@ class RestoreRecovery {
       await db.clearRestoreCommit(id);
       holdMitm(id, null);
       _awaitingMitm.add(_OwedMitm(id, null));
-      reports.add(
+      _report(
+        id,
         const RestoreRecoveryReport(
           RestoreRecoveryOutcome.committedUnconfirmed,
         ),
       );
       return;
     }
+    // A journal from a development build before the module list was kept:
+    // which modules it wrote, and whether they were written turned on, is
+    // unknown, so every module is turned off until consented to here.
+    // Skipped only when the rows certainly never committed. Idempotent, and
+    // done before the journal goes, so a crash in between redoes it.
+    if (journal.mitmUnrecorded &&
+        journal.mitmModules == null &&
+        (committed != null ||
+            journal.phase.index > RestorePhase.published.index)) {
+      // Still to be checked for other writers below: this write is not one,
+      // so the recorded fingerprint moves with it when it matched before.
+      final followsCommit =
+          committed != null &&
+          journal.phase.index < RestorePhase.configSaved.index &&
+          await db.restoreFingerprint() == (journal.dbFingerprint ?? committed);
+      await db.mitmModulesDao.turnAllOff();
+      if (followsCommit) {
+        await journal.advance(
+          journal.phase,
+          dbFingerprint: await db.restoreFingerprint(),
+        );
+      }
+      _mitmAllOff.add(id);
+    }
     if (committed == null) {
       if (journal.phase.index <= RestorePhase.published.index) {
         final kept = await journal.rollBack();
-        reports.add(
+        _report(
+          id,
           kept.isEmpty
               ? const RestoreRecoveryReport(RestoreRecoveryOutcome.rolledBack)
               : RestoreRecoveryReport(
@@ -834,7 +896,8 @@ class RestoreRecovery {
       // The rows committed once but their marker is gone (the database was
       // cleared or replaced since): nothing here can be trusted to apply.
       await journal.quarantine();
-      reports.add(
+      _report(
+        id,
         RestoreRecoveryReport(
           RestoreRecoveryOutcome.incomplete,
           skippedSteps: remaining,
@@ -846,7 +909,7 @@ class RestoreRecovery {
     await journal._clearCopyLeftovers();
     if (journal.phase == RestorePhase.finalizing) {
       await journal.finish(db);
-      reports.add(await _finished(db, journal, const []));
+      _report(id, await _finished(db, journal, const []));
       return;
     }
     final torn = await journal.tornFiles();
@@ -892,7 +955,7 @@ class RestoreRecovery {
       return;
     }
     await journal.finish(db);
-    reports.add(await _finished(db, journal, torn));
+    _report(id, await _finished(db, journal, torn));
   }
 
   Future<RestoreRecoveryReport> _finished(
@@ -954,7 +1017,8 @@ class RestoreRecovery {
         final mounts = await pendingMountLabels(db, journal.mountTargets);
         // Data changed since, but no step ended up skipped: nothing to
         // say about skipping.
-        reports.add(
+        _report(
+          item.id,
           left.isEmpty
               ? RestoreRecoveryReport(
                   RestoreRecoveryOutcome.completed,
@@ -979,7 +1043,8 @@ class RestoreRecovery {
           );
         }
       }
-      reports.add(
+      _report(
+        item.id,
         await _finished(
           db,
           journal,
@@ -1005,13 +1070,12 @@ class RestoreRecovery {
         'restore recovery finish failed: $error',
         logLevel: LogLevel.error,
       );
-      reports.add(
-        const RestoreRecoveryReport(
-          RestoreRecoveryOutcome.pending,
-          skippedSteps: [RestoreStep.mitm],
-          followUp: RestoreFollowUp.nextLaunch,
-        ),
+      const report = RestoreRecoveryReport(
+        RestoreRecoveryOutcome.pending,
+        skippedSteps: [RestoreStep.mitm],
+        followUp: RestoreFollowUp.nextLaunch,
       );
+      reports.add(_mitmAllOff.isEmpty ? report : report.withMitmAllOff());
     }
     startBackgroundWork();
     for (final report in takeReports()) {
@@ -1078,6 +1142,7 @@ String restoreRecoveryMessage(
   };
   return [
     ...lines,
+    if (report.mitmAllOff) l10n.restoreRecoveryMitmAllOff,
     if (report.pendingMounts.isNotEmpty)
       l10n.restorePendingMounts(report.pendingMounts.join(separator)),
     if (restoreFollowUpText(report.followUp, l10n) case final text

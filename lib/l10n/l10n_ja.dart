@@ -2246,6 +2246,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '前回の復元は中断され、起動時に処理できませんでした。記録は残してあり、次回の起動時に再試行します。';
 
   @override
+  String get restoreRecoveryMitmAllOff =>
+      '復元の記録が旧バージョンのもので、どの MITM モジュールを復元したか判別できません。すべての MITM モジュールをオフにしました。この端末で再度同意するまで実行されません。設定とファイルは保持されています。';
+
+  @override
   String get restoreContinue => '続行';
 
   @override

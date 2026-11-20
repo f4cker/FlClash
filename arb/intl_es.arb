@@ -699,6 +699,7 @@
   "restoreActionRetry": "Elige “Continuar” para volver a intentar ahora los pasos restantes.",
   "restoreActionRestoreAgain": "Para completar estos pasos, vuelve a restaurar la copia.",
   "restoreRecoveryFailed": "La última restauración se interrumpió y no se pudo procesar al iniciar. Su registro se conservó y se volverá a intentar la próxima vez que se inicie la app.",
+  "restoreRecoveryMitmAllOff": "El registro de la restauración es de una versión anterior y no se puede saber qué módulos MITM restauró. Se desactivaron todos los módulos MITM y solo se ejecutan cuando vuelvas a aceptarlos en este dispositivo. Su configuración y sus archivos se conservaron.",
   "restoreContinue": "Continuar",
   "pruneCache": "Depurar caché",
   "backupAndRestore": "Copia de seguridad y restauración",

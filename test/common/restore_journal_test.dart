@@ -1252,6 +1252,145 @@ void main() {
       expect(restored.runsUnder(restoreRecovery.mitmHold.value), isTrue);
     });
   });
+  group('an old-format journal without the module list', () {
+    final other = MitmModule(
+      id: 50,
+      name: 'Other module',
+      enabled: true,
+      accepted: true,
+      lastUpdateTime: DateTime(2026),
+    );
+
+    Future<Map<int, (bool, bool?)>> states() async => {
+      for (final row in await database.mitmModulesDao.query().get())
+        row.id: (row.enabled, row.accepted),
+    };
+
+    /// Crashes at [crash], then leaves what an old development build would
+    /// have: modules on, and a journal with no `mitmModules` key unless
+    /// [keepKey].
+    Future<ProviderContainer> oldCrash(
+      _Crash crash, {
+      bool keepKey = false,
+    }) async {
+      final (:container, :staging, :data) = await fixture();
+      await crashAt(
+        crash,
+        container.read(backupActionProvider.notifier),
+        data,
+        staging.path,
+      );
+      await database.mitmModulesDao.putAll([
+        if (crash.committed) _module.toCompanion(0),
+        other.toCompanion(1),
+      ]);
+      final [dir] = journals();
+      final file = File(join(dir.path, 'journal.json'));
+      final map = jsonDecode(file.readAsStringSync()) as Map;
+      // The old build wrote these rows itself, before its checkpoint.
+      if (crash.committed) {
+        map['dbFingerprint'] = await database.restoreFingerprint();
+      }
+      if (!keepKey) expect(map.remove('mitmModules'), [_module.id]);
+      file.writeAsStringSync(jsonEncode(map));
+      await relaunch();
+      restoreRecovery.clearMitmHolds();
+      return container;
+    }
+
+    for (final crash in [
+      _Crash.afterCommit,
+      _Crash.afterCaches,
+      _Crash.afterPrefs,
+    ]) {
+      test('${crash.name}: turns every module off and declined, keeps their '
+          'settings, and never calls the restore finished', () async {
+        await oldCrash(crash);
+        final before = {
+          for (final row in await database.mitmModulesDao.query().get())
+            row.id: row,
+        };
+        expect(await states(), {41: (true, true), 50: (true, true)});
+
+        final reports = await recover();
+
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        for (final row in await database.mitmModulesDao.query().get()) {
+          final was = before[row.id]!;
+          expect(
+            row.copyWith(enabled: was.enabled, accepted: was.accepted),
+            was,
+            reason: 'only the two flags change',
+          );
+        }
+        final report = reports.single;
+        expect(report.mitmAllOff, isTrue);
+        expect(report.outcome, RestoreRecoveryOutcome.pending);
+        expect(journals(), isEmpty);
+        expect(await markers(), isEmpty);
+        final en = currentAppLocalizations;
+        final message = restoreRecoveryMessage(report, en);
+        expect(message, contains(en.restoreRecoveryMitmAllOff));
+        expect(message, isNot(contains(en.restoreRecoveryCompleted)));
+      });
+    }
+
+    test('stays off on the next launch until consented to here', () async {
+      final container = await oldCrash(_Crash.afterCommit);
+      await recover();
+      await relaunch();
+      expect(await recover(), isEmpty);
+      expect(await states(), {41: (false, false), 50: (false, false)});
+
+      final action = container.read(mitmModulesActionProvider.notifier);
+      final keep = container.listen(mitmModulesProvider, (_, _) {});
+      addTearDown(keep.close);
+      await container.read(mitmModulesProvider.future);
+      await action.recordConsent(other.id, asksConsent: true, agreed: true);
+      await pumpEventQueue();
+      expect(await states(), {41: (false, false), 50: (true, true)});
+    });
+
+    test('a failed recheck keeps the journal in its old format, so the next '
+        'launch turns them off again and says so', () async {
+      await oldCrash(_Crash.afterCommit);
+      final first = await recover(mitm: () => throw StateError('no'));
+      expect(first.single.mitmAllOff, isTrue);
+      final [dir] = journals();
+      expect(
+        (jsonDecode(File(join(dir.path, 'journal.json')).readAsStringSync())
+                as Map)
+            .containsKey('mitmModules'),
+        isFalse,
+      );
+      // Turned on in between, as the old build might.
+      await database.mitmModulesDao.putAll([other.toCompanion(1)]);
+      await relaunch();
+
+      final second = await recover();
+
+      expect(await states(), {41: (false, false), 50: (false, false)});
+      expect(second.single.mitmAllOff, isTrue);
+      expect(journals(), isEmpty);
+    });
+
+    test('a restore rolled back before its rows committed changes no '
+        'module', () async {
+      await oldCrash(_Crash.beforePublish);
+      final reports = await recover();
+      expect(reports.single.outcome, RestoreRecoveryOutcome.rolledBack);
+      expect(reports.single.mitmAllOff, isFalse);
+      expect(await states(), {50: (true, true)});
+    });
+
+    test('a current journal leaves modules it did not write alone', () async {
+      await oldCrash(_Crash.afterCommit, keepKey: true);
+      final reports = await recover();
+      expect(reports.single.mitmAllOff, isFalse);
+      expect(reports.single.outcome, RestoreRecoveryOutcome.completed);
+      expect((await states())[50], (true, true));
+    });
+  });
 }
 
 /// Saving settings fails, as a full disk would make it.

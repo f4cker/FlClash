@@ -4158,6 +4158,12 @@ abstract class AppLocalizations {
   /// **'The last restore was interrupted and couldn\'t be processed at startup. Its record was kept and will be tried again the next time the app starts.'**
   String get restoreRecoveryFailed;
 
+  /// No description provided for @restoreRecoveryMitmAllOff.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore record is from an older version, so which MITM modules it restored can\'t be told. All MITM modules were turned off and run only after you agree to them again on this device. Their settings and files were kept.'**
+  String get restoreRecoveryMitmAllOff;
+
   /// No description provided for @restoreContinue.
   ///
   /// In en, this message translates to:

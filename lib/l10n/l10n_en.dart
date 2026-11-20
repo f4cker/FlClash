@@ -2340,6 +2340,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The last restore was interrupted and couldn\'t be processed at startup. Its record was kept and will be tried again the next time the app starts.';
 
   @override
+  String get restoreRecoveryMitmAllOff =>
+      'The restore record is from an older version, so which MITM modules it restored can\'t be told. All MITM modules were turned off and run only after you agree to them again on this device. Their settings and files were kept.';
+
+  @override
   String get restoreContinue => 'Continue';
 
   @override

@@ -699,6 +699,7 @@
   "restoreActionRetry": "Choisissez « Continuer » pour relancer maintenant les étapes restantes.",
   "restoreActionRestoreAgain": "Pour terminer ces étapes, restaurez de nouveau la sauvegarde.",
   "restoreRecoveryFailed": "La dernière restauration a été interrompue et n’a pas pu être traitée au démarrage. Son journal a été conservé et sera repris au prochain démarrage de l’app.",
+  "restoreRecoveryMitmAllOff": "Le journal de restauration provient d’une version antérieure : impossible de savoir quels modules MITM il a restaurés. Tous les modules MITM ont été désactivés et ne s’exécutent qu’une fois de nouveau acceptés sur cet appareil. Leurs réglages et fichiers sont conservés.",
   "restoreContinue": "Continuer",
   "pruneCache": "Nettoyer le cache",
   "backupAndRestore": "Sauvegarde et restauration",

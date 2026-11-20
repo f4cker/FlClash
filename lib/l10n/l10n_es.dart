@@ -2360,6 +2360,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'La última restauración se interrumpió y no se pudo procesar al iniciar. Su registro se conservó y se volverá a intentar la próxima vez que se inicie la app.';
 
   @override
+  String get restoreRecoveryMitmAllOff =>
+      'El registro de la restauración es de una versión anterior y no se puede saber qué módulos MITM restauró. Se desactivaron todos los módulos MITM y solo se ejecutan cuando vuelvas a aceptarlos en este dispositivo. Su configuración y sus archivos se conservaron.';
+
+  @override
   String get restoreContinue => 'Continuar';
 
   @override

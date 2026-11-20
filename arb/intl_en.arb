@@ -719,6 +719,7 @@
   "restoreActionRetry": "Choose “Continue” to try the remaining steps again now.",
   "restoreActionRestoreAgain": "To complete these steps, restore the backup again.",
   "restoreRecoveryFailed": "The last restore was interrupted and couldn't be processed at startup. Its record was kept and will be tried again the next time the app starts.",
+  "restoreRecoveryMitmAllOff": "The restore record is from an older version, so which MITM modules it restored can't be told. All MITM modules were turned off and run only after you agree to them again on this device. Their settings and files were kept.",
   "restoreContinue": "Continue",
   "pruneCache": "Prune cache",
   "backupAndRestore": "Backup and restore",

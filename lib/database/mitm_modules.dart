@@ -69,6 +69,12 @@ class MitmModulesDao extends DatabaseAccessor<Database>
     });
   }
 
+  /// Turns every module off and declined; each runs again only after its
+  /// consent is given on this device. Settings and files stay.
+  Future<void> turnAllOff() => update(mitmModules).write(
+    const MitmModulesCompanion(enabled: Value(false), accepted: Value(false)),
+  );
+
   void putAllWithBatch(Batch batch, Iterable<MitmModule> modules) {
     batch.insertAllOnConflictUpdate(
       mitmModules,
