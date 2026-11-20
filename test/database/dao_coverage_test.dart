@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -923,24 +924,49 @@ void main() {
         pending: (version) =>
             MountOperation(kind: MountOperationKind.save, version: version),
       );
-      for (final pending in [true, false]) {
-        if (!pending) await database.mountsDao.settle(1, 1);
-        final before = await database.mountsDao.target(1);
-        for (final isOverride in [false, true]) {
-          await expectLater(
-            database.restore(
-              [target, source],
-              const [],
-              const [],
-              const [],
-              const [],
-              isOverride: isOverride,
+      // A pending operation still refuses, and writes nothing.
+      final before = await database.mountsDao.target(1);
+      for (final isOverride in [false, true]) {
+        await expectLater(
+          database.restore(
+            [target, source],
+            const [],
+            const [],
+            const [],
+            const [],
+            isOverride: isOverride,
+          ),
+          throwsA(
+            isA<RestoreBlockedError>().having(
+              (e) => e.reason,
+              'reason',
+              RestoreBlockedReason.mountPending,
             ),
-            throwsStateError,
-          );
-          expect(await database.mountsDao.target(1), before);
-          expect(await database.profileMounts.count.getSingle(), 1);
-        }
+          ),
+        );
+        expect(await database.mountsDao.target(1), before);
+        expect(await database.profileMounts.count.getSingle(), 1);
+      }
+      // Settled, mounts no longer refuse. A backup without mount tables
+      // keeps the local relation, and the rebuilt target stays locked until
+      // it is checked.
+      await database.mountsDao.settle(1, 1);
+      for (final isOverride in [false, true]) {
+        final version = (await database.mountsDao.target(1))!.version;
+        await database.restore(
+          [target, source],
+          const [],
+          const [],
+          const [],
+          const [],
+          isOverride: isOverride,
+        );
+        final after = (await database.mountsDao.target(1))!;
+        expect(after.sourceIds, [2]);
+        expect(after.version, greaterThan(version));
+        expect(after.pending != null, isTrue);
+        expect(await database.profileMounts.count.getSingle(), 1);
+        await database.mountsDao.settle(1, after.version);
       }
     },
   );
