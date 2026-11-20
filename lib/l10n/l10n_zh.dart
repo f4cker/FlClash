@@ -2219,19 +2219,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreRecoveryMitmStopped => '暂停解密模块时出错。为安全起见，本次运行期间已停止所有解密模块。';
 
   @override
-  String get restoreRecoveryMitmLockKept => '解密模块的安全限制尚未解除：下次启动时会再次关闭所有解密模块。';
+  String get restoreRecoveryMitmLockKept => '解密模块的安全限制尚未解除，下次启动时会再次尝试关闭所有解密模块。';
 
   @override
   String get restoreRecoveryMitmLockKeptUnconfirmed =>
-      '解密模块的安全限制尚未解除：无法确认下次启动时是否会再次关闭所有解密模块。';
+      '解密模块的安全限制尚未解除，无法确认下次启动时是否会再次关闭模块。';
 
   @override
   String get restoreRecoveryMitmLockNotSaved =>
-      '无法确定上次恢复涉及哪些解密模块，且未能可靠保存解密模块的安全记录，因此本次没有关闭模块。为安全起见，本次运行期间已停止所有解密模块；下次启动时会再次处理。';
+      '无法确定上次恢复涉及哪些解密模块，也未能可靠保存安全记录，因此未修改模块的开关状态。为安全起见，本次运行期间已阻止所有解密模块运行；下次启动时会再次处理。';
 
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
-      '无法确定上次恢复涉及哪些解密模块，且未能可靠保存解密模块的安全记录，因此本次没有关闭模块。为安全起见，本次运行期间已停止所有解密模块；无法确认下次启动时是否会再次处理。';
+      '无法确定上次恢复涉及哪些解密模块，也未能可靠保存安全记录，因此未修改模块的开关状态。为安全起见，本次运行期间已阻止所有解密模块运行；无法确认下次启动时是否会再次处理。';
 
   @override
   String get restoreContinue => '继续完成';

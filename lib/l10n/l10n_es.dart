@@ -2389,19 +2389,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmLockKept =>
-      'La restricción de seguridad de los módulos MITM aún no se ha levantado: en el próximo inicio se volverán a desactivar todos los módulos MITM.';
+      'La restricción de seguridad de los módulos MITM aún no se ha levantado; en el próximo inicio se volverá a intentar desactivar todos los módulos MITM.';
 
   @override
   String get restoreRecoveryMitmLockKeptUnconfirmed =>
-      'La restricción de seguridad de los módulos MITM aún no se ha levantado: no se puede confirmar si en el próximo inicio se volverán a desactivar todos los módulos MITM.';
+      'La restricción de seguridad de los módulos MITM aún no se ha levantado; no se puede confirmar si en el próximo inicio se volverán a desactivar los módulos.';
 
   @override
   String get restoreRecoveryMitmLockNotSaved =>
-      'No se puede determinar qué módulos MITM incluyó la última restauración y no se pudo guardar de forma fiable el registro de seguridad de los módulos MITM, por lo que esta vez no se desactivó ningún módulo. Por seguridad, todos los módulos MITM quedan detenidos mientras la app esté abierta; se volverá a tratar en el próximo inicio.';
+      'No se puede determinar qué módulos MITM incluyó la última restauración y tampoco se pudo guardar de forma fiable el registro de seguridad, por lo que no se cambió el estado activado/desactivado de ningún módulo. Por seguridad, se impide que se ejecute cualquier módulo MITM mientras la app esté abierta; se volverá a tratar en el próximo inicio.';
 
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
-      'No se puede determinar qué módulos MITM incluyó la última restauración y no se pudo guardar de forma fiable el registro de seguridad de los módulos MITM, por lo que esta vez no se desactivó ningún módulo. Por seguridad, todos los módulos MITM quedan detenidos mientras la app esté abierta; no se puede confirmar si se volverá a tratar en el próximo inicio.';
+      'No se puede determinar qué módulos MITM incluyó la última restauración y tampoco se pudo guardar de forma fiable el registro de seguridad, por lo que no se cambió el estado activado/desactivado de ningún módulo. Por seguridad, se impide que se ejecute cualquier módulo MITM mientras la app esté abierta; no se puede confirmar si se volverá a tratar en el próximo inicio.';
 
   @override
   String get restoreContinue => 'Continuar';

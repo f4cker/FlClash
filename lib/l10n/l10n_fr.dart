@@ -2390,19 +2390,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmLockKept =>
-      'La restriction de sécurité des modules MITM n’est pas encore levée : tous les modules MITM seront de nouveau désactivés au prochain démarrage.';
+      'La restriction de sécurité des modules MITM n’est pas encore levée ; au prochain démarrage, l’app tentera de nouveau de désactiver tous les modules MITM.';
 
   @override
   String get restoreRecoveryMitmLockKeptUnconfirmed =>
-      'La restriction de sécurité des modules MITM n’est pas encore levée : impossible de confirmer si tous les modules MITM seront de nouveau désactivés au prochain démarrage.';
+      'La restriction de sécurité des modules MITM n’est pas encore levée ; impossible de confirmer si les modules seront de nouveau désactivés au prochain démarrage.';
 
   @override
   String get restoreRecoveryMitmLockNotSaved =>
-      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et l’enregistrement de sécurité des modules MITM n’a pas pu être sauvegardé de façon fiable ; aucun module n’a donc été désactivé cette fois. Par sécurité, tous les modules MITM sont arrêtés tant que l’app est ouverte ; ce sera traité de nouveau au prochain démarrage.';
+      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et l’enregistrement de sécurité n’a pas non plus pu être sauvegardé de façon fiable ; l’état activé/désactivé des modules n’a donc pas été modifié. Par sécurité, l’exécution de tous les modules MITM est bloquée tant que l’app est ouverte ; ce sera traité de nouveau au prochain démarrage.';
 
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
-      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et l’enregistrement de sécurité des modules MITM n’a pas pu être sauvegardé de façon fiable ; aucun module n’a donc été désactivé cette fois. Par sécurité, tous les modules MITM sont arrêtés tant que l’app est ouverte ; impossible de confirmer si ce sera traité de nouveau au prochain démarrage.';
+      'Impossible de déterminer quels modules MITM la dernière restauration concernait, et l’enregistrement de sécurité n’a pas non plus pu être sauvegardé de façon fiable ; l’état activé/désactivé des modules n’a donc pas été modifié. Par sécurité, l’exécution de tous les modules MITM est bloquée tant que l’app est ouverte ; impossible de confirmer si ce sera traité de nouveau au prochain démarrage.';
 
   @override
   String get restoreContinue => 'Continuer';

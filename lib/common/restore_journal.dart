@@ -1114,19 +1114,22 @@ class RestoreRecovery {
     _hold(_lockHold, null, persist: false);
     final write = _lockQueue.then((_) => _lock.write(reason));
     _lockQueue = write.then((_) {});
-    return write.then((saved) {
+    return write.then((saved) async {
       if (saved.file) {
         _lockDurable = true;
-      } else {
-        // Said by its own line, when a step waited on it.
-        stopMitmModules(
-          'safety lock not durable ($reason)',
-          persist: false,
-          said: false,
-        );
-        if (gate) _lockGateFailed = true;
+        return true;
       }
-      return saved.file;
+      // A file copy already durable still reads: the lock stands whatever
+      // this write's reason.
+      if (await _lockRetryConfirmed()) return true;
+      // Said by its own line, when a step waited on it.
+      await stopMitmModules(
+        'safety lock not durable ($reason)',
+        persist: false,
+        said: false,
+      );
+      if (gate) _lockGateFailed = true;
+      return false;
     });
   }
 
@@ -1457,7 +1460,10 @@ class RestoreRecovery {
       try {
         // The lock outlives the journal: confirmed before anything that
         // could lose the journal, or nothing more is done here.
-        if (!await _writeLock('old-format journal $id', gate: true)) {
+        // Once a lock could not be saved, no module is turned off this
+        // launch, so the report saying none was stays true.
+        if (_lockGateFailed ||
+            !await _writeLock('old-format journal $id', gate: true)) {
           throw const _LockNotDurable();
         }
         // Every lock write so far, a stop's included, came before this.

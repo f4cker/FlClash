@@ -1728,8 +1728,8 @@ void main() {
         expect(
           restoreRecoveryMessage(report, zh).split('\n'),
           contains(
-            '无法确定上次恢复涉及哪些解密模块，且未能可靠保存解密模块的安全记录，'
-            '因此本次没有关闭模块。为安全起见，本次运行期间已停止所有解密模块；'
+            '无法确定上次恢复涉及哪些解密模块，也未能可靠保存安全记录，'
+            '因此未修改模块的开关状态。为安全起见，本次运行期间已阻止所有解密模块运行；'
             '下次启动时会再次处理。',
           ),
         );
@@ -1742,6 +1742,28 @@ void main() {
         expect(await lock(), (file: false, prefs: false));
         expect(journals(), isEmpty);
         await expectOffUntilConsent();
+      });
+
+      test('a durable lock file from before still reads when a rewrite '
+          'fails: the lock stands, so modules are turned off and nothing is '
+          'said about a lock not saved', () async {
+        await oldCrash(_Crash.afterCommit);
+        lockFile().writeAsStringSync('{"reason":"earlier"}');
+        restoreRecovery.clearMitmHolds();
+        restoreRecovery.onLockStep = (copy, step) async {
+          if (copy == MitmLockCopy.file && step != 'read') {
+            throw StateError('file');
+          }
+        };
+        await restoreRecovery.run();
+        await restoreRecovery.finish(() async {});
+        final [report] = restoreRecovery.takeReports();
+        expect(await states(), {41: (false, false), 50: (false, false)});
+        expect(report.mitmLockNotSaved, isFalse);
+        expect(report.mitmAllOff, isTrue);
+        expect(report.mitmLockKept, isTrue);
+        expect(report.mitmLockKeptConfirmed, isTrue, reason: 'file reads');
+        expectNone(await reaching());
       });
 
       test('only the setting copy is confirmed and the journal goes too: '
@@ -1835,7 +1857,7 @@ void main() {
         final zh = lookupAppLocalizations(const Locale('zh'));
         expect(
           restoreRecoveryMessage(report, zh).split('\n'),
-          contains('解密模块的安全限制尚未解除：下次启动时会再次关闭所有解密模块。'),
+          contains('解密模块的安全限制尚未解除，下次启动时会再次尝试关闭所有解密模块。'),
         );
 
         final second = await launch();
@@ -1879,7 +1901,7 @@ void main() {
         final zh = lookupAppLocalizations(const Locale('zh'));
         expect(
           restoreRecoveryMessage(report, zh).split('\n'),
-          contains('解密模块的安全限制尚未解除：无法确认下次启动时是否会再次关闭所有解密模块。'),
+          contains('解密模块的安全限制尚未解除，无法确认下次启动时是否会再次关闭模块。'),
         );
 
         // Consented to in between: the lock still turns it off again.
@@ -2198,6 +2220,7 @@ void main() {
         File(join(dir.path, 'journal.json')).writeAsStringSync('{broken');
         await database.mitmModulesDao.putAll([other.toCompanion(1)]);
         await relaunch();
+        final before = await states();
         restoreRecovery.clearMitmHolds();
         restoreRecovery.onLockStep = (copy, step) async {
           if (step != 'read') throw StateError('$copy');
@@ -2205,6 +2228,7 @@ void main() {
         await restoreRecovery.run();
         await restoreRecovery.finish(() async {});
         final [report] = restoreRecovery.takeReports();
+        expect(await states(), before, reason: 'no on/off state changed');
         expect(restoreRecovery.mitmStopped, isTrue);
         expect(report.mitmLockNotSaved, isTrue);
         expect(report.mitmLockNotSavedRetryKept, isTrue);

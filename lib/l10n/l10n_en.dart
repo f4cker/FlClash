@@ -2367,19 +2367,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreRecoveryMitmLockKept =>
-      'The safety restriction on MITM modules hasn\'t been lifted yet: all MITM modules will be turned off again at the next launch.';
+      'The safety restriction on MITM modules hasn\'t been lifted yet; the next launch will try again to turn off all MITM modules.';
 
   @override
   String get restoreRecoveryMitmLockKeptUnconfirmed =>
-      'The safety restriction on MITM modules hasn\'t been lifted yet: whether all MITM modules will be turned off again at the next launch can\'t be confirmed.';
+      'The safety restriction on MITM modules hasn\'t been lifted yet; whether the next launch will turn the modules off again can\'t be confirmed.';
 
   @override
   String get restoreRecoveryMitmLockNotSaved =>
-      'Which MITM modules the last restore involved can\'t be determined, and the MITM safety record couldn\'t be saved reliably, so no modules were turned off this time. To be safe, all MITM modules are stopped while the app runs; this is handled again at the next launch.';
+      'Which MITM modules the last restore involved can\'t be determined, and the safety record couldn\'t be saved reliably, so no module\'s on/off state was changed. To be safe, all MITM modules are blocked from running while the app runs; this is handled again at the next launch.';
 
   @override
   String get restoreRecoveryMitmLockNotSavedNoRetry =>
-      'Which MITM modules the last restore involved can\'t be determined, and the MITM safety record couldn\'t be saved reliably, so no modules were turned off this time. To be safe, all MITM modules are stopped while the app runs; whether this is handled again at the next launch can\'t be confirmed.';
+      'Which MITM modules the last restore involved can\'t be determined, and the safety record couldn\'t be saved reliably, so no module\'s on/off state was changed. To be safe, all MITM modules are blocked from running while the app runs; whether this is handled again at the next launch can\'t be confirmed.';
 
   @override
   String get restoreContinue => 'Continue';
