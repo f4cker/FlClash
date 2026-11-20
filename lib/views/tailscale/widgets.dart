@@ -290,10 +290,10 @@ class TailscaleNewAccountAvatar extends StatelessWidget {
   }
 }
 
-/// The avatar of a record confirmed to be an account never finished: a
-/// plain grey person, as large as [TailscaleAvatar].
-class TailscaleUnfinishedAccountAvatar extends StatelessWidget {
-  const TailscaleUnfinishedAccountAvatar({super.key, this.size = 20});
+/// The avatar of a record with no account on file: a plain grey person, as
+/// large as [TailscaleAvatar].
+class TailscaleUnknownAccountAvatar extends StatelessWidget {
+  const TailscaleUnknownAccountAvatar({super.key, this.size = 20});
 
   final double size;
 

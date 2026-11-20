@@ -4213,6 +4213,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsUnconfirmedTip => '暂时无法确认此节点是否已连接，请重新读取状态。';
 
   @override
+  String get tsRecordsFoundNoNodeStatus => '已找到账号记录，但暂时无法读取节点状态。';
+
+  @override
   String get tsLoadFailedTip => '暂时无法读取此节点的状态，请重试。';
 
   @override
@@ -4272,9 +4275,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tsAccountsOfProfile => '当前配置的 Tailscale 账号';
-
-  @override
-  String get tsUnfinishedAccount => '未完成的账号';
 
   @override
   String get tsAccountStatusUnknown => '账号状态未知';
@@ -4845,9 +4845,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tsSignedOutReceipt => '已退出此账号';
-
-  @override
-  String get tsAccountsInProfile => '当前配置中的 Tailscale 账号';
 
   @override
   String get tsAddAccount => '添加 Tailscale 账号';

@@ -4377,6 +4377,10 @@ class AppLocalizationsKo extends AppLocalizations {
       'Can\'t confirm whether this node is connected. Read the status again.';
 
   @override
+  String get tsRecordsFoundNoNodeStatus =>
+      'Account records found, but node status can\'t be read right now.';
+
+  @override
   String get tsLoadFailedTip =>
       'Can\'t read this node\'s status right now. Try again.';
 
@@ -4437,9 +4441,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get tsAccountsOfProfile => 'Tailscale accounts in this profile';
-
-  @override
-  String get tsUnfinishedAccount => 'Unfinished account';
 
   @override
   String get tsAccountStatusUnknown => 'Account status unknown';
@@ -5058,9 +5059,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get tsSignedOutReceipt => 'Signed out of this account';
-
-  @override
-  String get tsAccountsInProfile => 'Tailscale accounts in this profile';
 
   @override
   String get tsAddAccount => 'Add Tailscale account';

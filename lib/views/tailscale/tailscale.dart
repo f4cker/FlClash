@@ -1410,8 +1410,9 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           return label;
         }
       }
-      if (tailscaleRecordUnfinished(record)) {
-        return appLocalizations.tsUnfinishedAccount;
+      if (tailscaleRecordAccountUnknown(record)) {
+        // Never a guess at why: only that no account is on file.
+        return appLocalizations.tsAccountStatusUnknown;
       }
       return record.name.isEmpty ? record.id : record.name;
     }
@@ -1434,19 +1435,22 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           for (final (index, record) in records.indexed)
             () {
               final label = labelOf(record);
+              final unknown = tailscaleRecordAccountUnknown(record);
               final network = record.loggedOut
                   ? ''
                   : record.account?.tailnet ?? '';
+              final subtitle = [
+                if (network.isNotEmpty) appLocalizations.tsNetworkOf(network),
+                // Already the title of an unknown account.
+                if (!unknown) appLocalizations.tsAccountStatusUnknown,
+              ].join(' · ');
               return PopupMenuItem(
                 label: label,
                 labelEmphasized: true,
-                leading: tailscaleRecordUnfinished(record)
-                    ? const TailscaleUnfinishedAccountAvatar()
+                leading: unknown
+                    ? const TailscaleUnknownAccountAvatar()
                     : TailscaleAvatar(name: label),
-                subtitle: [
-                  if (network.isNotEmpty) appLocalizations.tsNetworkOf(network),
-                  appLocalizations.tsAccountStatusUnknown,
-                ].join(' · '),
+                subtitle: subtitle.isEmpty ? null : subtitle,
                 // Wraps rather than cutting the state off on a narrow window.
                 subtitleMaxLines: 2,
                 checked: record.key == _selected,
@@ -1541,10 +1545,10 @@ String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
   };
 }
 
-/// A record known to be an account never finished: no sign-in was ever
-/// attached to it and nothing is under way. Anything else may have had an
-/// account, so it goes by its name.
-bool tailscaleRecordUnfinished(TailscaleManagedRecord record) =>
+/// A record with no finished account on file: none attached, not signed
+/// out, nothing under way. Whether it ever signed in only the Core can say,
+/// so it reads as 账号状态未知; any other record goes by its name.
+bool tailscaleRecordAccountUnknown(TailscaleManagedRecord record) =>
     record.account == null &&
     !record.attached &&
     !record.loggedOut &&
@@ -1560,7 +1564,9 @@ class _UnconfirmedStatus extends StatelessWidget {
 
   final VoidCallback onRead;
 
-  /// 查看账号, 8 under 重新读取状态; always stacked, never beside it.
+  /// 查看账号, 8 under 重新读取状态; always stacked, never beside it. Shown
+  /// once a read the user asked for still lists no node, which also words
+  /// the body as records found but node status unreadable.
   final Widget? manage;
 
   @override
@@ -1607,7 +1613,10 @@ class _UnconfirmedStatus extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                appLocalizations.tsUnconfirmedTip,
+                // After a read that still lists nothing, say what is known.
+                manage == null
+                    ? appLocalizations.tsUnconfirmedTip
+                    : appLocalizations.tsRecordsFoundNoNodeStatus,
                 textAlign: TextAlign.center,
                 style: AppTextStyle.subheadline
                     .of(context)

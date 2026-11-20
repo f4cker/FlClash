@@ -1385,6 +1385,7 @@ void main() {
     await tester.tap(find.text('重新读取状态'));
     await settle(tester);
     expect(find.text('查看账号'), findsOneWidget);
+    expect(find.text('已找到账号记录，但暂时无法读取节点状态。'), findsOneWidget);
   }
 
   for (final (name, mode) in [
@@ -1409,6 +1410,11 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await pumpRetried(tester, size: const Size(360, 760), pixelRatio: 2);
     await shoot(tester, 'card-11-retried-narrow-large-text');
+  });
+
+  shot('card-13-retried-narrow', (tester) async {
+    await pumpRetried(tester, size: const Size(360, 760), pixelRatio: 2);
+    await shoot(tester, 'card-13-retried-narrow');
   });
 
   shot('card-12-view-narrow-open', (tester) async {

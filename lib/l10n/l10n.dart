@@ -7782,6 +7782,12 @@ abstract class AppLocalizations {
   /// **'Can\'t confirm whether this node is connected. Read the status again.'**
   String get tsUnconfirmedTip;
 
+  /// No description provided for @tsRecordsFoundNoNodeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Account records found, but node status can\'t be read right now.'**
+  String get tsRecordsFoundNoNodeStatus;
+
   /// No description provided for @tsLoadFailedTip.
   ///
   /// In en, this message translates to:
@@ -7895,12 +7901,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tailscale accounts in this profile'**
   String get tsAccountsOfProfile;
-
-  /// No description provided for @tsUnfinishedAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Unfinished account'**
-  String get tsUnfinishedAccount;
 
   /// No description provided for @tsAccountStatusUnknown.
   ///
@@ -8927,12 +8927,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Signed out of this account'**
   String get tsSignedOutReceipt;
-
-  /// No description provided for @tsAccountsInProfile.
-  ///
-  /// In en, this message translates to:
-  /// **'Tailscale accounts in this profile'**
-  String get tsAccountsInProfile;
 
   /// No description provided for @tsAddAccount.
   ///

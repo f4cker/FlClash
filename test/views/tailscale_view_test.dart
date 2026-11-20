@@ -43,6 +43,7 @@ import 'package:prism_ui/prism_ui.dart'
         PopupAnchor,
         PopupPlacement,
         PressSurface,
+        PopupMenu,
         PopupMenuCard,
         SearchField,
         showInSheet,
@@ -2582,6 +2583,8 @@ void main() {
       await pumpUnconfirmed(tester);
 
       expect(find.text('状态待确认'), findsOneWidget);
+      expect(find.text('暂时无法确认此节点是否已连接，请重新读取状态。'), findsOneWidget);
+      expect(find.text('已找到账号记录，但暂时无法读取节点状态。'), findsNothing);
       expect(read, findsOneWidget);
       expect(manage, findsNothing);
       expect(find.text('查看账号'), findsNothing);
@@ -2598,10 +2601,14 @@ void main() {
       await settle(tester);
       // Not while the read runs.
       expect(manage, findsNothing);
+      expect(find.text('已找到账号记录，但暂时无法读取节点状态。'), findsNothing);
       pending.complete(const []);
       await settle(tester);
 
       expect(find.text('状态待确认'), findsOneWidget);
+      // What is known now: records, but no node status.
+      expect(find.text('已找到账号记录，但暂时无法读取节点状态。'), findsOneWidget);
+      expect(find.text('暂时无法确认此节点是否已连接，请重新读取状态。'), findsNothing);
       expect(manage, findsOneWidget);
       expect(find.text('查看账号'), findsOneWidget);
       expect(find.text('添加 Tailscale 账号'), findsNothing);
@@ -2634,13 +2641,21 @@ void main() {
       expect(find.text('当前配置的 Tailscale 账号'), findsOneWidget);
       expect(find.text('当前配置中的 Tailscale 账号'), findsNothing);
       expect(find.text('pat@example.test'), findsOneWidget);
-      // Only the record known to be unfinished says so; the rest go by name.
-      expect(find.text('未完成的账号'), findsOneWidget);
+      // A record with no account on file is titled 账号状态未知, with no
+      // second line saying it again; the rest go by name.
+      expect(find.text('未完成的账号'), findsNothing);
       expect(find.text('tailscale-m2'), findsNothing);
       expect(find.text('tailscale-m3'), findsOneWidget);
       expect(find.text('tailscale-m4'), findsOneWidget);
       expect(find.text('新账号'), findsNothing);
-      expect(find.textContaining('账号状态未知'), findsNWidgets(4));
+      final items = tester.widget<PopupMenu>(find.byType(PopupMenu)).items;
+      final unknown = items.where((item) => item.label == '账号状态未知');
+      expect(unknown, hasLength(1));
+      expect(unknown.single.subtitle, isNull);
+      expect(
+        [for (final item in items) item.subtitle],
+        ['所在网络：example-net.test · 账号状态未知', null, '账号状态未知', '账号状态未知'],
+      );
       expect(find.textContaining('状态待确认 ·'), findsNothing);
       expect(find.text('other-profile'), findsNothing);
       expect(find.text('添加 Tailscale 账号'), findsNothing);
@@ -2655,14 +2670,14 @@ void main() {
     });
 
     testWidgets(
-      'an unfinished account has a grey person, as large as the rest',
+      'an account of unknown status has a grey person, as large as the rest',
       (tester) async {
         await pumpUnconfirmed(tester);
         await retry(tester);
         await tester.tap(manage);
         await settle(tester);
 
-        final unfinished = find.byType(TailscaleUnfinishedAccountAvatar);
+        final unfinished = find.byType(TailscaleUnknownAccountAvatar);
         expect(unfinished, findsOneWidget);
         expect(find.byType(TailscaleNewAccountAvatar), findsNothing);
         final avatar = find.byType(TailscaleAvatar).first;
@@ -2679,7 +2694,7 @@ void main() {
               .onSurfaceVariant,
         );
         expect(
-          find.ancestor(of: unfinished, matching: find.text('未完成的账号')),
+          find.ancestor(of: unfinished, matching: find.text('账号状态未知')),
           findsNothing,
         );
         await teardownView(tester);
@@ -2698,7 +2713,7 @@ void main() {
       final menu = tester.getRect(find.byType(PopupMenuCard));
       expect(menu.left, greaterThanOrEqualTo(16));
       expect(menu.right, lessThanOrEqualTo(320 - 16));
-      expect(find.text('未完成的账号'), findsOneWidget);
+      expect(find.text('账号状态未知'), findsWidgets);
       await teardownView(tester);
     });
 
