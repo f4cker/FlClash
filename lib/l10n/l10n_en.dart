@@ -3600,7 +3600,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipTypeUnknown => 'Unknown type';
 
   @override
-  String get tapIconToRetry => 'Select the icon to retry.';
+  String get tapIconToRetry => 'Select the icon to retry';
 
   @override
   String get networkTakeover => 'Traffic takeover';
@@ -9371,19 +9371,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get queryFailedShowingLast =>
-      'Lookup failed; showing the last result. Select to retry.';
+      'Lookup failed; showing the last result. Select to retry';
 
   @override
   String get pendingQuery => 'Not looked up';
 
   @override
-  String get pendingQueryAction => 'Not looked up. Select to look up.';
+  String get pendingQueryAction => 'Not looked up. Select to look up';
 
   @override
   String get regionUnknown => 'Region unknown';
 
   @override
-  String get queryFailedTapToRetry => 'Lookup failed. Select to retry.';
+  String get queryFailedTapToRetry => 'Lookup failed. Select to retry';
 
   @override
   String ipTagOpenDetail(String tag, String ip) {

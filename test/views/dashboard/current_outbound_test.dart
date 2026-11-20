@@ -547,17 +547,17 @@ void main() {
       await tester.pump();
 
       expect(find.text('Lookup failed'), findsOneWidget);
-      expect(find.text('Select the icon to retry.'), findsOneWidget);
+      expect(find.text('Select the icon to retry'), findsOneWidget);
       expect(find.text('Not looked up'), findsNothing);
       // The globe in place of a country says the region is unknown, to the
       // eye and to a screen reader: it is no global exit.
       expect(
         _badgeTooltip(tester),
-        'Lookup failed. Select to retry., Region unknown',
+        'Lookup failed. Select to retry, Region unknown',
       );
       expect(
         find.semantics.byLabel(
-          'Lookup failed. Select to retry., Region unknown',
+          'Lookup failed. Select to retry, Region unknown',
         ),
         findsOne,
       );
@@ -579,21 +579,71 @@ void main() {
 
       expect(find.text('Not looked up'), findsOneWidget);
       expect(find.text('Lookup failed'), findsNothing);
-      expect(find.text('Select the icon to retry.'), findsNothing);
+      expect(find.text('Select the icon to retry'), findsNothing);
       expect(find.byType(SkeletonPill), findsNothing);
       expect(
         _badgeTooltip(tester),
-        'Not looked up. Select to look up., Region unknown',
+        'Not looked up. Select to look up, Region unknown',
       );
       expect(
         find.semantics.byLabel(
-          'Not looked up. Select to look up., Region unknown',
+          'Not looked up. Select to look up, Region unknown',
         ),
         findsOne,
       );
       expect(find.text('Unknown'), findsOneWidget);
       expect(find.text('—'), findsNothing);
       expect(find.semantics.byLabel(RegExp('Lookup failed')), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('the badge reads each state with no doubled punctuation', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final doubled = RegExp(r'[.;,:][.;,:]');
+      final seen = <String>[];
+      void check(String state) {
+        final tooltip = _badgeTooltip(tester);
+        final label = tester.getSemantics(_badge()).label;
+        expect(label, startsWith(tooltip.split(', ').first), reason: state);
+        for (final text in [tooltip, label]) {
+          expect(text, isNot(contains(doubled)), reason: '$state: "$text"');
+        }
+        seen.add(state);
+      }
+
+      // Known.
+      await tester.pumpWidget(_ipApp());
+      await tester.pump();
+      check('known');
+      // Failed, the region unknown.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_ipApp(exit: _failedHere));
+      await tester.pump();
+      check('failed');
+      // Not looked up on this route.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        _ipApp(exit: const ProbeEntry(phase: ProbePhase.failed)),
+      );
+      await tester.pump();
+      check('pending');
+      // Failed, still showing the last result.
+      await tester.pumpWidget(const SizedBox.shrink());
+      final probe = _ManualIps({
+        routedOutbound: _fresh(_ip),
+        directOutbound: _fresh(_localIp, country: 'HK'),
+      });
+      await tester.pumpWidget(_ipApp(probe: () => probe));
+      await tester.pump();
+      await tester.tap(_badge());
+      await tester.pump();
+      check('checking');
+      probe.settle(routedOutbound, _failedHere);
+      await tester.pumpAndSettle();
+      check('stale');
+      expect(seen, ['known', 'failed', 'pending', 'checking', 'stale']);
       semantics.dispose();
     });
 
@@ -715,7 +765,7 @@ void main() {
       expect(find.text('Data center'), findsOneWidget);
       expect(find.text('TORSERVERS-NET'), findsOneWidget);
       expect(find.text('Check failed'), findsNothing);
-      const stale = 'Lookup failed; showing the last result. Select to retry.';
+      const stale = 'Lookup failed; showing the last result. Select to retry';
       expect(find.semantics.byLabel('$stale, GB'), findsOne);
       expect(_badgeTooltip(tester), stale);
       expect(
@@ -836,7 +886,7 @@ void main() {
       expect(_badgeCode(tester), isNull);
       expect(
         _badgeTooltip(tester),
-        'Lookup failed. Select to retry., Region unknown',
+        'Lookup failed. Select to retry, Region unknown',
       );
 
       // Nor does a stale local address offer a switch.
@@ -873,7 +923,7 @@ void main() {
       await tester.pump();
       expect(_FakeIpx.built, [_ip]);
       expect(find.text('Not looked up'), findsOneWidget);
-      expect(_badgeTooltip(tester), 'Not looked up. Select to look up.');
+      expect(_badgeTooltip(tester), 'Not looked up. Select to look up');
 
       await tester.tap(_badge());
       await tester.pump();
@@ -1119,13 +1169,13 @@ void main() {
         expect(
           _badgeTooltip(tester),
           code == null
-              ? 'Not looked up. Select to look up., Region unknown'
-              : 'Not looked up. Select to look up.',
+              ? 'Not looked up. Select to look up, Region unknown'
+              : 'Not looked up. Select to look up',
         );
         expect(find.semantics.byLabel(RegExp('GB')), findsNothing);
         expect(
           find.semantics.byLabel(
-            'Not looked up. Select to look up., ${code ?? 'Region unknown'}',
+            'Not looked up. Select to look up, ${code ?? 'Region unknown'}',
           ),
           findsOne,
         );
@@ -1320,7 +1370,7 @@ void main() {
       expect(find.text('Lookup failed'), findsOneWidget);
       expect(
         _badgeTooltip(tester),
-        'Lookup failed. Select to retry., Region unknown',
+        'Lookup failed. Select to retry, Region unknown',
       );
       expect(
         find.descendant(of: _badge(), matching: find.byGlyph(AppGlyphs.error)),
@@ -1355,7 +1405,7 @@ void main() {
       );
       await tester.pump();
       expect(tester.takeAnnouncements().map((a) => a.message), [
-        'Lookup failed; showing the last result. Select to retry.',
+        'Lookup failed; showing the last result. Select to retry',
       ]);
       final badge = find.semantics.byLabel(RegExp('^Lookup failed'));
       expect(

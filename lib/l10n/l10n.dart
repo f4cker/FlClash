@@ -6309,7 +6309,7 @@ abstract class AppLocalizations {
   /// No description provided for @tapIconToRetry.
   ///
   /// In en, this message translates to:
-  /// **'Select the icon to retry.'**
+  /// **'Select the icon to retry'**
   String get tapIconToRetry;
 
   /// No description provided for @networkTakeover.
@@ -15379,7 +15379,7 @@ abstract class AppLocalizations {
   /// No description provided for @queryFailedShowingLast.
   ///
   /// In en, this message translates to:
-  /// **'Lookup failed; showing the last result. Select to retry.'**
+  /// **'Lookup failed; showing the last result. Select to retry'**
   String get queryFailedShowingLast;
 
   /// No description provided for @pendingQuery.
@@ -15391,7 +15391,7 @@ abstract class AppLocalizations {
   /// No description provided for @pendingQueryAction.
   ///
   /// In en, this message translates to:
-  /// **'Not looked up. Select to look up.'**
+  /// **'Not looked up. Select to look up'**
   String get pendingQueryAction;
 
   /// No description provided for @regionUnknown.
@@ -15403,7 +15403,7 @@ abstract class AppLocalizations {
   /// No description provided for @queryFailedTapToRetry.
   ///
   /// In en, this message translates to:
-  /// **'Lookup failed. Select to retry.'**
+  /// **'Lookup failed. Select to retry'**
   String get queryFailedTapToRetry;
 
   /// No description provided for @ipTagOpenDetail.
