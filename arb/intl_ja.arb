@@ -2734,11 +2734,11 @@
       }
     }
   },
-  "ipxGradeExcellent": "Excellent",
-  "ipxGradeGood": "Good",
-  "ipxGradeFair": "Fair",
-  "ipxGradePoor": "Poor",
-  "ipxGradeRisky": "High risk",
+  "ipxGradeExcellent": "非常に良い",
+  "ipxGradeGood": "良い",
+  "ipxGradeFair": "普通",
+  "ipxGradePoor": "悪い",
+  "ipxGradeRisky": "高リスク",
   "ipxLocation": "Location",
   "ipxNativity": "IP origin",
   "ipxNative": "Native IP",

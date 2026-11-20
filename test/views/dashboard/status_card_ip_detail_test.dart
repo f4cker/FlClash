@@ -602,6 +602,25 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('the grade is read in the locale, from its own key, with no '
+      'English in it', (tester) async {
+    final spy = _Spy();
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_app(spy, locale: const Locale('ru')));
+    await _settle(tester);
+    expect(find.text('Качество Плохое'), findsOneWidget);
+    expect(
+      find.semantics.byLabel('Качество Плохое, открыть сведения об IP $_ip'),
+      findsOne,
+    );
+    expect(
+      find.semantics.byLabel('Дата-центр, открыть сведения об IP $_ip'),
+      findsOne,
+    );
+    expect(find.semantics.byLabel(RegExp('Poor|Quality')), findsNothing);
+    semantics.dispose();
+  });
+
   testWidgets('a screen reader opens the detail without a query', (
     tester,
   ) async {

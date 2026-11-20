@@ -2734,11 +2734,11 @@
       }
     }
   },
-  "ipxGradeExcellent": "Excellent",
-  "ipxGradeGood": "Good",
-  "ipxGradeFair": "Fair",
-  "ipxGradePoor": "Poor",
-  "ipxGradeRisky": "High risk",
+  "ipxGradeExcellent": "매우 좋음",
+  "ipxGradeGood": "좋음",
+  "ipxGradeFair": "보통",
+  "ipxGradePoor": "나쁨",
+  "ipxGradeRisky": "높은 위험",
   "ipxLocation": "Location",
   "ipxNativity": "IP origin",
   "ipxNative": "Native IP",

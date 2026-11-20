@@ -7704,19 +7704,19 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get ipxGradeExcellent => 'Excellent';
+  String get ipxGradeExcellent => 'Excellente';
 
   @override
-  String get ipxGradeGood => 'Good';
+  String get ipxGradeGood => 'Bonne';
 
   @override
-  String get ipxGradeFair => 'Fair';
+  String get ipxGradeFair => 'Moyenne';
 
   @override
-  String get ipxGradePoor => 'Poor';
+  String get ipxGradePoor => 'Médiocre';
 
   @override
-  String get ipxGradeRisky => 'High risk';
+  String get ipxGradeRisky => 'Risque élevé';
 
   @override
   String get ipxLocation => 'Location';

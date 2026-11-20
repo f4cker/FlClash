@@ -7424,19 +7424,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get ipxGradeExcellent => 'Excellent';
+  String get ipxGradeExcellent => '非常に良い';
 
   @override
-  String get ipxGradeGood => 'Good';
+  String get ipxGradeGood => '良い';
 
   @override
-  String get ipxGradeFair => 'Fair';
+  String get ipxGradeFair => '普通';
 
   @override
-  String get ipxGradePoor => 'Poor';
+  String get ipxGradePoor => '悪い';
 
   @override
-  String get ipxGradeRisky => 'High risk';
+  String get ipxGradeRisky => '高リスク';
 
   @override
   String get ipxLocation => 'Location';

@@ -2734,11 +2734,11 @@
       }
     }
   },
-  "ipxGradeExcellent": "Excellent",
-  "ipxGradeGood": "Good",
-  "ipxGradeFair": "Fair",
-  "ipxGradePoor": "Poor",
-  "ipxGradeRisky": "High risk",
+  "ipxGradeExcellent": "Отличное",
+  "ipxGradeGood": "Хорошее",
+  "ipxGradeFair": "Удовлетворительное",
+  "ipxGradePoor": "Плохое",
+  "ipxGradeRisky": "Высокий риск",
   "ipxLocation": "Location",
   "ipxNativity": "IP origin",
   "ipxNative": "Native IP",

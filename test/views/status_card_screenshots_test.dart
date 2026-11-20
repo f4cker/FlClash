@@ -23,6 +23,7 @@ import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/current_outbound.dart';
 import 'package:fl_clash/views/dashboard/widgets/ip_detail_tag.dart';
+import 'package:fl_clash/views/dashboard/widgets/outbound_mode.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/rendering.dart';
@@ -128,6 +129,26 @@ class _Ipx extends IpxLookup {
 
   @override
   void reload() {}
+}
+
+/// The local exit graded B, whose label is the longest in Russian
+/// («Удовлетворительное»).
+class _FairLocalIpx extends _Ipx {
+  @override
+  IpxLookupState build(String ip) => ip == _localIp
+      ? const IpxLookupState(
+          phase: IpxPhase.done,
+          report: IpxReport(
+            ip: _localIp,
+            score: 62,
+            type: IpxIpType.residential,
+            nativity: IpxNativity.native,
+            countryCode: 'HK',
+            city: 'Hong Kong',
+            organization: 'HKBN',
+          ),
+        )
+      : super.build(ip);
 }
 
 class _Running extends RunTime {
@@ -643,5 +664,157 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 11));
     });
+  }
+  // The whole desktop dashboard, four columns, in the longest translations,
+  // on the local exit with its three chips: the window is narrowed until the
+  // tags just wrap, and the status card grows; nothing is cut and the rows
+  // below move down.
+  for (final language in ['ru', 'fr']) {
+    for (final brightness in Brightness.values) {
+      final tone = brightness == Brightness.light ? 'light' : 'dark';
+      final name = 'desktop-wrapped-$language-$tone';
+      testWidgets(name, skip: skip != null, (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        final cache = Directory.systemTemp.createTempSync('status-card-');
+        addTearDown(() => cache.deleteSync(recursive: true));
+        const pathProvider = MethodChannel('plugins.flutter.io/path_provider');
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          pathProvider,
+          (_) async => cache.path,
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            pathProvider,
+            null,
+          ),
+        );
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final container = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(
+              () => TestProfiles(const [
+                Profile(id: 1, autoUpdateDuration: Duration.zero),
+              ]),
+            ),
+            suspendProvider.overrideWithValue(false),
+            runTimeProvider.overrideWith(_Running.new),
+            routeTrackerProvider.overrideWithBuild((_, _) => _route),
+            outboundIpProbeProvider.overrideWith(() => _Ips(both)),
+            for (final ip in [_exitIp, _localIp])
+              ipxLookupProvider(ip).overrideWith(_FairLocalIpx.new),
+            ipQualityProvider.overrideWith((_, _) => Future.any(const [])),
+          ],
+        );
+        addTearDown(container.dispose);
+        globalState.container = container;
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.connected;
+        Future<void> resize(Size size) async {
+          tester.view.physicalSize = size * 2;
+          container.read(viewSizeProvider.notifier).value = size;
+          await settle(tester);
+        }
+
+        await resize(const Size(1600, 900));
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: boundary,
+            child: UncontrolledProviderScope(
+              container: container,
+              child: Consumer(
+                builder: (context, ref, _) => TestApp(
+                  locale: Locale(language),
+                  includeNavigatorKey: false,
+                  theme: watchAppTheme(ref, Brightness.light),
+                  darkTheme: watchAppTheme(ref, Brightness.dark),
+                  themeMode: brightness == Brightness.light
+                      ? ThemeMode.light
+                      : ThemeMode.dark,
+                  child: const HostScaffold(
+                    body: DashboardView(platform: SupportPlatform.MacOS),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await settle(tester);
+        // The local exit, its report known.
+        container.read(ipxLookupProvider(_localIp));
+        await tester.tap(find.text(_exitIp));
+        await settle(tester);
+        final card = find.byType(CurrentOutboundCard);
+        final tags = find.descendant(
+          of: card,
+          matching: find.byType(IpDetailTag),
+        );
+        bool wrapped() =>
+            tester.getRect(tags.last).top > tester.getRect(tags.first).top + 1;
+        expect(tags, findsNWidgets(2));
+        var width = 1600.0;
+        // The card's own minimum: what it is on one line.
+        const oneLine = 186.0;
+        if (wrapped()) {
+          // The card stops widening with the window (the column width is
+          // capped), so these tags wrap at every desktop width: shoot it
+          // at the usual 1220 window.
+          debugPrint(
+            '$name: wraps already at a 1600 window, card '
+            '${tester.getSize(card)}',
+          );
+          width = 1220;
+          await resize(Size(width, 900));
+        } else {
+          expect(tester.getSize(card).height, oneLine);
+          // Narrow, 10 at a time, to the first width that wraps.
+          while (!wrapped()) {
+            width -= 10;
+            expect(width, greaterThanOrEqualTo(1040), reason: 'standard');
+            await resize(Size(width, 900));
+          }
+        }
+        debugPrint(
+          '$name: shot at a ${width.toInt()} window, card '
+          '${tester.getSize(card)}, $oneLine on one line',
+        );
+        final cardRect = tester.getRect(card);
+        expect(cardRect.height, greaterThan(oneLine));
+        // All three chips whole, inside the card.
+        final local = find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Text &&
+                (widget.data == 'Локальный выход' ||
+                    widget.data == 'Sortie locale'),
+          ),
+        );
+        for (final chip in [
+          ...tags.evaluate().map(
+            (e) => find.descendant(
+              of: find.byWidget(e.widget),
+              matching: find.byType(Text),
+            ),
+          ),
+          local,
+        ]) {
+          for (var i = 0; i < chip.evaluate().length; i++) {
+            final rect = tester.getRect(chip.at(i));
+            expect(cardRect.contains(rect.topLeft), isTrue);
+            expect(cardRect.contains(rect.bottomRight), isTrue);
+          }
+        }
+        // The row below starts below the card.
+        final below = tester.getRect(find.byType(OutboundModeBar));
+        expect(below.top, greaterThan(cardRect.bottom));
+        expect(tester.takeException(), isNull);
+        await capture(tester, name);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 11));
+      });
+    }
   }
 }

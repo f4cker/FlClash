@@ -7651,19 +7651,19 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get ipxGradeExcellent => 'Excellent';
+  String get ipxGradeExcellent => 'Отличное';
 
   @override
-  String get ipxGradeGood => 'Good';
+  String get ipxGradeGood => 'Хорошее';
 
   @override
-  String get ipxGradeFair => 'Fair';
+  String get ipxGradeFair => 'Удовлетворительное';
 
   @override
-  String get ipxGradePoor => 'Poor';
+  String get ipxGradePoor => 'Плохое';
 
   @override
-  String get ipxGradeRisky => 'High risk';
+  String get ipxGradeRisky => 'Высокий риск';
 
   @override
   String get ipxLocation => 'Location';

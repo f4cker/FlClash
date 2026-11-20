@@ -7498,19 +7498,19 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get ipxGradeExcellent => 'Excellent';
+  String get ipxGradeExcellent => '매우 좋음';
 
   @override
-  String get ipxGradeGood => 'Good';
+  String get ipxGradeGood => '좋음';
 
   @override
-  String get ipxGradeFair => 'Fair';
+  String get ipxGradeFair => '보통';
 
   @override
-  String get ipxGradePoor => 'Poor';
+  String get ipxGradePoor => '나쁨';
 
   @override
-  String get ipxGradeRisky => 'High risk';
+  String get ipxGradeRisky => '높은 위험';
 
   @override
   String get ipxLocation => 'Location';

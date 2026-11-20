@@ -1145,7 +1145,7 @@
   "trafficTotal": "Total {value}",
   "ipQualityShort": "Quality",
   "ipTypeUnknown": "Unknown type",
-  "tapIconToRetry": "Tap the icon to retry",
+  "tapIconToRetry": "Select the icon to retry.",
   "networkTakeover": "Traffic takeover",
   "portValue": "Port {port}",
   "serviceAbnormalCount": "{count, plural, =1{1 issue} other{{count} issues}}",
@@ -3906,11 +3906,11 @@
   "switchToProxyExit": "Switch to proxy exit",
   "localExit": "Local exit",
   "statusQuerying": "Looking up now",
-  "queryFailedShowingLast": "Lookup failed, showing the last result; tap to retry",
+  "queryFailedShowingLast": "Lookup failed; showing the last result. Select to retry.",
   "pendingQuery": "Not looked up",
-  "pendingQueryAction": "Not looked up; tap to look up",
+  "pendingQueryAction": "Not looked up. Select to look up.",
   "regionUnknown": "Region unknown",
-  "queryFailedTapToRetry": "Lookup failed; tap to retry",
+  "queryFailedTapToRetry": "Lookup failed. Select to retry.",
   "ipTagOpenDetail": "{tag}, view IP details for {ip}",
   "@ipTagOpenDetail": {
     "placeholders": {
