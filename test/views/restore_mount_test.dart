@@ -778,7 +778,128 @@ void main() {
       expect(find.text(l10n.restoreOverrideDeletesLocal), findsOne);
       expect(find.text(l10n.restoreOverrideScopeNote), findsOne);
       expect(find.text(l10n.restoreMountOverrideLead), findsNothing);
-      expect(find.text(l10n.restoreMitmConfirm), findsOne);
+      // It deletes local items, so it is not a plain Restore.
+      expect(find.text(l10n.restoreMountConfirmOverride), findsOne);
+      expect(find.text(l10n.restoreMitmConfirm), findsNothing);
+    });
+
+    for (final (name, plan, modules) in [
+      ('mount changes and backup modules', _overridePlan(), _mitm),
+      (
+        'mount changes, no backup modules',
+        _overridePlan(),
+        const <RestoreMitmModule>[],
+      ),
+      ('no mount data', _legacyPlan(), _mitm),
+      (
+        'nothing else to list',
+        const RestoreMountPlan(isOverride: true, mountsCarried: true),
+        const <RestoreMitmModule>[],
+      ),
+    ]) {
+      testWidgets('every override says what it deletes: $name', (tester) async {
+        expect(plan.isOverride, isTrue);
+        await host(
+          tester,
+          () => RestoreMountConfirmSheet(plan: plan, mitmModules: modules),
+          size: const Size(900, 1400),
+        );
+        final l10n = currentAppLocalizations;
+        expect(find.text(l10n.restoreOverrideDeletesLocal), findsOne);
+        expect(find.text(l10n.restoreOverrideScopeNote), findsOne);
+        expect(find.text(l10n.restoreMountConfirmOverride), findsOne);
+        if (!plan.isEmpty) {
+          expect(
+            find.text(
+              plan.mountsCarried
+                  ? l10n.restoreMountOverrideLead
+                  : l10n.restoreMountLegacyLead,
+            ),
+            findsOne,
+            reason: 'the mount banner stays',
+          );
+        }
+      });
+    }
+
+    testWidgets('a compatible restore never shows the override line', (
+      tester,
+    ) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _mergePlan(), mitmModules: _mitm),
+        size: const Size(900, 1400),
+      );
+      final l10n = currentAppLocalizations;
+      expect(find.text(l10n.restoreOverrideDeletesLocal), findsNothing);
+      expect(find.text(l10n.restoreMountConfirmMerge), findsOne);
+    });
+
+    for (final (name, size, scale) in [
+      ('narrow, normal text', const Size(393, 852), 1.0),
+      ('narrow, 200% text', const Size(393, 852), 2.0),
+      ('wide, 200% text', const Size(900, 1000), 2.0),
+    ]) {
+      testWidgets('buttons stack, full width and uncut: $name', (tester) async {
+        await host(
+          tester,
+          () => const RestoreMountConfirmSheet(
+            plan: RestoreMountPlan(isOverride: true, mountsCarried: true),
+            mitmModules: _mitm,
+          ),
+          size: size,
+          textScale: scale,
+        );
+        expect(tester.takeException(), isNull);
+        final l10n = currentAppLocalizations;
+        final cancel = find.widgetWithText(TextButton, l10n.cancel);
+        final confirm = find.widgetWithText(
+          FilledButton,
+          l10n.restoreMountConfirmOverride,
+        );
+        await tester.scrollUntilVisible(
+          confirm,
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        final a = tester.getRect(cancel);
+        final b = tester.getRect(confirm);
+        expect(b.top, greaterThanOrEqualTo(a.bottom), reason: 'stacked');
+        expect(a.width, b.width);
+        expect(a.left, b.left);
+        for (final (label, button) in [
+          (l10n.cancel, a),
+          (l10n.restoreMountConfirmOverride, b),
+        ]) {
+          final text = find.text(label);
+          final paragraph = tester.renderObject<RenderParagraph>(text);
+          expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+          final rect = tester.getRect(text);
+          expect(
+            button.inflate(0.5).contains(rect.topLeft) &&
+                button.inflate(0.5).contains(rect.bottomRight),
+            isTrue,
+            reason: '$label is inside its button, not cut',
+          );
+        }
+      });
+    }
+
+    testWidgets('wide with normal text keeps the buttons in a row', (
+      tester,
+    ) async {
+      await host(
+        tester,
+        () => RestoreMountConfirmSheet(plan: _overridePlan()),
+        size: const Size(900, 1000),
+      );
+      final l10n = currentAppLocalizations;
+      final a = tester.getRect(find.widgetWithText(TextButton, l10n.cancel));
+      final b = tester.getRect(
+        find.widgetWithText(FilledButton, l10n.restoreMountConfirmOverride),
+      );
+      expect(a.center.dy, closeTo(b.center.dy, 1));
+      expect(b.left, greaterThan(a.right));
     });
 
     testWidgets('an empty plan says no relation changes', (tester) async {

@@ -772,14 +772,18 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
           )
         : null;
     final narrow = MediaQuery.sizeOf(context).width <= restoreNarrowWidth;
+    // Narrow or large text: each button gets the full width, so no label
+    // is cut, whatever the language.
+    final stacked = narrow || MediaQuery.textScalerOf(context).scale(16) > 24;
     final cancel = TextButton(onPressed: _cancel, child: Text(l10n.cancel));
     final confirm = FilledButton(
       onPressed: enabled ? _confirm : null,
+      // An override deletes local items, so it always says so.
       child: Text(
-        mitmOnly
-            ? l10n.restoreMitmConfirm
-            : plan.isOverride
+        plan.isOverride
             ? l10n.restoreMountConfirmOverride
+            : mitmOnly
+            ? l10n.restoreMitmConfirm
             : l10n.restoreMountConfirmMerge,
       ),
     );
@@ -788,33 +792,23 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (checkbox != null) ...[checkbox, const SizedBox(height: 12)],
-        if (narrow) ...[
+        if (stacked) ...[
           Text(l10n.restoreCancelWritesNothing, style: _aux(context, p)),
           const SizedBox(height: 8),
-          // Large text gets the full width per button, so no label is cut.
-          if (MediaQuery.textScalerOf(context).scale(16) > 24)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  child: cancel,
-                ),
-                const SizedBox(height: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  child: confirm,
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(child: SizedBox(height: 44, child: cancel)),
-                const SizedBox(width: 10),
-                Expanded(child: SizedBox(height: 44, child: confirm)),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: cancel,
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: confirm,
+              ),
+            ],
+          ),
         ] else
           Row(
             children: [
@@ -865,18 +859,16 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                   l10n.restoreIrreversible,
                 ],
               ),
-              if (mitmOnly) ...[
-                // The mount banner is gone here, so an override still says
-                // what else it does.
-                if (plan.isOverride) ...[
-                  const SizedBox(height: 20),
-                  _Callout(
-                    lead: l10n.restoreOverrideDeletesLocal,
-                    note: l10n.restoreOverrideScopeNote,
-                  ),
-                ],
-              ] else ...[
+              // Every override says what it deletes besides mounts.
+              if (plan.isOverride) ...[
                 const SizedBox(height: 20),
+                _Callout(
+                  lead: l10n.restoreOverrideDeletesLocal,
+                  note: l10n.restoreOverrideScopeNote,
+                ),
+              ],
+              if (!mitmOnly) ...[
+                SizedBox(height: plan.isOverride ? 12 : 20),
                 _Callout(lead: lead, note: note, warning: plan.mountsCarried),
                 const SizedBox(height: 16),
                 counts,
