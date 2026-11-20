@@ -29,6 +29,10 @@ class MitmSignerTests(unittest.TestCase):
         for name in APP_ONLY:
             self.assertEqual(PROJECT.count(f'/* {name} in Sources */,'), 1, name)
         self.assertEqual(PROJECT.count('/* MitmSignerTests.swift in Sources */,'), 1)
+        # The Flutter stand-in and the channel harness stay out of every target.
+        for name in ('FlutterMacOSStub.swift', 'MitmSignerChannelHarness.swift'):
+            self.assertNotIn(name, PROJECT)
+        self.assertNotIn('PBXFileSystemSynchronizedRootGroup', PROJECT)
 
     def test_apple_domains_match_the_core(self):
         swift = (RUNNER / 'MitmHostPolicy.swift').read_text()
@@ -79,36 +83,50 @@ class MitmSignerTests(unittest.TestCase):
         self.assertIn('answer["identity"] = outcome.identity', channel)
         self.assertNotIn('lastCoreIdentity', channel + (RUNNER / 'MitmSigner.swift').read_text())
 
+    def _flutter_stub(self, tmp):
+        """Builds the FlutterMacOS stand-in as a module and a library in tmp."""
+        build = _xcrun('swiftc', '-emit-module', '-emit-library', '-parse-as-library', '-module-name', 'FlutterMacOS',
+                       '-emit-module-path', str(Path(tmp, 'FlutterMacOS.swiftmodule')),
+                       '-Xlinker', '-install_name', '-Xlinker', '@rpath/libFlutterMacOS.dylib',
+                       str(TESTS / 'FlutterMacOSStub.swift'), '-o', str(Path(tmp, 'libFlutterMacOS.dylib')))
+        self.assertEqual(build.returncode, 0, build.stderr)
+
     @unittest.skipUnless(shutil.which('xcrun'), 'needs Xcode')
     def test_channel_typechecks_against_a_flutter_stub(self):
-        # Compile-only: the app is never built or run, the keychain never opened.
-        stub = '\n'.join([
-            'import Foundation',
-            'public protocol FlutterBinaryMessenger: AnyObject {}',
-            'public typealias FlutterResult = (Any?) -> Void',
-            'public final class FlutterMethodCall { public let method = ""; public let arguments: Any? = nil }',
-            'public final class FlutterMethodChannel {',
-            '    public init(name: String, binaryMessenger: FlutterBinaryMessenger) {}',
-            '    public func setMethodCallHandler(_ handler: ((FlutterMethodCall, @escaping FlutterResult) -> Void)?) {}',
-            '}',
-            'public final class FlutterStandardTypedData {',
-            '    public let data: Data',
-            '    public init(bytes: Data) { data = bytes }',
-            '}',
-            'public final class FlutterError { public init(code: String, message: String?, details: Any?) {} }',
-            'public let FlutterMethodNotImplemented = NSObject()',
-        ])
+        # Compile-only, with the real keychain store: nothing runs.
         with tempfile.TemporaryDirectory() as tmp:
-            Path(tmp, 'FlutterMacOS.swift').write_text(stub)
+            self._flutter_stub(tmp)
             Path(tmp, 'Helper.swift').write_text(
                 'enum ManagedHelperChannel { static func coreIdentity() -> String { "none" } }\n')
-            module = _xcrun('swiftc', '-emit-module', '-parse-as-library', '-module-name', 'FlutterMacOS',
-                            '-emit-module-path', str(Path(tmp, 'FlutterMacOS.swiftmodule')),
-                            str(Path(tmp, 'FlutterMacOS.swift')))
-            self.assertEqual(module.returncode, 0, module.stderr)
             check = _xcrun('swiftc', '-typecheck', '-I', tmp,
                            *[str(RUNNER / name) for name in SHARED + APP_ONLY], str(Path(tmp, 'Helper.swift')))
             self.assertEqual(check.returncode, 0, check.stderr)
+
+    def _run_channel(self, sanitize):
+        # The real channel with an in-memory store in place of
+        # MitmKeychainStore and a stub ManagedHelperChannel: no app, no keychain.
+        with tempfile.TemporaryDirectory() as tmp:
+            self._flutter_stub(tmp)
+            harness = Path(tmp, 'harness')
+            build = _xcrun('swiftc', *(['-sanitize=thread'] if sanitize else []),
+                           '-parse-as-library', '-I', tmp, '-L', tmp,
+                           '-lFlutterMacOS', '-Xlinker', '-rpath', '-Xlinker', tmp,
+                           *[str(RUNNER / name) for name in SHARED + ['MitmSignerChannel.swift']],
+                           str(TESTS / 'MitmSignerChannelHarness.swift'), '-o', str(harness))
+            self.assertEqual(build.returncode, 0, build.stderr)
+            run = subprocess.run([str(harness)], capture_output=True, text=True, timeout=120)
+            output = run.stdout + run.stderr
+            self.assertEqual(run.returncode, 0, output)
+            self.assertEqual(run.stdout.strip(), 'PASS', output)
+            self.assertNotIn('ThreadSanitizer', output)
+
+    @unittest.skipUnless(shutil.which('xcrun'), 'needs Xcode')
+    def test_channel_runs_against_a_flutter_stub(self):
+        self._run_channel(sanitize=False)
+
+    @unittest.skipUnless(shutil.which('xcrun'), 'needs Xcode')
+    def test_channel_runs_against_a_flutter_stub_under_thread_sanitizer(self):
+        self._run_channel(sanitize=True)
 
     def _run_xctest(self, sanitize=False):
         platform = _xcrun('--show-sdk-platform-path').stdout.strip()

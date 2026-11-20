@@ -156,6 +156,11 @@ final class MitmSigner {
         }
     }
 
+    /// Holds `lock` throughout, keychain calls included (delete, create,
+    /// sign the root, save; in the app these go to securityd and may be slow
+    /// or prompt). That stalls no sign or check only because
+    /// MitmSignerDispatcher runs generate and delete exclusively, with none
+    /// in flight; called beside signs directly, they would wait on it.
     func generate() throws -> MitmRootInfo {
         lock.lock()
         defer { lock.unlock() }
@@ -173,6 +178,7 @@ final class MitmSigner {
         return root
     }
 
+    /// Holds `lock` across the keychain deletion; see generate().
     func delete() throws {
         let leftovers = try locked { () throws -> [Error] in
             forget()
@@ -254,13 +260,51 @@ final class MitmSigner {
 }
 
 /// Shared/exclusive admission: any number of shared holders at once, or one
-/// exclusive holder alone. A waiting exclusive holder admits no new shared
-/// ones, so a generate or delete is never starved by a stream of signs.
+/// exclusive holder alone. An exclusive turn is reserved when it is asked for
+/// (reserveExclusive, on the submitting thread), and from then on no new
+/// shared holder is admitted: work submitted after a generate or delete never
+/// overtakes it, and a stream of signs never starves it.
 final class MitmSignerGate {
-    private let condition = NSCondition()
-    private var shared = 0
-    private var exclusive = false
-    private var exclusiveWaiting = 0
+    /// One reserved exclusive turn: used once, or given back unused.
+    final class Reservation {
+        fileprivate let gate: MitmSignerGate
+        fileprivate var state = 0 // 0 reserved, 1 running or done, 2 given back
+
+        fileprivate init(gate: MitmSignerGate) { self.gate = gate }
+
+        /// Runs body exclusively, after the shared holders in flight finish.
+        func run<T>(_ body: () throws -> T) rethrows -> T {
+            gate.condition.lock()
+            precondition(state == 0, "an exclusive reservation runs once")
+            state = 1
+            while gate.exclusive || gate.shared > 0 { gate.condition.wait() }
+            gate.exclusiveWaiting -= 1
+            gate.exclusive = true
+            gate.condition.unlock()
+            defer {
+                gate.condition.lock()
+                gate.exclusive = false
+                gate.condition.broadcast()
+                gate.condition.unlock()
+            }
+            return try body()
+        }
+
+        /// Gives the turn back if it never ran (its operation was cancelled).
+        func releaseUnused() {
+            gate.condition.lock()
+            defer { gate.condition.unlock() }
+            guard state == 0 else { return }
+            state = 2
+            gate.exclusiveWaiting -= 1
+            gate.condition.broadcast()
+        }
+    }
+
+    fileprivate let condition = NSCondition()
+    fileprivate var shared = 0
+    fileprivate var exclusive = false
+    fileprivate var exclusiveWaiting = 0
 
     func withShared<T>(_ body: () throws -> T) rethrows -> T {
         condition.lock()
@@ -276,20 +320,17 @@ final class MitmSignerGate {
         return try body()
     }
 
-    func withExclusive<T>(_ body: () throws -> T) rethrows -> T {
+    /// Holds back new shared holders from now on, until the turn has run or
+    /// been given back.
+    func reserveExclusive() -> Reservation {
         condition.lock()
         exclusiveWaiting += 1
-        while exclusive || shared > 0 { condition.wait() }
-        exclusiveWaiting -= 1
-        exclusive = true
         condition.unlock()
-        defer {
-            condition.lock()
-            exclusive = false
-            condition.broadcast()
-            condition.unlock()
-        }
-        return try body()
+        return Reservation(gate: self)
+    }
+
+    func withExclusive<T>(_ body: () throws -> T) rethrows -> T {
+        try reserveExclusive().run(body)
     }
 }
 
@@ -297,9 +338,11 @@ final class MitmSignerGate {
 /// - sign: up to `signWidth` at once;
 /// - check (certificate, checkCertificate, coreIdentity, anything else): one
 ///   at a time on a lane of their own, so they never queue behind signs;
-/// - barrier (generate, delete): alone. It waits for the signs and checks in
-///   flight, and none starts until it is done, so a root is never replaced
-///   or removed under a sign.
+/// - barrier (generate, delete): alone. Reserved when submitted, it waits
+///   for the signs and checks already running, and none starts until it is
+///   done (including ones submitted earlier but not yet started), so a root
+///   is never replaced or removed under a sign, and a sign submitted after
+///   it never uses the root it replaced.
 /// Flutter-free, so the tests run it without the app.
 final class MitmSignerDispatcher {
     enum Lane { case sign, check, barrier }
@@ -332,7 +375,14 @@ final class MitmSignerDispatcher {
         switch lane {
         case .sign: signs.addOperation { [gate] in gate.withShared(work) }
         case .check: checks.addOperation { [gate] in gate.withShared(work) }
-        case .barrier: barriers.addOperation { [gate] in gate.withExclusive(work) }
+        case .barrier:
+            // Reserved here, on the submitting thread, so a sign or check
+            // submitted after this call waits for it even while lanes idle.
+            let reservation = gate.reserveExclusive()
+            let operation = BlockOperation { reservation.run(work) }
+            // Runs after the block, or instead of it when cancelled.
+            operation.completionBlock = { reservation.releaseUnused() }
+            barriers.addOperation(operation)
         }
     }
 }

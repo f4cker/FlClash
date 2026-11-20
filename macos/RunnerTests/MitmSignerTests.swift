@@ -899,6 +899,68 @@ final class MitmSignerConcurrencyTests: XCTestCase {
         XCTAssertTrue((1...2).contains(roots.count))
     }
 
+    // 2c. With every lane idle, a sign submitted right after generate (or
+    // delete) never signs with the root that generate replaced: the barrier
+    // is reserved when it is submitted, not when its thread starts.
+    func testASignSubmittedAfterABarrierNeverUsesTheOldRoot() throws {
+        let store = LockedStore()
+        let signer = MitmSigner(store: store, coreIdentity: { "verified" })
+        let dispatcher = MitmSignerDispatcher()
+        var oldRootSigns = 0
+        for round in 0..<200 {
+            let old = try signer.generate()
+            let group = DispatchGroup()
+            var result: SignResult?
+            group.enter()
+            dispatcher.run(.barrier) {
+                if round % 2 == 0 { _ = try? signer.generate() } else { try? signer.delete() }
+                group.leave()
+            }
+            group.enter()
+            dispatcher.run(.sign) {
+                result = signer.sign(host: "r.example.com", spki: self.spki(), hostnames: self.list)
+                group.leave()
+            }
+            XCTAssertEqual(group.wait(timeout: .now() + 5), .success, "round \(round)")
+            switch result {
+            case let .success((leaf, ca))?:
+                if ca == old.der { oldRootSigns += 1 }
+                XCTAssertTrue(round % 2 == 0, "signed after delete in round \(round)")
+                XCTAssertTrue(verifies(leaf, ca, host: "r.example.com"))
+            case let .failure(error)?:
+                XCTAssertEqual(error, .noRoot)
+            case nil:
+                XCTFail("no result in round \(round)")
+            }
+        }
+        XCTAssertEqual(oldRootSigns, 0, "signs submitted after the barrier used the replaced root")
+    }
+
+    // 2d. The gate: a reservation holds back shared work at once; one never
+    // run (its operation cancelled) is given back and lets it through.
+    func testABarrierReservationHoldsBackSharedWorkUntilUsedOrGivenBack() {
+        let gate = MitmSignerGate()
+        for cancelled in [false, true] {
+            let reservation = gate.reserveExclusive()
+            let entered = DispatchSemaphore(value: 0)
+            DispatchQueue.global().async { gate.withShared { entered.signal() } }
+            XCTAssertEqual(entered.wait(timeout: .now() + 0.2), .timedOut, "shared work overtook a reservation")
+            if cancelled {
+                reservation.releaseUnused()
+            } else {
+                var ran = false
+                reservation.run { ran = true }
+                XCTAssertTrue(ran)
+                reservation.releaseUnused() // after running: a no-op
+            }
+            XCTAssertEqual(entered.wait(timeout: .now() + 2), .success)
+        }
+        // Nothing left reserved: shared work runs at once.
+        let free = DispatchSemaphore(value: 0)
+        DispatchQueue.global().async { gate.withShared { free.signal() } }
+        XCTAssertEqual(free.wait(timeout: .now() + 2), .success)
+    }
+
     // 8. A check sent behind 20 blocked signs (4 in flight, 16 queued) is
     // answered at once, while every sign is still waiting.
     func testChecksAreNotStarvedBySigns() throws {
