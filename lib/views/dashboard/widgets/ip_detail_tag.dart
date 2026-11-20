@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
@@ -77,9 +78,12 @@ class _IpDetailTagState extends State<IpDetailTag> {
     final onOpen = widget.onOpen;
     if (onOpen == null) return;
     final node = _node;
+    // Only a tag the keyboard was on gets it back: opened by a pointer or a
+    // screen reader, it takes no focus, as the badge and the address don't.
+    final hadFocus = node?.hasPrimaryFocus ?? false;
     await onOpen();
     // Back from the detail, focus returns to the tag that opened it.
-    if (mounted && node != null && node.canRequestFocus) {
+    if (hadFocus && mounted && node != null && node.canRequestFocus) {
       node.requestFocus();
     }
   }
@@ -175,10 +179,7 @@ class _IpDetailTagState extends State<IpDetailTag> {
         onPressedChanged: (value) => _set(() => _pressed = value),
         onFocusChange: (value) => _set(() => _focused = value),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: IpDetailTagStyle.minHit,
-            minHeight: IpDetailTagStyle.minHit,
-          ),
+          constraints: const BoxConstraints(minWidth: IpDetailTagStyle.minHit),
           child: Builder(
             builder: (context) {
               _node = Focus.maybeOf(context);
@@ -186,7 +187,16 @@ class _IpDetailTagState extends State<IpDetailTag> {
                 alignment: AlignmentDirectional.topStart,
                 widthFactor: 1,
                 heightFactor: 1,
-                child: chip,
+                // The target reaches the same way below the chip at any
+                // text size: 44 high at 1x, and as much more as the text
+                // makes the chip taller. What lies under the chip is only
+                // ever reach, so the card can lay it over the room below.
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: ipDetailTagReach(widget.height),
+                  ),
+                  child: chip,
+                ),
               );
             },
           ),
@@ -197,6 +207,12 @@ class _IpDetailTagState extends State<IpDetailTag> {
     return target;
   }
 }
+
+/// How far a tag's target reaches below a chip [chipHeight] high at 1x,
+/// whatever the text size: the room a row of tags can lay over what
+/// follows it.
+double ipDetailTagReach(double chipHeight) =>
+    math.max(0, IpDetailTagStyle.minHit - chipHeight);
 
 /// Lays [child] out [bottom] shorter than it is, so what follows moves up
 /// under it, while its whole height still takes taps: a tap target can

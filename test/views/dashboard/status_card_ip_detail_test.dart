@@ -1,9 +1,11 @@
 // The status card's type and quality tags open the IP detail of the exit
 // shown, without switching the exit or asking anything.
+import 'dart:async';
 import 'dart:ui' show Tristate;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ipx_al.dart';
+import 'package:fl_clash/features/ip_quality/ip_quality_sheet.dart';
 import 'package:fl_clash/common/service_probe.dart'
     show directOutbound, routedOutbound;
 import 'package:fl_clash/models/models.dart';
@@ -179,6 +181,11 @@ Widget _escapeBack(Widget child) => Shortcuts(
 Widget _app(
   _Spy spy, {
   bool localCached = false,
+  bool localLoading = false,
+  IpxLookupState proxyAnswer = const IpxLookupState(
+    phase: IpxPhase.done,
+    report: _report,
+  ),
   bool hideIp = false,
   DashboardDensity density = DashboardDensity.standard,
   // Wide enough for both tags in the test font, which is wider than any
@@ -186,6 +193,9 @@ Widget _app(
   double width = 780,
   double textScale = 1,
   Locale locale = const Locale('en'),
+  // As in the dashboard's top row: the card exactly as high as its
+  // content, at least 160, with no room to spare under the tags.
+  bool fitted = false,
 }) {
   return _escapeBack(
     TestApp(
@@ -202,10 +212,11 @@ Widget _app(
           spy.quality.add(ip);
           return Future.any(const []);
         }),
-        ipxLookupProvider(_ip).overrideWith(
-          () =>
-              _Ipx(const IpxLookupState(phase: IpxPhase.done, report: _report)),
-        ),
+        ipxLookupProvider(_ip).overrideWith(() => _Ipx(proxyAnswer)),
+        if (localLoading)
+          ipxLookupProvider(
+            _localIp,
+          ).overrideWith(() => _Ipx(const IpxLookupState())),
         if (localCached)
           ipxLookupProvider(_localIp).overrideWith(
             () => _Ipx(
@@ -222,7 +233,17 @@ Widget _app(
             child: DashboardDensityScope(
               density: density,
               scale: 1,
-              child: const CurrentOutboundCard(),
+              child: fitted
+                  ? Align(
+                      alignment: Alignment.topLeft,
+                      child: IntrinsicHeight(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 160),
+                          child: const CurrentOutboundCard(),
+                        ),
+                      ),
+                    )
+                  : const CurrentOutboundCard(),
             ),
           ),
         ),
@@ -280,6 +301,90 @@ void _expectProxyShown() {
     findsOneWidget,
   );
   expect(find.text('Local exit'), findsNothing);
+}
+
+/// What the card paints for its tag row: the tags' chips, the local exit
+/// chip and the skeletons, never their reach below.
+List<Rect> _tagPaint(WidgetTester tester) {
+  final card = find.byType(CurrentOutboundCard);
+  return [
+    for (final tag
+        in find
+            .descendant(of: card, matching: find.byType(IpDetailTag))
+            .evaluate())
+      tester.getRect(
+        find
+            .descendant(
+              of: find.byWidget(tag.widget),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Container && widget.decoration is ShapeDecoration,
+              ),
+            )
+            .first,
+      ),
+    // The tag row's own skeletons and the local exit chip, not the
+    // header's status chip or a cell's skeleton.
+    for (final element
+        in find
+            .descendant(
+              of: card,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    (widget is SkeletonPill &&
+                        (widget.width == 48 || widget.width == 72)) ||
+                    (widget is DashboardChip &&
+                        [
+                          'Local exit',
+                          'Локальный выход',
+                        ].contains(widget.label)),
+              ),
+            )
+            .evaluate())
+      tester.getRect(find.byWidget(element.widget)),
+  ];
+}
+
+/// The cells' labels and values under the tag row.
+List<Rect> _cellPaint(WidgetTester tester, List<String> labels) => [
+  for (final label in labels) tester.getRect(find.text(label)),
+];
+
+void _expectTagsClearOfCells(
+  WidgetTester tester,
+  List<String> labels, {
+  required int painted,
+}) {
+  final tags = _tagPaint(tester);
+  expect(tags, hasLength(painted));
+  for (final cell in _cellPaint(tester, labels)) {
+    for (final tag in tags) {
+      expect(
+        tag.overlaps(cell),
+        isFalse,
+        reason: 'the tag row painted at $tag reaches the cell at $cell',
+      );
+      // At least the smallest gap the card keeps above its cells.
+      expect(cell.top - tag.bottom, greaterThanOrEqualTo(8), reason: '$tag');
+    }
+  }
+}
+
+/// Whether the tag draws its focus ring.
+bool _ringOn(WidgetTester tester, String label) {
+  final chip = tester.widget<Container>(
+    find
+        .descendant(
+          of: _tag(label),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Container && widget.decoration is ShapeDecoration,
+          ),
+        )
+        .first,
+  );
+  final shape = (chip.decoration! as ShapeDecoration).shape as OutlinedBorder;
+  return shape.side.style != BorderStyle.none;
 }
 
 void main() {
@@ -703,6 +808,223 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('a pointer open and close leave no focus and no ring on the '
+      'tag', (tester) async {
+    _tallView(tester);
+    final strategy = FocusManager.instance.highlightStrategy;
+    // As on a Mac, where a focused tag would show its ring.
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(() => FocusManager.instance.highlightStrategy = strategy);
+    final spy = _Spy();
+    await tester.pumpWidget(_app(spy));
+    await _settle(tester);
+    FocusNode focusOf(String label) => Focus.of(
+      tester.element(
+        find.descendant(of: _tagRegion(label), matching: find.byType(Align)),
+      ),
+    );
+    for (final close in ['escape', 'pop']) {
+      for (final label in ['Data center', 'Quality Poor']) {
+        await tester.tap(find.text(label));
+        await _settle(tester);
+        expect(_detail('Exit IP'), findsOneWidget);
+        if (close == 'escape') {
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        } else {
+          await globalState.navigatorKey.currentState!.maybePop();
+        }
+        await _settle(tester);
+        expect(find.byType(NestedPagedSheet), findsNothing);
+        expect(focusOf(label).hasFocus, isFalse, reason: '$label, $close');
+        expect(_ringOn(tester, label), isFalse, reason: '$label, $close');
+      }
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the keyboard gets its ring back on the tag after closing', (
+    tester,
+  ) async {
+    _tallView(tester);
+    final strategy = FocusManager.instance.highlightStrategy;
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(() => FocusManager.instance.highlightStrategy = strategy);
+    final spy = _Spy();
+    await tester.pumpWidget(_app(spy));
+    await _settle(tester);
+    Focus.of(
+      tester.element(
+        find.descendant(
+          of: _tagRegion('Data center'),
+          matching: find.byType(Align),
+        ),
+      ),
+    ).requestFocus();
+    await _settle(tester);
+    expect(_ringOn(tester, 'Data center'), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await _settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await _settle(tester);
+    expect(_ringOn(tester, 'Data center'), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final (density, width) in const [
+    (DashboardDensity.standard, 470.0),
+    (DashboardDensity.compact, 440.0),
+    (DashboardDensity.mobile, 420.0),
+  ]) {
+    testWidgets('a skeleton wrapped alone onto the last line paints clear of '
+        'the cells (${density.name}, ru)', (tester) async {
+      _tallView(tester);
+      final spy = _Spy();
+      await tester.pumpWidget(
+        _app(
+          spy,
+          density: density,
+          width: width,
+          localLoading: true,
+          locale: const Locale('ru'),
+          fitted: true,
+        ),
+      );
+      await _settle(tester);
+      // The local exit, its report still on its way.
+      _containerOf(tester).read(ipxLookupProvider(_localIp));
+      await tester.tap(find.text(_ip));
+      await _settle(tester);
+      final chip = tester.getRect(find.text('Локальный выход'));
+      final skeletons = find.descendant(
+        of: find.byType(CurrentOutboundCard),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is SkeletonPill &&
+              (widget.width == 48 || widget.width == 72),
+        ),
+      );
+      expect(skeletons, findsNWidgets(2));
+      // The last line holds a skeleton and nothing else.
+      expect(
+        tester.getRect(skeletons.last).top,
+        greaterThan(chip.bottom),
+        reason: 'a skeleton wraps onto a line of its own',
+      );
+      _expectTagsClearOfCells(tester, [
+        'Время работы',
+        'Организация',
+      ], painted: 3);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final density in [
+    DashboardDensity.standard,
+    DashboardDensity.compact,
+    DashboardDensity.mobile,
+  ]) {
+    testWidgets('at twice the text size the tags paint clear of the cells '
+        '(${density.name})', (tester) async {
+      _tallView(tester);
+      final spy = _Spy();
+      await tester.pumpWidget(
+        _app(
+          spy,
+          density: density,
+          width: density.isDesktop ? 780 : 560,
+          textScale: 2,
+          fitted: true,
+        ),
+      );
+      await _settle(tester);
+      // The chip outgrows its own height.
+      expect(
+        _tagPaint(tester).first.height,
+        greaterThan(density.isDesktop ? 24 : 28),
+      );
+      _expectTagsClearOfCells(tester, ['Run time', 'Organization'], painted: 2);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('a "report failed" tag opens the detail with its retry, '
+      'retrying nothing itself', (tester) async {
+    _tallView(tester);
+    final spy = _Spy();
+    await tester.pumpWidget(
+      _app(spy, proxyAnswer: const IpxLookupState(phase: IpxPhase.failed)),
+    );
+    await _settle(tester);
+    final before = spy.queries;
+    await tester.tap(find.text('Couldn’t get the report'));
+    await _settle(tester);
+    expect(_detail('Exit IP'), findsOneWidget);
+    expect(find.text('Couldn’t get report'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    await tester.pump(const Duration(minutes: 6));
+    await _settle(tester);
+    expect(_Ipx.retries, 0);
+    expect(_Ipx.reloads, 0);
+    expect(spy.queries, before, reason: '$spy');
+    // The retry there is the user's to press.
+    await tester.tap(find.text('Retry'));
+    await _settle(tester);
+    expect(_Ipx.retries, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a tag opened while a lookup is under way asks nothing more '
+      'and shows it as under way', (tester) async {
+    _tallView(tester);
+    final spy = _Spy();
+    // Asked again, the last report still at hand: the tags stay.
+    await tester.pumpWidget(
+      _app(
+        spy,
+        proxyAnswer: const IpxLookupState(
+          phase: IpxPhase.loading,
+          report: _report,
+        ),
+      ),
+    );
+    await _settle(tester);
+    final before = spy.queries;
+    await tester.tap(find.text('Quality Poor'));
+    await _settle(tester);
+    expect(_detail('Exit IP'), findsOneWidget);
+    // Neither not queried nor failed: what the lookup has so far.
+    expect(find.text('Not queried yet'), findsNothing);
+    expect(find.text('Couldn’t get report'), findsNothing);
+    await tester.pump(const Duration(minutes: 6));
+    await _settle(tester);
+    expect(spy.queries, before, reason: '$spy');
+    expect(_Ipx.reloads + _Ipx.retries, 0);
+    _expectProxyShown();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the service status entry still looks the address up when it '
+      'opens', (tester) async {
+    _tallView(tester);
+    final spy = _Spy();
+    await tester.pumpWidget(_app(spy));
+    await _settle(tester);
+    expect(_Ipx.reloads, 0);
+    expect(spy.quality, isEmpty);
+    unawaited(
+      showIpQualitySheet(
+        tester.element(find.byType(CurrentOutboundCard)),
+        ip: _ip,
+      ),
+    );
+    await _settle(tester);
+    expect(_Ipx.reloads, 1);
+    expect(spy.quality, contains(_ip));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('two tab stops; Enter and Space open; Esc closes back to the '
       'tag', (tester) async {
     _tallView(tester);
@@ -802,8 +1124,10 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('without an address the tag is off, with no chevron, and says '
-      'so', (tester) async {
+  // The widget on its own: the card itself never shows an off tag, as
+  // without an address it shows skeletons read as "No IP to view yet".
+  testWidgets('IpDetailTag alone, given no onOpen, is off, with no chevron, '
+      'and says so', (tester) async {
     final semantics = tester.ensureSemantics();
     await tester.pumpWidget(
       const TestApp(

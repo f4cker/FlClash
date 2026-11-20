@@ -388,9 +388,9 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                       // and the cells' labels, which take no taps, so the
                       // card keeps its height.
                       HitOverhang(
-                        bottom:
-                            _tagRowHeight(!density.isDesktop) -
-                            _chipHeight(!density.isDesktop),
+                        bottom: ipDetailTagReach(
+                          _chipHeight(!density.isDesktop),
+                        ),
                         child: _ExitRow(
                           info: info,
                           shown: shown,
@@ -1009,20 +1009,29 @@ class _IpChips extends ConsumerWidget {
     ];
     // Every tag shows whole: those that do not fit wrap onto a line of
     // their own, and the card grows to hold it.
+    // Whatever ends a line leaves the reach of a tag's target empty below
+    // it, so the last line never paints into the room the card lays over
+    // the cells (see HitOverhang): a chip or a skeleton keeps it too.
+    Widget reach(Widget child) => Padding(
+      padding: EdgeInsets.only(bottom: ipDetailTagReach(height)),
+      child: child,
+    );
     final skeletons = [
       for (final width in _chipSkeletonWidths)
-        SkeletonPill(width: width, height: height),
+        reach(SkeletonPill(width: width, height: height)),
     ];
     final wrap = Wrap(
       spacing: IpDetailTagStyle.gap,
       runSpacing: IpDetailTagStyle.gap,
       children: [
         if (marked)
-          DashboardChip(
-            label: appLocalizations.localExit,
-            dot: true,
-            dotColor: context.colorScheme.primary,
-            large: large,
+          reach(
+            DashboardChip(
+              label: appLocalizations.localExit,
+              dot: true,
+              dotColor: context.colorScheme.primary,
+              large: large,
+            ),
           ),
         if (known.isNotEmpty)
           ...known
