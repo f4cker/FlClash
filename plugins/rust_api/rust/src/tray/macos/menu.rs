@@ -75,6 +75,7 @@ pub(super) struct Entry {
     pub icon: Option<TrayItemIcon>,
     pub badge: Option<TrayItemBadge>,
     pub accessibility_label: Option<String>,
+    pub keeps_open: bool,
     pub items: Vec<Entry>,
 }
 
@@ -98,6 +99,7 @@ impl Entry {
             icon: item.icon.clone(),
             badge: item.badge.clone(),
             accessibility_label: item.accessibility_label.clone(),
+            keeps_open: item.keeps_menu_open && item.kind == TrayItemKind::Action,
             items: item.items.iter().map(Entry::of).collect(),
         }
     }
@@ -120,6 +122,7 @@ impl Entry {
             icon: None,
             badge: None,
             accessibility_label: None,
+            keeps_open: false,
             items: vec![first],
         }
     }
@@ -138,6 +141,7 @@ impl Entry {
             icon: None,
             badge: None,
             accessibility_label: Some(String::new()),
+            keeps_open: false,
             items: Vec::new(),
         }
     }
@@ -203,6 +207,12 @@ pub(super) mod topology {
                     && (!matches!(old.kind, Kind::Submenu | Kind::Segments)
                         || matches(&old.items, &new.items))
             })
+    }
+
+    /// A row that keeps the menu open was disabled only by its own running
+    /// work, so it follows the new content back.
+    pub fn retained_enabled(entry: &Entry, initially_enabled: bool) -> bool {
+        entry.enabled && (entry.keeps_open || initially_enabled)
     }
 
     fn status_key(entry: &Entry) -> Option<&str> {
@@ -397,7 +407,10 @@ impl TrayMenu {
             } else if let Some(found) = topology::shared_index(&entry, &original, &desired) {
                 entry = desired[found].clone();
                 entry.id = original[index].id;
-                entry.enabled = entry.enabled && initially_enabled.get(index).copied().unwrap_or(true);
+                entry.enabled = topology::retained_enabled(
+                    &entry,
+                    initially_enabled.get(index).copied().unwrap_or(true),
+                );
                 if entry.kind == Kind::Segments {
                     let old_children = &original[index].items;
                     let new_children = &entry.items;
@@ -571,7 +584,9 @@ fn configure(item: &NSMenuItem, entry: &Entry) {
     };
     item.setTitle(&NSString::from_str(&title));
     item.setTag(entry.id as isize);
-    item.setEnabled(entry.enabled);
+    // Disabling the highlighted item mid-tracking would move the highlight;
+    // the row view draws and refuses the disabled state instead.
+    item.setEnabled(entry.enabled || entry.keeps_open);
     let tool_tip = entry.accessibility_label.clone().unwrap_or_else(|| {
         std::iter::once(title.as_str())
             .chain(entry.detail.as_deref())
@@ -661,6 +676,7 @@ pub(super) struct ItemContent {
     is_checkbox: bool,
     checked: bool,
     enabled: bool,
+    keeps_open: bool,
     has_submenu: bool,
 }
 
@@ -678,7 +694,8 @@ impl ItemContent {
             accessibility_label: entry.accessibility_label.clone(),
             is_checkbox: entry.kind == Kind::Checkbox,
             checked: item.state() == NSControlStateValueOn,
-            enabled: item.isEnabled(),
+            enabled: entry.enabled && item.isEnabled(),
+            keeps_open: entry.keeps_open,
             has_submenu: item.hasSubmenu(),
         }
     }
@@ -836,6 +853,7 @@ fn post(element: &AnyObject, notification: &NSString) {
 pub(super) struct ItemViewIvars {
     content: RefCell<ItemContent>,
     highlighted: Cell<bool>,
+    monitor: RefCell<KeyMonitor>,
 }
 
 define_class!(
@@ -866,6 +884,10 @@ define_class!(
                     Retained::into_super(submenu),
                 )]);
                 unsafe { self.setAccessibilityChildren(Some(&children)) };
+            }
+            self.ivars().monitor.replace(KeyMonitor(None));
+            if self.window().is_some() && self.ivars().content.borrow().keeps_open {
+                self.ivars().monitor.replace(KeyMonitor::key_down(self, Self::handle_key));
             }
         }
 
@@ -913,6 +935,7 @@ impl ItemView {
         let this = Self::alloc(mtm).set_ivars(ItemViewIvars {
             content: RefCell::new(content),
             highlighted: Cell::new(false),
+            monitor: RefCell::new(KeyMonitor(None)),
         });
         let frame = NSRect::new(NSPoint::ZERO, NSSize::new(width, height));
         let view: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: frame] };
@@ -965,13 +988,30 @@ impl ItemView {
     }
 
     fn is_highlighted(&self) -> bool {
-        self.ivars().highlighted.get() && self.ivars().content.borrow().enabled
+        let content = self.ivars().content.borrow();
+        self.ivars().highlighted.get() && (content.enabled || content.keeps_open)
+    }
+
+    /// AppKit would send the item's action on Return and close the menu.
+    fn handle_key(&self, event: &NSEvent) -> bool {
+        let modifiers = NSEventModifierFlags::Command
+            | NSEventModifierFlags::Control
+            | NSEventModifierFlags::Option;
+        if !self.ivars().highlighted.get()
+            || !self.ivars().content.borrow().keeps_open
+            || event.modifierFlags().intersects(modifiers)
+            || !matches!(event.keyCode(), 36 | 49 | 76)
+        {
+            return false;
+        }
+        self.activate();
+        true
     }
 
     fn activate(&self) -> bool {
-        let (enabled, has_submenu) = {
+        let (enabled, has_submenu, keeps_open) = {
             let content = self.ivars().content.borrow();
-            (content.enabled, content.has_submenu)
+            (content.enabled, content.has_submenu, content.keeps_open)
         };
         if !enabled || has_submenu {
             return false;
@@ -985,7 +1025,9 @@ impl ItemView {
         let Some((menu, root)) = menus_of(&item) else {
             return false;
         };
-        root.cancelTracking();
+        if !keeps_open {
+            root.cancelTracking();
+        }
         match menu.downcast::<TrayMenu>() {
             Ok(menu) => {
                 menu.select(item.tag() as u32);
@@ -1032,7 +1074,9 @@ impl ItemView {
             )
             .fill();
         }
-        let primary = if highlighted {
+        let primary = if highlighted && !content.enabled {
+            NSColor::selectedMenuItemTextColor().colorWithAlphaComponent(0.55)
+        } else if highlighted {
             NSColor::selectedMenuItemTextColor()
         } else if content.enabled {
             NSColor::labelColor()
@@ -1076,10 +1120,10 @@ impl ItemView {
                     };
                     background.setFill();
                     NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 4.0, 4.0).fill();
-                    let color = if !content.enabled {
+                    let color = if highlighted {
+                        primary.clone()
+                    } else if !content.enabled {
                         NSColor::disabledControlTextColor()
-                    } else if highlighted {
-                        NSColor::selectedMenuItemTextColor()
                     } else {
                         readable(icon.foreground, icon.background)
                     };
@@ -1125,10 +1169,10 @@ impl ItemView {
             };
             background.setFill();
             NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 5.0, 5.0).fill();
-            let color = if !content.enabled {
+            let color = if highlighted {
+                primary.clone()
+            } else if !content.enabled {
                 NSColor::disabledControlTextColor()
-            } else if highlighted {
-                NSColor::selectedMenuItemTextColor()
             } else {
                 readable(badge.foreground, badge.background)
             };
@@ -1146,7 +1190,7 @@ impl ItemView {
         }
         if let Some(detail) = &content.detail {
             let color = if highlighted {
-                NSColor::selectedMenuItemTextColor()
+                primary.clone()
             } else if content.enabled {
                 NSColor::secondaryLabelColor()
             } else {
@@ -1185,6 +1229,25 @@ impl ItemView {
 // ---------------------------------------------------------------------------
 
 struct KeyMonitor(Option<Retained<AnyObject>>);
+
+impl KeyMonitor {
+    fn key_down<V: Message + 'static>(view: &V, handle: fn(&V, &NSEvent) -> bool) -> Self {
+        let this = Weak::from_retained(&view.retain());
+        let handler = RcBlock::new(move |event: NonNull<NSEvent>| -> *mut NSEvent {
+            let Some(this) = this.load() else {
+                return event.as_ptr();
+            };
+            if handle(&this, unsafe { event.as_ref() }) {
+                null_mut()
+            } else {
+                event.as_ptr()
+            }
+        });
+        Self(unsafe {
+            NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &handler)
+        })
+    }
+}
 
 impl Drop for KeyMonitor {
     fn drop(&mut self) {
@@ -1274,21 +1337,7 @@ define_class!(
             if self.window().is_none() {
                 return;
             }
-            let this = Weak::from_retained(&self.retain());
-            let handler = RcBlock::new(move |event: NonNull<NSEvent>| -> *mut NSEvent {
-                let Some(this) = this.load() else {
-                    return event.as_ptr();
-                };
-                if this.handle_key(unsafe { event.as_ref() }) {
-                    null_mut()
-                } else {
-                    event.as_ptr()
-                }
-            });
-            let monitor = unsafe {
-                NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &handler)
-            };
-            self.ivars().monitor.replace(KeyMonitor(monitor));
+            self.ivars().monitor.replace(KeyMonitor::key_down(self, Self::handle_key));
         }
     }
 );
@@ -1736,7 +1785,7 @@ fn draw_symbol(image: &NSImage, x: f64, color: &NSColor, max_width: f64, bounds:
 
 #[cfg(test)]
 mod tests {
-    use super::topology::{grouped, matches, retained_status, shared_index};
+    use super::topology::{grouped, matches, retained_enabled, retained_status, shared_index};
     use super::{
         is_delay, segment_track, text_width, Entry, ItemContent, Kind, DETAIL_MAXIMUM_WIDTH,
     };
@@ -1780,6 +1829,7 @@ mod tests {
             is_checkbox: false,
             checked: false,
             enabled: true,
+            keeps_open: false,
             has_submenu: false,
         };
         let measured = text_width(content.detail.as_deref().unwrap(), &font);
@@ -1807,6 +1857,7 @@ mod tests {
             icon: None,
             badge: None,
             accessibility_label: None,
+            keeps_open: false,
             items: Vec::new(),
         }
     }
@@ -1904,6 +1955,55 @@ mod tests {
         };
         assert!(retained_status(&enabled, &[], &[]).is_none());
         assert!(retained_status(&entry(Kind::Action, 1, "x"), &[], &[]).is_none());
+    }
+
+    #[test]
+    fn only_actions_keep_the_menu_open() {
+        let mut item = crate::api::tray::TrayItem {
+            id: 1,
+            kind: crate::api::tray::TrayItemKind::Action,
+            label: "Test latency".into(),
+            detail: None,
+            enabled: true,
+            checked: false,
+            items: Vec::new(),
+            transient_status_key: None,
+            segment_group: None,
+            segment_error: None,
+            icon: None,
+            badge: None,
+            accessibility_label: None,
+            keeps_menu_open: true,
+        };
+        assert!(Entry::of(&item).keeps_open);
+        item.kind = crate::api::tray::TrayItemKind::Checkbox;
+        assert!(!Entry::of(&item).keeps_open);
+        item.kind = crate::api::tray::TrayItemKind::Action;
+        item.keeps_menu_open = false;
+        assert!(!Entry::of(&item).keeps_open);
+    }
+
+    #[test]
+    fn a_kept_row_that_keeps_the_menu_open_follows_its_new_enabled_state() {
+        let row = Entry {
+            keeps_open: true,
+            ..entry(Kind::Action, 1, "Test latency")
+        };
+        assert!(retained_enabled(&row, false));
+        assert!(!retained_enabled(&Entry { enabled: false, ..row.clone() }, true));
+        let other = entry(Kind::Action, 2, "Show");
+        assert!(!retained_enabled(&other, false));
+        assert!(retained_enabled(&other, true));
+    }
+
+    #[test]
+    fn keeping_the_menu_open_is_not_part_of_a_rows_identity() {
+        let current = vec![entry(Kind::Action, 1, "Test latency")];
+        let mut desired = current.clone();
+        desired[0].keeps_open = true;
+        desired[0].enabled = false;
+        desired[0].detail = Some("Testing".into());
+        assert!(matches(&current, &desired));
     }
 
     #[test]

@@ -3722,6 +3722,7 @@ impl SseDecode for crate::api::tray::TrayItem {
         let mut var_icon = <Option<crate::api::tray::TrayItemIcon>>::sse_decode(deserializer);
         let mut var_badge = <Option<crate::api::tray::TrayItemBadge>>::sse_decode(deserializer);
         let mut var_accessibilityLabel = <Option<String>>::sse_decode(deserializer);
+        let mut var_keepsMenuOpen = <bool>::sse_decode(deserializer);
         return crate::api::tray::TrayItem {
             id: var_id,
             kind: var_kind,
@@ -3736,6 +3737,7 @@ impl SseDecode for crate::api::tray::TrayItem {
             icon: var_icon,
             badge: var_badge,
             accessibility_label: var_accessibilityLabel,
+            keeps_menu_open: var_keepsMenuOpen,
         };
     }
 }
@@ -4512,6 +4514,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::tray::TrayItem {
             self.icon.into_into_dart().into_dart(),
             self.badge.into_into_dart().into_dart(),
             self.accessibility_label.into_into_dart().into_dart(),
+            self.keeps_menu_open.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5335,6 +5338,7 @@ impl SseEncode for crate::api::tray::TrayItem {
         <Option<crate::api::tray::TrayItemIcon>>::sse_encode(self.icon, serializer);
         <Option<crate::api::tray::TrayItemBadge>>::sse_encode(self.badge, serializer);
         <Option<String>>::sse_encode(self.accessibility_label, serializer);
+        <bool>::sse_encode(self.keeps_menu_open, serializer);
     }
 }
 

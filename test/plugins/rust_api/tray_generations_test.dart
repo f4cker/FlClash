@@ -538,4 +538,68 @@ void main() {
       );
     },
   );
+
+  test(
+    'macOS in-place refresh keeps a busy action that keeps the menu open',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      var selected = 0;
+      TrayMenuAction test({required bool busy}) => TrayMenuAction(
+        label: 'Test',
+        detail: busy ? 'Testing' : null,
+        enabled: !busy,
+        keepsMenuOpen: true,
+        onSelected: () => selected++,
+      );
+      await Tray.instance.show(_spec(menu: [test(busy: false)]));
+      await Tray.instance.openMenu();
+      await Tray.instance.show(_spec(menu: [test(busy: true)]));
+      final busy = host.lastShown!;
+      expect(busy.menu.single.keepsMenuOpen, isTrue);
+      expect(busy.menu.single.enabled, isFalse);
+      expect(busy.menu.single.detail, 'Testing');
+      await select(1024, busy.menuGeneration);
+      expect(selected, 0);
+      await Tray.instance.show(_spec(menu: [test(busy: false)]));
+      await select(1024, host.lastShown!.menuGeneration);
+      expect(selected, 1);
+    },
+  );
+
+  test(
+    'macOS a retained row that keeps the menu open follows its enabled state '
+    'back after a structural change',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      final selected = <String>[];
+      TrayMenuAction row(String label, {required bool enabled}) =>
+          TrayMenuAction(
+            label: label,
+            enabled: enabled,
+            keepsMenuOpen: label == 'Test',
+            onSelected: () => selected.add(label),
+          );
+      await Tray.instance.show(
+        _spec(
+          menu: [row('Test', enabled: false), row('Other', enabled: false)],
+        ),
+      );
+      final tracked = host.lastShown!.menuGeneration;
+      await Tray.instance.openMenu();
+      host.trackingGeneration = tracked;
+      host.generationsForShow = (generation) => [tracked, generation];
+      await Tray.instance.show(
+        _spec(
+          menu: [
+            row('Inserted', enabled: true),
+            row('Test', enabled: true),
+            row('Other', enabled: true),
+          ],
+        ),
+      );
+      await select(1024, tracked);
+      await select(1025, tracked);
+      expect(selected, ['Test']);
+    },
+  );
 }

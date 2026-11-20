@@ -40,6 +40,7 @@ final class TrayMenuAction extends TrayMenuItem {
     this.badge,
     this.accessibilityLabel,
     this.enabled = true,
+    this.keepsMenuOpen = false,
     this.onSelected,
   }) : transientStatusKey = null;
 
@@ -53,6 +54,7 @@ final class TrayMenuAction extends TrayMenuItem {
        icon = null,
        badge = null,
        enabled = false,
+       keepsMenuOpen = false,
        onSelected = null;
 
   final String? transientStatusKey;
@@ -62,6 +64,11 @@ final class TrayMenuAction extends TrayMenuItem {
   final TrayMenuBadge? badge;
   final String? accessibilityLabel;
   final bool enabled;
+
+  /// On macOS, selecting the action leaves the menu open, so the rows it
+  /// updates can be watched there. Disable it while its work runs: the row
+  /// stays highlightable but ignores selection.
+  final bool keepsMenuOpen;
   final TrayMenuItemSelectedCallback? onSelected;
 }
 

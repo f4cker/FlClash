@@ -150,6 +150,11 @@ class TrayItem {
   final TrayItemBadge? badge;
   final String? accessibilityLabel;
 
+  /// An action whose selection leaves the macOS menu open, so the rows
+  /// it updates can be watched; its row stays highlightable while
+  /// disabled. Ignored elsewhere.
+  final bool keepsMenuOpen;
+
   const TrayItem({
     required this.id,
     required this.kind,
@@ -164,6 +169,7 @@ class TrayItem {
     this.icon,
     this.badge,
     this.accessibilityLabel,
+    this.keepsMenuOpen = false,
   });
 
   @override
@@ -180,7 +186,8 @@ class TrayItem {
       segmentError.hashCode ^
       icon.hashCode ^
       badge.hashCode ^
-      accessibilityLabel.hashCode;
+      accessibilityLabel.hashCode ^
+      keepsMenuOpen.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -199,7 +206,8 @@ class TrayItem {
           segmentError == other.segmentError &&
           icon == other.icon &&
           badge == other.badge &&
-          accessibilityLabel == other.accessibilityLabel;
+          accessibilityLabel == other.accessibilityLabel &&
+          keepsMenuOpen == other.keepsMenuOpen;
 }
 
 /// A trailing pill, such as a delay. Colors are ARGB.

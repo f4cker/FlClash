@@ -62,6 +62,7 @@ abstract final class TrayCodec {
           :final badge,
           :final accessibilityLabel,
           :final enabled,
+          :final keepsMenuOpen,
         ) =>
           TrayItem(
             id: id,
@@ -75,6 +76,7 @@ abstract final class TrayCodec {
             icon: _icon(icon),
             badge: _badge(badge),
             accessibilityLabel: accessibilityLabel,
+            keepsMenuOpen: keepsMenuOpen,
           ),
         TrayMenuCheckbox(
           :final segmentGroup,
@@ -167,6 +169,7 @@ abstract final class TrayCodec {
           item.segmentGroup,
           item.segmentError,
           item.accessibilityLabel,
+          item.keepsMenuOpen,
           if (item.icon case final icon?)
             [
               icon.monogram,

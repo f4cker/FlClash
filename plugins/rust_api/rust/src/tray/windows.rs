@@ -417,6 +417,7 @@ mod tests {
             icon: None,
             badge: None,
             accessibility_label: None,
+            keeps_menu_open: false,
         }
     }
 

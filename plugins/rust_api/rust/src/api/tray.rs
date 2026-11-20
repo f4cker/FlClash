@@ -29,6 +29,7 @@ pub struct TrayItemBadge {
     pub foreground: u32,
 }
 
+#[frb]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrayItem {
     pub id: u32,
@@ -49,6 +50,11 @@ pub struct TrayItem {
     pub icon: Option<TrayItemIcon>,
     pub badge: Option<TrayItemBadge>,
     pub accessibility_label: Option<String>,
+    /// An action whose selection leaves the macOS menu open, so the rows
+    /// it updates can be watched; its row stays highlightable while
+    /// disabled. Ignored elsewhere.
+    #[frb(default = false)]
+    pub keeps_menu_open: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

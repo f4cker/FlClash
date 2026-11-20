@@ -222,4 +222,27 @@ void main() {
     expect(signatures, hasLength(4));
     expect(signature(red), signature(red));
   });
+
+  test('an action that keeps the menu open says so, and nothing else does', () {
+    String signature(bool keepsMenuOpen) => TrayCodec.encode(
+      _spec(
+        menu: [TrayMenuAction(label: 'Test', keepsMenuOpen: keepsMenuOpen)],
+      ),
+    ).signature;
+    final encoded = TrayCodec.encode(
+      _spec(
+        menu: const [
+          TrayMenuAction(label: 'Test', keepsMenuOpen: true),
+          TrayMenuAction(label: 'Show'),
+          TrayMenuAction.status(statusKey: 'mode', label: 'Pending'),
+        ],
+      ),
+    );
+    expect(encoded.menu.map((item) => item.keepsMenuOpen), [
+      true,
+      false,
+      false,
+    ]);
+    expect(signature(true), isNot(signature(false)));
+  });
 }

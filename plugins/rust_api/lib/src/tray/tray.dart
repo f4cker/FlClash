@@ -246,7 +246,10 @@ final class Tray {
         icon: item.icon,
         badge: item.badge,
         accessibilityLabel: item.accessibilityLabel,
-        enabled: item.enabled && (origin as TrayMenuAction).enabled,
+        enabled:
+            item.enabled &&
+            (item.keepsMenuOpen || (origin as TrayMenuAction).enabled),
+        keepsMenuOpen: item.keepsMenuOpen,
         onSelected: (previous as TrayMenuAction).onSelected,
       ),
       TrayMenuCheckbox() => TrayMenuCheckbox(

@@ -3328,8 +3328,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TrayItem dco_decode_tray_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return TrayItem(
       id: dco_decode_u_32(arr[0]),
       kind: dco_decode_tray_item_kind(arr[1]),
@@ -3344,6 +3344,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       icon: dco_decode_opt_box_autoadd_tray_item_icon(arr[10]),
       badge: dco_decode_opt_box_autoadd_tray_item_badge(arr[11]),
       accessibilityLabel: dco_decode_opt_String(arr[12]),
+      keepsMenuOpen: dco_decode_bool(arr[13]),
     );
   }
 
@@ -4146,6 +4147,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_icon = sse_decode_opt_box_autoadd_tray_item_icon(deserializer);
     var var_badge = sse_decode_opt_box_autoadd_tray_item_badge(deserializer);
     var var_accessibilityLabel = sse_decode_opt_String(deserializer);
+    var var_keepsMenuOpen = sse_decode_bool(deserializer);
     return TrayItem(
       id: var_id,
       kind: var_kind,
@@ -4160,6 +4162,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       icon: var_icon,
       badge: var_badge,
       accessibilityLabel: var_accessibilityLabel,
+      keepsMenuOpen: var_keepsMenuOpen,
     );
   }
 
@@ -5020,6 +5023,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_tray_item_icon(self.icon, serializer);
     sse_encode_opt_box_autoadd_tray_item_badge(self.badge, serializer);
     sse_encode_opt_String(self.accessibilityLabel, serializer);
+    sse_encode_bool(self.keepsMenuOpen, serializer);
   }
 
   @protected
