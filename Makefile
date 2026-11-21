@@ -101,7 +101,7 @@ strip-check: ## Strip the rsFeature checks in a scratch copy and analyze what th
 hooks-test: ## Test the git hook scripts in tool/hooks
 	bash tool/hooks/test.sh
 
-frb-test: ## Test tool/frb_codegen.sh in a scratch copy (FRB_CODEGEN=path for the codegen cases)
+frb-test: ## Test tool/frb_codegen.sh in scratch copies; exits 77 on skipped codegen cases (FRB_TEST_ALLOW_SKIP=1)
 	bash tool/frb_codegen_test.sh
 
 comment-density: ## Hold uncommitted changes, or FILES=paths, to the comment cap

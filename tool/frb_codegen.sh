@@ -6,7 +6,7 @@
 # channel in rust/rust-toolchain.toml, generates into a scratch copy, checks the
 # stem against the Cargo [lib] name, and only then swaps the changed files in.
 #
-# FRB_CODEGEN overrides the flutter_rust_bridge_codegen binary.
+# FRB_CODEGEN overrides the flutter_rust_bridge_codegen binary, GIT the git one.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -60,6 +60,19 @@ grep -q "\"name\":\"$lib_name\"" <<<"$metadata" ||
   die "cargo metadata does not list the [lib] target $lib_name"
 
 command -v rsync >/dev/null 2>&1 || die "rsync is not on PATH"
+git_bin="${GIT:-git}"
+command -v "$git_bin" >/dev/null 2>&1 || die "$git_bin is not on PATH; set GIT"
+
+# What the codegen writes (flutter_rust_bridge.yaml dart_output, plus the Rust
+# glue). Nothing else is copied back, so .dart_tool, Cargo.lock and the like stay.
+output_dirs=(lib/src/rust)
+output_files=(rust/src/frb_generated.rs)
+tracked=()
+while IFS= read -r -d '' file; do tracked+=("$file"); done < <(
+  "$git_bin" -C "$package" ls-files -z -- "${output_dirs[@]}" "${output_files[@]}"
+)
+[[ ${#tracked[@]} -gt 0 ]] || die "git lists no tracked bindings under $package/{${output_dirs[*]},${output_files[*]}}"
+
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/frb_codegen.XXXXXX")"
 staged=()
 cleanup() {
@@ -68,7 +81,8 @@ cleanup() {
   rm -rf "$scratch"
 }
 trap cleanup EXIT
-trap 'exit 130' INT TERM
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 mirror="$scratch/repo"
 mkdir -p "$mirror/.dart_tool" "$mirror/plugins"
@@ -82,21 +96,50 @@ copy="$mirror/plugins/rust_api"
 (cd "$copy" && CARGO_TARGET_DIR="$scratch/target" "$codegen" generate) ||
   die "$codegen generate failed; tracked files are unchanged"
 
+missing=()
+for relative in "${tracked[@]}"; do
+  if [[ ! -f "$copy/$relative" ]]; then missing+=("$relative"); fi
+done
+[[ ${#missing[@]} -eq 0 ]] ||
+  die "codegen did not produce tracked output ${missing[*]} (git rm it first if that is intended); tracked files are unchanged"
+
+outputs=("${tracked[@]}")
+is_listed() {
+  local needle="$1" item
+  shift
+  for item in "$@"; do [[ "$item" == "$needle" ]] && return 0; done
+  return 1
+}
+while IFS= read -r -d '' file; do
+  relative="${file#"$copy"/}"
+  is_listed "$relative" "${tracked[@]}" || outputs+=("$relative")
+done < <(
+  for dir in "${output_dirs[@]}"; do [[ ! -d "$copy/$dir" ]] || find "$copy/$dir" -type f -print0; done
+  for file in "${output_files[@]}"; do [[ ! -f "$copy/$file" ]] || printf '%s\0' "$copy/$file"; done
+)
+
+for relative in "${outputs[@]}"; do
+  [[ -s "$copy/$relative" ]] || die "codegen wrote an empty $relative; tracked files are unchanged"
+  if [[ "$relative" == *.dart ]] && grep -qE "(stem|ioDirectory): *'UNKNOWN'" "$copy/$relative"; then
+    die "$relative has an UNKNOWN loader config (cargo metadata failed inside the codegen); tracked files are unchanged"
+  fi
+done
 generated="$copy/lib/src/rust/frb_generated.dart"
 [[ -f "$generated" ]] || die "codegen wrote no lib/src/rust/frb_generated.dart"
 stems="$(sed -nE "s/^[[:space:]]*stem: '([^']*)',?[[:space:]]*$/\1/p" "$generated")"
-if grep -q "UNKNOWN" <<<"$stems" || grep -qE "ioDirectory: 'UNKNOWN'" "$generated"; then
-  die "generated loader config is UNKNOWN (cargo metadata failed inside the codegen); tracked files are unchanged"
-fi
 [[ "$stems" == "$lib_name" ]] ||
   die "generated stem '${stems//$'\n'/,}' is not the Cargo [lib] name '$lib_name'; tracked files are unchanged"
 
-changed=()
-while IFS= read -r -d '' file; do
-  relative="${file#"$copy"/}"
-  if ! cmp -s "$file" "$package/$relative"; then changed+=("$relative"); fi
-done < <(find "$copy" -type f -not -path "$copy/rust/target/*" -print0)
+while IFS= read -r -d '' relative; do
+  if ! is_listed "$relative" "${outputs[@]}" && [[ -f "$copy/$relative" ]] && ! cmp -s "$copy/$relative" "$package/$relative"; then
+    echo "frb_codegen: warning: codegen also changed $relative, which is not an output; left as is" >&2
+  fi
+done < <("$git_bin" -C "$package" ls-files -z)
 
+changed=()
+for relative in "${outputs[@]}"; do
+  if ! cmp -s "$copy/$relative" "$package/$relative"; then changed+=("$relative"); fi
+done
 if [[ ${#changed[@]} -eq 0 ]]; then
   echo "frb_codegen: bindings are up to date (stem '$lib_name', toolchain $channel)"
   exit 0
@@ -116,10 +159,11 @@ for relative in "${changed[@]}"; do
   cp -p "$copy/$relative" "$stage"
 done
 
-moved=()
+# Every changed file goes back to its backup (or away, if it is new), whether
+# or not its mv ran yet, so a failure or INT/TERM mid-loop leaves no mix.
 restore() {
   local relative
-  for relative in ${moved[@]+"${moved[@]}"}; do
+  for relative in "${changed[@]}"; do
     if [[ -f "$backup/$relative" ]]; then
       cp -p "$backup/$relative" "$package/$relative"
     else
@@ -127,13 +171,23 @@ restore() {
     fi
   done
 }
+interrupted() {
+  trap '' INT TERM
+  restore
+  echo "frb_codegen: interrupted; restored the tracked files" >&2
+  exit "$1"
+}
+trap 'interrupted 130' INT
+trap 'interrupted 143' TERM
 for index in "${!changed[@]}"; do
   if ! mv -f "${staged[$index]}" "$package/${changed[$index]}"; then
+    trap '' INT TERM
     restore
     die "could not replace ${changed[$index]}; restored the tracked files"
   fi
-  moved+=("${changed[$index]}")
 done
+trap 'exit 130' INT
+trap 'exit 143' TERM
 staged=()
 
 printf 'frb_codegen: updated %s\n' "${changed[@]}"
