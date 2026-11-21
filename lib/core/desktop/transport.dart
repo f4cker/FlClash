@@ -5,6 +5,8 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:rust_api/rust_api.dart';
 
+import 'socket_address.dart';
+
 typedef IpcServerBinder = Future<IpcServer> Function(String address);
 
 enum DesktopTransportState { idle, starting, ready, connected, failed, closed }
@@ -63,10 +65,15 @@ abstract interface class DesktopCoreTransport {
 }
 
 final class IpcCoreTransport implements DesktopCoreTransport {
+  String _address;
+
+  /// The address of the last successful bind; read it after [open].
   @override
-  final String address;
+  String get address => _address;
 
   final IpcServerBinder _bind;
+  final Future<String> Function()? _nextAddress;
+  final int _maxBindAttempts;
   final StreamController<DesktopTransportEvent> _events =
       StreamController<DesktopTransportEvent>.broadcast();
   final StreamController<Uint8List> _frames =
@@ -82,8 +89,24 @@ final class IpcCoreTransport implements DesktopCoreTransport {
   int _generation = 0;
   int _bindAttempt = 0;
 
-  IpcCoreTransport({required this.address, IpcServerBinder? bind})
-    : _bind = bind ?? _bindIpcServer;
+  /// Binds the same [address] every time (the Windows pipe).
+  IpcCoreTransport({required String address, IpcServerBinder? bind})
+    : _address = address,
+      _bind = bind ?? _bindIpcServer,
+      _nextAddress = null,
+      _maxBindAttempts = 1;
+
+  /// Binds a fresh address from [nextAddress] on every open. A name that is
+  /// already taken is left alone and another one is tried, up to
+  /// [maxBindAttempts] names in all.
+  IpcCoreTransport.unique({
+    required Future<String> Function() nextAddress,
+    IpcServerBinder? bind,
+    int maxBindAttempts = unixSocketBindAttempts,
+  }) : _address = '',
+       _bind = bind ?? _bindIpcServer,
+       _nextAddress = nextAddress,
+       _maxBindAttempts = maxBindAttempts;
 
   static Future<IpcServer> _bindIpcServer(String address) {
     return IpcServer.bind(address: address);
@@ -128,7 +151,7 @@ final class IpcCoreTransport implements DesktopCoreTransport {
     try {
       await _serverDropped;
       checkStillWanted();
-      final server = await _bind(address);
+      final server = await _bindServer();
       if (attempt != _bindAttempt) {
         await server.close();
       }
@@ -142,6 +165,33 @@ final class IpcCoreTransport implements DesktopCoreTransport {
         _fail(error, stackTrace);
       }
       rethrow;
+    }
+  }
+
+  Future<IpcServer> _bindServer() async {
+    final nextAddress = _nextAddress;
+    if (nextAddress == null) {
+      return _bind(_address);
+    }
+    for (var tried = 1; ; tried++) {
+      final candidate = await nextAddress();
+      try {
+        final server = await _bind(candidate);
+        _address = candidate;
+        return server;
+      } catch (error) {
+        if (!isAddressInUse(error)) rethrow;
+        commonPrint.log(
+          'IPC socket name already taken, trying another: $error',
+          logLevel: LogLevel.warning,
+        );
+        if (tried >= _maxBindAttempts) {
+          throw StateError(
+            'IPC socket: all $tried random names were already taken; '
+            'nothing was deleted',
+          );
+        }
+      }
     }
   }
 

@@ -15,6 +15,7 @@ import 'desktop/macos_helper_launcher.dart';
 import 'desktop/macos_helper_transport.dart';
 import 'desktop/macos_repair_record.dart';
 import 'desktop/rpc_client.dart';
+import 'desktop/socket_address.dart';
 import 'desktop/transport.dart';
 import 'event.dart';
 import 'interface.dart';
@@ -39,7 +40,6 @@ class CoreService extends CoreHandlerInterface {
   }
 
   factory CoreService._create() {
-    final address = system.isWindows ? windowsPipeName : unixSocketPath;
     final directLauncher = DirectCoreLauncher();
 
     final managedMac = system.isMacOS && macosManagedHelperBuild;
@@ -47,7 +47,11 @@ class CoreService extends CoreHandlerInterface {
     lifecycle = DesktopCoreLifecycle(
       transport: managedMac
           ? MacHelperTransport(macosHelperClient)
-          : IpcCoreTransport(address: address),
+          : system.isMacOS
+          ? IpcCoreTransport.unique(nextAddress: nextUnixSocketAddress)
+          : IpcCoreTransport(
+              address: system.isWindows ? windowsPipeName : unixSocketPath,
+            ),
       launcherResolver: managedMac
           ? MacHelperLauncher(macosHelperClient)
           : HelperLauncherResolver(

@@ -88,13 +88,60 @@ void main() {
   });
 
   test('an address that cannot be bound fails the transport', () async {
+    // Only the socket's own directory is created; a missing grandparent is not.
     final unbindable = IpcCoreTransport(
-      address: '${directory.path}/missing/core.sock',
+      address: '${directory.path}/missing/nested/core.sock',
     );
 
     await expectLater(unbindable.open(), throwsA(anything));
 
     expect(unbindable.state, DesktopTransportState.failed);
+    expect(Directory('${directory.path}/missing').existsSync(), isFalse);
     await unbindable.close();
   });
+
+  group('macOS private socket directory', () {
+    test('an absent directory is created owner-only', () async {
+      final private = IpcCoreTransport(
+        address: '${directory.path}/app-501/core.sock',
+      );
+
+      await private.open();
+
+      expect(
+        FileStat.statSync('${directory.path}/app-501').mode & 0x1ff,
+        0x1c0,
+      );
+      await private.close();
+      expect(
+        FileSystemEntity.typeSync('${directory.path}/app-501/core.sock'),
+        FileSystemEntityType.notFound,
+      );
+    });
+
+    test('a directory others can enter is refused and kept', () async {
+      final shared = Directory('${directory.path}/shared')..createSync();
+      await Process.run('chmod', ['755', shared.path]);
+      final refused = IpcCoreTransport(address: '${shared.path}/core.sock');
+
+      await expectLater(refused.open(), throwsA(contains('refusing')));
+
+      expect(FileStat.statSync(shared.path).mode & 0x1ff, 0x1ed);
+      await refused.close();
+    });
+
+    test(
+      'an existing file at the name is kept and reported as taken',
+      () async {
+        final taken = File('${directory.path}/taken.sock')
+          ..writeAsStringSync('keep');
+        final transport = IpcCoreTransport(address: taken.path);
+
+        await expectLater(transport.open(), throwsA(startsWith('EADDRINUSE')));
+
+        expect(taken.readAsStringSync(), 'keep');
+        await transport.close();
+      },
+    );
+  }, skip: Platform.isMacOS ? false : 'the private directory is macOS-only');
 }

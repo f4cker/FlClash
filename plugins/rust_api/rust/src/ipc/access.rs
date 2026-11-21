@@ -3,7 +3,9 @@ use interprocess::local_socket::ListenerOptions;
 use std::io;
 
 /// Linux carries an `fchmod` on the unbound socket over to the file `bind`
-/// creates; other Unixes reject it and get `restrict_socket` after `bind`.
+/// creates; other Unixes reject it. macOS binds inside an owner-only 0700
+/// directory and tightens the mode through that directory's fd
+/// (`endpoint`); the remaining platforms get `restrict_socket` after `bind`.
 pub fn owner_only(options: ListenerOptions<'_>) -> ListenerOptions<'_> {
     #[cfg(target_os = "linux")]
     {
@@ -17,6 +19,7 @@ pub fn owner_only(options: ListenerOptions<'_>) -> ListenerOptions<'_> {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 pub fn restrict_socket(path: &str) -> io::Result<()> {
     #[cfg(unix)]
     {
