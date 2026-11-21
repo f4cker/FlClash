@@ -36,6 +36,8 @@ static BOOL FCTestHelperTrust(NSString *helper) {
 
 // FC_TEST_FAIL_SWAP_BACK: every swap after the first fails, as when the swap back cannot happen.
 // FC_TEST_KILL=beforeSwap|afterSwap|beforeSwapBack: the process dies there, as on a crash or a forced quit.
+// FC_TEST_KILL=beforeRelease: it dies as the rollback marker is about to become the staging marker again; this
+// definition takes the place of libc's rename(2) for UpdateInstaller.m, which is linked into this driver.
 static int FCTestSwap(const char *from, const char *to) {
     static int swaps = 0;
     const char *kill_at = getenv("FC_TEST_KILL") ?: "";
@@ -48,6 +50,14 @@ static int FCTestSwap(const char *from, const char *to) {
     int result = renamex_np(from, to, RENAME_SWAP);
     if (first && !strcmp(kill_at, "afterSwap")) kill(getpid(), SIGKILL);
     return result;
+}
+
+int rename(const char *from, const char *to) {
+    const char *kill_at = getenv("FC_TEST_KILL") ?: "";
+    size_t length = strlen(to), suffix = strlen("/.flash-update-staging");
+    if (!strcmp(kill_at, "beforeRelease") && length > suffix && !strcmp(to + length - suffix, "/.flash-update-staging"))
+        kill(getpid(), SIGKILL);
+    return renamex_np(from, to, 0);
 }
 
 static CFStringRef FCTestRescueDirectory(void) {
