@@ -108,7 +108,7 @@ class _Errors extends StatelessWidget {
     final l = context.appLocalizations;
     final syntax = mitmIssueError(l, _syntax);
     final maxSize = mitmIssueError(l, _maxSize);
-    final unreadable = mitmIssueError(l, _unreadable, scriptName: '签到.js');
+    final unreadable = mitmScriptCannotLoadError(l, '签到.js', _unreadable);
     // No name the user knows to give: the words name no file.
     final tooLarge = mitmIssueError(l, _tooLarge);
     final refused = mitmRewriteNotAppliedError(l, _refused);
@@ -132,7 +132,7 @@ class _Errors extends StatelessWidget {
             ),
             MountBanner(
               level: MountBannerLevel.error,
-              lines: [l.mitmScriptCannotLoad('签到.js', unreadable.text)],
+              lines: [unreadable.text],
               raw: unreadable.raw,
             ),
             MountBanner(

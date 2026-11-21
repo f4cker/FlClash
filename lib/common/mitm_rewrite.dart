@@ -356,6 +356,18 @@ MitmShownError mitmIssueError(
   raw: issue.message.trim().isEmpty ? null : issue.message,
 );
 
+/// [issue] for the script [name] under a sentence that names it already,
+/// as "{name} can't be loaded: …": the reason names no file, so the name
+/// reads once; the stored name only in the details.
+MitmShownError mitmScriptCannotLoadError(
+  AppLocalizations l,
+  String name,
+  MitmRewriteIssue issue,
+) {
+  final error = mitmIssueError(l, issue);
+  return (text: l.mitmScriptCannotLoad(name, error.text), raw: error.raw);
+}
+
 const _storedIssueMark = '\u0001mitm-issue:';
 
 /// [issue] as a script row keeps it in its error text, so the row can word

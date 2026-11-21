@@ -13,6 +13,10 @@ import '../helpers/test_app.dart';
 final zh = lookupAppLocalizations(const Locale('zh', 'CN'));
 final en = lookupAppLocalizations(const Locale('en'));
 final ru = lookupAppLocalizations(const Locale('ru'));
+final es = lookupAppLocalizations(const Locale('es'));
+final fr = lookupAppLocalizations(const Locale('fr'));
+final ja = lookupAppLocalizations(const Locale('ja'));
+final ko = lookupAppLocalizations(const Locale('ko'));
 
 MitmRewriteIssue _issue(String kind, [List<String> args = const []]) =>
     MitmRewriteIssue(
@@ -223,6 +227,68 @@ void main() {
               : 'The script file exceeds 8 MiB.',
         );
       }
+    });
+
+    test('under a sentence that names the script, it reads once', () {
+      const stored = '3f9a0c51e2b7d4a6.js';
+      for (final (kind, message) in [
+        ('scriptUnreadable', 'script file $stored cannot be read'),
+        ('scriptTooLarge', 'script file $stored is over 8 MiB'),
+      ]) {
+        final issue = MitmRewriteIssue(
+          section: 'script',
+          kind: kind,
+          args: const [stored],
+          message: message,
+        );
+        for (final l in [zh, en, es, fr, ja, ko, ru]) {
+          final shown = mitmScriptCannotLoadError(l, '签到.js', issue);
+          expect(
+            '签到.js'.allMatches(shown.text).length,
+            1,
+            reason: '${l.localeName}: ${shown.text}',
+          );
+          expect(shown.text, isNot(contains(stored)));
+          expect(
+            shown.text,
+            l.mitmScriptCannotLoad(
+              '签到.js',
+              kind == 'scriptUnreadable'
+                  ? l.mitmScriptErrorUnreadableNoName
+                  : l.mitmScriptErrorTooLargeNoName,
+            ),
+          );
+          expect(shown.raw, message);
+        }
+      }
+      expect(
+        mitmScriptCannotLoadError(
+          zh,
+          '签到.js',
+          const MitmRewriteIssue(
+            section: 'script',
+            kind: 'scriptUnreadable',
+            args: [stored],
+            message: 'script file $stored cannot be read',
+          ),
+        ).text,
+        '签到.js 无法加载：无法读取脚本文件。',
+      );
+    });
+
+    test('other reasons under the named sentence keep their words', () {
+      const issue = MitmRewriteIssue(
+        section: 'script',
+        kind: 'scriptMaxSize',
+        args: ['"10k"'],
+        message: 'max-size must be a number of bytes, got "10k"',
+      );
+      final shown = mitmScriptCannotLoadError(en, 'a.js', issue);
+      expect(
+        shown.text,
+        en.mitmScriptCannotLoad('a.js', en.mitmScriptErrorMaxSize('10k')),
+      );
+      expect(shown.raw, issue.message);
     });
 
     test('other codes ignore the script name', () {
