@@ -17,6 +17,9 @@ static NSString * const FCUpdateStagingPrefix = @".Flash-update-";
 static NSString * const FCUpdateBundleName = @"Flash.app";
 // Written into a staging directory when it is created; cleanup deletes only directories that carry it.
 static NSString * const FCUpdateStagingMarker = @".flash-update-staging";
+// Replaces the staging marker from just before the swap until the installed app passed its checks: until then the
+// directory may hold the only good copy of the previous app, so cleanup never deletes it on the marker alone.
+static NSString * const FCUpdateRollbackMarker = @".flash-update-rollback";
 static NSString * const FCUpdateRescueRecord = @"last-failed-update.json";
 
 static NSDictionary *FCUpdateAnswer(NSString *code, NSString *detail) {
@@ -190,6 +193,19 @@ static NSString *FCUpdateMarkerPath(NSString *directory) {
     return [directory stringByAppendingPathComponent:FCUpdateStagingMarker];
 }
 
+static NSString *FCUpdateRollbackMarkerPath(NSString *directory) {
+    return [directory stringByAppendingPathComponent:FCUpdateRollbackMarker];
+}
+
+static BOOL FCUpdateHoldForRollback(NSString *directory) {
+    return rename(FCUpdateMarkerPath(directory).fileSystemRepresentation,
+        FCUpdateRollbackMarkerPath(directory).fileSystemRepresentation) == 0;
+}
+
+static void FCUpdateReleaseRollback(NSString *directory) {
+    rename(FCUpdateRollbackMarkerPath(directory).fileSystemRepresentation, FCUpdateMarkerPath(directory).fileSystemRepresentation);
+}
+
 static BOOL FCUpdateMark(NSString *directory) {
     int descriptor = open(FCUpdateMarkerPath(directory).fileSystemRepresentation,
         O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
@@ -201,6 +217,12 @@ static BOOL FCUpdateMark(NSString *directory) {
 static BOOL FCUpdateMarked(NSString *directory) {
     struct stat state;
     return lstat(FCUpdateMarkerPath(directory).fileSystemRepresentation, &state) == 0 && S_ISREG(state.st_mode) &&
+        state.st_uid == getuid();
+}
+
+static BOOL FCUpdateRollbackHeld(NSString *directory) {
+    struct stat state;
+    return lstat(FCUpdateRollbackMarkerPath(directory).fileSystemRepresentation, &state) == 0 && S_ISREG(state.st_mode) &&
         state.st_uid == getuid();
 }
 
@@ -266,7 +288,8 @@ static BOOL FCUpdateStagedPath(NSString *staged, NSString *target) {
 // cleanup deletes it), then move it under `rescueDirectory` without replacing anything there.
 static NSDictionary *FCUpdateRescue(NSString *previous, NSString *rescueDirectory, NSDictionary *record) {
     NSString *staging = previous.stringByDeletingLastPathComponent;
-    BOOL unmarked = unlink(FCUpdateMarkerPath(staging).fileSystemRepresentation) == 0 || errno == ENOENT;
+    BOOL unmarked = (unlink(FCUpdateMarkerPath(staging).fileSystemRepresentation) == 0 || errno == ENOENT) &&
+        (unlink(FCUpdateRollbackMarkerPath(staging).fileSystemRepresentation) == 0 || errno == ENOENT);
     uint64_t build = 0;
     NSString *name = FCUpdateAppBuild(previous, &build) ? [NSString stringWithFormat:@"Flash-%llu", build] : @"Flash-previous";
     NSString *rescued = previous;
@@ -318,8 +341,12 @@ static NSDictionary *FCUpdateInstallChecked(NSString *staged, NSString *target, 
     uint64_t build = 0;
     NSData *launcher = FCUpdateLauncher(target);
     if (!FCUpdateAppBuild(staged, &build) || !launcher) return FCUpdateAnswer(@"failed", @"staged app unreadable");
+    NSString *staging = staged.stringByDeletingLastPathComponent;
+    if (!FCUpdateHoldForRollback(staging))
+        return FCUpdateAnswer(@"failed", [@"rollback marker: " stringByAppendingString:@(strerror(errno))]);
     if (policy.swap(staged.fileSystemRepresentation, target.fileSystemRepresentation)) {
         int error = errno;
+        FCUpdateReleaseRollback(staging);
         return FCUpdateAnswer(FCUpdatePermissionError(error) ? @"notWritable" : @"swapFailed", @(strerror(error)));
     }
     uint64_t installed = 0;
@@ -328,9 +355,14 @@ static NSDictionary *FCUpdateInstallChecked(NSString *staged, NSString *target, 
     if (![trust isEqualToString:@"trusted"]) problem = [@"installed app signature: " stringByAppendingString:trust];
     else if (!FCUpdateAppBuild(target, &installed) || installed != build) problem = @"installed build";
     else if (![FCUpdateLauncher(target) isEqualToData:launcher]) problem = @"installed launcher";
-    if (!problem) return @{@"code": @"ok", @"replaced": staged};
-    if (policy.swap(staged.fileSystemRepresentation, target.fileSystemRepresentation) == 0)
+    if (!problem) {
+        FCUpdateReleaseRollback(staging);
+        return @{@"code": @"ok", @"replaced": staged};
+    }
+    if (policy.swap(staged.fileSystemRepresentation, target.fileSystemRepresentation) == 0) {
+        FCUpdateReleaseRollback(staging);
         return FCUpdateAnswer(@"rolledBack", problem);
+    }
     NSString *detail = [NSString stringWithFormat:@"%@; swap back: %s", problem, strerror(errno)];
     NSMutableDictionary *answer = [FCUpdateAnswer(@"rollbackFailed", detail) mutableCopy];
     [answer addEntriesFromDictionary:FCUpdateRescue(staged, (__bridge NSString *)policy.rescueDirectory,
@@ -376,16 +408,35 @@ NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy
     return FCUpdateNoteUnchanged(FCUpdateInstallChecked(staged, target, @{}, policy), target, before);
 }
 
-void FCUpdateCleanup(NSString *target) {
+// An install stopped between the swap and the end of its checks. A kept app older than the installed one is the
+// previous app: rescue it. A newer one is the candidate that was never installed or was swapped back: delete it.
+static void FCUpdateSettleInterrupted(NSString *path, NSString *target, NSString *rescueDirectory) {
+    NSString *kept = [path stringByAppendingPathComponent:FCUpdateBundleName];
+    struct stat state;
+    if (lstat(kept.fileSystemRepresentation, &state) || !S_ISDIR(state.st_mode)) return;
+    uint64_t keptBuild = 0, installedBuild = 0;
+    if (FCUpdateAppBuild(kept, &keptBuild) && FCUpdateAppBuild(target, &installedBuild) && keptBuild > installedBuild) {
+        [NSFileManager.defaultManager removeItemAtPath:path error:nil];
+        return;
+    }
+    FCUpdateRescue(kept, rescueDirectory, @{@"problem": @"update interrupted before its checks completed",
+        @"failedBuild": @(installedBuild), @"installedApp": target});
+}
+
+void FCUpdateCleanupKeeping(NSString *target, NSString *rescueDirectory) {
     NSString *parent = target.stringByDeletingLastPathComponent;
     for (NSString *name in [NSFileManager.defaultManager contentsOfDirectoryAtPath:parent error:nil]) {
         if (![name hasPrefix:FCUpdateStagingPrefix]) continue;
         NSString *path = [parent stringByAppendingPathComponent:name];
         struct stat state;
-        if (lstat(path.fileSystemRepresentation, &state) == 0 && S_ISDIR(state.st_mode) && state.st_uid == getuid() &&
-            FCUpdateMarked(path))
-            [NSFileManager.defaultManager removeItemAtPath:path error:nil];
+        if (lstat(path.fileSystemRepresentation, &state) || !S_ISDIR(state.st_mode) || state.st_uid != getuid()) continue;
+        if (FCUpdateRollbackHeld(path)) FCUpdateSettleInterrupted(path, target, rescueDirectory);
+        else if (FCUpdateMarked(path)) [NSFileManager.defaultManager removeItemAtPath:path error:nil];
     }
+}
+
+void FCUpdateCleanup(NSString *target) {
+    FCUpdateCleanupKeeping(target, FCUpdateRescueDirectory());
 }
 
 BOOL FCUpdateScheduleRelaunch(pid_t pid, NSString *target) {

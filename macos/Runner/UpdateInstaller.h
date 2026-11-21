@@ -35,7 +35,9 @@ NSString *FCUpdateInstalledBundle(void);
 NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSString *target, FCUpdatePolicy policy);
 
 // Checks the staged app again, swaps it with `target` (renamex_np RENAME_SWAP), checks the installed result and
-// swaps back when that fails. The replaced app stays in the staging directory until FCUpdateCleanup.
+// swaps back when that fails. The replaced app stays in the staging directory until FCUpdateCleanup. From just
+// before the swap until the installed app passed its checks (or was swapped back) the directory carries a rollback
+// marker instead of the staging marker.
 //
 // When the swap back fails too (rollbackFailed), the previous app is the only good copy: its staging directory
 // loses its marker, so no cleanup ever deletes it, and it moves to policy.rescueDirectory/Flash-<build>.app with
@@ -45,7 +47,11 @@ NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSStrin
 NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy);
 
 // Removes this user's staging directories beside `target`, only those still carrying the marker FCUpdatePrepare
-// writes when it creates them (so never a previous app kept after rollbackFailed).
+// writes when it creates them (so never a previous app kept after rollbackFailed). A directory still carrying the
+// rollback marker (an install stopped mid-way) is never deleted for its marker: an app in it older than the
+// installed one moves to `rescueDirectory` as after rollbackFailed; a newer one was never installed and is removed.
+void FCUpdateCleanupKeeping(NSString *target, NSString *rescueDirectory);
+// FCUpdateCleanupKeeping with FCUpdateRescueDirectory().
 void FCUpdateCleanup(NSString *target);
 NSData * _Nullable FCUpdateCandidateSeal(NSString *bundle);
 NSDictionary *FCUpdateInstallExpected(NSString *staged, NSString *target, NSDictionary *expected, FCUpdatePolicy policy);
