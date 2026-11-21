@@ -1260,7 +1260,7 @@
   "arguments": "인수",
   "mitmRoutingRules": "라우팅 규칙",
   "mitmIgnoredLines": "무시된 줄",
-  "mitmModuleRulesDesc": "Module routing rules go after the added rules and before the profile's own.",
+  "mitmModuleRulesDesc": "모듈 라우팅 규칙은 추가 규칙 다음, 프로필 자체 규칙 앞에 적용됩니다.",
   "mitmModuleSystemTip": "{system}용으로 작성되었습니다. 일부 줄은 이 기기의 앱과 맞지 않을 수 있습니다.",
   "mitmSkipSection": "[{section}] 섹션은 지원되지 않습니다",
   "mitmSkipSetting": "이 설정은 지원되지 않습니다",
@@ -2774,399 +2774,399 @@
   "ipxUnknown": "Unknown",
   "mitmHttp2": "HTTP/2 복호화",
   "mitmHttp2Desc": "끄면 HTTP/1.1 연결만 복호화합니다. HTTP/2만 지원하는 연결은 복호화하지 않습니다.",
-  "mitmRewriteAndScripts": "Rewrite & Scripts",
+  "mitmRewriteAndScripts": "재작성 및 스크립트",
   "@mitmRewriteAndScripts": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewrite": "Rewrite",
+  "mitmRewrite": "재작성",
   "@mitmRewrite": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRuleCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "mitmRewriteRuleCount": "{count, plural, =1{규칙 1개} other{규칙 {count}개}}",
   "@mitmRewriteRuleCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteInvalidCount": "{count} invalid",
+  "mitmRewriteInvalidCount": "잘못된 항목 {count}개",
   "@mitmRewriteInvalidCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteNoneAdded": "None added",
+  "mitmRewriteNoneAdded": "추가된 항목 없음",
   "@mitmRewriteNoneAdded": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSubtitle": "Profile “{profile}” · {count} rewrite rules, {enabled} on",
+  "mitmRewriteSubtitle": "프로필 “{profile}” · 재작성 규칙 {count}개, 켜짐 {enabled}개",
   "@mitmRewriteSubtitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupReject": "URL Reject",
+  "mitmRewriteGroupReject": "URL 차단",
   "@mitmRewriteGroupReject": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupRedirect": "URL Redirect",
+  "mitmRewriteGroupRedirect": "URL 리디렉션",
   "@mitmRewriteGroupRedirect": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupHeader": "Request & Response Headers",
+  "mitmRewriteGroupHeader": "요청 및 응답 헤더",
   "@mitmRewriteGroupHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupBody": "Request & Response Bodies",
+  "mitmRewriteGroupBody": "요청 및 응답 본문",
   "@mitmRewriteGroupBody": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActReject": "Block",
+  "mitmRewriteActReject": "차단",
   "@mitmRewriteActReject": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActRedirect": "{code} redirect",
+  "mitmRewriteActRedirect": "{code} 리디렉션",
   "@mitmRewriteActRedirect": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActUrl": "Rewrite URL",
+  "mitmRewriteActUrl": "URL 재작성",
   "@mitmRewriteActUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActRequestHeader": "Request header",
+  "mitmRewriteActRequestHeader": "요청 헤더",
   "@mitmRewriteActRequestHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActResponseHeader": "Response header",
+  "mitmRewriteActResponseHeader": "응답 헤더",
   "@mitmRewriteActResponseHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActRequestBody": "Request body",
+  "mitmRewriteActRequestBody": "요청 본문",
   "@mitmRewriteActRequestBody": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActResponseBody": "Response body",
+  "mitmRewriteActResponseBody": "응답 본문",
   "@mitmRewriteActResponseBody": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActMapLocal": "Local response",
+  "mitmRewriteActMapLocal": "로컬 응답",
   "@mitmRewriteActMapLocal": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectError": "Return an error",
+  "mitmRewriteRejectError": "오류 반환",
   "@mitmRewriteRejectError": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteReject200": "Return an empty page",
+  "mitmRewriteReject200": "빈 페이지 반환",
   "@mitmRewriteReject200": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectImage": "Return a blank image",
+  "mitmRewriteRejectImage": "빈 이미지 반환",
   "@mitmRewriteRejectImage": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectDict": "Return an empty JSON object",
+  "mitmRewriteRejectDict": "빈 JSON 객체 반환",
   "@mitmRewriteRejectDict": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectArray": "Return an empty JSON array",
+  "mitmRewriteRejectArray": "빈 JSON 배열 반환",
   "@mitmRewriteRejectArray": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectDrop": "Drop the connection",
+  "mitmRewriteRejectDrop": "연결 끊기",
   "@mitmRewriteRejectDrop": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderAdd": "Add {name}",
+  "mitmRewriteHeaderAdd": "{name} 추가",
   "@mitmRewriteHeaderAdd": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderDel": "Remove {name}",
+  "mitmRewriteHeaderDel": "{name} 삭제",
   "@mitmRewriteHeaderDel": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderReplace": "Replace {name}",
+  "mitmRewriteHeaderReplace": "{name} 바꾸기",
   "@mitmRewriteHeaderReplace": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderReplaceRegex": "Replace in {name}",
+  "mitmRewriteHeaderReplaceRegex": "{name}에서 정규식으로 바꾸기",
   "@mitmRewriteHeaderReplaceRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBodyReplace": "{count, plural, =1{1 replacement} other{{count} replacements}}",
+  "mitmRewriteBodyReplace": "{count, plural, =1{1곳 바꾸기} other{{count}곳 바꾸기}}",
   "@mitmRewriteBodyReplace": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBodyLimit": "Up to {size}",
+  "mitmRewriteBodyLimit": "최대 {size}",
   "@mitmRewriteBodyLimit": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteInvalid": "Invalid rule: {reason}",
+  "mitmRewriteInvalid": "잘못된 규칙: {reason}",
   "@mitmRewriteInvalid": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteInvalidSpoken": "Invalid rule, {reason}",
+  "mitmRewriteInvalidSpoken": "잘못된 규칙, {reason}",
   "@mitmRewriteInvalidSpoken": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmRewriteToggleLabel": "{action}, {url}",
   "@mitmRewriteToggleLabel": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteNotApplied": "The change didn't take effect: {reason}",
+  "mitmRewriteNotApplied": "변경 사항이 적용되지 않았습니다: {reason}",
   "@mitmRewriteNotApplied": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEnableAll": "Turn All On",
+  "mitmRewriteEnableAll": "모두 켜기",
   "@mitmRewriteEnableAll": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteDisableAll": "Turn All Off",
+  "mitmRewriteDisableAll": "모두 끄기",
   "@mitmRewriteDisableAll": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteCopyAll": "Copy All Rules",
+  "mitmRewriteCopyAll": "모든 규칙 복사",
   "@mitmRewriteCopyAll": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteDeleteInvalid": "Delete Invalid Rules",
+  "mitmRewriteDeleteInvalid": "잘못된 규칙 삭제",
   "@mitmRewriteDeleteInvalid": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteDeleteInvalidConfirm": "Delete {count, plural, =1{1 invalid rule} other{{count} invalid rules}}?",
+  "mitmRewriteDeleteInvalidConfirm": "{count, plural, =1{잘못된 규칙 1개를 삭제할까요?} other{잘못된 규칙 {count}개를 삭제할까요?}}",
   "@mitmRewriteDeleteInvalidConfirm": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteOff": "Decryption is off, so rewrite rules won't take effect.",
+  "mitmRewriteOff": "복호화가 꺼져 있어 재작성 규칙이 적용되지 않습니다.",
   "@mitmRewriteOff": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGoTurnOn": "Turn On",
+  "mitmRewriteGoTurnOn": "켜기",
   "@mitmRewriteGoTurnOn": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEmptyTitle": "No rewrite rules yet",
+  "mitmRewriteEmptyTitle": "아직 재작성 규칙이 없습니다",
   "@mitmRewriteEmptyTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEmptyDesc": "Paste rules to import them.",
+  "mitmRewriteEmptyDesc": "규칙을 붙여넣어 가져올 수 있습니다.",
   "@mitmRewriteEmptyDesc": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePaste": "Paste to Import",
+  "mitmRewritePaste": "붙여넣어 가져오기",
   "@mitmRewritePaste": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSearchHint": "Search rewrite rules",
+  "mitmRewriteSearchHint": "재작성 규칙 검색",
   "@mitmRewriteSearchHint": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportTitle": "Import Rewrite Rules",
+  "mitmRewriteImportTitle": "재작성 규칙 가져오기",
   "@mitmRewriteImportTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportDesc": "Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.",
+  "mitmRewriteImportDesc": "재작성 규칙을 한 줄에 하나씩 붙여넣으세요. Surge의 [URL Rewrite], [Header Rewrite], [Body Rewrite], [Map Local] 섹션은 제목으로 자동 인식됩니다.",
   "@mitmRewriteImportDesc": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportReady": "Ready to import {count}: {detail}",
+  "mitmRewriteImportReady": "{count}개를 가져올 수 있습니다: {detail}",
   "@mitmRewriteImportReady": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportLineError": "Line {line} can't be imported: {reason}",
+  "mitmRewriteImportLineError": "{line}번째 줄을 가져올 수 없습니다: {reason}",
   "@mitmRewriteImportLineError": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportMoreErrors": "{count, plural, =1{1 more line has errors} other{{count} more lines have errors}}",
+  "mitmRewriteImportMoreErrors": "{count, plural, =1{그 외 1개 줄에 오류가 있습니다} other{그 외 {count}개 줄에 오류가 있습니다}}",
   "@mitmRewriteImportMoreErrors": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportDuplicate": "Line {line} is already there and will be skipped",
+  "mitmRewriteImportDuplicate": "{line}번째 줄은 이미 있어 건너뜁니다",
   "@mitmRewriteImportDuplicate": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePlace": "Place",
+  "mitmRewritePlace": "위치",
   "@mitmRewritePlace": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePlaceEnd": "End of each group",
+  "mitmRewritePlaceEnd": "각 그룹의 끝",
   "@mitmRewritePlaceEnd": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePlaceStart": "Start of each group",
+  "mitmRewritePlaceStart": "각 그룹의 시작",
   "@mitmRewritePlaceStart": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportButton": "Import {count}",
+  "mitmRewriteImportButton": "{count}개 가져오기",
   "@mitmRewriteImportButton": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImporting": "Importing…",
+  "mitmRewriteImporting": "가져오는 중…",
   "@mitmRewriteImporting": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImported": "Imported {count, plural, =1{1 rule} other{{count} rules}}",
+  "mitmRewriteImported": "{count, plural, =1{규칙 1개를 가져왔습니다} other{규칙 {count}개를 가져왔습니다}}",
   "@mitmRewriteImported": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEditTitle": "Edit Rewrite Rule",
+  "mitmRewriteEditTitle": "재작성 규칙 편집",
   "@mitmRewriteEditTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEditSubtitle": "{group} · Rule {number}",
+  "mitmRewriteEditSubtitle": "{group} · 규칙 {number}",
   "@mitmRewriteEditSubtitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePreviewType": "Type",
+  "mitmRewritePreviewType": "유형",
   "@mitmRewritePreviewType": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePreviewMatch": "Matches",
+  "mitmRewritePreviewMatch": "일치하는 URL",
   "@mitmRewritePreviewMatch": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePreviewAction": "Action",
+  "mitmRewritePreviewAction": "동작",
   "@mitmRewritePreviewAction": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteUnparsable": "Can't parse",
+  "mitmRewriteUnparsable": "분석할 수 없음",
   "@mitmRewriteUnparsable": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSectionChanged": "This line belongs in {group}; it will move there.",
+  "mitmRewriteSectionChanged": "이 줄은 {group}에 속하므로 저장하면 해당 그룹으로 이동합니다.",
   "@mitmRewriteSectionChanged": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBadgeApplied": "Rewritten · {type}",
+  "mitmRewriteBadgeApplied": "재작성됨 · {type}",
   "@mitmRewriteBadgeApplied": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBadgeFailed": "Rewrite failed · {reason}",
+  "mitmRewriteBadgeFailed": "재작성 실패 · {reason}",
   "@mitmRewriteBadgeFailed": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRewritten": "Rewritten",
+  "mitmRewriteRewritten": "재작성됨",
   "@mitmRewriteRewritten": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteFailedShort": "Rewrite failed",
+  "mitmRewriteFailedShort": "재작성 실패",
   "@mitmRewriteFailedShort": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteAppliedTitle": "Rewrite applied",
+  "mitmRewriteAppliedTitle": "재작성 적용됨",
   "@mitmRewriteAppliedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHitCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "mitmRewriteHitCount": "{count, plural, =1{규칙 1개} other{규칙 {count}개}}",
   "@mitmRewriteHitCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteFailedTitle": "Rewrite failed: {reason}",
+  "mitmRewriteFailedTitle": "재작성 실패: {reason}",
   "@mitmRewriteFailedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePassedThrough": "Not rewritten; passed on unchanged",
+  "mitmRewritePassedThrough": "재작성하지 않고 원본 그대로 전달됨",
   "@mitmRewritePassedThrough": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRuleRef": "Rule {rule}",
+  "mitmRewriteRuleRef": "규칙 {rule}",
   "@mitmRewriteRuleRef": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteViewInList": "Show in Rewrite",
+  "mitmRewriteViewInList": "재작성에서 보기",
   "@mitmRewriteViewInList": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBefore": "Before",
+  "mitmRewriteBefore": "재작성 전",
   "@mitmRewriteBefore": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteAfter": "After",
+  "mitmRewriteAfter": "재작성 후",
   "@mitmRewriteAfter": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRuleRemoved": "The rule is no longer in this profile",
+  "mitmRewriteRuleRemoved": "이 프로필에 더 이상 규칙이 없습니다",
   "@mitmRewriteRuleRemoved": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipOversize": "Content over the size limit",
+  "mitmRewriteSkipOversize": "콘텐츠가 크기 제한을 초과함",
   "@mitmRewriteSkipOversize": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipDecode": "Couldn't decompress the content",
+  "mitmRewriteSkipDecode": "콘텐츠의 압축을 해제할 수 없음",
   "@mitmRewriteSkipDecode": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipNotText": "Content isn't in a supported text format",
+  "mitmRewriteSkipNotText": "지원되는 텍스트 형식이 아님",
   "@mitmRewriteSkipNotText": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipEncoding": "Unsupported content encoding",
+  "mitmRewriteSkipEncoding": "지원되지 않는 콘텐츠 인코딩",
   "@mitmRewriteSkipEncoding": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipTimeout": "The pattern took too long to match",
+  "mitmRewriteSkipTimeout": "패턴 일치 시간이 초과됨",
   "@mitmRewriteSkipTimeout": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipCrossHost": "Can't rewrite to another host",
+  "mitmRewriteSkipCrossHost": "다른 호스트로 재작성할 수 없음",
   "@mitmRewriteSkipCrossHost": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipInvalidUrl": "The rewritten URL is invalid",
+  "mitmRewriteSkipInvalidUrl": "재작성된 URL이 유효하지 않음",
   "@mitmRewriteSkipInvalidUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipStreaming": "The content is a stream",
+  "mitmRewriteSkipStreaming": "콘텐츠가 스트림임",
   "@mitmRewriteSkipStreaming": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipUploading": "The request was still uploading",
+  "mitmRewriteSkipUploading": "요청을 아직 업로드 중임",
   "@mitmRewriteSkipUploading": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipRead": "Couldn't read the content",
+  "mitmRewriteSkipRead": "콘텐츠를 읽을 수 없음",
   "@mitmRewriteSkipRead": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipOther": "Rewrite not applied",
+  "mitmRewriteSkipOther": "재작성이 적용되지 않음",
   "@mitmRewriteSkipOther": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmRewriteRejectDetail": "{text} ({type})",
   "@mitmRewriteRejectDetail": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteErrorFramingHeader": "{value} controls how the message is sent and can't be rewritten.",
-  "mitmRewriteErrorNeedsValue": "{value} needs a value.",
-  "mitmRewriteErrorBodyHead": "A body rewrite must start with http-request or http-response.",
-  "mitmRewriteErrorHeaderLineBreak": "A header value can't contain a line break.",
-  "mitmRewriteErrorNeedsReplacementUrl": "A redirect or URL rewrite needs a target URL.",
-  "mitmRewriteErrorDataUrl": "Remote content must be downloaded before a local response can use it.",
-  "mitmRewriteErrorDataBase64": "The content isn't valid Base64.",
-  "mitmRewriteErrorDataFileName": "The content must name a file in the resources folder; got {value}.",
-  "mitmRewriteErrorFileNeedsData": "The file type needs a file.",
-  "mitmRewriteErrorBodyTooLarge": "The decoded content is over the rewrite size limit.",
-  "mitmRewriteErrorEmptyRegex": "The regular expression can't be empty.",
-  "mitmRewriteErrorEmptyRule": "The rule can't be empty.",
-  "mitmRewriteErrorUrlFieldCount": "Enter a regular expression, a replacement and a type; found {value} items.",
-  "mitmRewriteErrorBodyPairs": "After the URL regular expression, enter pairs of a pattern and its replacement.",
-  "mitmRewriteErrorHeaderFields": "Enter the request or response type, a regular expression, an action and a header, plus a value when needed.",
-  "mitmRewriteErrorKeyValue": "Use the key=value format; got {value}.",
-  "mitmRewriteErrorHeaderFormat": "The header is invalid; use a:b|c:d or Base64.",
-  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex needs a regular expression and a replacement.",
-  "mitmRewriteErrorUrlRegex": "The URL regular expression is invalid.",
-  "mitmRewriteErrorBodyRegex": "The content regular expression {value} is invalid.",
-  "mitmRewriteErrorInvalidHeader": "The header {value} is invalid.",
-  "mitmRewriteErrorHeaderName": "The header name {value} is invalid.",
-  "mitmRewriteErrorHeaderRegex": "The header regular expression is invalid.",
-  "mitmRewriteErrorJq": "Rewriting content with jq isn't supported yet.",
-  "mitmRewriteErrorLocalUnreadable": "Can't read the local response file {value}.",
-  "mitmRewriteErrorLocalTooLarge": "The local response file {value} is over 16 MiB.",
-  "mitmRewriteErrorRegexTimeout": "The regular expression took too long to match.",
-  "mitmRewriteErrorStatusCode": "The status code must be between 200 and 999; got {value}.",
-  "mitmRewriteErrorUrlType": "Unsupported URL rewrite type: {value}.",
-  "mitmRewriteErrorDataType": "Unsupported content type: {value}.",
-  "mitmRewriteErrorHeaderAction": "Unsupported header action: {value}.",
-  "mitmRewriteErrorParameter": "Unsupported parameter: {value}.",
-  "mitmRewriteErrorSection": "Unsupported section: {value}.",
-  "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
-  "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
-  "mitmRewriteErrorGeneric": "The rule's format is invalid.",
-  "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "mitmRewriteErrorFramingHeader": "{value}은(는) 메시지 전송 방식을 제어하므로 재작성할 수 없습니다.",
+  "mitmRewriteErrorNeedsValue": "{value}에 값이 필요합니다.",
+  "mitmRewriteErrorBodyHead": "본문 재작성 규칙은 http-request 또는 http-response로 시작해야 합니다.",
+  "mitmRewriteErrorHeaderLineBreak": "헤더 값에 줄바꿈을 포함할 수 없습니다.",
+  "mitmRewriteErrorNeedsReplacementUrl": "리디렉션 또는 URL 재작성에는 대상 URL이 필요합니다.",
+  "mitmRewriteErrorDataUrl": "원격 콘텐츠는 다운로드한 후 로컬 응답에 사용할 수 있습니다.",
+  "mitmRewriteErrorDataBase64": "콘텐츠가 유효한 Base64가 아닙니다.",
+  "mitmRewriteErrorDataFileName": "콘텐츠에 리소스 폴더의 파일을 지정해야 합니다. 현재 값: {value}.",
+  "mitmRewriteErrorFileNeedsData": "파일 유형을 사용하려면 파일을 지정해야 합니다.",
+  "mitmRewriteErrorBodyTooLarge": "디코딩된 콘텐츠가 재작성 크기 제한을 초과했습니다.",
+  "mitmRewriteErrorEmptyRegex": "정규식은 비워 둘 수 없습니다.",
+  "mitmRewriteErrorEmptyRule": "규칙은 비워 둘 수 없습니다.",
+  "mitmRewriteErrorUrlFieldCount": "정규식, 대체 내용 및 유형을 입력하세요. 현재 항목 수: {value}.",
+  "mitmRewriteErrorBodyPairs": "URL 정규식 뒤에 패턴과 대체 내용을 쌍으로 입력하세요.",
+  "mitmRewriteErrorHeaderFields": "요청 또는 응답 유형, 정규식, 동작 및 헤더를 입력하고 필요한 경우 값도 입력하세요.",
+  "mitmRewriteErrorKeyValue": "key=value 형식을 사용하세요. 현재 값: {value}.",
+  "mitmRewriteErrorHeaderFormat": "헤더가 유효하지 않습니다. a:b|c:d 또는 Base64를 사용하세요.",
+  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex에는 정규식과 대체 내용이 필요합니다.",
+  "mitmRewriteErrorUrlRegex": "URL 정규식이 유효하지 않습니다.",
+  "mitmRewriteErrorBodyRegex": "콘텐츠 정규식 {value}이(가) 유효하지 않습니다.",
+  "mitmRewriteErrorInvalidHeader": "헤더 {value}이(가) 유효하지 않습니다.",
+  "mitmRewriteErrorHeaderName": "헤더 이름 {value}이(가) 유효하지 않습니다.",
+  "mitmRewriteErrorHeaderRegex": "헤더 정규식이 유효하지 않습니다.",
+  "mitmRewriteErrorJq": "아직 jq를 사용한 콘텐츠 재작성을 지원하지 않습니다.",
+  "mitmRewriteErrorLocalUnreadable": "로컬 응답 파일 {value}을(를) 읽을 수 없습니다.",
+  "mitmRewriteErrorLocalTooLarge": "로컬 응답 파일 {value}이(가) 16 MiB를 초과합니다.",
+  "mitmRewriteErrorRegexTimeout": "정규식 일치 시간이 초과되었습니다.",
+  "mitmRewriteErrorStatusCode": "상태 코드는 200에서 999 사이여야 합니다. 현재 값: {value}.",
+  "mitmRewriteErrorUrlType": "지원되지 않는 URL 재작성 유형: {value}.",
+  "mitmRewriteErrorDataType": "지원되지 않는 콘텐츠 유형: {value}.",
+  "mitmRewriteErrorHeaderAction": "지원되지 않는 헤더 동작: {value}.",
+  "mitmRewriteErrorParameter": "지원되지 않는 매개변수: {value}.",
+  "mitmRewriteErrorSection": "지원되지 않는 섹션: {value}.",
+  "mitmRewriteErrorUnterminatedQuote": "{value}의 따옴표가 닫히지 않았습니다.",
+  "mitmRewriteErrorOutsideSection": "이 줄은 [URL Rewrite], [Header Rewrite], [Body Rewrite], [Map Local] 섹션에 속하지 않습니다.",
+  "mitmRewriteErrorGeneric": "규칙 형식이 유효하지 않습니다.",
+  "mitmRewriteFailureGeneric": "오류가 발생하여 규칙이 변경되지 않았습니다.",
   "mitmScriptErrorLine": "스크립트 줄의 형식이 올바르지 않거나 요청/응답 유형이 없습니다.",
   "@mitmScriptErrorLine": {
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
@@ -3212,129 +3212,130 @@
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorFramingHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorNeedsValue": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyHead": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderLineBreak": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorNeedsReplacementUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataBase64": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataFileName": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorFileNeedsData": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyTooLarge": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorEmptyRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorEmptyRule": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUrlFieldCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyPairs": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderFields": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorKeyValue": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderFormat": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderReplaceRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUrlRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorInvalidHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderName": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorJq": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorLocalUnreadable": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorLocalTooLarge": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorRegexTimeout": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorStatusCode": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUrlType": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataType": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderAction": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorParameter": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorSection": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUnterminatedQuote": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorOutsideSection": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteMatchedTitle": "Rule matched",
+  "mitmRewriteMatchedTitle": "규칙 일치",
   "@mitmRewriteMatchedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteNotAppliedTitle": "Rewrite not applied: {value}",
+  "mitmRewriteNotAppliedTitle": "재작성이 적용되지 않음: {value}",
   "@mitmRewriteNotAppliedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScripts": "Scripts",
-  "mitmScriptCount": "{count, plural, =1{1 script} other{{count} scripts}}",
+  "mitmScripts": "스크립트",
+  "mitmScriptCount": "{count, plural, =1{스크립트 1개} other{스크립트 {count}개}}",
   "@mitmScriptCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmUpdateCount": "{count} with updates",
   "@mitmUpdateCount": {
@@ -3344,15 +3345,16 @@
       }
     }
   },
-  "mitmScriptInvalidCount": "{count} invalid",
+  "mitmScriptInvalidCount": "잘못된 스크립트 {count}개",
   "@mitmScriptInvalidCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleCount": "{count} modules, {enabled} on",
+  "mitmModuleCount": "모듈 {count}개, 켜짐 {enabled}개",
   "@mitmModuleCount": {
     "placeholders": {
       "count": {
@@ -3361,9 +3363,10 @@
       "enabled": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptSubtitle": "Profile “{profile}” · {count} scripts, {enabled} on",
+  "mitmScriptSubtitle": "프로필 “{profile}” · 스크립트 {count}개, 켜짐 {enabled}개",
   "@mitmScriptSubtitle": {
     "placeholders": {
       "profile": {},
@@ -3373,61 +3376,66 @@
       "enabled": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptGroupRequest": "Request Scripts",
-  "mitmScriptGroupResponse": "Response Scripts",
-  "mitmScriptKindRequest": "Request",
-  "mitmScriptKindResponse": "Response",
-  "mitmScriptNeedsBody": "Needs body",
-  "mitmScriptRemoteSource": "{source} · checked {time}",
+  "mitmScriptGroupRequest": "요청 스크립트",
+  "mitmScriptGroupResponse": "응답 스크립트",
+  "mitmScriptKindRequest": "요청",
+  "mitmScriptKindResponse": "응답",
+  "mitmScriptNeedsBody": "본문 필요",
+  "mitmScriptRemoteSource": "{source} · {time} 확인",
   "@mitmScriptRemoteSource": {
     "placeholders": {
       "source": {},
       "time": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptLocalSource": "Local file · {file}",
+  "mitmScriptLocalSource": "로컬 파일 · {file}",
   "@mitmScriptLocalSource": {
     "placeholders": {
       "file": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptHasUpdate": "Update available",
+  "mitmScriptHasUpdate": "업데이트 가능",
   "mitmHasUpdate": "Update available",
   "mitmViewUpdate": "View Update",
-  "mitmScriptsFromModules": "{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}",
+  "mitmScriptsFromModules": "{count, plural, =1{모듈에서 제공하는 스크립트 1개가 더 있습니다} other{모듈에서 제공하는 스크립트 {count}개가 더 있습니다}}",
   "@mitmScriptsFromModules": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptsOff": "HTTPS decryption is off, so scripts don't run.",
-  "mitmScriptHostNotDecrypted": "This host isn't decrypted, so the script won't run",
+  "mitmScriptsOff": "HTTPS 복호화가 꺼져 있어 스크립트가 실행되지 않습니다.",
+  "mitmScriptHostNotDecrypted": "이 호스트는 복호화되지 않으므로 스크립트가 실행되지 않습니다",
   "mitmAddToDecryption": "Add to Decryption",
-  "mitmScriptsEmptyTitle": "No scripts yet",
-  "mitmScriptsEmptyBody": "Once added, a script runs on the requests or responses it matches.",
+  "mitmScriptsEmptyTitle": "아직 스크립트가 없습니다",
+  "mitmScriptsEmptyBody": "스크립트를 추가하면 일치하는 요청이나 응답에서 실행됩니다.",
   "mitmAddScript": "Add Script",
   "mitmCheckAllUpdates": "Check All for Updates",
-  "mitmScriptCopyAll": "Copy All Lines",
-  "mitmScriptDeleteInvalid": "Delete Invalid Scripts",
-  "mitmScriptDeleteInvalidConfirm": "Delete {count} invalid scripts?",
+  "mitmScriptCopyAll": "모든 설정 줄 복사",
+  "mitmScriptDeleteInvalid": "잘못된 스크립트 삭제",
+  "mitmScriptDeleteInvalidConfirm": "잘못된 스크립트 {count}개를 삭제할까요?",
   "@mitmScriptDeleteInvalidConfirm": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmCheckUpdate": "Check for Update",
   "mitmCopyLine": "Copy Line",
   "mitmAddScriptHint": "Paste lines from a Surge config's [Script] section, one script per line, or just a script URL.",
-  "mitmScriptType": "Type",
-  "mitmScriptPattern": "URL Pattern",
-  "mitmScriptTimeout": "Timeout",
-  "mitmScriptPasteOk": "{count} can be added: {requests} request, {responses} response",
+  "mitmScriptType": "유형",
+  "mitmScriptPattern": "URL 패턴",
+  "mitmScriptTimeout": "시간 제한",
+  "mitmScriptPasteOk": "{count}개를 추가할 수 있습니다: 요청 {requests}개, 응답 {responses}개",
   "@mitmScriptPasteOk": {
     "placeholders": {
       "count": {
@@ -3439,21 +3447,23 @@
       "responses": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptPasteLineError": "Line {line} can't be added: {reason}",
+  "mitmScriptPasteLineError": "{line}번째 줄을 추가할 수 없습니다: {reason}",
   "@mitmScriptPasteLineError": {
     "placeholders": {
       "line": {
         "type": "int"
       },
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptUnsupportedType": "This kind of script isn't supported yet",
-  "mitmScriptUnreadable": "Not a script line",
-  "mitmScriptNoPattern": "No URL pattern",
-  "mitmScriptNoPath": "script-path must be a URL; add a local script with “From File…”",
+  "mitmScriptUnsupportedType": "아직 지원하지 않는 스크립트 유형입니다",
+  "mitmScriptUnreadable": "스크립트 설정 줄이 아닙니다",
+  "mitmScriptNoPattern": "URL 패턴이 없습니다",
+  "mitmScriptNoPath": "script-path는 URL이어야 합니다. 로컬 스크립트는 “파일에서 추가…”를 사용하세요",
   "mitmAddFromFile": "From File…",
   "mitmContinue": "Continue",
   "mitmScriptConfirmTitle": "Confirm Scripts",
@@ -3470,35 +3480,39 @@
   },
   "mitmAlsoDecryptHosts": "Also add these hosts to decryption",
   "mitmAddAndEnable": "Add and Turn On",
-  "mitmScriptDownloading": "Downloading and checking…",
-  "mitmScriptsAdded": "{count, plural, =1{1 script added} other{{count} scripts added}}",
+  "mitmScriptDownloading": "다운로드 및 확인 중…",
+  "mitmScriptsAdded": "{count, plural, =1{스크립트 1개를 추가했습니다} other{스크립트 {count}개를 추가했습니다}}",
   "@mitmScriptsAdded": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptEmpty": "The script is empty",
-  "mitmScriptDownloadFailed": "Couldn't download {name}: {reason}",
+  "mitmScriptEmpty": "스크립트가 비어 있습니다",
+  "mitmScriptDownloadFailed": "{name}을(를) 다운로드할 수 없습니다: {reason}",
   "@mitmScriptDownloadFailed": {
     "placeholders": {
       "name": {},
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptCannotLoad": "{name} can't be loaded: {reason}",
+  "mitmScriptCannotLoad": "{name}을(를) 불러올 수 없습니다: {reason}",
   "@mitmScriptCannotLoad": {
     "placeholders": {
       "name": {},
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptCheckFailed": "Couldn't check for updates: {reason}",
+  "mitmScriptCheckFailed": "업데이트를 확인할 수 없습니다: {reason}",
   "@mitmScriptCheckFailed": {
     "placeholders": {
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmUpdateTitle": "{name} has an update",
   "@mitmUpdateTitle": {
@@ -3541,114 +3555,127 @@
       }
     }
   },
-  "mitmModuleRewrites": "Rewrite rules",
-  "mitmModuleRoutingRules": "Routing rules",
-  "mitmModuleUnsupported": "Not supported",
-  "mitmModuleUnsupportedCount": "{count, plural, =1{1 line won't be imported.} other{{count} lines won't be imported.}}",
+  "mitmModuleRewrites": "재작성 규칙",
+  "mitmModuleRoutingRules": "라우팅 규칙",
+  "mitmModuleUnsupported": "지원되지 않음",
+  "mitmModuleUnsupportedCount": "{count, plural, =1{1개 줄을 가져오지 않습니다.} other{{count}개 줄을 가져오지 않습니다.}}",
   "@mitmModuleUnsupportedCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmImportOnly": "Import Only",
   "mitmImportAndEnable": "Import and Turn On",
   "mitmImportModule": "Import Module",
-  "mitmModuleImported": "Module imported",
-  "mitmModuleHostCount": "{count} hosts",
+  "mitmModuleImported": "모듈을 가져왔습니다",
+  "mitmModuleHostCount": "복호화 대상 호스트 {count}개",
   "@mitmModuleHostCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleRewriteCount": "{count} rewrites",
+  "mitmModuleRewriteCount": "재작성 규칙 {count}개",
   "@mitmModuleRewriteCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleUnsupportedLines": "{count} lines not supported",
+  "mitmModuleUnsupportedLines": "지원되지 않는 줄 {count}개",
   "@mitmModuleUnsupportedLines": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleRemoteSource": "Remote · updated {time}",
+  "mitmModuleRemoteSource": "원격 · {time} 업데이트",
   "@mitmModuleRemoteSource": {
     "placeholders": {
       "time": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleLocalSource": "Local",
-  "mitmModulesEmptyTitle": "No modules yet",
-  "mitmModulesEmptyBody": "Once imported, you can see what a module sets up.",
-  "mitmScriptsRan": "Scripts ran · {count}",
+  "mitmModuleLocalSource": "로컬",
+  "mitmModulesEmptyTitle": "아직 모듈이 없습니다",
+  "mitmModulesEmptyBody": "모듈을 가져오면 설정 내용을 확인할 수 있습니다.",
+  "mitmScriptsRan": "스크립트 실행됨 · {count}개",
   "@mitmScriptsRan": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged.} other{{count} scripts didn't finish; the message passed unchanged.}}",
+  "mitmScriptsPassed": "{count, plural, =1{스크립트 1개가 완료되지 않아 메시지가 원본 그대로 전달되었습니다.} other{스크립트 {count}개가 완료되지 않아 메시지가 원본 그대로 전달되었습니다.}}",
   "@mitmScriptsPassed": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptDone": "Finished · {took}",
+  "mitmScriptDone": "실행 완료 · {took}",
   "@mitmScriptDone": {
     "placeholders": {
       "took": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptTimedOut": "Script timed out",
+  "mitmScriptTimedOut": "스크립트 실행 시간 초과",
   "@mitmScriptTimedOut": {
     "placeholders": {
       "seconds": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptFailed": "Script failed: {reason}",
+  "mitmScriptFailed": "스크립트 실행 실패: {reason}",
   "@mitmScriptFailed": {
     "placeholders": {
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptNotRun": "Script didn't run: {reason}",
+  "mitmScriptNotRun": "스크립트가 실행되지 않음: {reason}",
   "@mitmScriptNotRun": {
     "placeholders": {
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptMemory": "over the memory limit",
-  "mitmScriptBusy": "too many scripts running",
-  "mitmScriptNoDone": "the script never called $done",
-  "mitmScriptLogExpand": "Show All ({count} lines)",
+  "mitmScriptMemory": "메모리 제한 초과",
+  "mitmScriptBusy": "동시에 실행 중인 스크립트가 너무 많음",
+  "mitmScriptNoDone": "스크립트가 $done을 호출하지 않음",
+  "mitmScriptLogExpand": "전체 보기 ({count}줄)",
   "@mitmScriptLogExpand": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptRequestsSent": "{count, plural, =1{1 request sent} other{{count} requests sent}}",
+  "mitmScriptRequestsSent": "{count, plural, =1{요청 1개 전송됨} other{요청 {count}개 전송됨}}",
   "@mitmScriptRequestsSent": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmViewInScripts": "Show in Scripts",
   "mitmViewInModule": "Show in Module",
@@ -3659,15 +3686,15 @@
     }
   },
   "@mitmRewriteFailureGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmUpdateCheckFailedKept": "Couldn't check for updates; the current version still works.",
   "mitmUpdateDownloadFailedKept": "Couldn't download the new version; the current version still works.",
   "mitmUpdateInvalidKept": "The new version can't be loaded; the current version still works.",
-  "mitmScriptLoadFailed": "The script can't be loaded: {reason}.",
-  "mitmModuleLoadFailed": "The module can't be loaded: {reason}.",
+  "mitmScriptLoadFailed": "스크립트를 불러올 수 없습니다: {reason}.",
+  "mitmModuleLoadFailed": "모듈을 불러올 수 없습니다: {reason}.",
   "mitmPendingKept": "A new version is waiting; the current version keeps running.",
-  "mitmScriptFoundUpdate": "New version found {time}",
+  "mitmScriptFoundUpdate": "{time} 새 버전 발견",
   "mitmAlsoDecryptHost": "Also add {host} to decryption",
   "mitmDiffAdded": "{count, plural, =1{+1 line} other{+{count} lines}}",
   "mitmDiffRemoved": "{count, plural, =1{−1 line} other{−{count} lines}}",
@@ -3679,7 +3706,7 @@
   "mitmPauseSignRefusedHint": "Check that HTTPS decryption is on. New connections try decryption again once the pause ends.",
   "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
   "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
-  "mitmModuleRuleCount": "{count, plural, =1{1 routing rule} other{{count} routing rules}}",
+  "mitmModuleRuleCount": "{count, plural, =1{라우팅 규칙 1개} other{라우팅 규칙 {count}개}}",
   "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
@@ -3865,5 +3892,116 @@
   "ipNotQueried": "아직 조회하지 않음",
   "ipFlagLookupNote": "카드의 국기를 선택하면 출구 IP와 국가를 다시 조회합니다. 보고서가 없거나 지난 조회에 실패한 경우 ipx.al 보고서도 가져오려고 시도합니다.",
   "ipTypeExplain": "유형: IP가 속한 네트워크 종류(주거, 모바일, 비즈니스, 데이터 센터 등).",
-  "ipQualityExplain": "품질: ipx.al 건강 점수(0–100)에 해당하는 등급."
+  "ipQualityExplain": "품질: ipx.al 건강 점수(0–100)에 해당하는 등급.",
+  "@mitmModuleRulesDesc": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScripts": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptGroupRequest": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptGroupResponse": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptKindRequest": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptKindResponse": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNeedsBody": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptHasUpdate": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptsOff": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptHostNotDecrypted": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptsEmptyTitle": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptsEmptyBody": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptCopyAll": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptDeleteInvalid": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptTimeout": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptUnsupportedType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptUnreadable": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNoPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNoPath": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptDownloading": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptEmpty": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRewrites": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRoutingRules": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleUnsupported": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleImported": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleLocalSource": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModulesEmptyTitle": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModulesEmptyBody": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptMemory": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptBusy": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNoDone": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptLoadFailed": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleLoadFailed": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptFoundUpdate": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRuleCount": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  }
 }
