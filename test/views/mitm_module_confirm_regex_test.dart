@@ -467,12 +467,9 @@ void main() {
         await tester.pumpAndSettle();
         FlutterError.onError = reported;
         final l = currentAppLocalizations;
-        // d2e42ee0 already overflows once here, by 20 dp, in a row of the
-        // rewrite section above the hints (the same with no hints at all);
-        // the hints add none and none is in them.
-        expect(errors.map((e) => e.exceptionAsString()).toList(), [
-          'A RenderFlex overflowed by 20 pixels on the right.',
-        ]);
+        // The rewrite section row that overflowed by 20 dp on d2e42ee0 now
+        // wraps (fix/module-import-l10n), and the hints add no overflow.
+        expect(errors.map((e) => e.exceptionAsString()).toList(), isEmpty);
         for (final error in errors) {
           final info = error.informationCollector?.call().join('\n') ?? '';
           expect(info, isNot(contains('_MitmRuleHint')));
