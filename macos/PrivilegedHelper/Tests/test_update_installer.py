@@ -222,6 +222,7 @@ class UpdateInstallerTests(unittest.TestCase):
         self.assertEqual(answer['code'], 'rolledBack', answer)
         self.assertEqual(self.installed_build(), '100')
         self.assertEqual(plistlib.loads((staged / 'Contents/Info.plist').read_bytes())['CFBundleVersion'], '101')
+        self.assertEqual(self.markers(staged.parent), ['.flash-update-staging'])
         run('codesign', '--verify', '--strict', self.target)
 
     def build_of(self, app):
@@ -276,6 +277,45 @@ class UpdateInstallerTests(unittest.TestCase):
         self.assertEqual(self.build_of(staged), '100')
         # Without its marker, the directory is no longer something install accepts either.
         self.assertEqual(self.call('install', staged, self.target, self.status)['code'], 'rejected')
+
+    def markers(self, directory):
+        return sorted(item.name for item in directory.iterdir() if item.name.startswith('.flash-update'))
+
+    def interrupted_install(self, staged, env):
+        result = subprocess.run([str(self.driver), 'install', str(staged), str(self.target), str(self.status)],
+                                capture_output=True, text=True, env={**os.environ, **env})
+        self.assertEqual(result.returncode, -9, result)
+        self.assertEqual(self.markers(staged.parent), ['.flash-update-rollback'])
+
+    def test_interrupted_install_keeps_the_previous_app_for_cleanup_to_rescue(self):
+        # Killed after the swap, or after a failed check before the swap back: 101 is installed but never passed
+        # its checks, so 100 in the staging directory may be the only good copy. Cleanup must not delete it.
+        rescue = self.case / 'Support/Flash/update-rescue'
+        for kill_at, extra in (('afterSwap', {}), ('beforeSwapBack', {'FC_TEST_FAIL_INSTALLED': '1'})):
+            with self.subTest(kill_at):
+                shutil.rmtree(rescue, ignore_errors=True)
+                shutil.rmtree(self.target, ignore_errors=True)
+                self.make_app(self.target, 100, 100)
+                staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+                self.interrupted_install(staged, {'FC_TEST_KILL': kill_at, **extra})
+                self.assertEqual((self.installed_build(), self.build_of(staged)), ('101', '100'))
+                self.call('cleanup', self.target, env={'FC_TEST_RESCUE_DIR': str(rescue)})
+                self.assertEqual(self.staging_dirs(), [])
+                self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
+                run('codesign', '--verify', '--strict', rescue / 'Flash-100.app')
+                record = json.loads((rescue / 'last-failed-update.json').read_text())
+                self.assertEqual((record['previousBuild'], record['failedBuild'], record['moved']), (100, 101, True))
+                shutil.rmtree(self.case / 'build-101-101-1')
+
+    def test_interrupted_install_before_the_swap_removes_only_the_candidate(self):
+        self.make_app(self.target, 100, 100)
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        self.interrupted_install(staged, {'FC_TEST_KILL': 'beforeSwap'})
+        rescue = self.case / 'Support/Flash/update-rescue'
+        self.call('cleanup', self.target, env={'FC_TEST_RESCUE_DIR': str(rescue)})
+        self.assertEqual(self.staging_dirs(), [])
+        self.assertEqual(self.installed_build(), '100')
+        self.assertFalse(rescue.exists())
 
     def test_cleanup_deletes_only_marked_staging_directories(self):
         self.make_app(self.target, 100, 100)

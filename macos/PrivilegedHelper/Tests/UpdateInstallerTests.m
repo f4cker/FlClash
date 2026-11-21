@@ -3,6 +3,7 @@
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
 #import <errno.h>
+#import <signal.h>
 #import <stdio.h>
 #import "../../Runner/UpdateInstaller.h"
 #import "../../Shared/HelperTrust.h"
@@ -34,13 +35,19 @@ static BOOL FCTestHelperTrust(NSString *helper) {
 }
 
 // FC_TEST_FAIL_SWAP_BACK: every swap after the first fails, as when the swap back cannot happen.
+// FC_TEST_KILL=beforeSwap|afterSwap|beforeSwapBack: the process dies there, as on a crash or a forced quit.
 static int FCTestSwap(const char *from, const char *to) {
     static int swaps = 0;
-    if (getenv("FC_TEST_FAIL_SWAP_BACK") && swaps++ > 0) {
+    const char *kill_at = getenv("FC_TEST_KILL") ?: "";
+    BOOL first = swaps++ == 0;
+    if ((first && !strcmp(kill_at, "beforeSwap")) || (!first && !strcmp(kill_at, "beforeSwapBack"))) kill(getpid(), SIGKILL);
+    if (getenv("FC_TEST_FAIL_SWAP_BACK") && !first) {
         errno = EBUSY;
         return -1;
     }
-    return renamex_np(from, to, RENAME_SWAP);
+    int result = renamex_np(from, to, RENAME_SWAP);
+    if (first && !strcmp(kill_at, "afterSwap")) kill(getpid(), SIGKILL);
+    return result;
 }
 
 static CFStringRef FCTestRescueDirectory(void) {
@@ -78,7 +85,7 @@ int main(int argc, const char *argv[]) {
             FCPrint(@{@"candidate": FCGUICandidateTrust(arguments[1]), @"installed": FCGUIBundleTrust(arguments[1]),
                 @"test": FCTestAppTrust(arguments[1])});
         } else if ([command isEqualToString:@"cleanup"] && arguments.count == 2) {
-            FCUpdateCleanup(arguments[1]);
+            FCUpdateCleanupKeeping(arguments[1], (__bridge NSString *)FCTestRescueDirectory());
             FCPrint(@{@"code": @"ok"});
         } else if ([command isEqualToString:@"manual"] && arguments.count == 4) {
             FCPrint(@{@"app": FCUpdateUnpackForManualInstall(arguments[1], arguments[2], arguments[3]) ?: @""});
