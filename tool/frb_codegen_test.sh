@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
 # Tests tool/frb_codegen.sh in scratch git copies of the committed rust_api package.
-# Stub rustup, cargo and codegen cover the refusals and the copy-back without a
-# toolchain. The real-codegen cases need rustup and flutter_rust_bridge_codegen
-# (PATH or FRB_CODEGEN); when they cannot run the script exits 77 (SKIP) unless
+# The stubbed cases (refusals, copy-back, injected faults, signals, leftover
+# backups, make) run under env -i with a PATH of symlinks to the few tools the
+# script needs and temp HOME/CARGO_HOME/RUSTUP_HOME, so no machine rustup leaks
+# in. The real-codegen cases need rustup and flutter_rust_bridge_codegen (PATH
+# or FRB_CODEGEN); when they cannot run the script exits 77 (SKIP) unless
 # FRB_TEST_ALLOW_SKIP=1.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 root="$(cd "$script_dir/.." && pwd -P)"
 git_bin="${GIT:-git}"
-git_path="$(command -v "$git_bin")" || { echo "frb_codegen_test: $git_bin is not on PATH; set GIT" >&2; exit 1; }
+command -v "$git_bin" >/dev/null 2>&1 || { echo "frb_codegen_test: $git_bin is not on PATH; set GIT" >&2; exit 1; }
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/frb_codegen_test.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 
 failures=0
 skipped=0
+status=0
 package_rel='plugins/rust_api'
 generated_rel="$package_rel/lib/src/rust/frb_generated.dart"
 pinned="$(sed -nE 's/^flutter_rust_bridge[[:space:]]*=[[:space:]]*"=?([^"]+)".*/\1/p' "$root/$package_rel/rust/Cargo.toml")"
 channel="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$root/$package_rel/rust/rust-toolchain.toml" | head -n 1)"
+# The outputs the update stub changes, in the script's order; extra.dart is new.
+updated=(lib/src/rust/api/charset.dart lib/src/rust/frb_generated.dart rust/src/frb_generated.rs)
 
 fail() {
   echo "FAIL: $*" >&2
@@ -30,12 +35,28 @@ skip() {
   skipped=$((skipped + 1))
 }
 
+# Isolated tools: the real git binary (not a wrapper that searches PATH) and
+# exactly the utilities frb_codegen.sh, its stubs and make use.
+iso="$scratch/iso"
+mkdir -p "$iso/bin" "$iso/home" "$iso/cargo" "$iso/rustup" "$iso/tmp"
+real_git="$("$git_bin" --exec-path 2>/dev/null)/git"
+[[ -x "$real_git" ]] || real_git="$(command -v "$git_bin")"
+ln -s "$real_git" "$iso/bin/git"
+sha_name=sha256sum
+command -v sha256sum >/dev/null 2>&1 || sha_name=shasum
+for tool in bash sh env sed awk head grep mkdir mktemp cp mv rm cmp find dirname cat printf rsync make "$sha_name"; do
+  path="$(command -v "$tool")" || { echo "frb_codegen_test: $tool is not on PATH" >&2; exit 1; }
+  [[ "$path" == /* ]] || path="$(type -P "$tool")"
+  ln -s "$path" "$iso/bin/$tool"
+done
+
 new_sandbox() {
   local sandbox="$scratch/$1"
   mkdir -p "$sandbox/tool" "$sandbox/.dart_tool"
   "$git_bin" -C "$root" archive HEAD -- "$package_rel" pubspec.yaml analysis_options.yaml lint_options.yaml |
     tar -x -C "$sandbox"
   cp "$script_dir/frb_codegen.sh" "$sandbox/tool/"
+  cp "$root/Makefile" "$sandbox/"
   cp "$root/.dart_tool/package_config.json" "$sandbox/.dart_tool/"
   "$git_bin" -C "$sandbox" init -q
   "$git_bin" -C "$sandbox" add -A
@@ -46,36 +67,85 @@ manifest() {
   (cd "$1/$package_rel" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256)
 }
 
-run_script() {
+# run_iso SANDBOX PATH-PREFIX [VAR=value...]: frb_codegen.sh in the isolated env.
+run_iso() {
+  local sandbox="$1" prefix="$2"
+  shift 2
+  set +e
+  (cd / && env -i PATH="$prefix$iso/bin" HOME="$iso/home" CARGO_HOME="$iso/cargo" RUSTUP_HOME="$iso/rustup" \
+    TMPDIR="$iso/tmp" FRB_CODEGEN="$fake/codegen" "$@" "$iso/bin/bash" "$sandbox/tool/frb_codegen.sh") \
+    >"$scratch/out" 2>"$scratch/err"
+  status=$?
+  set -e
+}
+
+run_real() {
   local sandbox="$1"
   shift
   set +e
   (cd / && env "$@" bash "$sandbox/tool/frb_codegen.sh") >"$scratch/out" 2>"$scratch/err"
   status=$?
   set -e
-  return $status
 }
 
-expect_refused() {
-  local name="$1" needle="$2" sandbox="$3"
-  shift 3
-  local before
+no_leftovers() {
+  local name="$1" sandbox="$2"
+  [[ ! -e "$sandbox/.frb_codegen_backup" ]] || fail "$name: left the backup directory"
+  if [[ -n "$(find "$sandbox" -name '*.frb_codegen.*')" ]]; then fail "$name: left staged files"; fi
+}
+
+# expect STATUS NAME NEEDLE SANDBOX PREFIX [VAR=value...]: that exit, that
+# stderr, and the package byte-identical to before with nothing left behind.
+expect() {
+  local want="$1" name="$2" needle="$3" sandbox="$4" prefix="$5" before
+  shift 5
   before="$(manifest "$sandbox")"
-  if run_script "$sandbox" "$@"; then
-    fail "$name: should exit non-zero"
-  elif ! grep -q -- "$needle" "$scratch/err"; then
+  run_iso "$sandbox" "$prefix" "$@"
+  [[ "$status" == "$want" ]] || fail "$name: exit $status, not $want"
+  if ! grep -q -- "$needle" "$scratch/err"; then
     fail "$name: stderr does not say '$needle'"
     cat "$scratch/err" >&2
   fi
   [[ "$(manifest "$sandbox")" == "$before" ]] || fail "$name: tracked files changed"
   if grep -q "UNKNOWN" "$sandbox/$generated_rel"; then fail "$name: UNKNOWN was written"; fi
-  if [[ -n "$(find "$sandbox" -name '*.frb_codegen.*')" ]]; then fail "$name: left staged files"; fi
+  no_leftovers "$name" "$sandbox"
+}
+
+# expect_recoverable NAME SANDBOX BEFORE [PATH]: the restore failed, so exit 3,
+# every other file still restored (only PATH, if given, differs), a complete and
+# intact backup, recovery steps printed, later runs refused, and the printed
+# recover.sh brings back exactly the original package.
+expect_recoverable() {
+  local name="$1" sandbox="$2" before="$3" left="${4:+$package_rel/$4}" kept="$2/.frb_codegen_backup" relative
+  [[ "$status" == 3 ]] || fail "$name: exit $status, not 3"
+  [[ "$({
+    "$git_bin" -C "$sandbox" diff --name-only -- "$package_rel"
+    "$git_bin" -C "$sandbox" ls-files --others --exclude-standard -- "$package_rel"
+  })" == "$left" ]] || fail "$name: the restore did not put back every file it could"
+  grep -q 'restore FAILED' "$scratch/err" || fail "$name: stderr does not report the failed restore"
+  grep -q "bash .*recover.sh" "$scratch/err" || fail "$name: no recovery command printed"
+  grep -q "cp -p .*files/lib/src/rust/frb_generated.dart" "$scratch/err" || fail "$name: recovery steps not listed"
+  for relative in "${updated[@]}"; do
+    "$git_bin" -C "$sandbox" show ":$package_rel/$relative" | cmp -s - "$kept/files/$relative" ||
+      fail "$name: backup of $relative is missing or altered"
+  done
+  [[ "$(wc -l <"$kept/SHA256SUMS" | tr -d ' ')" == "${#updated[@]}" ]] || fail "$name: SHA256SUMS is incomplete"
+  (cd "$kept/files" && shasum -a 256 -c ../SHA256SUMS >/dev/null) || fail "$name: backup fails its SHA256SUMS"
+  run_iso "$sandbox" "$fake/stub:" FAKE_MODE=update
+  [[ "$status" == 4 ]] || fail "$name: a later run exited $status, not 4"
+  grep -q 'stopped while replacing' "$scratch/err" || fail "$name: a later run did not explain the leftover backup"
+  if ! bash "$kept/recover.sh" >"$scratch/recover.out" 2>&1; then
+    fail "$name: recover.sh failed"
+    cat "$scratch/recover.out" >&2
+  fi
+  [[ "$(manifest "$sandbox")" == "$before" ]] || fail "$name: recover.sh did not restore the original package"
+  no_leftovers "$name (after recover.sh)" "$sandbox"
 }
 
 # Stubs. stub/rustup lists the pinned channel, stub/cargo answers the metadata
 # preflight, and the stub codegen edits the copy as FAKE_MODE says.
 fake="$scratch/fake"
-mkdir -p "$fake/no-rustup" "$fake/no-toolchain" "$fake/stub" "$fake/kill-mv"
+mkdir -p "$fake/no-toolchain" "$fake/stub" "$fake/kill-mv"
 cat >"$fake/no-toolchain/rustup" <<'STUB'
 #!/bin/sh
 [ "$1" = toolchain ] && { echo 'no installed toolchains'; exit 0; }
@@ -111,60 +181,101 @@ case "\$FAKE_MODE" in
     echo '// touched' >>rust/src/lib.rs ;;
 esac
 STUB
-# Moves for real, then sends TERM to the script after the second move.
-cat >"$fake/kill-mv/mv" <<'STUB'
+# Moves for real, then sends KILL_SIG to the script after the second move.
+cat >"$fake/kill-mv/mv" <<STUB
 #!/bin/sh
-/bin/mv "$@" || exit
-n=$(($(cat "$MV_COUNT" 2>/dev/null || echo 0) + 1))
-echo "$n" >"$MV_COUNT"
-[ "$n" -eq 2 ] && kill -TERM "$PPID"
+$(command -v mv) "\$@" || exit
+n=\$((\$(cat "\$MV_COUNT" 2>/dev/null || echo 0) + 1))
+echo "\$n" >"\$MV_COUNT"
+[ "\$n" -eq 2 ] && kill -"\$KILL_SIG" "\$PPID"
 exit 0
 STUB
 chmod +x "$fake"/*/* "$fake/codegen"
-base_path="$(dirname "$git_path"):/usr/bin:/bin"
-stub_path="$fake/stub:$base_path"
+stub="$fake/stub:"
 
 sandbox="$(new_sandbox refused)"
-expect_refused 'rustup missing' 'rustup is not on PATH' "$sandbox" \
-  PATH="$fake/no-rustup:$base_path" FRB_CODEGEN="$fake/codegen"
-expect_refused 'toolchain missing' 'is not installed' "$sandbox" \
-  PATH="$fake/no-toolchain:$base_path" FRB_CODEGEN="$fake/codegen"
+expect 1 'rustup missing' 'rustup is not on PATH' "$sandbox" ''
+expect 1 'toolchain missing' 'is not installed' "$sandbox" "$fake/no-toolchain:"
 for mode in unknown unknown-io; do
-  expect_refused "codegen wrote UNKNOWN ($mode)" 'UNKNOWN loader config' "$sandbox" \
-    PATH="$stub_path" FRB_CODEGEN="$fake/codegen" FAKE_MODE="$mode"
+  expect 1 "codegen wrote UNKNOWN ($mode)" 'UNKNOWN loader config' "$sandbox" "$stub" FAKE_MODE="$mode"
 done
-expect_refused 'codegen deleted an output' 'did not produce tracked output lib/src/rust/api/wifi.dart' "$sandbox" \
-  PATH="$stub_path" FRB_CODEGEN="$fake/codegen" FAKE_MODE=deleted
-expect_refused 'codegen wrote an empty output' 'empty lib/src/rust/api/tray.dart' "$sandbox" \
-  PATH="$stub_path" FRB_CODEGEN="$fake/codegen" FAKE_MODE=empty
-expect_refused 'TERM during the replacement' 'interrupted; restored' "$sandbox" \
-  PATH="$fake/kill-mv:$stub_path" FRB_CODEGEN="$fake/codegen" FAKE_MODE=update MV_COUNT="$scratch/mv-count"
-[[ "${status:-0}" -eq 143 ]] || fail "TERM during the replacement: exit $status, not 143"
-[[ "$(cat "$scratch/mv-count" 2>/dev/null)" == 2 ]] || fail 'TERM during the replacement: the kill did not land mid-loop'
+expect 1 'codegen deleted an output' 'did not produce tracked output lib/src/rust/api/wifi.dart' "$sandbox" "$stub" \
+  FAKE_MODE=deleted
+expect 1 'codegen wrote an empty output' 'empty lib/src/rust/api/tray.dart' "$sandbox" "$stub" FAKE_MODE=empty
+expect 1 'fault hook outside test mode' 'only honoured with FRB_CODEGEN_TEST_MODE=1' "$sandbox" "$stub" \
+  FAKE_MODE=update FRB_CODEGEN_FAULT=mv:1
+
+# Faults before or during the swap whose restore succeeds: original, exit 1.
+for fault in backup:1 backup:2 mv:1 mv:2 mv:4; do
+  case "$fault" in backup:*) needle='could not back up' ;; *) needle='restored the tracked files and verified' ;; esac
+  expect 1 "fault $fault" "$needle" "$sandbox" "$stub" FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT="$fault"
+done
+# Signals mid-swap, sent right after the second mv.
+for signal in TERM:143 HUP:129 INT:130; do
+  rm -f "$scratch/mv-count"
+  expect "${signal#*:}" "SIG${signal%:*} during the swap" 'interrupted; restored the tracked files' "$sandbox" \
+    "$fake/kill-mv:$stub" FAKE_MODE=update MV_COUNT="$scratch/mv-count" KILL_SIG="${signal%:*}"
+  [[ "$(cat "$scratch/mv-count" 2>/dev/null)" == 2 ]] || fail "SIG${signal%:*} during the swap: did not land mid-loop"
+done
+# Faults in the restore itself: the backup must survive for recover.sh.
+for fault in mv:4,restore:1:"${updated[0]}" mv:4,restore:2:"${updated[1]}" mv:2,verify:1:; do
+  before="$(manifest "$sandbox")"
+  run_iso "$sandbox" "$stub" FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT="${fault%:*}"
+  expect_recoverable "fault ${fault%:*}" "$sandbox" "$before" "${fault##*:}"
+done
+# SIGKILL cannot be trapped: the backup stays, the next run refuses, recover.sh works.
+before="$(manifest "$sandbox")"
+rm -f "$scratch/mv-count"
+run_iso "$sandbox" "$fake/kill-mv:$stub" FAKE_MODE=update MV_COUNT="$scratch/mv-count" KILL_SIG=KILL
+[[ "$status" != 0 && -f "$sandbox/.frb_codegen_backup/recover.sh" ]] || fail 'SIGKILL during the swap: no backup left'
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+[[ "$status" == 4 ]] || fail "SIGKILL during the swap: the next run exited $status, not 4"
+grep -q "bash .*recover.sh" "$scratch/err" || fail 'SIGKILL during the swap: the next run printed no recovery'
+grep -q 'leftover staged file' "$scratch/err" || fail 'SIGKILL during the swap: staged leftovers not listed'
+bash "$sandbox/.frb_codegen_backup/recover.sh" >/dev/null 2>&1 || fail 'SIGKILL during the swap: recover.sh failed'
+[[ "$(manifest "$sandbox")" == "$before" ]] || fail 'SIGKILL during the swap: recover.sh did not restore the package'
+no_leftovers 'SIGKILL during the swap (after recover.sh)' "$sandbox"
+# A backup left before the swap began means the originals were never touched.
+mkdir "$sandbox/.frb_codegen_backup" && echo backup >"$sandbox/.frb_codegen_backup/phase"
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+[[ "$status" == 4 ]] || fail "leftover pre-swap backup: exit $status, not 4"
+grep -q 'were not touched' "$scratch/err" || fail 'leftover pre-swap backup: not explained'
+# make stops at the failing frb: neither a dependent target nor a later goal runs.
+printf 'after: frb\n\ttouch %s/after-ran\nlater:\n\ttouch %s/later-ran\n' "$scratch" "$scratch" >"$scratch/extra.mk"
+set +e
+env -i PATH="$stub$iso/bin" HOME="$iso/home" CARGO_HOME="$iso/cargo" RUSTUP_HOME="$iso/rustup" TMPDIR="$iso/tmp" \
+  FRB_CODEGEN="$fake/codegen" FAKE_MODE=update make -C "$sandbox" -f Makefile -f "$scratch/extra.mk" after later \
+  >"$scratch/make.out" 2>&1
+make_status=$?
+set -e
+[[ "$make_status" != 0 ]] || fail 'make: exited 0 although frb failed'
+[[ ! -e "$scratch/after-ran" && ! -e "$scratch/later-ran" ]] || fail 'make: went on after frb failed'
+rm -rf "$sandbox/.frb_codegen_backup"
 sed -i.orig 's/^channel = .*/channel = "0.0.0-frb-codegen-test"/' "$sandbox/$package_rel/rust/rust-toolchain.toml"
 rm "$sandbox/$package_rel/rust/rust-toolchain.toml.orig"
-expect_refused 'pinned channel missing' '0.0.0-frb-codegen-test' "$sandbox" \
-  PATH="$stub_path" FRB_CODEGEN="$fake/codegen"
+expect 1 'pinned channel missing' '0.0.0-frb-codegen-test' "$sandbox" "$stub"
 
 sandbox="$(new_sandbox copy-back)"
-if ! run_script "$sandbox" PATH="$stub_path" FRB_CODEGEN="$fake/codegen" FAKE_MODE=update; then
-  fail 'copy-back: exited non-zero'
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+if [[ "$status" != 0 ]]; then
+  fail "copy-back: exit $status"
   cat "$scratch/err" >&2
 fi
 {
   "$git_bin" -C "$sandbox" diff --name-only -- "$package_rel"
   "$git_bin" -C "$sandbox" ls-files --others --exclude-standard -- "$package_rel"
 } >"$scratch/status"
-printf '%s\n' \
-  "$package_rel/lib/src/rust/api/charset.dart" \
-  "$package_rel/lib/src/rust/frb_generated.dart" \
-  "$package_rel/rust/src/frb_generated.rs" \
-  "$package_rel/lib/src/rust/api/extra.dart" >"$scratch/want-status"
+{
+  for relative in "${updated[@]}"; do echo "$package_rel/$relative"; done
+  echo "$package_rel/lib/src/rust/api/extra.dart"
+} | sort >"$scratch/want-status"
+sort -o "$scratch/status" "$scratch/status"
 cmp -s "$scratch/want-status" "$scratch/status" || {
   fail 'copy-back: did not copy exactly the changed and new outputs'
   diff "$scratch/want-status" "$scratch/status" >&2 || true
 }
 grep -q 'rust/src/lib.rs, which is not an output' "$scratch/err" || fail 'copy-back: no warning for a changed non-output'
+no_leftovers 'copy-back' "$sandbox"
 
 codegen="${FRB_CODEGEN:-$(command -v flutter_rust_bridge_codegen || true)}"
 if [[ -z "$codegen" ]]; then
@@ -174,8 +285,9 @@ elif ! command -v rustup >/dev/null 2>&1; then
 else
   sandbox="$(new_sandbox generate)"
   before="$(manifest "$sandbox")"
-  if ! run_script "$sandbox" FRB_CODEGEN="$codegen"; then
-    fail 'generation: exited non-zero'
+  run_real "$sandbox" FRB_CODEGEN="$codegen"
+  if [[ "$status" != 0 ]]; then
+    fail "generation: exit $status"
     cat "$scratch/err" >&2
   fi
   [[ "$(manifest "$sandbox")" == "$before" ]] || fail 'generation: output differs from the committed bindings'
@@ -185,12 +297,13 @@ else
 
   sed "s/stem: 'rust_api'/stem: 'UNKNOWN'/" "$sandbox/$generated_rel" >"$scratch/broken"
   cp "$scratch/broken" "$sandbox/$generated_rel"
-  if ! run_script "$sandbox" FRB_CODEGEN="$codegen"; then
-    fail 'repair: exited non-zero'
+  run_real "$sandbox" FRB_CODEGEN="$codegen"
+  if [[ "$status" != 0 ]]; then
+    fail "repair: exit $status"
     cat "$scratch/err" >&2
   fi
   [[ "$(manifest "$sandbox")" == "$before" ]] || fail 'repair: did not restore the committed bindings'
-  if [[ -n "$(find "$sandbox" -name '*.frb_codegen.*')" ]]; then fail 'repair: left staged files'; fi
+  no_leftovers 'repair' "$sandbox"
 fi
 
 if ((failures > 0)); then

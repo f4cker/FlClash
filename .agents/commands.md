@@ -137,10 +137,13 @@ make frb   # bash tool/frb_codegen.sh; FRB_CODEGEN=path picks the codegen binary
 The wrapper pins cargo to the channel in `rust/rust-toolchain.toml` (`RUSTUP_TOOLCHAIN`), fails if rustup or that
 toolchain is missing, and generates into a scratch copy. It copies back only the outputs (the files git tracks under
 `lib/src/rust/` and `rust/src/frb_generated.rs`, plus new files there), refuses when one of them is missing or empty or
-a Dart one has an `'UNKNOWN'` stem, and requires the default loader stem to equal the Cargo `[lib]` name. The swap is
-all-or-nothing, also on INT/TERM. A bare `flutter_rust_bridge_codegen generate` falls back to stem `'UNKNOWN'` whenever
-`cargo metadata` fails, which breaks `RustLib.init` in every build but the managed macOS release. `make frb-test` tests
-the wrapper and exits 77 when the real-codegen cases are skipped (`FRB_TEST_ALLOW_SKIP=1` accepts that).
+a Dart one has an `'UNKNOWN'` stem, and requires the default loader stem to equal the Cargo `[lib]` name. The swap
+backs the originals up to `.frb_codegen_backup/` and, on a failing command or INT/TERM/HUP, restores and sha256-checks
+every file. A failed restore keeps the backup and exits 3 with the commands of its `recover.sh`; SIGKILL, power loss and
+the like are not covered, so any run refuses (exit 4) while that directory exists and prints how to recover. A bare
+`flutter_rust_bridge_codegen generate` falls back to stem `'UNKNOWN'` whenever `cargo metadata` fails, which breaks
+`RustLib.init` in every build but the managed macOS release. `make frb-test` tests the wrapper with injected faults,
+and exits 77 when the real-codegen cases are skipped (`FRB_TEST_ALLOW_SKIP=1` accepts that).
 
 Generated output paths, configured in each package's `build.yaml`:
 
