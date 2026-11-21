@@ -409,6 +409,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
       ),
       stackedOrder: _stackedOrder,
       minBodyHeight: _minBodyHeight,
+      narrowMargin: 16,
       // No scroll view of its own: the frame scrolls the body under its
       // pinned actions, and one nested in it could hide its own end.
       children: [

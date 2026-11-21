@@ -246,6 +246,49 @@ void main() {
       )
       .first;
 
+  /// The dialog's panel, and the frame's content inside its padding.
+  (Rect, Rect) dialogRects(WidgetTester tester) => (
+    tester.getRect(
+      find
+          .ancestor(
+            of: find.byType(PinnedFooter),
+            matching: find.byType(Surface),
+          )
+          .first,
+    ),
+    tester.getRect(find.byType(PinnedFooter)),
+  );
+
+  /// The padding the button around [label] keeps beside it.
+  EdgeInsets labelPadding(WidgetTester tester, String label) =>
+      tester
+              .widget<Padding>(
+                find
+                    .ancestor(
+                      of: find.text(label),
+                      matching: find.byWidgetPredicate(
+                        (widget) => widget is Padding && widget.child is Align,
+                      ),
+                    )
+                    .first,
+              )
+              .padding
+          as EdgeInsets;
+
+  /// The window's margin each side of [panel], and [content]'s inside it.
+  void expectInsets(
+    WidgetTester tester, {
+    required double outer,
+    required double inner,
+  }) {
+    final (panel, content) = dialogRects(tester);
+    final window = tester.view.physicalSize.width;
+    expect(panel.left, closeTo(outer, 0.5), reason: 'left margin');
+    expect(window - panel.right, closeTo(outer, 0.5), reason: 'right margin');
+    expect(content.left - panel.left, closeTo(inner, 0.5));
+    expect(panel.right - content.right, closeTo(inner, 0.5));
+  }
+
   /// The scroll view the body scrolls in, apart from the actions.
   Finder bodyScroll() => find
       .ancestor(
@@ -339,6 +382,25 @@ void main() {
         expect(tester.takeException(), isNull);
 
         await tapButton(tester, l.cancel, printed);
+        expect(await result, isNull);
+      });
+
+      testWidgets('$name: 16pt from the window, 16pt inside, labels '
+          '12pt in', (tester) async {
+        await pump(tester, size: narrow, locale: locale, textScale: scale);
+        final (result, _) = open(tester);
+        await tester.pumpAndSettle();
+        final l = currentAppLocalizations;
+        expect(tester.takeException(), isNull);
+
+        expectInsets(tester, outer: 16, inner: 16);
+        for (final label in stackedLabels(l)) {
+          final padding = labelPadding(tester, label);
+          expect(padding.left, 12, reason: label);
+          expect(padding.right, 12, reason: label);
+        }
+
+        await tapButton(tester, l.cancel, capturePrints());
         expect(await result, isNull);
       });
 
@@ -562,6 +624,41 @@ void main() {
         }
       },
     );
+  }
+
+  for (final locale in locales) {
+    for (final scale in const [1.0, 2.0]) {
+      testWidgets('${locale.languageCode} 1024x768 ×${scale.toInt()}: the '
+          'alert keeps its width, margins and label padding', (tester) async {
+        await pump(
+          tester,
+          size: const Size(1024, 768),
+          locale: locale,
+          textScale: scale,
+        );
+        final (result, _) = open(tester);
+        await tester.pumpAndSettle();
+        final l = currentAppLocalizations;
+        expect(tester.takeException(), isNull);
+
+        expectInsets(tester, outer: (1024 - 560) / 2, inner: 16);
+        expect(find.byType(OverflowBox), findsNothing);
+        // prism_ui's own label padding: no theme over the actions.
+        final ambient = ButtonTheme.of(
+          tester.element(find.byType(PinnedFooter)),
+        );
+        for (final label in stackedLabels(l)) {
+          expect(
+            ButtonTheme.of(tester.element(find.text(label))),
+            same(ambient),
+            reason: label,
+          );
+        }
+
+        await tapButton(tester, l.cancel, capturePrints());
+        expect(await result, isNull);
+      });
+    }
   }
 
   /// A frame with every kind of action: delete, a leading one, cancel, save.

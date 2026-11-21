@@ -46,6 +46,8 @@ const _okInk = Color(0xFF16632C);
 const _warnInk = Color(0xFF8A5300);
 const _fieldGap = 14.0;
 const _stackedActionHeight = 44.0;
+
+const _alertMargin = 40.0;
 const _labelGap = 6.0;
 const _validateDelay = Duration(milliseconds: 300);
 const _checkDelay = Duration(milliseconds: 500);
@@ -423,6 +425,8 @@ class RuleEditFrame extends StatelessWidget {
   final List<Symbol>? stackedOrder;
   final double? minBodyHeight;
 
+  final double? narrowMargin;
+
   const RuleEditFrame({
     super.key,
     required this.title,
@@ -439,6 +443,7 @@ class RuleEditFrame extends StatelessWidget {
     this.leading,
     this.stackedOrder,
     this.minBodyHeight,
+    this.narrowMargin,
   });
 
   @override
@@ -446,7 +451,12 @@ class RuleEditFrame extends StatelessWidget {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final screen = MediaQuery.sizeOf(context).width;
-    final effective = math.max(280.0, math.min(width, screen - 32));
+    final margin = narrowMargin;
+    final narrow = margin != null && screen < width + 2 * _alertMargin;
+    final effective = math.max(
+      280.0,
+      math.min(width, screen - (narrow ? 2 * margin : 32)),
+    );
     final errorInk = colorScheme.brightness == Brightness.light
         ? _errorInk
         : const Color(0xFFF2B8B5);
@@ -577,8 +587,17 @@ class RuleEditFrame extends StatelessWidget {
                 ...stackedActions.where((slot) => slot.id == id),
             ],
     );
-    final footer = AdaptiveActions(wide: wide, stacked: stacked);
-    return CallbackShortcuts(
+    Widget footer = AdaptiveActions(wide: wide, stacked: stacked);
+    if (narrow) {
+      const labelPadding = ButtonStyle(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+      );
+      footer = ButtonTheme.merge(
+        data: const ButtonThemeData(text: labelPadding, filled: labelPadding),
+        child: footer,
+      );
+    }
+    final dialog = CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): cancel},
       child: AlertDialog(
         title: title,
@@ -656,6 +675,12 @@ class RuleEditFrame extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (!narrow) return dialog;
+    // prism_ui insets by [_alertMargin]; a wider box leaves [narrowMargin].
+    return OverflowBox(
+      maxWidth: screen + 2 * (_alertMargin - margin),
+      child: dialog,
     );
   }
 }
