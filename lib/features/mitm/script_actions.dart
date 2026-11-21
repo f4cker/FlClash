@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -15,9 +16,12 @@ typedef MitmReader = ProviderReader;
 const _maxScriptSize = 8 << 20;
 
 class _ScriptException implements Exception {
-  const _ScriptException(this.message);
+  const _ScriptException(this.message, {this.raw});
 
   final String message;
+
+  /// The Core's own text behind [message], for 查看原始错误.
+  final String? raw;
 
   @override
   String toString() => message;
@@ -90,9 +94,10 @@ Future<void> _forgetRemovedUrls(
   }
 }
 
-/// What a failed download or load says, already in the app's words.
-String? mitmScriptErrorMessage(Object error) =>
-    error is _ScriptException ? error.message : null;
+/// What a failed download or load says, already in the app's words, with
+/// the Core's own text when it gave one.
+MitmShownError? mitmScriptError(Object error) =>
+    error is _ScriptException ? (text: error.message, raw: error.raw) : null;
 
 Future<List<int>> downloadMitmScript(String url) async =>
     _checkedScript((await request.getFileResponseForUrl(url)).data);
@@ -190,19 +195,18 @@ Future<List<MitmScript>> prepareMitmScripts(
       ),
     );
   }
-  final issues = await read(coreHandlerProvider).validateMitm(
-    MitmRules(script: [for (final script in scripts) script.line]),
-  );
-  final problems = issues[MitmList.script] ?? const {};
+  final problems = await read(
+    coreHandlerProvider,
+  ).validateMitmScripts([for (final script in scripts) script.line]);
   if (problems.isNotEmpty) {
-    final (index, reason) = problems.entries
+    final (index, issue) = problems.entries
         .map((entry) => (entry.key, entry.value))
         .first;
+    final l = currentAppLocalizations;
+    final error = mitmIssueError(l, issue);
     throw _ScriptException(
-      currentAppLocalizations.mitmScriptCannotLoad(
-        drafts[index].info.name,
-        reason,
-      ),
+      l.mitmScriptCannotLoad(drafts[index].info.name, error.text),
+      raw: error.raw,
     );
   }
   return scripts;
@@ -288,15 +292,13 @@ Future<MitmScript> _checkMitmScriptUpdate(
     }
     final line =
         parseMitmScriptInfo(script.line)?.lineWith(name) ?? script.line;
-    final issues = await read(
-      coreHandlerProvider,
-    ).validateMitm(MitmRules(script: [line]));
-    final problem = issues[MitmList.script]?.values.firstOrNull;
+    final issues = await read(coreHandlerProvider).validateMitmScripts([line]);
+    final problem = issues.values.firstOrNull;
     if (problem == null && fetched is ResourceDownloaded) {
       await resourceCache.commit(ResourceKind.mitmScript, url, fetched);
     }
     if (problem != null) {
-      checked = failed(MitmUpdateFailure.invalid, problem);
+      checked = failed(MitmUpdateFailure.invalid, mitmStoredIssue(problem));
     } else if (missing) {
       checked = script.copyWith(
         line: line,

@@ -7,6 +7,7 @@ export 'input.dart';
 export 'last_update_time_text.dart';
 export 'page_source_rows.dart';
 export 'palette.dart';
+export 'raw_error_details.dart';
 export 'read_failure.dart';
 export 'record.dart';
 export 'record_feed_list.dart';

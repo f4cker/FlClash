@@ -403,6 +403,9 @@ class RuleEditFrame extends StatelessWidget {
   final double width;
   final List<Widget> children;
   final String? error;
+
+  /// The untranslated text behind [error], behind 查看原始错误 in its bar.
+  final String? errorRaw;
   final bool busy;
   final String primaryLabel;
   final VoidCallback? onPrimary;
@@ -425,6 +428,7 @@ class RuleEditFrame extends StatelessWidget {
     required this.primaryLabel,
     required this.onPrimary,
     this.error,
+    this.errorRaw,
     this.busy = false,
     this.onDelete,
     this.deleting = false,
@@ -437,6 +441,9 @@ class RuleEditFrame extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final screen = MediaQuery.sizeOf(context).width;
     final effective = math.max(280.0, math.min(width, screen - 32));
+    final errorInk = colorScheme.brightness == Brightness.light
+        ? _errorInk
+        : const Color(0xFFF2B8B5);
     void cancel() {
       if (!busy) Navigator.of(context).pop();
     }
@@ -607,15 +614,23 @@ class RuleEditFrame extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text(
-                      error,
-                      style: AppTextStyle.footnote
-                          .of(context)
-                          .copyWith(
-                            color: colorScheme.brightness == Brightness.light
-                                ? _errorInk
-                                : const Color(0xFFF2B8B5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 4,
+                      children: [
+                        Text(
+                          error,
+                          style: AppTextStyle.footnote
+                              .of(context)
+                              .copyWith(color: errorInk),
+                        ),
+                        if (errorRaw case final raw?)
+                          RawErrorDetails(
+                            key: ValueKey(raw),
+                            raw: raw,
+                            color: errorInk,
                           ),
+                      ],
                     ),
                   ),
                 ),

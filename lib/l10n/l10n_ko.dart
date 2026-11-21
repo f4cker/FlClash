@@ -8093,11 +8093,51 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
 
   @override
-  String get mitmRewriteErrorDetails => 'Details';
-
-  @override
   String get mitmRewriteFailureGeneric =>
       'something went wrong, and the rules are unchanged.';
+
+  @override
+  String get mitmScriptErrorLine => '스크립트 줄의 형식이 올바르지 않거나 요청/응답 유형이 없습니다.';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return '지원하지 않는 스크립트 유형: $type.';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => '일치 패턴이 없습니다.';
+
+  @override
+  String get mitmScriptErrorPath => '스크립트 경로가 없습니다.';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return '바이트 수는 숫자여야 합니다: $value.';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return '초 단위 시간은 숫자여야 합니다: $value.';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => '인수가 올바른 JSON이 아닙니다.';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return '파일을 읽을 수 없습니다: $filename.';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return '파일이 8 MiB를 초과합니다: $filename.';
+  }
+
+  @override
+  String get mitmScriptErrorSyntax => '스크립트를 컴파일할 수 없습니다.';
+
+  @override
+  String get viewOriginalError => '원본 오류 보기';
 
   @override
   String get mitmRewriteMatchedTitle => 'Rule matched';

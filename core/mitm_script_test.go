@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -376,6 +377,24 @@ func TestMitmScriptValidateReportsSyntax(t *testing.T) {
 	}})
 	if len(issues[mitmSectionScript]) != 2 {
 		t.Fatalf("%+v", issues)
+	}
+	// The app words an issue from its code; the compile error stays raw.
+	syntax, unreadable := issues[mitmSectionScript][0], issues[mitmSectionScript][1]
+	if syntax.Kind != "scriptSyntax" || len(syntax.Args) != 1 || !strings.Contains(syntax.Message, syntax.Args[0]) {
+		t.Fatalf("syntax %+v", syntax)
+	}
+	if unreadable.Kind != "scriptUnreadable" || len(unreadable.Args) != 1 || unreadable.Args[0] != "missing.js" {
+		t.Fatalf("unreadable %+v", unreadable)
+	}
+	bad := handleMitmValidate(map[string][]string{
+		mitmSectionScript: {`x = type=cron,script-path=a.js`},
+		mitmSectionURL:    {`^a`},
+	})
+	if got := bad[mitmSectionScript]; len(got) != 1 || got[0].Kind != "scriptType" || !reflect.DeepEqual(got[0].Args, []string{`"cron"`}) || got[0].Code != mitmRewriteInvalid {
+		t.Fatalf("type %+v", got)
+	}
+	if got := bad[mitmSectionURL]; len(got) != 1 || got[0].Kind == "" || got[0].Message == "" {
+		t.Fatalf("url %+v", got)
 	}
 	engine := withMitmScriptRules(t, scriptLine("x", "http-request", "", names[0]))
 	if engine == nil || len(engine.issues) != 1 || len(engine.rules) != 0 {

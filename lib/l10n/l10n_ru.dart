@@ -8246,11 +8246,52 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
 
   @override
-  String get mitmRewriteErrorDetails => 'Details';
-
-  @override
   String get mitmRewriteFailureGeneric =>
       'something went wrong, and the rules are unchanged.';
+
+  @override
+  String get mitmScriptErrorLine =>
+      'Неверный формат строки скрипта или не указан тип запроса/ответа.';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return 'Неподдерживаемый тип скрипта: $type.';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => 'Не указан шаблон сопоставления.';
+
+  @override
+  String get mitmScriptErrorPath => 'Не указан путь к скрипту.';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'Количество байтов должно быть числом: $value.';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return 'Количество секунд должно быть числом: $value.';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => 'Аргумент не является корректным JSON.';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'Не удалось прочитать файл: $filename.';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'Размер файла превышает 8 MiB: $filename.';
+  }
+
+  @override
+  String get mitmScriptErrorSyntax => 'Не удалось скомпилировать скрипт.';
+
+  @override
+  String get viewOriginalError => 'Показать исходную ошибку';
 
   @override
   String get mitmRewriteMatchedTitle => 'Rule matched';

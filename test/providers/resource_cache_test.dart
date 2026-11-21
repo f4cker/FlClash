@@ -214,6 +214,11 @@ void main() {
       await duringValidation?.call();
       return {MitmList.script: <int, String>{}};
     });
+    when(() => core.validateMitmScripts(any())).thenAnswer((_) async {
+      validations++;
+      await duringValidation?.call();
+      return <int, MitmRewriteIssue>{};
+    });
     const profile = Profile(
       id: 1,
       label: 'Uses the script',

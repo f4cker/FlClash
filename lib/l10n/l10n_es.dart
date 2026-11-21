@@ -8296,11 +8296,52 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
 
   @override
-  String get mitmRewriteErrorDetails => 'Details';
-
-  @override
   String get mitmRewriteFailureGeneric =>
       'something went wrong, and the rules are unchanged.';
+
+  @override
+  String get mitmScriptErrorLine =>
+      'La línea del script tiene un formato incorrecto o le falta el tipo de solicitud/respuesta.';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return 'Tipo de script no compatible: $type.';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => 'Falta el patrón de coincidencia.';
+
+  @override
+  String get mitmScriptErrorPath => 'Falta la ruta del script.';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'El número de bytes debe ser un número: $value.';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return 'El número de segundos debe ser un número: $value.';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => 'El argumento no es JSON válido.';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'No se puede leer el archivo: $filename.';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'El archivo supera los 8 MiB: $filename.';
+  }
+
+  @override
+  String get mitmScriptErrorSyntax => 'No se ha podido compilar el script.';
+
+  @override
+  String get viewOriginalError => 'Ver error original';
 
   @override
   String get mitmRewriteMatchedTitle => 'Rule matched';

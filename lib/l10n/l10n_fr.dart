@@ -8299,11 +8299,52 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
 
   @override
-  String get mitmRewriteErrorDetails => 'Details';
-
-  @override
   String get mitmRewriteFailureGeneric =>
       'something went wrong, and the rules are unchanged.';
+
+  @override
+  String get mitmScriptErrorLine =>
+      'La ligne du script est mal formatée ou le type de requête/réponse est manquant.';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return 'Type de script non pris en charge : $type.';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => 'Motif de correspondance manquant.';
+
+  @override
+  String get mitmScriptErrorPath => 'Chemin du script manquant.';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'Le nombre d’octets doit être numérique : $value.';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return 'Le nombre de secondes doit être numérique : $value.';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => 'L’argument n’est pas un JSON valide.';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'Impossible de lire le fichier : $filename.';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'Le fichier dépasse 8 MiB : $filename.';
+  }
+
+  @override
+  String get mitmScriptErrorSyntax => 'Impossible de compiler le script.';
+
+  @override
+  String get viewOriginalError => 'Voir l’erreur d’origine';
 
   @override
   String get mitmRewriteMatchedTitle => 'Rule matched';

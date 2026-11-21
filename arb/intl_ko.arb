@@ -3166,8 +3166,51 @@
   "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
   "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
   "mitmRewriteErrorGeneric": "The rule's format is invalid.",
-  "mitmRewriteErrorDetails": "Details",
   "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "mitmScriptErrorLine": "스크립트 줄의 형식이 올바르지 않거나 요청/응답 유형이 없습니다.",
+  "@mitmScriptErrorLine": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorType": "지원하지 않는 스크립트 유형: {type}.",
+  "@mitmScriptErrorType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPattern": "일치 패턴이 없습니다.",
+  "@mitmScriptErrorPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPath": "스크립트 경로가 없습니다.",
+  "@mitmScriptErrorPath": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorMaxSize": "바이트 수는 숫자여야 합니다: {value}.",
+  "@mitmScriptErrorMaxSize": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTimeout": "초 단위 시간은 숫자여야 합니다: {value}.",
+  "@mitmScriptErrorTimeout": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorArgument": "인수가 올바른 JSON이 아닙니다.",
+  "@mitmScriptErrorArgument": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorUnreadable": "파일을 읽을 수 없습니다: {filename}.",
+  "@mitmScriptErrorUnreadable": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLarge": "파일이 8 MiB를 초과합니다: {filename}.",
+  "@mitmScriptErrorTooLarge": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorSyntax": "스크립트를 컴파일할 수 없습니다.",
+  "@mitmScriptErrorSyntax": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "viewOriginalError": "원본 오류 보기",
+  "@viewOriginalError": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
   "@mitmRewriteErrorFramingHeader": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
@@ -3274,9 +3317,6 @@
     "description": "PROVISIONAL: English text, awaiting translation"
   },
   "@mitmRewriteErrorGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
-  },
-  "@mitmRewriteErrorDetails": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
   "mitmRewriteMatchedTitle": "Rule matched",

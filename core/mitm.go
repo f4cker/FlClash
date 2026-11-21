@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -49,6 +50,21 @@ type MitmIssue struct {
 	Index   int           `json:"index"`
 	Code    mitmHostIssue `json:"code"`
 	Message string        `json:"message"`
+	// For a rewrite rule or a script, what is wrong as a stable code and the
+	// values its text names, as MitmRewriteIssue has them; the app words it
+	// and keeps Message for details.
+	Kind string   `json:"kind,omitempty"`
+	Args []string `json:"args,omitempty"`
+}
+
+// The issue of a rewrite rule or a script that does not load.
+func mitmRuleIssue(index int, err error) MitmIssue {
+	issue := MitmIssue{Index: index, Code: mitmRewriteInvalid, Message: err.Error()}
+	var ruleErr *mitmRuleError
+	if errors.As(err, &ruleErr) {
+		issue.Kind, issue.Args = ruleErr.kind, ruleErr.args
+	}
+	return issue
 }
 
 var mitmRuleLists = []string{"hostname", "url-rewrite", "header-rewrite", "body-rewrite", "map-local", "script"}
@@ -228,11 +244,7 @@ func handleMitmValidate(params map[string][]string) map[string][]MitmIssue {
 	for _, section := range mitmRewriteSections {
 		for index, line := range params[section] {
 			if _, err := parseMitmRewriteLine(section, line); err != nil {
-				result[section] = append(result[section], MitmIssue{
-					Index:   index,
-					Code:    mitmRewriteInvalid,
-					Message: err.Error(),
-				})
+				result[section] = append(result[section], mitmRuleIssue(index, err))
 			}
 		}
 	}
@@ -243,11 +255,7 @@ func handleMitmValidate(params map[string][]string) map[string][]MitmIssue {
 			err = loadMitmScript(rule.script, programs)
 		}
 		if err != nil {
-			result[mitmSectionScript] = append(result[mitmSectionScript], MitmIssue{
-				Index:   index,
-				Code:    mitmRewriteInvalid,
-				Message: err.Error(),
-			})
+			result[mitmSectionScript] = append(result[mitmSectionScript], mitmRuleIssue(index, err))
 		}
 	}
 	return result

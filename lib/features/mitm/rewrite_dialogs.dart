@@ -17,11 +17,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'rewrite.dart' show mitmRewriteErrorColor, mitmRewriteListSeparator;
 
 /// What a failed save or check says: the app's own words for a failure it
-/// knows, never an exception's or the Core's English, which goes to logs.
-String mitmRewriteFailureText(AppLocalizations l, Object error) {
+/// knows. An exception's or the Core's own text is never the message; when
+/// the app has no words for it, it says the generic text and keeps that raw
+/// text for 查看原始错误, shown only when the user opens it.
+MitmShownError mitmRewriteFailure(AppLocalizations l, Object error) {
   final text = userFacingErrorMessage(error, l);
   final raw = error is CoreMethodException ? error.message : error.toString();
-  return text == raw ? l.mitmRewriteFailureGeneric : text;
+  return text == raw
+      ? (
+          text: l.mitmRewriteFailureGeneric,
+          raw: raw.trim().isEmpty ? null : raw,
+        )
+      : (text: text, raw: null);
+}
+
+/// A change that did not take effect, as the rewrite page and its dialogs
+/// say it.
+MitmShownError mitmRewriteNotAppliedError(AppLocalizations l, Object error) {
+  final failure = mitmRewriteFailure(l, error);
+  return (text: l.mitmRewriteNotApplied(failure.text), raw: failure.raw);
 }
 
 const _dialogWidth = 520.0;
@@ -312,7 +326,7 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
   String _parsed = '';
   bool _atStart = false;
   bool _busy = false;
-  String? _error;
+  MitmShownError? _error;
   int _generation = 0;
 
   @override
@@ -378,9 +392,7 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
-        _error = context.appLocalizations.mitmRewriteNotApplied(
-          mitmRewriteFailureText(context.appLocalizations, error),
-        );
+        _error = mitmRewriteNotAppliedError(context.appLocalizations, error);
       });
     }
   }
@@ -423,9 +435,7 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = context.appLocalizations.mitmRewriteNotApplied(
-          mitmRewriteFailureText(context.appLocalizations, error),
-        );
+        _error = mitmRewriteNotAppliedError(context.appLocalizations, error);
       });
     }
   }
@@ -487,7 +497,8 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
       title: appLocalizations.mitmRewriteImportTitle,
       subtitle: appLocalizations.mitmRewriteImportDesc,
       width: _dialogWidth,
-      error: _error,
+      error: _error?.text,
+      errorRaw: _error?.raw,
       busy: _busy,
       primaryLabel: _busy
           ? appLocalizations.mitmRewriteImporting
@@ -582,10 +593,9 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
   Timer? _timer;
   MitmRewriteIssue? _issue;
   String? _checked;
-  bool _details = false;
   bool _busy = false;
   bool _deleting = false;
-  String? _error;
+  MitmShownError? _error;
   int _generation = 0;
 
   @override
@@ -635,9 +645,7 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
-        _error = context.appLocalizations.mitmRewriteNotApplied(
-          mitmRewriteFailureText(context.appLocalizations, error),
-        );
+        _error = mitmRewriteNotAppliedError(context.appLocalizations, error);
       });
     }
   }
@@ -656,9 +664,7 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
       setState(() {
         _busy = false;
         _deleting = false;
-        _error = context.appLocalizations.mitmRewriteNotApplied(
-          mitmRewriteFailureText(context.appLocalizations, error),
-        );
+        _error = mitmRewriteNotAppliedError(context.appLocalizations, error);
       });
     }
   }
@@ -706,7 +712,8 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
       title: appLocalizations.mitmRewriteEditTitle,
       subtitle: widget.subtitle,
       width: _dialogWidth,
-      error: _error,
+      error: _error?.text,
+      errorRaw: _error?.raw,
       busy: _busy,
       deleting: _deleting,
       primaryLabel: appLocalizations.save,
@@ -763,20 +770,10 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
             // The Core's own words, for a report: behind a tap, not in the
             // red line.
             if (issue != null && issue.kind != 'emptyRule')
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: _details
-                    ? SelectableText(
-                        issue.message,
-                        style: label.toJetBrainsMono,
-                      )
-                    : TextButton(
-                        onPressed: () => setState(() => _details = true),
-                        child: Text(
-                          appLocalizations.mitmRewriteErrorDetails,
-                          style: label.copyWith(color: colorScheme.primary),
-                        ),
-                      ),
+              RawErrorDetails(
+                key: ValueKey(issue.message),
+                raw: issue.message,
+                color: colorScheme.onSurfaceVariant,
               ),
           ],
         ),

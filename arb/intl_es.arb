@@ -3166,8 +3166,51 @@
   "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
   "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
   "mitmRewriteErrorGeneric": "The rule's format is invalid.",
-  "mitmRewriteErrorDetails": "Details",
   "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "mitmScriptErrorLine": "La línea del script tiene un formato incorrecto o le falta el tipo de solicitud/respuesta.",
+  "@mitmScriptErrorLine": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorType": "Tipo de script no compatible: {type}.",
+  "@mitmScriptErrorType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPattern": "Falta el patrón de coincidencia.",
+  "@mitmScriptErrorPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPath": "Falta la ruta del script.",
+  "@mitmScriptErrorPath": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorMaxSize": "El número de bytes debe ser un número: {value}.",
+  "@mitmScriptErrorMaxSize": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTimeout": "El número de segundos debe ser un número: {value}.",
+  "@mitmScriptErrorTimeout": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorArgument": "El argumento no es JSON válido.",
+  "@mitmScriptErrorArgument": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorUnreadable": "No se puede leer el archivo: {filename}.",
+  "@mitmScriptErrorUnreadable": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLarge": "El archivo supera los 8 MiB: {filename}.",
+  "@mitmScriptErrorTooLarge": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorSyntax": "No se ha podido compilar el script.",
+  "@mitmScriptErrorSyntax": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "viewOriginalError": "Ver error original",
+  "@viewOriginalError": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
   "@mitmRewriteErrorFramingHeader": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
@@ -3274,9 +3317,6 @@
     "description": "PROVISIONAL: English text, awaiting translation"
   },
   "@mitmRewriteErrorGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
-  },
-  "@mitmRewriteErrorDetails": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
   "mitmRewriteMatchedTitle": "Rule matched",

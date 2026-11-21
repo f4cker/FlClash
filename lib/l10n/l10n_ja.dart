@@ -8019,11 +8019,52 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
 
   @override
-  String get mitmRewriteErrorDetails => 'Details';
-
-  @override
   String get mitmRewriteFailureGeneric =>
       'something went wrong, and the rules are unchanged.';
+
+  @override
+  String get mitmScriptErrorLine =>
+      'スクリプト行の形式が正しくないか、リクエスト／レスポンスの種類が指定されていません。';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return 'サポートされていないスクリプトの種類：$type。';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => '一致パターンが指定されていません。';
+
+  @override
+  String get mitmScriptErrorPath => 'スクリプトのパスが指定されていません。';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'バイト数には数値を指定してください：$value。';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return '秒数には数値を指定してください：$value。';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => '引数が有効な JSON ではありません。';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'ファイルを読み取れません：$filename。';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'ファイルが 8 MiB を超えています：$filename。';
+  }
+
+  @override
+  String get mitmScriptErrorSyntax => 'スクリプトをコンパイルできません。';
+
+  @override
+  String get viewOriginalError => '元のエラーを表示';
 
   @override
   String get mitmRewriteMatchedTitle => 'Rule matched';

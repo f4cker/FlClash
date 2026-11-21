@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -16,7 +17,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'rewrite.dart' show mitmRewriteErrorColor;
-import 'rewrite_dialogs.dart' show MitmLineEditor, mitmRewriteFailureText;
+import 'rewrite_dialogs.dart' show MitmLineEditor, mitmRewriteFailure;
 import 'script_actions.dart';
 
 const mitmScriptInk = Color(0xFF0A7C86);
@@ -33,8 +34,11 @@ const _dialogWidth = 560.0;
 const _diffWidth = 640.0;
 const _validateDelay = Duration(milliseconds: 300);
 
-String mitmScriptFailureText(AppLocalizations l, Object error) =>
-    mitmScriptErrorMessage(error) ?? mitmRewriteFailureText(l, error);
+/// A failed script action as the app shows it: a download or load failure in
+/// the app's words, with the Core's own text behind 查看原始错误 when there
+/// is one; anything else as a rewrite failure.
+MitmShownError mitmScriptFailure(AppLocalizations l, Object error) =>
+    mitmScriptError(error) ?? mitmRewriteFailure(l, error);
 
 /// A failed update that left the current version running.
 String mitmKeptFailureText(AppLocalizations l, MitmUpdateFailure? failure) =>
@@ -367,7 +371,7 @@ class _ScriptAddDialogState extends ConsumerState<_ScriptAddDialog> {
   bool _confirming = false;
   bool _alsoDecrypt = true;
   bool _busy = false;
-  String? _error;
+  MitmShownError? _error;
 
   /// A local file's name and bytes, set by From File….
   ({String name, List<int> bytes})? _file;
@@ -496,7 +500,7 @@ class _ScriptAddDialogState extends ConsumerState<_ScriptAddDialog> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = mitmScriptFailureText(context.appLocalizations, error);
+        _error = mitmScriptFailure(context.appLocalizations, error);
       });
     }
   }
@@ -631,7 +635,8 @@ class _ScriptAddDialogState extends ConsumerState<_ScriptAddDialog> {
       title: l.mitmScriptConfirmTitle,
       subtitle: l.mitmScriptCount(drafts.length),
       width: _dialogWidth,
-      error: _error,
+      error: _error?.text,
+      errorRaw: _error?.raw,
       busy: _busy,
       primaryLabel: _busy ? l.mitmScriptDownloading : l.mitmAddAndEnable,
       onPrimary: () => _add(drafts, uncovered),
@@ -840,7 +845,7 @@ class _ScriptEditDialogState extends State<_ScriptEditDialog> {
   late int _timeout = _info.timeout;
   bool _busy = false;
   bool _deleting = false;
-  String? _error;
+  MitmShownError? _error;
 
   @override
   void dispose() {
@@ -886,7 +891,7 @@ class _ScriptEditDialogState extends State<_ScriptEditDialog> {
       setState(() {
         _busy = false;
         _deleting = false;
-        _error = mitmScriptFailureText(context.appLocalizations, error);
+        _error = mitmScriptFailure(context.appLocalizations, error);
       });
     }
   }
@@ -910,7 +915,8 @@ class _ScriptEditDialogState extends State<_ScriptEditDialog> {
       title: l.edit,
       subtitle: '${mitmScriptKindLabel(l, _info.kind)} · ${_info.name}',
       width: _dialogWidth,
-      error: _error,
+      error: _error?.text,
+      errorRaw: _error?.raw,
       busy: _busy,
       deleting: _deleting,
       primaryLabel: l.save,
@@ -1215,7 +1221,7 @@ class _UpdateDialog extends StatefulWidget {
 class _UpdateDialogState extends State<_UpdateDialog> {
   late final _diff = mitmLineDiff(widget.before, widget.after);
   bool _busy = false;
-  String? _error;
+  MitmShownError? _error;
 
   Future<void> _adopt() async {
     setState(() {
@@ -1229,7 +1235,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = mitmScriptFailureText(context.appLocalizations, error);
+        _error = mitmScriptFailure(context.appLocalizations, error);
       });
     }
   }
@@ -1242,7 +1248,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       title: l.mitmUpdateTitle(widget.name),
       subtitle: widget.subtitle,
       width: _diffWidth,
-      error: _error,
+      error: _error?.text,
+      errorRaw: _error?.raw,
       busy: _busy,
       primaryLabel: l.mitmAdoptUpdate,
       onPrimary: _adopt,

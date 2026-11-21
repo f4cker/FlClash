@@ -7597,10 +7597,50 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmRewriteErrorGeneric => '规则格式无效。';
 
   @override
-  String get mitmRewriteErrorDetails => '查看详情';
+  String get mitmRewriteFailureGeneric => '出现错误，规则保持不变。';
 
   @override
-  String get mitmRewriteFailureGeneric => '出现错误，规则保持不变。';
+  String get mitmScriptErrorLine => '脚本行格式不正确，或缺少请求/响应类型。';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return '不支持的脚本类型：$type。';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => '缺少匹配模式。';
+
+  @override
+  String get mitmScriptErrorPath => '缺少脚本路径。';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return '字节数必须为数字：$value。';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return '秒数必须为数字：$value。';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => '参数不是有效的 JSON。';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return '无法读取文件：$filename。';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return '文件超过 8 MiB：$filename。';
+  }
+
+  @override
+  String get mitmScriptErrorSyntax => '脚本无法编译。';
+
+  @override
+  String get viewOriginalError => '查看原始错误';
 
   @override
   String get mitmRewriteMatchedTitle => '命中规则';

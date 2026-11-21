@@ -606,6 +606,32 @@ abstract class CoreHandlerInterface {
     }, arguments: rules.toJson());
   }
 
+  /// Why the Core cannot load each of [lines], Surge [Script] lines, by
+  /// index: the stable code and its values for the app to word, the Core's
+  /// own text for details. A Core that sends no code leaves kind empty.
+  Future<Map<int, MitmRewriteIssue>> validateMitmScripts(List<String> lines) {
+    return _query(CoreMethod.mitmValidate, (data) {
+      final issues = _json(data)[MitmList.script.key];
+      return {
+        if (issues is List)
+          for (final item in issues)
+            if (item case {
+              'index': final num index,
+              'message': final String message,
+            })
+              index.toInt(): MitmRewriteIssue(
+                section: MitmList.script.key,
+                kind: item['kind'] is String ? item['kind']! as String : '',
+                args: [
+                  if (item['args'] case final List args)
+                    for (final arg in args) '$arg',
+                ],
+                message: message,
+              ),
+      };
+    }, arguments: MitmRules(script: lines).toJson());
+  }
+
   /// Ends decryption in the Core without a setup; a Core not decrypting is
   /// left alone.
   Future<void> disableMitm() => _command(CoreMethod.mitmDisable);

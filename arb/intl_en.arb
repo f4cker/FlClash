@@ -3120,8 +3120,59 @@
   "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
   "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
   "mitmRewriteErrorGeneric": "The rule's format is invalid.",
-  "mitmRewriteErrorDetails": "Details",
   "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "mitmScriptErrorLine": "The script line has an invalid format or is missing a request/response type.",
+  "mitmScriptErrorType": "Unsupported script type: {type}.",
+  "@mitmScriptErrorType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmScriptErrorPattern": "Missing match pattern.",
+  "mitmScriptErrorPath": "Missing script path.",
+  "mitmScriptErrorMaxSize": "The byte count must be a number: {value}.",
+  "@mitmScriptErrorMaxSize": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmScriptErrorTimeout": "The number of seconds must be a number: {value}.",
+  "@mitmScriptErrorTimeout": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmScriptErrorArgument": "The argument is not valid JSON.",
+  "mitmScriptErrorUnreadable": "Cannot read file: {filename}.",
+  "@mitmScriptErrorUnreadable": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmScriptErrorTooLarge": "File exceeds 8 MiB: {filename}.",
+  "@mitmScriptErrorTooLarge": {
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmScriptErrorSyntax": "The script could not be compiled.",
+  "@mitmScriptErrorSyntax": {
+    "description": "Headline only; the raw compile error is never translated and sits behind viewOriginalError."
+  },
+  "viewOriginalError": "View original error",
+  "@viewOriginalError": {
+    "description": "Toggles the Core's or the system's untranslated error text, shown verbatim and collapsed by default."
+  },
   "@mitmRewriteErrorFramingHeader": {
     "placeholders": {
       "value": {

@@ -3166,8 +3166,51 @@
   "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
   "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
   "mitmRewriteErrorGeneric": "The rule's format is invalid.",
-  "mitmRewriteErrorDetails": "Details",
   "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "mitmScriptErrorLine": "スクリプト行の形式が正しくないか、リクエスト／レスポンスの種類が指定されていません。",
+  "@mitmScriptErrorLine": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorType": "サポートされていないスクリプトの種類：{type}。",
+  "@mitmScriptErrorType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPattern": "一致パターンが指定されていません。",
+  "@mitmScriptErrorPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPath": "スクリプトのパスが指定されていません。",
+  "@mitmScriptErrorPath": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorMaxSize": "バイト数には数値を指定してください：{value}。",
+  "@mitmScriptErrorMaxSize": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTimeout": "秒数には数値を指定してください：{value}。",
+  "@mitmScriptErrorTimeout": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorArgument": "引数が有効な JSON ではありません。",
+  "@mitmScriptErrorArgument": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorUnreadable": "ファイルを読み取れません：{filename}。",
+  "@mitmScriptErrorUnreadable": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLarge": "ファイルが 8 MiB を超えています：{filename}。",
+  "@mitmScriptErrorTooLarge": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorSyntax": "スクリプトをコンパイルできません。",
+  "@mitmScriptErrorSyntax": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "viewOriginalError": "元のエラーを表示",
+  "@viewOriginalError": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
   "@mitmRewriteErrorFramingHeader": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
@@ -3274,9 +3317,6 @@
     "description": "PROVISIONAL: English text, awaiting translation"
   },
   "@mitmRewriteErrorGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
-  },
-  "@mitmRewriteErrorDetails": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
   "mitmRewriteMatchedTitle": "Rule matched",

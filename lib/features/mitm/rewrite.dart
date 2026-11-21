@@ -184,7 +184,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
   final _pending = <int>{};
   final _flashing = <int>{};
   final _rowKeys = <int, GlobalKey>{};
-  String? _error;
+  MitmShownError? _error;
   Timer? _flashTimer;
   bool _revealed = false;
 
@@ -227,9 +227,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = context.appLocalizations.mitmRewriteNotApplied(
-            mitmRewriteFailureText(context.appLocalizations, error),
-          );
+          _error = mitmRewriteNotAppliedError(context.appLocalizations, error);
         });
       }
       return false;
@@ -503,7 +501,11 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
     final appLocalizations = context.appLocalizations;
     final banners = [
       if (_error case final error?)
-        MountBanner(level: MountBannerLevel.error, lines: [error]),
+        MountBanner(
+          level: MountBannerLevel.error,
+          lines: [error.text],
+          raw: error.raw,
+        ),
       if (!decrypting)
         MountBanner(
           level: MountBannerLevel.info,
