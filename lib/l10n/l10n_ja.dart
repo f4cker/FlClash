@@ -8815,6 +8815,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmRuleUnverified => 'このルールを検証できませんでした。適用されるか確認できません。';
 
   @override
+  String get mitmRuleChecking => '検証中…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return '無視されました：$reason';
   }

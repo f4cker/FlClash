@@ -2492,6 +2492,7 @@
   "mitmModuleHostsSkipped": "以下主机名也将被跳过：{hosts}。范围过宽、属于 Apple 服务或格式无效的条目不会用于解密。",
   "mitmRuleRegexInvalid": "正则表达式无效，此规则不会生效。",
   "mitmRuleUnverified": "未能校验此规则，无法确认是否会生效。",
+  "mitmRuleChecking": "校验中…",
   "mitmHostIgnored": "已忽略：{reason}",
   "mitmHostReasonUnknown": "原因未知",
   "mitmHostReasonEmbeddedWildcard": "不支持名称中间的 *",

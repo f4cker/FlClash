@@ -3800,6 +3800,7 @@
   "mitmModuleHostsSkipped": "These hostnames will also be skipped: {hosts}. Entries that are too broad, belong to Apple services, or are invalid will not be used for decryption.",
   "mitmRuleRegexInvalid": "Invalid regular expression. This rule will not take effect.",
   "mitmRuleUnverified": "Could not validate this rule. It may not take effect.",
+  "mitmRuleChecking": "Validating…",
   "mitmHostIgnored": "Ignored: {reason}",
   "mitmHostReasonUnknown": "Reason unknown",
   "mitmHostReasonEmbeddedWildcard": "* in the middle of a name is not supported",

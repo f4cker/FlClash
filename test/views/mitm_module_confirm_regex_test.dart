@@ -184,12 +184,63 @@ void main() {
     open(tester);
     await tester.pump();
     final l = currentAppLocalizations;
-    // While it is asked, nothing is claimed either way.
+    // While it is asked, every rule says so; none looks passed.
+    expect(textContaining(l.mitmRuleChecking), findsNWidgets(3));
     expect(textContaining(l.mitmRuleUnverified), findsNothing);
-    await tester.pump(mitmModuleRewriteCheckTimeout);
+    await tester.pump(
+      mitmModuleRewriteCheckTimeout - const Duration(milliseconds: 1),
+    );
+    expect(textContaining(l.mitmRuleChecking), findsNWidgets(3));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pumpAndSettle();
+    expect(textContaining(l.mitmRuleChecking), findsNothing);
+    expect(textContaining(l.mitmRuleUnverified), findsNWidgets(3));
+    expect(textContaining(l.mitmRuleRegexInvalid), findsNothing);
+    // An answer after the timeout changes nothing.
+    never.complete(_coreAnswer());
     await tester.pumpAndSettle();
     expect(textContaining(l.mitmRuleUnverified), findsNWidgets(3));
     expect(textContaining(l.mitmRuleRegexInvalid), findsNothing);
+  });
+
+  testWidgets('pending, every rule shows checking; the answer replaces it', (
+    tester,
+  ) async {
+    final answer = Completer<Map<MitmList, Map<int, MitmRewriteIssue>>>();
+    await pump(tester, validator: (_) => answer.future);
+    open(tester);
+    await tester.pump();
+    final l = currentAppLocalizations;
+    expect(textContaining(l.mitmRuleChecking), findsNWidgets(3));
+    expect(textContaining(l.mitmRuleRegexInvalid), findsNothing);
+    expect(textContaining(l.mitmRuleUnverified), findsNothing);
+    // No details while there is nothing to tell.
+    expect(find.text(l.viewOriginalError), findsNothing);
+
+    answer.complete(_coreAnswer());
+    await tester.pumpAndSettle();
+    expect(textContaining(l.mitmRuleChecking), findsNothing);
+    expect(textContaining(l.mitmRuleRegexInvalid), findsOneWidget);
+    expect(textContaining(l.mitmRuleUnverified), findsNothing);
+  });
+
+  testWidgets('pending, then every rule loads: the checking rows go', (
+    tester,
+  ) async {
+    final answer = Completer<Map<MitmList, Map<int, MitmRewriteIssue>>>();
+    await pump(tester, validator: (_) => answer.future);
+    open(tester);
+    await tester.pump();
+    final l = currentAppLocalizations;
+    expect(textContaining(l.mitmRuleChecking), findsNWidgets(3));
+    answer.complete({
+      ..._coreAnswer(),
+      MitmList.urlRewrite: const <int, MitmRewriteIssue>{},
+    });
+    await tester.pumpAndSettle();
+    expect(textContaining(l.mitmRuleChecking), findsNothing);
+    expect(textContaining(l.mitmRuleRegexInvalid), findsNothing);
+    expect(textContaining(l.mitmRuleUnverified), findsNothing);
   });
 
   testWidgets('no Core running: unverified', (tester) async {
@@ -259,6 +310,7 @@ void main() {
   for (final (name, validator) in <(String, MitmRewriteValidator)>[
     ('an invalid rule', (_) async => _coreAnswer()),
     ('a failed check', (_) async => throw StateError('gone')),
+    ('a check still pending', (_) => Completer<Never>().future),
   ]) {
     for (final (label, enable) in [
       ('Import and Turn On', true),
@@ -275,11 +327,17 @@ void main() {
           false => l.mitmImportOnly,
           null => l.cancel,
         };
+        if (name == 'a check still pending') {
+          expect(textContaining(l.mitmRuleChecking), findsNWidgets(3));
+        }
         await tester.tap(find.text(button), warnIfMissed: true);
         await tester.pumpAndSettle();
         expect(await result, enable);
         // Routing rules stay on, as the sheet opens with them.
         expect(imports, enable == null ? isEmpty : [(enable, true)]);
+        expect(tester.takeException(), isNull);
+        // A check outliving the sheet ends quietly.
+        await tester.pump(mitmModuleRewriteCheckTimeout);
         expect(tester.takeException(), isNull);
       });
     }
@@ -314,6 +372,30 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a screen reader hears checking, then the answer, live', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final answer = Completer<Map<MitmList, Map<int, MitmRewriteIssue>>>();
+    await pump(tester, validator: (_) => answer.future);
+    open(tester);
+    await tester.pumpAndSettle();
+    final l = currentAppLocalizations;
+    final checking = find.bySemanticsLabel(
+      '${l.mitmRewriteGroupReject} #2, ${l.mitmRuleChecking}',
+    );
+    expect(checking, findsOneWidget);
+    expect(tester.getSemantics(checking).flagsCollection.isLiveRegion, isTrue);
+    answer.complete(_coreAnswer());
+    await tester.pumpAndSettle();
+    final invalid = find.bySemanticsLabel(
+      '${l.mitmRewriteGroupReject} #2, ${l.mitmRuleRegexInvalid}',
+    );
+    expect(invalid, findsOneWidget);
+    expect(tester.getSemantics(invalid).flagsCollection.isLiveRegion, isTrue);
+    semantics.dispose();
+  });
+
   // Narrow and doubled text: the hints wrap, nothing overflows, and the
   // actions are still reached, the same as with no hints at all.
   for (final locale in const [Locale('ru'), Locale('fr')]) {
@@ -334,6 +416,7 @@ void main() {
         'an invalid and an unverified rule',
         (_) async => _coreAnswer(body: false),
       ),
+      ('every rule checking', (_) => Completer<Never>().future),
     ]) {
       testWidgets('${locale.languageCode} 360x640 ×2 with $name: wraps, '
           'no new overflow, the actions act', (tester) async {
@@ -362,14 +445,24 @@ void main() {
           expect(info, isNot(contains('_MitmRuleHint')));
           expect(info, isNot(contains('RawErrorDetails')));
         }
-        for (final text in [l.mitmRuleRegexInvalid, l.mitmRuleUnverified]) {
+        for (final text in [
+          l.mitmRuleRegexInvalid,
+          l.mitmRuleUnverified,
+          l.mitmRuleChecking,
+        ]) {
           final found = textContaining(text);
-          if (found.evaluate().isEmpty) continue;
-          final paragraph = tester.renderObject<RenderParagraph>(found);
-          // Whole, over more than one line, inside the sheet's width.
-          expect(paragraph.didExceedMaxLines, isFalse);
-          expect(paragraph.size.height, greaterThan(40));
-          expect(tester.getRect(found).right, lessThanOrEqualTo(360));
+          for (final element in found.evaluate()) {
+            final paragraph = element.renderObject! as RenderParagraph;
+            final rect = tester.getRect(
+              find.byElementPredicate((e) => e == element),
+            );
+            // Whole and inside the sheet's width; the long ones wrap.
+            expect(paragraph.didExceedMaxLines, isFalse);
+            if (text != l.mitmRuleChecking) {
+              expect(paragraph.size.height, greaterThan(40));
+            }
+            expect(rect.right, lessThanOrEqualTo(360));
+          }
         }
         final primary = find.text(l.mitmImportAndEnable);
         await tester.ensureVisible(primary);
@@ -379,6 +472,7 @@ void main() {
         expect(await result, isTrue);
         expect(imports, [(true, true)]);
         expect(tester.takeException(), isNull);
+        await tester.pump(mitmModuleRewriteCheckTimeout);
       });
     }
   }

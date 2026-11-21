@@ -24,7 +24,12 @@ const mitmModuleRewriteCheckTimeout = Duration(seconds: 10);
 const _regexIssueKinds = {'urlRegex', 'headerRegex', 'bodyRegex', 'emptyRegex'};
 
 /// Whether a rewrite line will load, as far as the sheet can say.
-enum MitmRuleCheck { invalidRegex, unverified }
+enum MitmRuleCheck {
+  /// Still waiting on the Core: never shown as if it had passed.
+  checking,
+  invalidRegex,
+  unverified,
+}
 
 String mitmSkipReasonText(AppLocalizations l, MitmModuleSkip skip) =>
     switch (skip.reason) {
@@ -134,9 +139,13 @@ class _MitmRuleHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
-    final color = mitmAmberColor(context);
+    final checking = check == MitmRuleCheck.checking;
+    final color = checking
+        ? context.colorScheme.onSurfaceVariant
+        : mitmAmberColor(context);
     final style = AppTextStyle.footnote.of(context).copyWith(color: color);
     final text = switch (check) {
+      MitmRuleCheck.checking => l.mitmRuleChecking,
       MitmRuleCheck.invalidRegex => l.mitmRuleRegexInvalid,
       MitmRuleCheck.unverified => l.mitmRuleUnverified,
     };
@@ -145,9 +154,11 @@ class _MitmRuleHint extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 2,
       children: [
-        // One node for a screen reader: which rule, then what is wrong.
+        // One node for a screen reader: which rule, then what is wrong; read
+        // out again as the check's answer replaces "checking".
         Semantics(
           container: true,
+          liveRegion: true,
           label: '$label, $text',
           excludeSemantics: true,
           child: Text.rich(
@@ -157,7 +168,11 @@ class _MitmRuleHint extends StatelessWidget {
                   alignment: PlaceholderAlignment.middle,
                   child: Padding(
                     padding: const EdgeInsetsDirectional.only(end: 4),
-                    child: GlyphIcon(AppGlyphs.warning, size: 13, color: color),
+                    child: GlyphIcon(
+                      checking ? AppGlyphs.clock : AppGlyphs.warning,
+                      size: 13,
+                      color: color,
+                    ),
                   ),
                 ),
                 TextSpan(
@@ -252,12 +267,12 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
     }
   }
 
-  /// Every rewrite line the Core rejects as a pattern, or that it could not
-  /// check, in the order the sheet lists them.
+  /// Every rewrite line still being checked, that the Core rejects as a
+  /// pattern, or that it could not check, in the order the sheet lists them.
   List<Widget> _ruleHints(AppLocalizations l) {
     final issues = _rewriteIssues;
     final failed = _rewriteCheckError;
-    if (issues == null && failed == null) return const [];
+    final pending = issues == null && failed == null;
     final numbers = <MitmRewriteGroup, int>{};
     final hints = <Widget>[];
     for (final (list, lines) in _rewriteLists) {
@@ -269,7 +284,10 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
         final issue = listIssues?[index];
         final MitmRuleCheck check;
         final String detail;
-        if (failed != null || listIssues == null) {
+        if (pending) {
+          check = MitmRuleCheck.checking;
+          detail = '';
+        } else if (failed != null || listIssues == null) {
           check = MitmRuleCheck.unverified;
           detail = failed == null ? line : '$line\n$failed';
         } else if (issue != null && _regexIssueKinds.contains(issue.kind)) {

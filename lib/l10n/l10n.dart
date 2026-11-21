@@ -14897,6 +14897,12 @@ abstract class AppLocalizations {
   /// **'Could not validate this rule. It may not take effect.'**
   String get mitmRuleUnverified;
 
+  /// No description provided for @mitmRuleChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating…'**
+  String get mitmRuleChecking;
+
   /// No description provided for @mitmHostIgnored.
   ///
   /// In en, this message translates to:

@@ -3781,6 +3781,7 @@
   "mitmModuleHostsSkipped": "다음 호스트 이름도 건너뜁니다: {hosts}. 범위가 너무 넓거나 Apple 서비스에 속하거나 형식이 올바르지 않은 항목은 복호화에 사용되지 않습니다.",
   "mitmRuleRegexInvalid": "정규 표현식이 올바르지 않습니다. 이 규칙은 적용되지 않습니다.",
   "mitmRuleUnverified": "이 규칙을 검증하지 못했습니다. 적용 여부를 확인할 수 없습니다.",
+  "mitmRuleChecking": "검증 중…",
   "mitmHostIgnored": "무시됨: {reason}",
   "mitmHostReasonUnknown": "원인 알 수 없음",
   "mitmHostReasonEmbeddedWildcard": "이름 중간의 *는 지원하지 않음",

@@ -9129,6 +9129,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de vérifier cette règle. Elle pourrait ne pas prendre effet.';
 
   @override
+  String get mitmRuleChecking => 'Vérification…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return 'Ignoré : $reason';
   }

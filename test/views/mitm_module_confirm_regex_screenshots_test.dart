@@ -105,9 +105,10 @@ void main() {
     await useAppPaths(Directory.systemTemp.createTempSync('regex_shots'));
   });
 
-  for (final (name, size, open) in [
-    ('regex-hint-confirm-zh', const Size(560, 760), false),
-    ('regex-hint-confirm-zh-details', const Size(560, 860), true),
+  for (final (name, size, open, pending) in [
+    ('regex-hint-confirm-zh-checking', const Size(560, 760), false, true),
+    ('regex-hint-confirm-zh', const Size(560, 760), false, false),
+    ('regex-hint-confirm-zh-details', const Size(560, 860), true, false),
   ]) {
     testWidgets(name, skip: skip != null, (tester) async {
       final db = Database(NativeDatabase.memory());
@@ -136,18 +137,20 @@ void main() {
           // The Core rejects the second URL rule and says nothing of the
           // body rule.
           mitmRewriteValidatorProvider.overrideWithValue(
-            (_) async => {
-              MitmList.urlRewrite: {
-                1: const MitmRewriteIssue(
-                  kind: 'urlRegex',
-                  message:
-                      'invalid URL regex: error parsing regexp: '
-                      'missing closing ): `^http(s://ads\\.example\\.net/banner`',
-                ),
-              },
-              MitmList.headerRewrite: const {},
-              MitmList.mapLocal: const {},
-            },
+            (_) async => pending
+                ? Completer<Never>().future
+                : {
+                    MitmList.urlRewrite: {
+                      1: const MitmRewriteIssue(
+                        kind: 'urlRegex',
+                        message:
+                            'invalid URL regex: error parsing regexp: '
+                            'missing closing ): `^http(s://ads\\.example\\.net/banner`',
+                      ),
+                    },
+                    MitmList.headerRewrite: const {},
+                    MitmList.mapLocal: const {},
+                  },
           ),
         ],
       );
@@ -209,7 +212,7 @@ void main() {
         ).writeAsBytes(data!.buffer.asUint8List());
       });
       await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(mitmModuleRewriteCheckTimeout);
     });
   }
 }

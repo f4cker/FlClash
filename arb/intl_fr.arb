@@ -3781,6 +3781,7 @@
   "mitmModuleHostsSkipped": "Ces noms d’hôte seront également ignorés : {hosts}. Les entrées trop larges, appartenant à des services Apple ou invalides ne seront pas utilisées pour le déchiffrement.",
   "mitmRuleRegexInvalid": "Expression régulière non valide. Cette règle ne prendra pas effet.",
   "mitmRuleUnverified": "Impossible de vérifier cette règle. Elle pourrait ne pas prendre effet.",
+  "mitmRuleChecking": "Vérification…",
   "mitmHostIgnored": "Ignoré : {reason}",
   "mitmHostReasonUnknown": "Raison inconnue",
   "mitmHostReasonEmbeddedWildcard": "Les * au milieu d’un nom ne sont pas pris en charge",

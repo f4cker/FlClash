@@ -9056,6 +9056,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not validate this rule. It may not take effect.';
 
   @override
+  String get mitmRuleChecking => 'Validating…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return 'Ignored: $reason';
   }

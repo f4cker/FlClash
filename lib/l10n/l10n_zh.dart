@@ -8328,6 +8328,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmRuleUnverified => '未能校验此规则，无法确认是否会生效。';
 
   @override
+  String get mitmRuleChecking => '校验中…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return '已忽略：$reason';
   }

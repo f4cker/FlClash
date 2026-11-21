@@ -3781,6 +3781,7 @@
   "mitmModuleHostsSkipped": "Эти имена хостов также будут пропущены: {hosts}. Слишком широкие записи, записи служб Apple и недопустимые записи не будут использоваться для расшифровки.",
   "mitmRuleRegexInvalid": "Недопустимое регулярное выражение. Это правило не будет действовать.",
   "mitmRuleUnverified": "Не удалось проверить это правило. Оно может не сработать.",
+  "mitmRuleChecking": "Проверка…",
   "mitmHostIgnored": "Игнорируется: {reason}",
   "mitmHostReasonUnknown": "Причина неизвестна",
   "mitmHostReasonEmbeddedWildcard": "* в середине имени не поддерживается",

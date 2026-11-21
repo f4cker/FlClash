@@ -9094,6 +9094,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось проверить это правило. Оно может не сработать.';
 
   @override
+  String get mitmRuleChecking => 'Проверка…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return 'Игнорируется: $reason';
   }
