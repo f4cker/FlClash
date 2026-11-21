@@ -95,14 +95,18 @@ String _shortTag(String value) {
   return hash.toRadixString(16).padLeft(8, '0');
 }
 
-/// One directory per app copy inside [base]: the sanitised bundle id when the
-/// whole socket path then fits, otherwise `fl-<hash of the id>`. The name's
-/// 128 bits are never shortened; if even the short form does not fit, this
-/// fails instead of truncating or falling back.
+/// One directory per app copy inside [base]: the bundle id when it needs no
+/// sanitising and the whole socket path then fits, otherwise
+/// `fl-<hash of the id>`. Ids that differ only in sanitised characters thus
+/// get different hashed directories. A 32-bit hash can still collide; that is
+/// safe, because every name carries 128 random bits, binds never overwrite,
+/// and cleanup removes only our own (dev, ino). The name's 128 bits are never
+/// shortened; if even the short form does not fit, this fails instead of
+/// truncating or falling back.
 String unixSocketSubdir({required String base, required String appId}) {
   final safe = appId.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
   final candidates = [
-    if (safe.isNotEmpty && !safe.startsWith('.')) safe,
+    if (safe == appId && safe.isNotEmpty && !safe.startsWith('.')) safe,
     'fl-${_shortTag(appId)}',
   ];
   for (final subdir in candidates) {

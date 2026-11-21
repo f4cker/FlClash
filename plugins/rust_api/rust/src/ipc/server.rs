@@ -765,6 +765,7 @@ mod tests {
         server.close();
     }
 
+    #[cfg(not(target_os = "macos"))]
     #[test]
     fn an_unusable_address_fails_the_bind() {
         let missing = private_dir().join("missing-parent");
@@ -772,5 +773,23 @@ mod tests {
 
         assert!(Server::bind(path.to_str().unwrap().to_owned()).is_err());
         assert!(!missing.exists());
+    }
+
+    /// On macOS a nested address is refused by the placement check before any
+    /// mkdir; the missing-grandparent case lives in `endpoint` with an
+    /// injected base.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_nested_address_is_refused_before_anything_is_created() {
+        let dir = private_dir();
+        let path = dir.join("missing-parent").join("nested").join("core.sock");
+
+        let error = Server::bind(path.to_str().unwrap().to_owned())
+            .err()
+            .unwrap();
+
+        assert!(error.to_string().contains("not directly inside"), "{error}");
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        std::fs::remove_dir(&dir).unwrap();
     }
 }

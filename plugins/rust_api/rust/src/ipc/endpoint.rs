@@ -746,6 +746,26 @@ mod tests {
     }
 
     #[test]
+    fn a_missing_grandparent_inside_a_valid_directory_is_not_created() {
+        // A valid owner-only directory whose child, the injected base, is
+        // missing: the socket's grandparent. Nothing may appear in `parent`.
+        let parent = fresh("gp");
+        std::fs::DirBuilder::new()
+            .mode(0o700)
+            .create(&parent)
+            .unwrap();
+        let base = parent.join("missing");
+        let address = format!("{}/sub/core.sock", base.display());
+
+        let error = prepare_in(&address, &base, current_uid()).err().unwrap();
+
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(error.to_string().contains("cannot be inspected"), "{error}");
+        assert!(entries(&parent).is_empty());
+        std::fs::remove_dir(&parent).unwrap();
+    }
+
+    #[test]
     fn a_symlinked_base_is_refused() {
         let target = fresh("basetarget");
         std::fs::create_dir(&target).unwrap();

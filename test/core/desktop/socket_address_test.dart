@@ -79,6 +79,19 @@ void main() {
       expect(subdir.startsWith('.'), isFalse);
     });
 
+    test('ids differing only in sanitised characters get distinct dirs', () {
+      final a = unixSocketSubdir(base: '/b', appId: 'com.example/app');
+      final b = unixSocketSubdir(base: '/b', appId: 'com.example:app');
+
+      expect(a, matches(RegExp(r'^fl-[0-9a-f]{8}$')));
+      expect(b, matches(RegExp(r'^fl-[0-9a-f]{8}$')));
+      expect(a, isNot(b));
+      expect(
+        unixSocketSubdir(base: '/b', appId: 'com.example_app'),
+        'com.example_app',
+      );
+    });
+
     test('names carry 128 random bits and differ between listeners', () {
       final names = {for (var i = 0; i < 1000; i++) randomSocketName()};
 

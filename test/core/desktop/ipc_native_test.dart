@@ -93,18 +93,25 @@ void main() {
     );
   });
 
-  test('an address that cannot be bound fails the transport', () async {
-    // Only the socket's own directory is created; a missing grandparent is not.
-    final unbindable = IpcCoreTransport(
-      address: '${directory.path}/missing/nested/core.sock',
-    );
+  test(
+    'an address that cannot be bound fails the transport',
+    () async {
+      // Only the socket's own directory is created; a missing grandparent is not.
+      // macOS refuses this address earlier; see the private directory group.
+      final unbindable = IpcCoreTransport(
+        address: '${directory.path}/missing/nested/core.sock',
+      );
 
-    await expectLater(unbindable.open(), throwsA(anything));
+      await expectLater(unbindable.open(), throwsA(anything));
 
-    expect(unbindable.state, DesktopTransportState.failed);
-    expect(Directory('${directory.path}/missing').existsSync(), isFalse);
-    await unbindable.close();
-  });
+      expect(unbindable.state, DesktopTransportState.failed);
+      expect(Directory('${directory.path}/missing').existsSync(), isFalse);
+      await unbindable.close();
+    },
+    skip: Platform.isMacOS
+        ? 'macOS: covered by the nested-address test'
+        : false,
+  );
 
   group('macOS private socket directory', () {
     test('an absent directory is created owner-only', () async {
@@ -120,6 +127,24 @@ void main() {
         FileSystemEntityType.notFound,
       );
       Directory(absent).deleteSync();
+    });
+
+    test('a nested address is refused before anything is created', () async {
+      // The placement check runs before any mkdir, so even the socket's
+      // own directory is not made. A missing grandparent inside a valid
+      // base is covered in Rust with an injected base.
+      final nested = IpcCoreTransport(
+        address: '${directory.path}/missing/nested/core.sock',
+      );
+
+      await expectLater(
+        nested.open(),
+        throwsA(contains('not directly inside the per-user temp dir')),
+      );
+
+      expect(nested.state, DesktopTransportState.failed);
+      expect(directory.listSync(), isEmpty);
+      await nested.close();
     });
 
     test('a socket directory in public /tmp is refused', () async {
