@@ -41,9 +41,9 @@ NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSStrin
 //
 // When the swap back fails too (rollbackFailed), the previous app is the only good copy: its staging directory
 // loses its marker, so no cleanup ever deletes it, and it moves to policy.rescueDirectory/Flash-<build>.app with
-// a record (last-failed-update.json) beside it. `rescued` is where it ends up (still the staging directory when
-// the move fails), `rescueMoved` whether it moved, `rescueVerified` whether an app with the previous build was
-// found there after the move.
+// a record beside it: last-failed-update.json, plus failed-update-<date>.json that later rescues never overwrite.
+// `rescued` is where it ends up (still the staging directory when the move fails), `rescueMoved` whether it moved,
+// `rescueVerified` whether an app with the previous build was found there after the move.
 NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy);
 
 // Removes this user's staging directories beside `target`, only those still carrying the marker FCUpdatePrepare

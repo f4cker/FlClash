@@ -315,6 +315,12 @@ static void FCUpdateWriteRecord(NSString *rescueDirectory, NSDictionary *entry) 
     NSData *json = [NSJSONSerialization dataWithJSONObject:entry options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys
         error:nil];
     [json writeToFile:[rescueDirectory stringByAppendingPathComponent:FCUpdateRescueRecord] atomically:YES];
+    NSString *stamp = [entry[@"date"] stringByReplacingOccurrencesOfString:@":" withString:@""];
+    for (int i = 1; i < 100; i++) {
+        NSString *name = [NSString stringWithFormat:i == 1 ? @"failed-update-%@.json" : @"failed-update-%@-%d.json", stamp, i];
+        if ([json writeToFile:[rescueDirectory stringByAppendingPathComponent:name] options:NSDataWritingWithoutOverwriting
+                error:nil]) break;
+    }
 }
 
 static BOOL FCUpdateUnmark(NSString *staging) {
