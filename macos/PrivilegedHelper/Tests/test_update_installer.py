@@ -305,7 +305,10 @@ class UpdateInstallerTests(unittest.TestCase):
                 self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
                 run('codesign', '--verify', '--strict', rescue / 'Flash-100.app')
                 record = json.loads((rescue / 'last-failed-update.json').read_text())
-                self.assertEqual((record['previousBuild'], record['failedBuild'], record['moved']), (100, 101, True))
+                # A cleanup rescue records the installed build; only a live rollbackFailed knows the failed one.
+                self.assertEqual((record['previousBuild'], record['installedBuild'], record['moved'], record['problem']),
+                                 (100, 101, True, 'update interrupted before it finished'))
+                self.assertNotIn('failedBuild', record)
                 shutil.rmtree(self.case / 'build-101-101-1')
 
     def test_interrupted_install_before_the_swap_removes_only_the_candidate(self):
