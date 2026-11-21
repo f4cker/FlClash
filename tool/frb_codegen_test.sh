@@ -235,6 +235,9 @@ for signal in TERM:143 HUP:129 INT:130; do
     "$fake/kill-mv:$stub" FAKE_MODE=update MV_COUNT="$scratch/mv-count" KILL_SIG="${signal%:*}"
   [[ "$(cat "$scratch/mv-count" 2>/dev/null)" == 2 ]] || fail "SIG${signal%:*} during the swap: did not land mid-loop"
 done
+# A signal after the traps are set but before phase=replace is written.
+expect 143 'SIGTERM before phase=replace' 'interrupted; restored the tracked files' "$sandbox" "$stub" \
+  FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT=phase-signal:1
 # A second signal while the first one's restore runs is ignored until it ends.
 rm -f "$scratch/mv-count"
 expect 143 'SIGTERM during the restore' 'interrupted; restored the tracked files' "$sandbox" "$fake/kill-mv:$stub" \
@@ -285,9 +288,26 @@ run_iso "$sandbox" "$stub" FAKE_MODE=update
 [[ "$status" == 4 ]] || fail "SIGKILL during the swap: the next run exited $status, not 4"
 grep -q "bash .*recover.sh" "$scratch/err" || fail 'SIGKILL during the swap: the next run printed no recovery'
 grep -q 'leftover staged file' "$scratch/err" || fail 'SIGKILL during the swap: staged leftovers not listed'
+# MANIFEST records recover.sh's sha256: an altered recover.sh is not offered.
+cp "$sandbox/.frb_codegen_backup/recover.sh" "$scratch/recover.keep"
+echo 'echo altered' >>"$sandbox/.frb_codegen_backup/recover.sh"
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+[[ "$status" == 4 ]] || fail "altered recover.sh: exit $status, not 4"
+grep -q 'recover.sh does not match its sha256' "$scratch/err" || fail 'altered recover.sh: not detected'
+if grep -q "bash .*recover.sh" "$scratch/err"; then fail 'altered recover.sh: still advised'; fi
+if grep -q 'git -C .* checkout' "$scratch/err"; then fail 'altered recover.sh: advised git checkout'; fi
+grep -q 'stash push --include-untracked' "$scratch/err" || fail 'altered recover.sh: no git stash advice'
+cp "$scratch/recover.keep" "$sandbox/.frb_codegen_backup/recover.sh"
 bash "$sandbox/.frb_codegen_backup/recover.sh" >/dev/null 2>&1 || fail 'SIGKILL during the swap: recover.sh failed'
 [[ "$(manifest "$sandbox")" == "$before" ]] || fail 'SIGKILL during the swap: recover.sh did not restore the package'
 no_leftovers 'SIGKILL during the swap (after recover.sh)' "$sandbox"
+# A crash right after mkdir and the first phase.tmp write: untouched, not a mix.
+mkdir "$sandbox/.frb_codegen_backup" && echo backup >"$sandbox/.frb_codegen_backup/phase.tmp"
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+[[ "$status" == 4 ]] || fail "backup with only phase.tmp: exit $status, not 4"
+grep -q 'were not touched; it is safe to delete' "$scratch/err" || fail 'backup with only phase.tmp: not called untouched'
+if grep -q 'mix of old and new' "$scratch/err"; then fail 'backup with only phase.tmp: called a mix'; fi
+rm -rf "$sandbox/.frb_codegen_backup"
 # A backup left before the swap began means the originals were never touched.
 mkdir "$sandbox/.frb_codegen_backup" && echo backup >"$sandbox/.frb_codegen_backup/phase"
 run_iso "$sandbox" "$stub" FAKE_MODE=update

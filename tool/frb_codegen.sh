@@ -54,9 +54,8 @@ discard_backup() {
 
 # Lists why the backup is not a usable recovery source; prints nothing if it is.
 backup_problems() {
-  local kind hash relative ended=0
+  local kind hash relative ended=0 script=0
   [[ -f "$backup/MANIFEST" ]] || { echo '  - it has no MANIFEST'; return 0; }
-  [[ -f "$backup/recover.sh" ]] || echo '  - it has no recover.sh'
   while IFS=$'\t' read -r kind hash relative; do
     case "$kind" in
       copy)
@@ -66,12 +65,21 @@ backup_problems() {
           echo "  - files/$relative does not match its sha256"
         fi
         ;;
+      recover)
+        script=1
+        if [[ ! -f "$backup/recover.sh" ]]; then
+          echo '  - it has no recover.sh'
+        elif [[ "$(sha256 "$backup/recover.sh")" != "$hash" ]]; then
+          echo '  - recover.sh does not match its sha256'
+        fi
+        ;;
       new) ;;
       end) ended=1 ;;
       *) echo "  - MANIFEST has an unknown entry '$kind'" ;;
     esac
   done <"$backup/MANIFEST"
   [[ "$ended" == 1 ]] || echo '  - MANIFEST is truncated'
+  [[ "$script" == 1 ]] || echo '  - MANIFEST records no recover.sh'
 }
 
 for tomb in "$tomb_prefix"*; do
@@ -84,13 +92,14 @@ if [[ -e "$backup" ]]; then
     left_phase="$(cat "$backup/phase" 2>/dev/null || true)"
     problems=''
     case "$left_phase" in
-      backup) echo 'It stopped before replacing anything, so the tracked files were not touched.' ;;
+      backup) echo 'It stopped before replacing anything, so the tracked files were not touched; it is safe to delete.' ;;
       done) echo 'It finished replacing the bindings but could not remove the backup.' ;;
       '')
-        if [[ -n "$(find "$backup" -mindepth 1 -print -quit 2>/dev/null)" ]]; then
+        # write_phase backup is the first write, so nothing but phase.tmp means no file was touched.
+        if [[ -n "$(find "$backup" -mindepth 1 ! -name phase.tmp -print -quit 2>/dev/null)" ]]; then
           problems='  - it has no phase file'
         else
-          echo 'It stopped before replacing anything, so the tracked files were not touched.'
+          echo 'It stopped before replacing anything, so the tracked files were not touched; it is safe to delete.'
         fi
         ;;
       replace) problems="$(backup_problems)" ;;
@@ -99,10 +108,12 @@ if [[ -e "$backup" ]]; then
     if [[ -n "$problems" ]]; then
       echo 'It is NOT a usable recovery source:'
       echo "$problems"
-      echo 'The bindings may be a mix of old and new. Compare them with git and restore what differs, e.g.:'
+      echo 'The bindings may be a mix of old and new. Look at what differs before changing anything, and set the'
+      echo 'current state aside with git stash (not git checkout) so uncommitted bindings work is kept:'
       printf '  git -C %q status --short -- lib/src/rust rust/src/frb_generated.rs\n' "$package"
-      printf '  git -C %q checkout -- lib/src/rust rust/src/frb_generated.rs\n' "$package"
-      echo "(any files that survived are in $backup/files), then remove it:"
+      printf '  git -C %q diff -- lib/src/rust rust/src/frb_generated.rs\n' "$package"
+      printf '  git -C %q stash push --include-untracked -- lib/src/rust rust/src/frb_generated.rs\n' "$package"
+      echo "Files that survived are in $backup/files. Then remove the backup and rerun make frb:"
       printf '  rm -rf %q\n' "$backup"
     elif [[ "$left_phase" == replace ]]; then
       echo 'It stopped while replacing the bindings. Restore them with:'
@@ -125,7 +136,7 @@ if [[ -n "${FRB_CODEGEN_FAULT:-}" ]]; then
   [[ "${FRB_CODEGEN_TEST_MODE:-}" == 1 ]] || die "FRB_CODEGEN_FAULT is only honoured with FRB_CODEGEN_TEST_MODE=1"
   IFS=, read -r -a faults <<<"$FRB_CODEGEN_FAULT"
   for spec in "${faults[@]}"; do
-    [[ "$spec" =~ ^(backup|stage|stage-verify|mv|restore|restore-signal|verify):([0-9]+)$ ]] ||
+    [[ "$spec" =~ ^(backup|stage|stage-verify|phase-signal|mv|restore|restore-signal|verify):([0-9]+)$ ]] ||
       die "bad FRB_CODEGEN_FAULT entry '$spec'"
     fault_stages+=("${BASH_REMATCH[1]}")
     fault_counts+=("${BASH_REMATCH[2]}")
@@ -320,7 +331,7 @@ done
     fi
   done
   printf 'if [[ $damaged == 1 ]]; then\n  echo %q >&2\n  exit 1\nfi\n' \
-    "recover.sh: the backup is damaged, so nothing was copied. Restore $package from git instead (git -C $package checkout -- lib/src/rust rust/src/frb_generated.rs), then remove $backup."
+    "recover.sh: the backup is damaged, so nothing was copied. Inspect $package with git diff and set it aside with git stash push --include-untracked -- lib/src/rust rust/src/frb_generated.rs (not git checkout, so uncommitted work is kept), then remove $backup."
   for index in "${!changed[@]}"; do
     if [[ -n "${hashes[$index]}" ]]; then
       printf 'cp -p %q %q\n' "$backup/files/${changed[$index]}" "$package/${changed[$index]}"
@@ -343,6 +354,7 @@ done
 } >"$backup/recover.sh"
 {
   printf '%s\n' "${manifest[@]}"
+  printf 'recover\t%s\trecover.sh\n' "$(sha256 "$backup/recover.sh")"
   printf 'end\t-\t-\n'
 } >"$backup/MANIFEST.tmp"
 mv -f "$backup/MANIFEST.tmp" "$backup/MANIFEST"
@@ -402,11 +414,14 @@ restore_and_exit() {
   exit 3
 }
 
-write_phase replace
-phase=replace
+# The traps go first, so a signal before or while phase=replace is written
+# still restores (restoring untouched originals is a no-op) and exits 128+n.
 trap 'restore_and_exit interrupted 130' INT
 trap 'restore_and_exit interrupted 143' TERM
 trap 'restore_and_exit interrupted 129' HUP
+if inject phase-signal; then kill -TERM $$; fi
+write_phase replace
+phase=replace
 for index in "${!changed[@]}"; do
   if inject mv || ! mv -f "${staged[$index]}" "$package/${changed[$index]}"; then
     restore_and_exit "could not replace ${changed[$index]}" 1
