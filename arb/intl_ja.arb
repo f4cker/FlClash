@@ -177,6 +177,7 @@
   "geodataLoader": "Geo低メモリモード",
   "requests": "リクエスト",
   "recentRequests": "最近のリクエスト",
+  "requestsSearchScopeHint": "検索、フィルター、並べ替えの対象は保持中の記録のみです。保持数：{count}件、上限：{limit}件。",
   "findProcessMode": "プロセス検出",
   "init": "初期化",
   "infiniteTime": "無期限",

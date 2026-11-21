@@ -1176,6 +1176,12 @@ abstract class AppLocalizations {
   /// **'Recent requests'**
   String get recentRequests;
 
+  /// No description provided for @requestsSearchScopeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search, filters and sorting apply only to retained records. Retained: {count}; limit: {limit}.'**
+  String requestsSearchScopeHint(int count, int limit);
+
   /// No description provided for @findProcessMode.
   ///
   /// In en, this message translates to:

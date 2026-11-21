@@ -177,6 +177,7 @@
   "geodataLoader": "Geo低内存模式",
   "requests": "请求",
   "recentRequests": "最近请求",
+  "requestsSearchScopeHint": "搜索、筛选和排序仅作用于已保留的记录。当前保留 {count} 条，上限 {limit} 条。",
   "findProcessMode": "查找进程",
   "init": "初始化",
   "infiniteTime": "长期有效",

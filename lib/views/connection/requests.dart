@@ -271,7 +271,7 @@ class _RecentFeedState extends State<_RecentFeed> {
       valueListenable: widget.listController,
       builder: (context, state, _) {
         final requests = widget.listController.shownBy(widget.filters);
-        return NullStatusSwitcher(
+        final feed = NullStatusSwitcher(
           isEmpty: requests.isEmpty,
           isSearching: state.isSearching || widget.filters.isFiltering,
           nullStatus: NullStatus(
@@ -347,7 +347,71 @@ class _RecentFeedState extends State<_RecentFeed> {
             ),
           ),
         );
+        return Consumer(
+          builder: (context, ref, feed) => RequestsSearchScopeNote(
+            count: state.trackerInfos.length,
+            limit: widget.listController.limitOf(
+              ref.watch(requestsProvider.select((list) => list.maxLength)),
+            ),
+            child: feed!,
+          ),
+          child: feed,
+        );
       },
+    );
+  }
+}
+
+/// Above the recent requests, whether searched, filtered, sorted or not:
+/// all of these reach only the [count] requests the list keeps now, at most
+/// [limit], never older ones.
+class RequestsSearchScopeNote extends StatelessWidget {
+  final int count;
+  final int limit;
+  final Widget child;
+
+  const RequestsSearchScopeNote({
+    super.key,
+    required this.count,
+    required this.limit,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // The note takes the place of the space the feed leaves under the bar.
+    return Padding(
+      padding: EdgeInsets.only(top: context.contentTopPadding),
+      child: MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
+        child: FloatingBarScope(
+          inset: 0,
+          child: TopInsetScope(
+            inset: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  // Not a live region: the count moves with every request
+                  // while following, and would be read out each time.
+                  child: Text(
+                    context.appLocalizations.requestsSearchScopeHint(
+                      count,
+                      limit,
+                    ),
+                    style: AppTextStyle.caption1
+                        .of(context)
+                        .copyWith(color: context.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

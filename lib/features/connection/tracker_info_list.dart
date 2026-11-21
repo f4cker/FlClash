@@ -81,6 +81,12 @@ class TrackerInfoListController extends ValueNotifier<TrackerInfosState> {
     );
   }
 
+  /// How many requests the list keeps at most now: what the source keeps,
+  /// [followingLimit], while it follows; more while paused, see
+  /// [setTrackerInfos].
+  int limitOf(int followingLimit) =>
+      value.autoScrollToEnd ? followingLimit : pausedMaxRequestsLength;
+
   void setAutoScrollToEnd(bool autoScrollToEnd) {
     value = value.copyWith(autoScrollToEnd: autoScrollToEnd);
   }

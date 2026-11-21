@@ -177,6 +177,7 @@
   "geodataLoader": "Mode Geo à faible mémoire",
   "requests": "Requêtes",
   "recentRequests": "Requêtes récentes",
+  "requestsSearchScopeHint": "La recherche, les filtres et le tri s’appliquent uniquement aux enregistrements conservés. Conservés : {count} ; limite : {limit}.",
   "findProcessMode": "Recherche de processus",
   "init": "Initialisation",
   "infiniteTime": "N’expire jamais",
