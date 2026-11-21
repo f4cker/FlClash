@@ -22,8 +22,8 @@ COMMENT_FILES = $(or $(FILES),$(shell git diff HEAD --name-only --diff-filter=d;
 
 .PHONY: help setup submodules pub-get doctor hooks worktrees \
 	gen gen-watch l10n status-icons frb site \
-	fmt fmt-check analyze test coverage lint strip-check hooks-test comment-density plugins-check setup-hooks-test \
-	rust-check changelog-verify check \
+	fmt fmt-check analyze test coverage lint strip-check hooks-test frb-test comment-density plugins-check \
+	setup-hooks-test rust-check changelog-verify check \
 	core-check core-test \
 	package package-android package-windows package-macos package-linux package-dry manifest \
 	run release-plan clean clean-core
@@ -68,8 +68,13 @@ l10n: ## Regenerate lib/l10n from the ARB files
 status-icons: ## Regenerate the tray icons
 	dart run tool/generate_status_icons.dart
 
-frb: ## Regenerate the flutter_rust_bridge bindings of plugins/rust_api
-	cd plugins/rust_api && flutter_rust_bridge_codegen generate
+frb: ## Regenerate the flutter_rust_bridge bindings of plugins/rust_api, pinned to its rust-toolchain.toml
+	@echo 'bash tool/frb_codegen.sh'; bash tool/frb_codegen.sh || { code=$$?; case $$code in \
+		3) why='restore failed: recover with the recover.sh printed above' ;; \
+		4) why='an earlier backup is left: resolve it as printed above' ;; \
+		129|130|143) why='interrupted: bindings restored and verified' ;; \
+		*) why='refused or failed: bindings unchanged' ;; esac; \
+		echo "make frb: tool/frb_codegen.sh exited $$code ($$why)" >&2; exit $$code; }
 
 site: ## Build the website into build/site
 	bash tool/build_site.sh
@@ -100,6 +105,9 @@ strip-check: ## Strip the rsFeature checks in a scratch copy and analyze what th
 
 hooks-test: ## Test the git hook scripts in tool/hooks
 	bash tool/hooks/test.sh
+
+frb-test: ## Test tool/frb_codegen.sh in scratch copies; exits 77 on skipped codegen cases (FRB_TEST_ALLOW_SKIP=1)
+	bash tool/frb_codegen_test.sh
 
 comment-density: ## Hold uncommitted changes, or FILES=paths, to the comment cap
 	@files='$(strip $(COMMENT_FILES))'; \
