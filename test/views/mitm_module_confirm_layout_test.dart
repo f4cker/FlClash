@@ -1102,4 +1102,133 @@ void main() {
     await tester.pumpAndSettle();
     expect(await result, isNull);
   });
+
+  /// The clipping ancestors of [target] that cut any of it off.
+  List<String> clipsCutting(WidgetTester tester, Finder target) {
+    Rect global(RenderBox box) => MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      Offset.zero & box.size,
+    );
+    final box = tester.renderObject<RenderBox>(target);
+    final rect = global(box);
+    final cuts = <String>[];
+    for (var node = box.parent; node != null; node = node.parent) {
+      final clip = switch (node) {
+        RenderClipRect(:final clipBehavior) ||
+        RenderClipRRect(:final clipBehavior) ||
+        RenderClipPath(:final clipBehavior) ||
+        RenderPhysicalShape(:final clipBehavior) ||
+        RenderPhysicalModel(:final clipBehavior) ||
+        RenderStack(:final clipBehavior) ||
+        RenderFlex(:final clipBehavior) => clipBehavior,
+        RenderAbstractViewport() => Clip.hardEdge,
+        _ => Clip.none,
+      };
+      if (clip == Clip.none || node is! RenderBox) continue;
+      final kept = global(node).intersect(rect);
+      if (kept.width < rect.width - 0.5 || kept.height < rect.height - 0.5) {
+        cuts.add('${node.runtimeType}');
+      }
+    }
+    return cuts;
+  }
+
+  for (final tag in const ['en', 'ru']) {
+    for (final scale in const [1.0, 2.0]) {
+      final name = '$tag 320x640 ×${scale.toInt()}, real font';
+
+      testWidgets(
+        '$name: once settled, the panel and every action are whole on '
+        'screen, nothing clips them',
+        skip: noArial != null,
+        (tester) async {
+          await realFont(tester);
+          const size = Size(320, 640);
+          await pump(tester, size: size, locale: Locale(tag), textScale: scale);
+          final (result, _) = open(tester);
+          await tester.pumpAndSettle();
+          final l = currentAppLocalizations;
+          final screen = Offset.zero & size;
+
+          final (panel, _) = dialogRects(tester);
+          expect(screen.intersect(panel), panel);
+          expect(find.byType(OverflowBox), findsOneWidget);
+          for (final label in stackedLabels(l)) {
+            final button = tester.getRect(buttonOf(label));
+            expect(screen.intersect(button), button, reason: label);
+            expect(clipsCutting(tester, buttonOf(label)), isEmpty);
+            expect(clipsCutting(tester, find.text(label)), isEmpty);
+          }
+          expect(tester.takeException(), isNull);
+
+          await tester.tapAt(tester.getCenter(buttonOf(l.cancel)));
+          await tester.pumpAndSettle();
+          expect(await result, isNull);
+        },
+      );
+
+      for (final (action, enable) in const [
+        ('Import Only', false),
+        ('Cancel', null),
+        ('Import and Turn On', true),
+      ]) {
+        testWidgets(
+          '$name: $action takes a tap at its centre unscrolled, and Enter',
+          skip: noArial != null,
+          (tester) async {
+            await realFont(tester);
+            await pump(
+              tester,
+              size: const Size(320, 640),
+              locale: Locale(tag),
+              textScale: scale,
+            );
+            final l = currentAppLocalizations;
+            final label = switch (enable) {
+              true => l.mitmImportAndEnable,
+              false => l.mitmImportOnly,
+              null => l.cancel,
+            };
+            for (final byKey in [false, true]) {
+              final (result, imports) = open(tester);
+              await tester.pumpAndSettle();
+              Object? closed = 'open';
+              unawaited(result.then((value) => closed = value));
+              if (byKey) {
+                final labels = stackedLabels(l);
+                Focus.of(
+                  tester.element(find.text(labels.first)),
+                  createDependency: false,
+                ).requestFocus();
+                await tester.pumpAndSettle();
+                for (final _ in labels.take(labels.indexOf(label))) {
+                  await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+                  await tester.pumpAndSettle();
+                }
+                await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+              } else {
+                await tester.tapAt(tester.getCenter(buttonOf(label)));
+              }
+              await tester.pumpAndSettle();
+              expect(closed, enable, reason: 'byKey: $byKey');
+              expect(imports, enable == null ? isEmpty : [enable]);
+            }
+            final (result, _) = open(tester);
+            await tester.pumpAndSettle();
+            Focus.of(
+              tester.element(find.text(label)),
+              createDependency: false,
+            ).requestFocus();
+            await tester.pumpAndSettle();
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+            await tester.pumpAndSettle();
+            Object? closed = 'open';
+            unawaited(result.then((value) => closed = value));
+            await tester.pumpAndSettle();
+            expect(closed, isNull);
+          },
+        );
+      }
+    }
+  }
 }
