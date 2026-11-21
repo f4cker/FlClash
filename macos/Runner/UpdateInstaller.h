@@ -48,8 +48,9 @@ NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy
 
 // Removes this user's staging directories beside `target`, only those still carrying the marker FCUpdatePrepare
 // writes when it creates them (so never a previous app kept after rollbackFailed). A directory still carrying the
-// rollback marker (an install stopped mid-way) is never deleted for its marker: an app in it older than the
-// installed one moves to `rescueDirectory` as after rollbackFailed; a newer one was never installed and is removed.
+// rollback marker (an install stopped mid-way) is never deleted for its marker: it is removed only when it still
+// holds the candidate recorded in that marker (same build and seal). Any other app in it moves to `rescueDirectory`
+// as after rollbackFailed; without an app bundle in it, it loses its markers, stays, and gets a record there.
 void FCUpdateCleanupKeeping(NSString *target, NSString *rescueDirectory);
 // FCUpdateCleanupKeeping with FCUpdateRescueDirectory().
 void FCUpdateCleanup(NSString *target);
