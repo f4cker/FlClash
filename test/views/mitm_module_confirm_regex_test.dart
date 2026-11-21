@@ -372,27 +372,60 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('a screen reader hears checking, then the answer, live', (
-    tester,
-  ) async {
+  testWidgets('a screen reader hears the answer once: one live region '
+      'around the hints, none on each', (tester) async {
     final semantics = tester.ensureSemantics();
     final answer = Completer<Map<MitmList, Map<int, MitmRewriteIssue>>>();
     await pump(tester, validator: (_) => answer.future);
     open(tester);
     await tester.pumpAndSettle();
     final l = currentAppLocalizations;
-    final checking = find.bySemanticsLabel(
-      '${l.mitmRewriteGroupReject} #2, ${l.mitmRuleChecking}',
+
+    /// Every live region on screen, and the one holding [node] if any.
+    (List<SemanticsNode>, SemanticsNode?) liveRegions(SemanticsNode node) {
+      var root = node;
+      while (root.parent != null) {
+        root = root.parent!;
+      }
+      final found = <SemanticsNode>[];
+      void visit(SemanticsNode node) {
+        if (node.flagsCollection.isLiveRegion) found.add(node);
+        node.visitChildren((child) {
+          visit(child);
+          return true;
+        });
+      }
+
+      visit(root);
+      SemanticsNode? holder = node.parent;
+      while (holder != null && !holder.flagsCollection.isLiveRegion) {
+        holder = holder.parent;
+      }
+      return (found, holder);
+    }
+
+    final checking = tester.getSemantics(
+      find.bySemanticsLabel(
+        '${l.mitmRewriteGroupReject} #2, ${l.mitmRuleChecking}',
+      ),
     );
-    expect(checking, findsOneWidget);
-    expect(tester.getSemantics(checking).flagsCollection.isLiveRegion, isTrue);
+    expect(checking.flagsCollection.isLiveRegion, isFalse);
+    var (regions, holder) = liveRegions(checking);
+    expect(regions, hasLength(1));
+    expect(holder, same(regions.single));
+
     answer.complete(_coreAnswer());
     await tester.pumpAndSettle();
-    final invalid = find.bySemanticsLabel(
-      '${l.mitmRewriteGroupReject} #2, ${l.mitmRuleRegexInvalid}',
+    final invalid = tester.getSemantics(
+      find.bySemanticsLabel(
+        '${l.mitmRewriteGroupReject} #2, ${l.mitmRuleRegexInvalid}',
+      ),
     );
-    expect(invalid, findsOneWidget);
-    expect(tester.getSemantics(invalid).flagsCollection.isLiveRegion, isTrue);
+    // Its own label as before, no live region of its own.
+    expect(invalid.flagsCollection.isLiveRegion, isFalse);
+    (regions, holder) = liveRegions(invalid);
+    expect(regions, hasLength(1));
+    expect(holder, same(regions.single));
     semantics.dispose();
   });
 

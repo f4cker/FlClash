@@ -154,11 +154,10 @@ class _MitmRuleHint extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 2,
       children: [
-        // One node for a screen reader: which rule, then what is wrong; read
-        // out again as the check's answer replaces "checking".
+        // One node for a screen reader: which rule, then what is wrong. The
+        // hints' one live region, not each hint, says when the answer comes.
         Semantics(
           container: true,
-          liveRegion: true,
           label: '$label, $text',
           excludeSemantics: true,
           child: Text.rich(
@@ -480,11 +479,29 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
                       () => setState(() => _rewriteLines = true),
                     )
                   : Text('${group.label(l)} ${lines.length}', style: secondary),
-            for (final hint
-                in _allRuleHints ? ruleHints : ruleHints.take(_shownRules))
-              hint,
-            if (!_allRuleHints && ruleHints.length > _shownRules)
-              _more(l.showMore, () => setState(() => _allRuleHints = true)),
+            if (ruleHints.isNotEmpty)
+              // A single live region for every hint: the check's answer
+              // replacing "checking" is announced once, not once per rule.
+              Semantics(
+                container: true,
+                liveRegion: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 4,
+                  children: [
+                    for (final hint
+                        in _allRuleHints
+                            ? ruleHints
+                            : ruleHints.take(_shownRules))
+                      hint,
+                    if (!_allRuleHints && ruleHints.length > _shownRules)
+                      _more(
+                        l.showMore,
+                        () => setState(() => _allRuleHints = true),
+                      ),
+                  ],
+                ),
+              ),
             if (_rewriteLines)
               for (final lines in rewrites.values)
                 for (final line in lines)
