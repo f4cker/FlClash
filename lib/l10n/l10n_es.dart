@@ -586,12 +586,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recentRequests => 'Solicitudes recientes';
 
   @override
-  String requestsSearchScopeHint(int count) {
+  String requestsSearchScopeHint(int count, int limit) {
     final intl.NumberFormat countNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
+    final intl.NumberFormat limitNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String limitString = limitNumberFormat.format(limit);
 
-    return 'La búsqueda solo incluye los $countString registros más recientes conservados.';
+    return 'La búsqueda, los filtros y la ordenación solo se aplican a los registros conservados. Conservados: $countString; límite: $limitString.';
   }
 
   @override

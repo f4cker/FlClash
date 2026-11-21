@@ -550,12 +550,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recentRequests => '最近请求';
 
   @override
-  String requestsSearchScopeHint(int count) {
+  String requestsSearchScopeHint(int count, int limit) {
     final intl.NumberFormat countNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
+    final intl.NumberFormat limitNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String limitString = limitNumberFormat.format(limit);
 
-    return '仅搜索已保留的最近 $countString 条记录。';
+    return '搜索、筛选和排序仅作用于已保留的记录。当前保留 $countString 条，上限 $limitString 条。';
   }
 
   @override

@@ -177,7 +177,7 @@
   "geodataLoader": "Geo: экономия памяти",
   "requests": "Запросы",
   "recentRequests": "Последние запросы",
-  "requestsSearchScopeHint": "Поиск охватывает только последние {count} сохранённых записей.",
+  "requestsSearchScopeHint": "Поиск, фильтры и сортировка применяются только к сохранённым записям. Сохранено: {count}; предел: {limit}.",
   "findProcessMode": "Поиск процесса",
   "init": "Инициализация",
   "infiniteTime": "Бессрочно",

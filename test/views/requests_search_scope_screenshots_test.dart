@@ -1,5 +1,5 @@
-// Renders the recent requests searched, with the note on what the search
-// covers, in Chinese, to PNG for review. Off by default:
+// Renders the recent requests with the note on what search, filters and
+// sorting cover: idle, searched and paused, in Chinese, to PNG for review. Off by default:
 //   HINTS_SHOTS=<dir> flutter test \
 //     test/views/requests_search_scope_screenshots_test.dart
 import 'dart:io';
@@ -108,9 +108,11 @@ void main() {
     Directory(_outDir!).createSync(recursive: true);
   });
 
-  for (final (name, size) in [
-    ('requests-search-scope-zh', const Size(900, 560)),
-    ('requests-search-scope-zh-narrow', const Size(390, 640)),
+  for (final (name, size, query, paused) in [
+    ('requests-search-scope-zh', const Size(900, 560), null, false),
+    ('requests-search-scope-zh-searched', const Size(900, 560), 'api', false),
+    ('requests-search-scope-zh-paused', const Size(900, 560), null, true),
+    ('requests-search-scope-zh-narrow', const Size(390, 640), 'api', false),
   ]) {
     testWidgets(name, skip: skip != null, (tester) async {
       final container = ProviderContainer(
@@ -119,7 +121,7 @@ void main() {
       addTearDown(container.dispose);
       globalState.container = container;
       final notifier = container.read(requestsProvider.notifier);
-      notifier.value = FixedList<TrackerInfo>(500);
+      notifier.value = FixedList<TrackerInfo>(maxRequestsLength);
       for (var i = 0; i < 120; i++) {
         notifier.addRequest(_tracker(i));
       }
@@ -147,10 +149,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byGlyph(AppGlyphs.search));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'api');
-      await tester.pumpAndSettle();
+      if (paused) {
+        await tester.drag(find.byType(ScrollToEndBox), const Offset(0, -300));
+        await tester.pumpAndSettle();
+      }
+      if (query != null) {
+        await tester.tap(find.byGlyph(AppGlyphs.search));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), query);
+        await tester.pumpAndSettle();
+      }
       final render =
           boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       await tester.runAsync(() async {

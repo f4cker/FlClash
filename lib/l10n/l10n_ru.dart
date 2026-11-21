@@ -576,12 +576,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get recentRequests => 'Последние запросы';
 
   @override
-  String requestsSearchScopeHint(int count) {
+  String requestsSearchScopeHint(int count, int limit) {
     final intl.NumberFormat countNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
+    final intl.NumberFormat limitNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String limitString = limitNumberFormat.format(limit);
 
-    return 'Поиск охватывает только последние $countString сохранённых записей.';
+    return 'Поиск, фильтры и сортировка применяются только к сохранённым записям. Сохранено: $countString; предел: $limitString.';
   }
 
   @override

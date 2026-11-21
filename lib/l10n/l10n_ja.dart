@@ -560,12 +560,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recentRequests => '最近のリクエスト';
 
   @override
-  String requestsSearchScopeHint(int count) {
+  String requestsSearchScopeHint(int count, int limit) {
     final intl.NumberFormat countNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
+    final intl.NumberFormat limitNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String limitString = limitNumberFormat.format(limit);
 
-    return '検索対象は、保存されている直近$countString件の記録のみです。';
+    return '検索、フィルター、並べ替えの対象は保持中の記録のみです。保持数：$countString件、上限：$limitString件。';
   }
 
   @override

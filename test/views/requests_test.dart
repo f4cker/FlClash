@@ -283,11 +283,11 @@ void main() {
     expect(label.data, requests.last.start.showFull);
     // The hint is pinned to the thumb: at the newest end the thumb center
     // rests 24 dp (half the 48 dp minimum thumb) below the track's top edge,
-    // which the list running under the bar leaves at the bar's foot.
-    expect(
-      tester.getCenter(find.byKey(hintKey)).dy,
-      closeTo(tester.getRect(find.byType(AppBar)).bottom + 24, 6),
-    );
+    // which starts where the list does, under the note on what it keeps.
+    final note = tester.getRect(find.textContaining('apply only to retained'));
+    final list = tester.getRect(find.byType(ScrollToEndBox));
+    expect(list.top, greaterThanOrEqualTo(note.bottom));
+    expect(tester.getCenter(find.byKey(hintKey)).dy, closeTo(list.top + 24, 6));
 
     await gesture.up();
     await tester.pump(const Duration(milliseconds: 100));

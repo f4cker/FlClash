@@ -177,10 +177,14 @@
   "geodataLoader": "Geo low-memory mode",
   "requests": "Requests",
   "recentRequests": "Recent requests",
-  "requestsSearchScopeHint": "Search covers only the most recent {count} retained records.",
+  "requestsSearchScopeHint": "Search, filters and sorting apply only to retained records. Retained: {count}; limit: {limit}.",
   "@requestsSearchScopeHint": {
     "placeholders": {
       "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "limit": {
         "type": "int",
         "format": "decimalPattern"
       }
