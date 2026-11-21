@@ -9121,6 +9121,17 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get mitmRuleRegexInvalid =>
+      'Expression régulière non valide. Cette règle ne prendra pas effet.';
+
+  @override
+  String get mitmRuleUnverified =>
+      'Impossible de vérifier cette règle. Elle pourrait ne pas prendre effet.';
+
+  @override
+  String get mitmRuleChecking => 'Vérification…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return 'Ignoré : $reason';
   }

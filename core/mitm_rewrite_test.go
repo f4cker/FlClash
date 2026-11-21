@@ -208,6 +208,26 @@ func TestMitmRewriteValidateAndInstallKeepGoodRules(t *testing.T) {
 	}
 }
 
+// The module import sheet asks mitm.validate which URL rewrite lines the
+// Core's own compiler rejects, by index: an unbalanced group is an invalid
+// regex, while a lookahead (beyond RE2, taken by the fallback) is fine.
+func TestMitmValidateFlagsAnInvalidURLRegexByIndex(t *testing.T) {
+	result := handleMitmValidate(map[string][]string{
+		mitmSectionURL: {
+			`^https?:\/\/(?!static\.)a\.com\/ad - reject`,
+			`^http(s:// - reject`,
+			`^https:\/\/b\.com\/(?=x) - reject`,
+		},
+	})
+	issues := result[mitmSectionURL]
+	if len(issues) != 1 {
+		t.Fatalf("issues %+v", issues)
+	}
+	if got := issues[0]; got.Index != 1 || got.Code != mitmRewriteInvalid || got.Kind != "urlRegex" || got.Message == "" {
+		t.Fatalf("issue %+v", got)
+	}
+}
+
 func TestMitmRewriteCountersSurviveAnUnchangedReinstall(t *testing.T) {
 	rules := []MitmRewriteRule{rwRule("a", mitmSectionURL, `^https:\/\/a\.com\/ad - reject`), rwRule("b", mitmSectionURL, `^https:\/\/a\.com\/x - reject`)}
 	withMitmRewrite(t, 0, rules...)

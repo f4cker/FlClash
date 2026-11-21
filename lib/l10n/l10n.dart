@@ -14885,6 +14885,24 @@ abstract class AppLocalizations {
   /// **'These hostnames will also be skipped: {hosts}. Entries that are too broad, belong to Apple services, or are invalid will not be used for decryption.'**
   String mitmModuleHostsSkipped(Object hosts);
 
+  /// No description provided for @mitmRuleRegexInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid regular expression. This rule will not take effect.'**
+  String get mitmRuleRegexInvalid;
+
+  /// No description provided for @mitmRuleUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not validate this rule. It may not take effect.'**
+  String get mitmRuleUnverified;
+
+  /// No description provided for @mitmRuleChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Validating…'**
+  String get mitmRuleChecking;
+
   /// No description provided for @mitmHostIgnored.
   ///
   /// In en, this message translates to:

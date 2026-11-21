@@ -1202,6 +1202,21 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
   );
 }
 
+/// Asks the Core's own compiler which rewrite lines of [rules] it cannot
+/// load, by list and index; throws when the Core cannot answer, so no line
+/// is ever taken as loading without its word.
+typedef MitmRewriteValidator =
+    Future<Map<MitmList, Map<int, MitmRewriteIssue>>> Function(MitmRules rules);
+
+final mitmRewriteValidatorProvider = Provider<MitmRewriteValidator>(
+  (ref) => (rules) async {
+    if (ref.read(coreStatusProvider) != CoreStatus.connected) {
+      throw StateError('The Core is not running');
+    }
+    return ref.read(coreHandlerProvider).validateMitmRewrites(rules);
+  },
+);
+
 /// What the Core and the app say of a module's hostname lines, by the line
 /// as written, for [lines] joined by newlines; the app's own word alone
 /// while the Core is not running or cannot answer.

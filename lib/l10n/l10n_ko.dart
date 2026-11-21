@@ -8880,6 +8880,15 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get mitmRuleRegexInvalid => '정규 표현식이 올바르지 않습니다. 이 규칙은 적용되지 않습니다.';
+
+  @override
+  String get mitmRuleUnverified => '이 규칙을 검증하지 못했습니다. 적용 여부를 확인할 수 없습니다.';
+
+  @override
+  String get mitmRuleChecking => '검증 중…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return '무시됨: $reason';
   }

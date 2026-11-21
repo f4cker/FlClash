@@ -9086,6 +9086,17 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get mitmRuleRegexInvalid =>
+      'Недопустимое регулярное выражение. Это правило не будет действовать.';
+
+  @override
+  String get mitmRuleUnverified =>
+      'Не удалось проверить это правило. Оно может не сработать.';
+
+  @override
+  String get mitmRuleChecking => 'Проверка…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return 'Игнорируется: $reason';
   }

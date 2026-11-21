@@ -8322,6 +8322,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get mitmRuleRegexInvalid => '正则表达式无效，此规则不会生效。';
+
+  @override
+  String get mitmRuleUnverified => '未能校验此规则，无法确认是否会生效。';
+
+  @override
+  String get mitmRuleChecking => '校验中…';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return '已忽略：$reason';
   }

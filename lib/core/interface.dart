@@ -606,6 +606,38 @@ abstract class CoreHandlerInterface {
     }, arguments: rules.toJson());
   }
 
+  /// Why the Core cannot load each rewrite line of [rules], by list and
+  /// index, as its own compiler reads it: the stable code for the app to
+  /// word, the Core's text for details. A list the Core does not answer for
+  /// is left out, so its lines are not taken as loading.
+  Future<Map<MitmList, Map<int, MitmRewriteIssue>>> validateMitmRewrites(
+    MitmRules rules,
+  ) {
+    return _query(CoreMethod.mitmValidate, (data) {
+      final lists = _json(data);
+      return {
+        for (final list in _rewriteLists)
+          if (lists[list.key] case final List issues)
+            list: {
+              for (final item in issues)
+                if (item case {
+                  'index': final num index,
+                  'message': final String message,
+                })
+                  index.toInt(): MitmRewriteIssue(
+                    section: list.key,
+                    kind: item['kind'] is String ? item['kind']! as String : '',
+                    args: [
+                      if (item['args'] case final List args)
+                        for (final arg in args) '$arg',
+                    ],
+                    message: message,
+                  ),
+            },
+      };
+    }, arguments: rules.toJson());
+  }
+
   /// Why the Core cannot load each of [lines], Surge [Script] lines, by
   /// index: the stable code and its values for the app to word, the Core's
   /// own text for details. A Core that sends no code leaves kind empty.
@@ -881,6 +913,13 @@ List<T> Function(Object) _models<T>(
   T Function(Map<String, dynamic>) fromJson,
 ) =>
     (data) => [for (final item in data as List) fromJson(_json(item))];
+
+const _rewriteLists = [
+  MitmList.urlRewrite,
+  MitmList.headerRewrite,
+  MitmList.bodyRewrite,
+  MitmList.mapLocal,
+];
 
 Map<int, String> _issues(Object data, {bool code = false}) => {
   for (final item in data as List)
