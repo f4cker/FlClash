@@ -34,6 +34,7 @@ List<RecordColumn<TrackerInfo>> trackerInfoColumns(
         ),
         cell: (_, info) =>
             RecordCellText(info.start.showTime.trim(), muted: true),
+        cellInputs: (info) => info.start,
         sortKey: (info) => info.start,
         descendingFirst: true,
       ),
@@ -42,6 +43,7 @@ List<RecordColumn<TrackerInfo>> trackerInfoColumns(
       cell: (_, info) => system.isAndroid
           ? RecordCellText(info.progressText)
           : ProcessCell(metadata: info.metadata),
+      cellInputs: (info) => info.metadata,
       sortKey: (info) => system.isAndroid
           ? info.progressText.toLowerCase()
           : processLabelOf(processApps.processOf(info.metadata)).toLowerCase(),
@@ -49,6 +51,12 @@ List<RecordColumn<TrackerInfo>> trackerInfoColumns(
     RecordColumn(
       TableColumn('target', appLocalizations.target, flex: wide ? 1.4 : 1.3),
       cell: (_, info) => TrackerTargetText(info),
+      cellInputs: (info) => (
+        info.metadata,
+        info.mitmOutcome,
+        info.mitmPauseReason,
+        info.mitmRewrite,
+      ),
       sortKey: (info) => info.title.toLowerCase(),
     ),
     if (detailed)
@@ -60,17 +68,20 @@ List<RecordColumn<TrackerInfo>> trackerInfoColumns(
         ),
         cell: (_, info) =>
             RecordCellText(info.metadata.network.toUpperCase(), muted: true),
+        cellInputs: (info) => info.metadata.network,
         sortKey: (info) => info.metadata.network.toLowerCase(),
       ),
     if (wide || !isLive)
       RecordColumn(
         TableColumn('rule', appLocalizations.rule, flex: 1),
         cell: (_, info) => TrackerRuleText(info),
+        cellInputs: (info) => (info.rule, info.rulePayload),
         sortKey: (info) => '${info.rule} ${info.rulePayload}'.toLowerCase(),
       ),
     RecordColumn(
       TableColumn('exit', appLocalizations.outboundExit, width: 120),
       cell: (_, info) => _ExitChip(exit: info.chains.firstOrNull ?? ''),
+      cellInputs: (info) => info.chains.firstOrNull ?? '',
       sortKey: (info) => (info.chains.firstOrNull ?? '').toLowerCase(),
     ),
     if (isLive) ...[
@@ -141,6 +152,7 @@ RecordColumn<TrackerInfo> _amountColumn(
 }) {
   return RecordColumn(
     TableColumn(id, label, width: width, end: true),
+    cellInputs: amountOf,
     cell: (_, info) {
       final amount = amountOf(info);
       return RecordCellText(

@@ -15,6 +15,9 @@ var _currentLocale = const Locale('en');
 AppLocalizations get currentAppLocalizations =>
     lookupAppLocalizations(_currentLocale);
 
+/// The locale [currentAppLocalizations] reads, for caches of localized text.
+Locale get currentAppLocale => _currentLocale;
+
 AppLocalizations loadAppLocalizations(Locale locale) {
   _currentLocale = AppLocalizations.delegate.isSupported(locale)
       ? locale

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
@@ -12,6 +13,16 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// From this many connections a search runs at most once per
+/// [searchThrottle]: the first keystroke after a pause is searched at once,
+/// the ones typed within the interval only by their last query at its end, so
+/// fast typing does not run over the whole list at every keystroke.
+@visibleForTesting
+const throttledSearchLength = 2000;
+
+@visibleForTesting
+const searchThrottle = Duration(milliseconds: 150);
 
 class RequestsView extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
@@ -35,6 +46,8 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   final _live = TrackerInfoListController();
   final _liveFeed = GlobalKey<_LiveFeedState>();
   Timer? _requestRefresh;
+  Timer? _searchCooldown;
+  String? _queuedSearch;
   late final _filters = trackerInfoFilterController(ref, 'requests');
   late var _feed =
       widget.initialFeed ?? ref.read(appSettingProvider).requestFeed;
@@ -56,6 +69,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   @override
   void dispose() {
     _requestRefresh?.cancel();
+    _searchCooldown?.cancel();
     _recent.dispose();
     _live.dispose();
     _filters.dispose();
@@ -83,6 +97,40 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   }
 
   void _search(String query) {
+    final length = max(
+      _recent.value.trackerInfos.length,
+      _live.value.trackerInfos.length,
+    );
+    if (query.isEmpty || length < throttledSearchLength) {
+      // Nothing waits behind a clear: the next keystroke is a fresh start.
+      _searchCooldown?.cancel();
+      _searchCooldown = null;
+      _queuedSearch = null;
+      _applySearch(query);
+      return;
+    }
+    if (_searchCooldown != null) {
+      _queuedSearch = query;
+      return;
+    }
+    _applySearch(query);
+    _startSearchCooldown();
+  }
+
+  void _startSearchCooldown() {
+    _searchCooldown = Timer(searchThrottle, () {
+      _searchCooldown = null;
+      final query = _queuedSearch;
+      if (query == null) {
+        return;
+      }
+      _queuedSearch = null;
+      _applySearch(query);
+      _startSearchCooldown();
+    });
+  }
+
+  void _applySearch(String query) {
     _recent.search(query);
     _live.search(query);
   }
@@ -222,7 +270,7 @@ class _RecentFeedState extends State<_RecentFeed> {
     return ValueListenableBuilder<TrackerInfosState>(
       valueListenable: widget.listController,
       builder: (context, state, _) {
-        final requests = widget.filters.apply(state.list);
+        final requests = widget.listController.shownBy(widget.filters);
         return NullStatusSwitcher(
           isEmpty: requests.isEmpty,
           isSearching: state.isSearching || widget.filters.isFiltering,
@@ -478,9 +526,9 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       return;
     }
     _snapshot = trackerInfos;
-    ref.read(requestsProvider.notifier).retainMitmStatuses([
-      for (final info in trackerInfos) info.id,
-    ]);
+    ref
+        .read(requestsProvider.notifier)
+        .retainMitmStatuses(trackerInfos.map((info) => info.id));
     _showSnapshot();
   }
 
@@ -539,7 +587,7 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     return ValueListenableBuilder<TrackerInfosState>(
       valueListenable: widget.listController,
       builder: (context, state, _) {
-        final connections = widget.filters.apply(state.list);
+        final connections = widget.listController.shownBy(widget.filters);
         // Nothing read yet: the failure stands in the content, never the
         // empty state.
         final unread = _failed && !_succeeded;

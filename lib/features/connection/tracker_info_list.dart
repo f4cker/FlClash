@@ -10,9 +10,56 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'process_view.dart';
 import 'tracker_info_item.dart';
 import 'tracker_info_table.dart';
+import 'tracker_search.dart';
 
 class TrackerInfoListController extends ValueNotifier<TrackerInfosState> {
   TrackerInfoListController() : super(const TrackerInfosState());
+
+  final _search = TrackerSearch();
+
+  TrackerInfosState? _trackerInfosOf;
+  List<TrackerInfo> _trackerInfos = const [];
+
+  /// [value]'s connections as one list per state: the generated getter wraps
+  /// them in a new view at each read, which no memo below would know again.
+  List<TrackerInfo> get _stateTrackerInfos {
+    if (!identical(value, _trackerInfosOf)) {
+      _trackerInfosOf = value;
+      _trackerInfos = value.trackerInfos;
+    }
+    return _trackerInfos;
+  }
+
+  /// What [TrackerInfosStateExt.list] gives for [value], searched once per
+  /// list and query.
+  List<TrackerInfo> get list => _search.apply(_stateTrackerInfos, value.query);
+
+  List<TrackerInfo>? _filtered;
+  List<RecordFilter>? _filteredBy;
+  List<TrackerInfo> _shown = const [];
+  final _appsChanges = ProcessAppsChanges();
+
+  /// [list] narrowed by [filters], worked out again only when either or the
+  /// apps moved, so a rebuild for anything else costs nothing per connection.
+  List<TrackerInfo> shownBy(RecordFilterController<TrackerInfo> filters) {
+    final list = this.list;
+    final appsChanged = filters.isFiltering && _appsChanges.take();
+    if (!appsChanged &&
+        identical(list, _filtered) &&
+        identical(filters.filters, _filteredBy)) {
+      return _shown;
+    }
+    _filtered = list;
+    _filteredBy = filters.filters;
+    return _shown = filters.apply(list);
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _appsChanges.dispose();
+    super.dispose();
+  }
 
   void search(String query) {
     value = value.copyWith(query: query);

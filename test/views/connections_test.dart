@@ -5,6 +5,8 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/features/features.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/core.dart';
@@ -34,6 +36,9 @@ TrackerInfo _tracker({
   int download = 0,
   DateTime? start,
   bool mitm = false,
+  String rule = 'DOMAIN',
+  String? rulePayload,
+  String destinationPort = '443',
 }) {
   return TrackerInfo(
     id: id,
@@ -44,13 +49,13 @@ TrackerInfo _tracker({
       network: 'tcp',
       host: host,
       destinationIP: '1.1.1.1',
-      destinationPort: '443',
+      destinationPort: destinationPort,
       process: process,
       mitm: mitm,
     ),
     chains: chains,
-    rule: 'DOMAIN',
-    rulePayload: host,
+    rule: rule,
+    rulePayload: rulePayload ?? host,
   );
 }
 
@@ -378,6 +383,213 @@ void main() {
     expect(topOf('gamma.test'), lessThan(topOf('alpha.test')));
 
     await teardownView(tester);
+  });
+
+  testWidgets('over a long list a search runs at once, then at most once '
+      'per interval with the last query typed', (tester) async {
+    whenConnections<RankedTrackerInfos>(
+      core,
+      () async => [
+        _tracker(id: 'needle', host: 'needle.test', download: 1),
+        _tracker(id: 'pin', host: 'pin.test', download: 2),
+        for (var i = 0; i < throttledSearchLength; i++)
+          _tracker(id: 'c$i', host: 'h$i.test', download: 1000 + i),
+      ],
+    );
+
+    await pumpConnections(tester);
+    await pumpSettled(tester);
+    expect(find.textContaining('needle.test'), findsNothing);
+
+    await tester.tap(find.byGlyph(AppGlyphs.search));
+    await tester.pump(commonDuration);
+    await tester.pump(commonDuration);
+    // The first keystroke after a pause is searched at once.
+    await tester.enterText(find.byType(TextField), 'needle');
+    await tester.pump();
+    expect(find.byType(TrackerInfoTableRow), findsOneWidget);
+    expect(find.textContaining('needle.test'), findsWidgets);
+
+    // Within the interval only the last query typed is kept, for its end.
+    await tester.enterText(find.byType(TextField), 'p');
+    await tester.enterText(find.byType(TextField), 'pin');
+    await tester.pump(searchThrottle ~/ 2);
+    expect(find.textContaining('needle.test'), findsWidgets);
+    expect(find.textContaining('pin.test'), findsNothing);
+
+    await tester.pump(searchThrottle);
+    await tester.pump();
+    await pumpSettled(tester);
+    expect(find.byType(TrackerInfoTableRow), findsOneWidget);
+    expect(find.textContaining('pin.test'), findsWidgets);
+
+    // Clearing the query is never held back, and drops a query kept for the
+    // end of the interval.
+    await tester.enterText(find.byType(TextField), 'h1');
+    await tester.enterText(find.byType(TextField), 'pin');
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(TrackerInfoTableRow).evaluate().length, greaterThan(1));
+    await pumpSettled(tester);
+    expect(find.byType(TrackerInfoTableRow).evaluate().length, greaterThan(1));
+
+    await teardownView(tester);
+  });
+
+  testWidgets('a kept table cell follows a change of only the exit, the '
+      'rule or one metadata field', (tester) async {
+    var row = _tracker(id: 'a', host: 'a.test', rulePayload: 'p.test');
+    whenConnections<RankedTrackerInfos>(core, () async => [row]);
+    await pumpConnections(tester);
+    await pumpSettled(tester);
+    expect(find.text('Proxy'), findsOneWidget);
+    expect(find.text('curl'), findsWidgets);
+
+    Future<void> poll(TrackerInfo next) async {
+      row = next;
+      await pumpSettled(tester);
+    }
+
+    await poll(row.copyWith(chains: const ['Backup', 'Proxy']));
+    expect(find.text('Backup'), findsOneWidget);
+    expect(find.text('Proxy'), findsNothing);
+
+    await poll(row.copyWith(rule: 'GEOSITE', rulePayload: 'cn'));
+    expect(
+      find.textContaining('GEOSITE cn', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('DOMAIN', findRichText: true), findsNothing);
+
+    await poll(row.copyWith(metadata: row.metadata.copyWith(process: 'wget')));
+    expect(find.text('wget'), findsWidgets);
+    expect(find.text('curl'), findsNothing);
+
+    await poll(
+      row.copyWith(metadata: row.metadata.copyWith(host: 'moved.test')),
+    );
+    expect(find.textContaining('moved.test'), findsWidgets);
+    expect(find.textContaining('a.test'), findsNothing);
+
+    await teardownView(tester);
+  });
+
+  testWidgets('kept table cells follow a theme and a locale switch', (
+    tester,
+  ) async {
+    whenConnections<RankedTrackerInfos>(
+      core,
+      () async => [_tracker(id: 'a', process: '', download: 1)],
+    );
+    final look = ValueNotifier((const Locale('en'), ThemeMode.light));
+    addTearDown(look.dispose);
+    addTearDown(() => loadAppLocalizations(const Locale('en')));
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: ValueListenableBuilder(
+          valueListenable: look,
+          builder: (_, look, _) => Consumer(
+            builder: (_, ref, _) => TestApp(
+              locale: look.$1,
+              theme: watchAppTheme(ref, Brightness.light),
+              darkTheme: watchAppTheme(ref, Brightness.dark),
+              themeMode: look.$2,
+              child: const RequestsView(initialFeed: RequestFeed.live),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await pumpSettled(tester);
+
+    Color? colorOf(Finder cell) => tester
+        .widget<RichText>(
+          find.descendant(of: cell, matching: find.byType(RichText)).first,
+        )
+        .text
+        .style
+        ?.color;
+    final time = find.byType(RecordCellText).first;
+    final light = colorOf(time);
+    expect(find.text('Unknown process'), findsWidgets);
+
+    look.value = (const Locale('en'), ThemeMode.dark);
+    await pumpSettled(tester);
+    expect(colorOf(time), isNot(light));
+
+    look.value = (const Locale('zh'), ThemeMode.dark);
+    await pumpSettled(tester);
+    expect(find.text('未知进程'), findsWidgets);
+    expect(find.text('Unknown process'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('over a long list the first key after a clear is searched at '
+      'once, even within the interval', (tester) async {
+    whenConnections<RankedTrackerInfos>(
+      core,
+      () async => [
+        _tracker(id: 'needle', host: 'needle.test', download: 1),
+        _tracker(id: 'pin', host: 'pin.test', download: 2),
+        for (var i = 0; i < throttledSearchLength; i++)
+          _tracker(id: 'c$i', host: 'h$i.test', download: 1000 + i),
+      ],
+    );
+    await pumpConnections(tester);
+    await pumpSettled(tester);
+    await tester.tap(find.byGlyph(AppGlyphs.search));
+    await tester.pump(commonDuration);
+    await tester.pump(commonDuration);
+
+    await tester.enterText(find.byType(TextField), 'needle');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump(searchThrottle ~/ 3);
+    await tester.enterText(find.byType(TextField), 'pin');
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TrackerInfoTableRow && widget.trackerInfo.id == 'pin',
+      ),
+      findsOneWidget,
+    );
+
+    await teardownView(tester);
+  });
+
+  testWidgets('a query kept for the end of the interval is dropped with the '
+      'view', (tester) async {
+    whenConnections<RankedTrackerInfos>(
+      core,
+      () async => [
+        for (var i = 0; i < throttledSearchLength; i++)
+          _tracker(id: 'c$i', host: 'h$i.test', download: 1000 + i),
+      ],
+    );
+    await pumpConnections(tester);
+    await pumpSettled(tester);
+    await tester.tap(find.byGlyph(AppGlyphs.search));
+    await tester.pump(commonDuration);
+    await tester.pump(commonDuration);
+
+    await tester.enterText(find.byType(TextField), 'h1');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'h12');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(searchThrottle * 2);
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('shows the read failure, never the empty state, when core '
