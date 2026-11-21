@@ -82,6 +82,18 @@ backup_problems() {
   [[ "$script" == 1 ]] || echo '  - MANIFEST records no recover.sh'
 }
 
+# Lists why the backup cannot be fully read; prints nothing if every entry can.
+backup_unreadable() {
+  local entry errors
+  if ! errors="$(find "$backup" -print 2>&1 >/dev/null)" || [[ -n "$errors" ]]; then
+    echo "  - find could not walk it: ${errors:-find failed}"
+    return 0
+  fi
+  while IFS= read -r -d '' entry; do
+    if [[ ! -r "$entry" ]] || { [[ -d "$entry" ]] && [[ ! -x "$entry" ]]; }; then echo "  - $entry is not readable"; fi
+  done < <(find "$backup" -print0)
+}
+
 for tomb in "$tomb_prefix"*; do
   [[ -e "$tomb" ]] || continue
   rm -rf "$tomb" || echo "frb_codegen: warning: could not remove the tombstone $tomb (not a recovery source)" >&2
@@ -89,6 +101,13 @@ done
 if [[ -e "$backup" ]]; then
   {
     echo "frb_codegen: an earlier run left $backup; refusing to run until it is resolved."
+    unreadable="$(backup_unreadable)"
+    if [[ -n "$unreadable" ]]; then
+      echo 'Cannot inspect the backup, so it may hold the only copy of the originals; do NOT delete it:'
+      echo "$unreadable"
+      printf 'Make it readable again (e.g. chmod -R u+rwX %q), then rerun to see how to resolve it.\n' "$backup"
+      exit 4
+    fi
     left_phase="$(cat "$backup/phase" 2>/dev/null || true)"
     problems=''
     case "$left_phase" in
@@ -96,7 +115,10 @@ if [[ -e "$backup" ]]; then
       done) echo 'It finished replacing the bindings but could not remove the backup.' ;;
       '')
         # write_phase backup is the first write, so nothing but phase.tmp means no file was touched.
-        if [[ -n "$(find "$backup" -mindepth 1 ! -name phase.tmp -print -quit 2>/dev/null)" ]]; then
+        if ! others="$(find "$backup" -mindepth 1 ! -name phase.tmp -print -quit)"; then
+          echo 'Cannot inspect the backup; do NOT delete it.'
+          exit 4
+        elif [[ -n "$others" ]]; then
           problems='  - it has no phase file'
         else
           echo 'It stopped before replacing anything, so the tracked files were not touched; it is safe to delete.'

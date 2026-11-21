@@ -301,6 +301,21 @@ cp "$scratch/recover.keep" "$sandbox/.frb_codegen_backup/recover.sh"
 bash "$sandbox/.frb_codegen_backup/recover.sh" >/dev/null 2>&1 || fail 'SIGKILL during the swap: recover.sh failed'
 [[ "$(manifest "$sandbox")" == "$before" ]] || fail 'SIGKILL during the swap: recover.sh did not restore the package'
 no_leftovers 'SIGKILL during the swap (after recover.sh)' "$sandbox"
+# An unreadable part of the backup is never called safe to delete.
+kept="$sandbox/.frb_codegen_backup"
+mkdir -p "$kept/files" && echo backup >"$kept/phase.tmp" && echo data >"$kept/files/x" && chmod 000 "$kept/files"
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+chmod 755 "$kept/files"
+[[ "$status" == 4 ]] || fail "unreadable backup dir: exit $status, not 4"
+grep -q 'Cannot inspect the backup.*do NOT delete it' "$scratch/err" || fail 'unreadable backup dir: not reported'
+if grep -q 'safe to delete\|rm -rf' "$scratch/err"; then fail 'unreadable backup dir: deletion advised'; fi
+chmod 000 "$kept/files/x"
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+chmod 644 "$kept/files/x"
+[[ "$status" == 4 ]] || fail "unreadable backup file: exit $status, not 4"
+grep -q "files/x is not readable" "$scratch/err" || fail 'unreadable backup file: not reported'
+if grep -q 'safe to delete\|rm -rf' "$scratch/err"; then fail 'unreadable backup file: deletion advised'; fi
+rm -rf "$kept"
 # A crash right after mkdir and the first phase.tmp write: untouched, not a mix.
 mkdir "$sandbox/.frb_codegen_backup" && echo backup >"$sandbox/.frb_codegen_backup/phase.tmp"
 run_iso "$sandbox" "$stub" FAKE_MODE=update
