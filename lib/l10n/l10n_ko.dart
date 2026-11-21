@@ -560,6 +560,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recentRequests => '최근 요청';
 
   @override
+  String requestsSearchScopeHint(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '검색은 보관된 최근 기록 $countString개만 대상으로 합니다.';
+  }
+
+  @override
   String get findProcessMode => '프로세스 찾기';
 
   @override

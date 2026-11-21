@@ -271,7 +271,7 @@ class _RecentFeedState extends State<_RecentFeed> {
       valueListenable: widget.listController,
       builder: (context, state, _) {
         final requests = widget.listController.shownBy(widget.filters);
-        return NullStatusSwitcher(
+        final feed = NullStatusSwitcher(
           isEmpty: requests.isEmpty,
           isSearching: state.isSearching || widget.filters.isFiltering,
           nullStatus: NullStatus(
@@ -347,7 +347,73 @@ class _RecentFeedState extends State<_RecentFeed> {
             ),
           ),
         );
+        return RequestsSearchScopeNote(
+          visible: state.isSearching,
+          // Paused, the list keeps more than it does while following.
+          count: state.autoScrollToEnd
+              ? maxRequestsLength
+              : pausedMaxRequestsLength,
+          child: feed,
+        );
       },
+    );
+  }
+}
+
+/// Under the bar while the recent requests are searched: the search reaches
+/// only the [count] most recent requests the app keeps, never older ones.
+class RequestsSearchScopeNote extends StatelessWidget {
+  final bool visible;
+  final int count;
+  final Widget child;
+
+  const RequestsSearchScopeNote({
+    super.key,
+    required this.visible,
+    required this.count,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // One tree shown or not, so the feed below keeps its state (where it is
+    // scrolled, whether it follows) as the note comes and goes; hidden, each
+    // scope passes on what the feed would read without it.
+    return Padding(
+      padding: EdgeInsets.only(top: visible ? context.contentTopPadding : 0),
+      child: MediaQuery.removePadding(
+        context: context,
+        removeTop: visible,
+        child: FloatingBarScope(
+          // The page's scaffold always sets one; hidden, it passes on.
+          inset: visible ? 0 : FloatingBarScope.of(context) ?? 0,
+          child: TopInsetScope(
+            inset: visible ? 8 : TopInsetScope.of(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (visible)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    // Read out as it appears, when a search starts.
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        context.appLocalizations.requestsSearchScopeHint(count),
+                        style: AppTextStyle.caption1
+                            .of(context)
+                            .copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                  ),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -586,6 +586,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recentRequests => 'Solicitudes recientes';
 
   @override
+  String requestsSearchScopeHint(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'La búsqueda solo incluye los $countString registros más recientes conservados.';
+  }
+
+  @override
   String get findProcessMode => 'Buscar proceso';
 
   @override

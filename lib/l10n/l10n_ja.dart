@@ -560,6 +560,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recentRequests => '最近のリクエスト';
 
   @override
+  String requestsSearchScopeHint(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '検索対象は、保存されている直近$countString件の記録のみです。';
+  }
+
+  @override
   String get findProcessMode => 'プロセス検出';
 
   @override

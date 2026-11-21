@@ -177,6 +177,15 @@
   "geodataLoader": "Geo low-memory mode",
   "requests": "Requests",
   "recentRequests": "Recent requests",
+  "requestsSearchScopeHint": "Search covers only the most recent {count} retained records.",
+  "@requestsSearchScopeHint": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "findProcessMode": "Find process",
   "init": "Init",
   "infiniteTime": "Never expires",

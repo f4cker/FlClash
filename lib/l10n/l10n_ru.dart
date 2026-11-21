@@ -576,6 +576,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get recentRequests => 'Последние запросы';
 
   @override
+  String requestsSearchScopeHint(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Поиск охватывает только последние $countString сохранённых записей.';
+  }
+
+  @override
   String get findProcessMode => 'Поиск процесса';
 
   @override

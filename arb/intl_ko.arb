@@ -177,6 +177,7 @@
   "geodataLoader": "Geo 저메모리 모드",
   "requests": "요청",
   "recentRequests": "최근 요청",
+  "requestsSearchScopeHint": "검색은 보관된 최근 기록 {count}개만 대상으로 합니다.",
   "findProcessMode": "프로세스 찾기",
   "init": "초기화",
   "infiniteTime": "만료되지 않음",
