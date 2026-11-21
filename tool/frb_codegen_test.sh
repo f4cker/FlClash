@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests tool/frb_codegen.sh in scratch git copies of the committed rust_api package.
-# The stubbed cases (refusals, copy-back, injected faults, signals, leftover
-# backups, make) run under env -i with a PATH of symlinks to the few tools the
+# The stubbed cases (refusals, copy-back, injected faults at every stage,
+# signals, leftover backups and tombstones, recover.sh, make) run under env -i with a PATH of symlinks to the few tools the
 # script needs and temp HOME/CARGO_HOME/RUSTUP_HOME, so no machine rustup leaks
 # in. The real-codegen cases need rustup and flutter_rust_bridge_codegen (PATH
 # or FRB_CODEGEN); when they cannot run the script exits 77 (SKIP) unless
@@ -42,8 +42,9 @@ mkdir -p "$iso/bin" "$iso/home" "$iso/cargo" "$iso/rustup" "$iso/tmp"
 real_git="$("$git_bin" --exec-path 2>/dev/null)/git"
 [[ -x "$real_git" ]] || real_git="$(command -v "$git_bin")"
 ln -s "$real_git" "$iso/bin/git"
-sha_name=sha256sum
-command -v sha256sum >/dev/null 2>&1 || sha_name=shasum
+# The same sha256 tool frb_codegen.sh picks.
+if command -v sha256sum >/dev/null 2>&1; then sha_tool=(sha256sum); else sha_tool=(shasum -a 256); fi
+sha_name="${sha_tool[0]}"
 for tool in bash sh env sed awk head grep mkdir mktemp cp mv rm cmp find dirname cat printf rsync make "$sha_name"; do
   path="$(command -v "$tool")" || { echo "frb_codegen_test: $tool is not on PATH" >&2; exit 1; }
   [[ "$path" == /* ]] || path="$(type -P "$tool")"
@@ -64,7 +65,7 @@ new_sandbox() {
 }
 
 manifest() {
-  (cd "$1/$package_rel" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256)
+  (cd "$1/$package_rel" && find . -type f -print0 | sort -z | xargs -0 "${sha_tool[@]}")
 }
 
 # run_iso SANDBOX PATH-PREFIX [VAR=value...]: frb_codegen.sh in the isolated env.
@@ -130,7 +131,7 @@ expect_recoverable() {
       fail "$name: backup of $relative is missing or altered"
   done
   [[ "$(wc -l <"$kept/SHA256SUMS" | tr -d ' ')" == "${#updated[@]}" ]] || fail "$name: SHA256SUMS is incomplete"
-  (cd "$kept/files" && shasum -a 256 -c ../SHA256SUMS >/dev/null) || fail "$name: backup fails its SHA256SUMS"
+  (cd "$kept/files" && "${sha_tool[@]}" -c ../SHA256SUMS >/dev/null) || fail "$name: backup fails its SHA256SUMS"
   run_iso "$sandbox" "$fake/stub:" FAKE_MODE=update
   [[ "$status" == 4 ]] || fail "$name: a later run exited $status, not 4"
   grep -q 'stopped while replacing' "$scratch/err" || fail "$name: a later run did not explain the leftover backup"
@@ -181,14 +182,25 @@ case "\$FAKE_MODE" in
     echo '// touched' >>rust/src/lib.rs ;;
 esac
 STUB
-# Moves for real, then sends KILL_SIG to the script after the second move.
+# Moves for real, then sends KILL_SIG to the script after the second swap mv
+# (a staged file onto its output; the phase and MANIFEST renames do not count).
 cat >"$fake/kill-mv/mv" <<STUB
 #!/bin/sh
 $(command -v mv) "\$@" || exit
+case "\$*" in *.frb_codegen.[0-9]*) ;; *) exit 0 ;; esac
 n=\$((\$(cat "\$MV_COUNT" 2>/dev/null || echo 0) + 1))
 echo "\$n" >"\$MV_COUNT"
 [ "\$n" -eq 2 ] && kill -"\$KILL_SIG" "\$PPID"
 exit 0
+STUB
+# An rm -rf of a backup or tombstone that dies after deleting only phase.
+mkdir -p "$fake/partial-rm"
+cat >"$fake/partial-rm/rm" <<STUB
+#!/bin/sh
+for arg; do
+  case "\$arg" in *.frb_codegen_backup | *.frb-backup.discard-*) $(command -v rm) -f "\$arg/phase"; exit 1 ;; esac
+done
+exec $(command -v rm) "\$@"
 STUB
 chmod +x "$fake"/*/* "$fake/codegen"
 stub="$fake/stub:"
@@ -206,8 +218,14 @@ expect 1 'fault hook outside test mode' 'only honoured with FRB_CODEGEN_TEST_MOD
   FAKE_MODE=update FRB_CODEGEN_FAULT=mv:1
 
 # Faults before or during the swap whose restore succeeds: original, exit 1.
-for fault in backup:1 backup:2 mv:1 mv:2 mv:4; do
-  case "$fault" in backup:*) needle='could not back up' ;; *) needle='restored the tracked files and verified' ;; esac
+for fault in backup:1 backup:2 stage:1 stage:3 stage-verify:2 mv:1 mv:2 mv:4 mv:4,restore-signal:1 \
+  mv:2,restore-signal:3; do
+  case "$fault" in
+    backup:*) needle='could not back up' ;;
+    stage:*) needle='could not stage' ;;
+    stage-verify:*) needle='does not match the generated one' ;;
+    *) needle='restored the tracked files and verified' ;;
+  esac
   expect 1 "fault $fault" "$needle" "$sandbox" "$stub" FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT="$fault"
 done
 # Signals mid-swap, sent right after the second mv.
@@ -217,12 +235,47 @@ for signal in TERM:143 HUP:129 INT:130; do
     "$fake/kill-mv:$stub" FAKE_MODE=update MV_COUNT="$scratch/mv-count" KILL_SIG="${signal%:*}"
   [[ "$(cat "$scratch/mv-count" 2>/dev/null)" == 2 ]] || fail "SIG${signal%:*} during the swap: did not land mid-loop"
 done
+# A second signal while the first one's restore runs is ignored until it ends.
+rm -f "$scratch/mv-count"
+expect 143 'SIGTERM during the restore' 'interrupted; restored the tracked files' "$sandbox" "$fake/kill-mv:$stub" \
+  FAKE_MODE=update MV_COUNT="$scratch/mv-count" KILL_SIG=TERM FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT=restore-signal:2
 # Faults in the restore itself: the backup must survive for recover.sh.
 for fault in mv:4,restore:1:"${updated[0]}" mv:4,restore:2:"${updated[1]}" mv:2,verify:1:; do
   before="$(manifest "$sandbox")"
   run_iso "$sandbox" "$stub" FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT="${fault%:*}"
   expect_recoverable "fault ${fault%:*}" "$sandbox" "$before" "${fault##*:}"
 done
+# recover.sh checks the whole backup before copying anything.
+before="$(manifest "$sandbox")"
+run_iso "$sandbox" "$stub" FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT=mv:4,restore:1
+[[ "$status" == 3 ]] || fail "damaged backup: setup exited $status, not 3"
+kept="$sandbox/.frb_codegen_backup"
+echo 'damage' >>"$kept/files/${updated[1]}"
+mixed="$(manifest "$sandbox")"
+if bash "$kept/recover.sh" >"$scratch/recover.out" 2>&1; then fail 'damaged backup: recover.sh exited 0'; fi
+grep -q 'nothing was copied' "$scratch/recover.out" || fail 'damaged backup: recover.sh did not say it copied nothing'
+[[ "$(manifest "$sandbox")" == "$mixed" ]] || fail 'damaged backup: recover.sh copied files anyway'
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+[[ "$status" == 4 ]] || fail "damaged backup: the next run exited $status, not 4"
+grep -q "NOT a usable recovery source" "$scratch/err" || fail 'damaged backup: the next run did not call it unusable'
+grep -q "files/${updated[1]} does not match its sha256" "$scratch/err" || fail 'damaged backup: the damage is not named'
+if grep -q "bash .*recover.sh" "$scratch/err"; then fail 'damaged backup: the next run still advised recover.sh'; fi
+"$git_bin" -C "$sandbox" show ":$package_rel/${updated[1]}" >"$kept/files/${updated[1]}"
+bash "$kept/recover.sh" >/dev/null 2>&1 || fail 'damaged backup: recover.sh failed once repaired'
+[[ "$(manifest "$sandbox")" == "$before" ]] || fail 'damaged backup: recover.sh did not restore the package'
+no_leftovers 'damaged backup (after recover.sh)' "$sandbox"
+# A half-deleted backup (recover.sh left, phase gone) is not offered for recovery.
+mkdir "$kept" && echo 'exit 1' >"$kept/recover.sh"
+run_iso "$sandbox" "$stub" FAKE_MODE=update
+[[ "$status" == 4 ]] || fail "backup without phase: exit $status, not 4"
+grep -q 'it has no phase file' "$scratch/err" || fail 'backup without phase: not called unusable'
+if grep -q "bash .*recover.sh" "$scratch/err"; then fail 'backup without phase: recover.sh still advised'; fi
+rm -rf "$kept"
+# Tombstones are never recovery sources: the next run deletes them and goes on.
+mkdir -p "$sandbox/.frb-backup.discard-12345/files" && echo replace >"$sandbox/.frb-backup.discard-12345/phase"
+cp "$sandbox/$generated_rel" "$sandbox/.frb-backup.discard-12345/recover.sh"
+expect 1 'leftover tombstone' 'UNKNOWN loader config' "$sandbox" "$stub" FAKE_MODE=unknown
+[[ ! -e "$sandbox/.frb-backup.discard-12345" ]] || fail 'leftover tombstone: not removed'
 # SIGKILL cannot be trapped: the backup stays, the next run refuses, recover.sh works.
 before="$(manifest "$sandbox")"
 rm -f "$scratch/mv-count"
@@ -250,7 +303,20 @@ make_status=$?
 set -e
 [[ "$make_status" != 0 ]] || fail 'make: exited 0 although frb failed'
 [[ ! -e "$scratch/after-ran" && ! -e "$scratch/later-ran" ]] || fail 'make: went on after frb failed'
+grep -q 'make frb: tool/frb_codegen.sh exited 4 (an earlier backup is left' "$scratch/make.out" ||
+  fail 'make: did not report exit 4'
 rm -rf "$sandbox/.frb_codegen_backup"
+before="$(manifest "$sandbox")"
+set +e
+env -i PATH="$stub$iso/bin" HOME="$iso/home" CARGO_HOME="$iso/cargo" RUSTUP_HOME="$iso/rustup" TMPDIR="$iso/tmp" \
+  FRB_CODEGEN="$fake/codegen" FAKE_MODE=update FRB_CODEGEN_TEST_MODE=1 FRB_CODEGEN_FAULT=mv:4,restore:1 \
+  make -C "$sandbox" -f Makefile -f "$scratch/extra.mk" after later >"$scratch/make.out" 2>&1
+make_status=$?
+set -e
+[[ "$make_status" != 0 && ! -e "$scratch/after-ran" && ! -e "$scratch/later-ran" ]] || fail 'make: went on after exit 3'
+grep -q 'make frb: tool/frb_codegen.sh exited 3 (restore failed' "$scratch/make.out" || fail 'make: did not report exit 3'
+bash "$sandbox/.frb_codegen_backup/recover.sh" >/dev/null 2>&1 || fail 'make: recover.sh after exit 3 failed'
+[[ "$(manifest "$sandbox")" == "$before" ]] || fail 'make: recover.sh after exit 3 did not restore the package'
 sed -i.orig 's/^channel = .*/channel = "0.0.0-frb-codegen-test"/' "$sandbox/$package_rel/rust/rust-toolchain.toml"
 rm "$sandbox/$package_rel/rust/rust-toolchain.toml.orig"
 expect 1 'pinned channel missing' '0.0.0-frb-codegen-test' "$sandbox" "$stub"
@@ -276,6 +342,17 @@ cmp -s "$scratch/want-status" "$scratch/status" || {
 }
 grep -q 'rust/src/lib.rs, which is not an output' "$scratch/err" || fail 'copy-back: no warning for a changed non-output'
 no_leftovers 'copy-back' "$sandbox"
+
+# A delete that dies partway only ever hits the tombstone, so the next run
+# neither finds a backup nor offers a recovery, and clears the tombstone.
+sandbox="$(new_sandbox partial-delete)"
+run_iso "$sandbox" "$fake/partial-rm:$stub" FAKE_MODE=update
+[[ "$status" == 0 ]] || fail "partial delete: exit $status, not 0"
+[[ ! -e "$sandbox/.frb_codegen_backup" ]] || fail 'partial delete: the backup itself was half-deleted'
+run_iso "$sandbox" "$stub" FAKE_MODE=unknown
+[[ "$status" == 1 ]] || fail "partial delete: the next run exited $status, not 1"
+if grep -q 'recover.sh' "$scratch/err"; then fail 'partial delete: the next run offered a recovery'; fi
+[[ -z "$(find "$sandbox" -maxdepth 1 -name '.frb-backup.discard-*')" ]] || fail 'partial delete: tombstone not cleared'
 
 codegen="${FRB_CODEGEN:-$(command -v flutter_rust_bridge_codegen || true)}"
 if [[ -z "$codegen" ]]; then

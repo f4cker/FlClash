@@ -69,7 +69,12 @@ status-icons: ## Regenerate the tray icons
 	dart run tool/generate_status_icons.dart
 
 frb: ## Regenerate the flutter_rust_bridge bindings of plugins/rust_api, pinned to its rust-toolchain.toml
-	bash tool/frb_codegen.sh
+	@echo 'bash tool/frb_codegen.sh'; bash tool/frb_codegen.sh || { code=$$?; case $$code in \
+		3) why='restore failed: recover with the recover.sh printed above' ;; \
+		4) why='an earlier backup is left: resolve it as printed above' ;; \
+		129|130|143) why='interrupted: bindings restored and verified' ;; \
+		*) why='refused or failed: bindings unchanged' ;; esac; \
+		echo "make frb: tool/frb_codegen.sh exited $$code ($$why)" >&2; exit $$code; }
 
 site: ## Build the website into build/site
 	bash tool/build_site.sh
