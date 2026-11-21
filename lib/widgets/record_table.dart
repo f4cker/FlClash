@@ -19,11 +19,17 @@ class RecordColumn<T> {
   final Comparable<Object> Function(T item)? sortKey;
   final bool descendingFirst;
 
+  /// All of an item that [cell] reads, when that is less than the item: a
+  /// row rebuilt for another version of its item keeps this cell while these
+  /// stay equal.
+  final Object? Function(T item)? cellInputs;
+
   const RecordColumn(
     this.layout, {
     required this.cell,
     this.sortKey,
     this.descendingFirst = false,
+    this.cellInputs,
   });
 
   String get id => layout.id;
@@ -142,7 +148,14 @@ class RecordTable<T> {
   });
 
   List<Widget> cellsOf(BuildContext context, T item) => [
-    for (final column in columns) column.cell(context, item),
+    for (final column in columns)
+      if (column.cellInputs case final inputsOf?)
+        MemoBuilder(
+          inputs: [column, inputsOf(item)],
+          builder: (context) => column.cell(context, item),
+        )
+      else
+        column.cell(context, item),
   ];
 }
 

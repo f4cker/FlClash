@@ -22,9 +22,15 @@ import '../helpers/test_profiles.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
 
-TrackerInfo _tracker(String id, {String? host, bool mitm = false}) {
+TrackerInfo _tracker(
+  String id, {
+  String? host,
+  bool mitm = false,
+  int download = 0,
+}) {
   return TrackerInfo(
     id: id,
+    download: download,
     start: DateTime.utc(2026),
     metadata: Metadata(
       network: 'tcp',
@@ -185,6 +191,75 @@ void main() {
 
     expect(find.byGlyph(MitmBadge.decrypted.glyph), findsNothing);
     expect(find.byGlyph(MitmBadge.passedThrough.glyph), findsOneWidget);
+
+    await teardownView(tester);
+  });
+
+  testWidgets('a traffic-only read rebuilds the traffic cells of a row, and '
+      'a report after it still marks the kept target', (tester) async {
+    live = [_tracker('a', download: 100), _tracker('b', download: 100)];
+    await pumpLive(tester);
+
+    final rebuilt = <Type, int>{};
+    debugOnRebuildDirtyWidget = (element, _) {
+      final type = element.widget.runtimeType;
+      rebuilt[type] = (rebuilt[type] ?? 0) + 1;
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+    live = [_tracker('a', download: 4096), _tracker('b', download: 100)];
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(commonDuration);
+    debugOnRebuildDirtyWidget = null;
+
+    expect(rebuilt[TrackerInfoTableRow], greaterThan(0));
+    expect(rebuilt[ProcessCell], isNull);
+    expect(rebuilt[TrackerTargetText], isNull);
+    expect(rebuilt[TrackerRuleText], isNull);
+    expect(find.text(4096.traffic.show), findsOneWidget);
+
+    requests().setMitmOutcome('a', 'decrypted');
+    await tester.pump(renderThrottleDuration);
+    await tester.pump();
+    expect(badgeOf('a'), findsOneWidget);
+    expect(badgeOf('b'), findsNothing);
+
+    await teardownView(tester);
+  });
+
+  testWidgets('over thousands of churning connections the rows marked '
+      'decrypted are exactly the reported ones on screen', (tester) async {
+    List<TrackerInfo> poll(int round) => [
+      for (var i = round * 30; i < round * 30 + 3000; i++)
+        _tracker('c$i', download: (i * 7919) % 100000),
+    ];
+    final reported = {for (var i = 0; i < 3100; i += 7) 'c$i'};
+    for (final id in reported) {
+      requests().setMitmOutcome(id, 'decrypted');
+    }
+    live = poll(0);
+    await pumpLive(tester);
+
+    for (var round = 1; round <= 3; round++) {
+      live = poll(round);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(commonDuration);
+
+      final rows = [
+        for (final element in find.byType(TrackerInfoTableRow).evaluate())
+          (element.widget as TrackerInfoTableRow).trackerInfo.id,
+      ];
+      final marked = {
+        for (final element
+            in find.byGlyph(MitmBadge.decrypted.glyph).evaluate())
+          element
+              .findAncestorWidgetOfExactType<TrackerTargetText>()!
+              .trackerInfo
+              .id,
+      };
+      expect(rows, isNotEmpty);
+      expect(marked, isNotEmpty);
+      expect(marked, rows.where(reported.contains).toSet());
+    }
 
     await teardownView(tester);
   });
