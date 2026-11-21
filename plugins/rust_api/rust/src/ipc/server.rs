@@ -706,12 +706,10 @@ mod tests {
 
     #[test]
     fn an_unusable_address_fails_the_bind() {
-        let path = private_dir()
-            .join("missing-parent")
-            .join("nested")
-            .join("core.sock");
+        let missing = private_dir().join("missing-parent");
+        let path = missing.join("nested").join("core.sock");
 
         assert!(Server::bind(path.to_str().unwrap().to_owned()).is_err());
-        assert!(!path.parent().unwrap().exists());
+        assert!(!missing.exists());
     }
 }

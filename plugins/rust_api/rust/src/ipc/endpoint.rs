@@ -59,9 +59,15 @@ impl PrivateDir {
     /// if it already passes every check; it is never chmod-ed, chown-ed or
     /// deleted.
     pub fn claim(path: &Path) -> io::Result<Self> {
-        match DirBuilder::new().mode(0o700).create(path) {
-            Ok(()) => {}
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+        Self::claim_with(path, |path| DirBuilder::new().mode(0o700).create(path))
+    }
+
+    /// `claim` with the mkdir injected, so a umask that strips owner bits can
+    /// be simulated without changing the process-wide umask.
+    fn claim_with(path: &Path, mkdir: impl FnOnce(&Path) -> io::Result<()>) -> io::Result<Self> {
+        let created = match mkdir(path) {
+            Ok(()) => true,
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => false,
             Err(error) => {
                 return Err(io::Error::new(
                     error.kind(),
@@ -71,22 +77,38 @@ impl PrivateDir {
                     ),
                 ))
             }
-        }
+        };
         // SAFETY: geteuid() takes no arguments and cannot fail.
         let uid = unsafe { libc::geteuid() };
         let checked = std::fs::symlink_metadata(path)?;
-        check_dir(path, &checked, uid)?;
+        // Only a directory made by this very call may still have its mode
+        // fixed; it is checked in full after that.
+        if created {
+            check_owned_dir(path, &checked, uid)?;
+        } else {
+            check_dir(path, &checked, uid)?;
+        }
         let dir = OpenOptions::new()
             .read(true)
             .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC)
             .open(path)
             .map_err(|error| refused(path, &format!("cannot be opened: {error}")))?;
-        let opened = dir.metadata()?;
-        check_dir(path, &opened, uid)?;
+        let mut opened = dir.metadata()?;
+        check_owned_dir(path, &opened, uid)?;
         let id = FileId::of(&checked);
         if FileId::of(&opened) != id {
             return Err(refused(path, "was replaced while it was being opened"));
         }
+        if created && opened.mode() & 0o7777 != 0o700 {
+            // The umask stripped bits from the 0700 mkdir; fix it through the
+            // fd just verified to be the directory created here.
+            // SAFETY: the fd is open.
+            if unsafe { libc::fchmod(dir.as_raw_fd(), 0o700) } != 0 {
+                return Err(io::Error::last_os_error());
+            }
+            opened = dir.metadata()?;
+        }
+        check_dir(path, &opened, uid)?;
         Ok(Self {
             path: path.to_owned(),
             dir,
@@ -129,6 +151,16 @@ impl PrivateDir {
 }
 
 fn check_dir(path: &Path, metadata: &Metadata, uid: u32) -> io::Result<()> {
+    check_owned_dir(path, metadata, uid)?;
+    let mode = metadata.mode() & 0o7777;
+    if mode != 0o700 {
+        return Err(refused(path, &format!("has mode {mode:o}, not 700")));
+    }
+    Ok(())
+}
+
+/// A real directory owned by `uid`, whatever its mode.
+fn check_owned_dir(path: &Path, metadata: &Metadata, uid: u32) -> io::Result<()> {
     if metadata.file_type().is_symlink() {
         return Err(refused(path, "is a symbolic link"));
     }
@@ -140,10 +172,6 @@ fn check_dir(path: &Path, metadata: &Metadata, uid: u32) -> io::Result<()> {
             path,
             &format!("is owned by uid {}, not {uid}", metadata.uid()),
         ));
-    }
-    let mode = metadata.mode() & 0o7777;
-    if mode != 0o700 {
-        return Err(refused(path, &format!("has mode {mode:o}, not 700")));
     }
     Ok(())
 }
@@ -368,6 +396,93 @@ mod tests {
             kind(PrivateDir::claim(&tmp)),
             io::ErrorKind::PermissionDenied
         );
+    }
+
+    fn entries(path: &Path) -> Vec<std::ffi::OsString> {
+        let mut names: Vec<_> = std::fs::read_dir(path)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn claiming_a_directory_owned_by_someone_else_changes_nothing() {
+        // The canonical /tmp is root's: claim must reach the owner check,
+        // refuse, and leave its mode alone.
+        let tmp = std::fs::canonicalize("/tmp").unwrap();
+        let mode = std::fs::symlink_metadata(&tmp).unwrap().mode();
+
+        let error = PrivateDir::claim(&tmp).err().unwrap();
+
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(error.to_string().contains("owned by uid 0"), "{error}");
+        assert_eq!(std::fs::symlink_metadata(&tmp).unwrap().mode(), mode);
+    }
+
+    #[test]
+    fn claiming_a_failing_directory_creates_and_deletes_nothing() {
+        let path = fresh("keep");
+        std::fs::create_dir(&path).unwrap();
+        std::fs::write(path.join("sentinel"), b"keep").unwrap();
+        for mode in [0o755, 0o500, 0o711] {
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode)).unwrap();
+            let before = entries(&path);
+
+            assert_eq!(
+                kind(PrivateDir::claim(&path)),
+                io::ErrorKind::PermissionDenied
+            );
+
+            assert_eq!(
+                std::fs::symlink_metadata(&path).unwrap().mode() & 0o7777,
+                mode
+            );
+            assert_eq!(entries(&path), before);
+        }
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        assert_eq!(std::fs::read(path.join("sentinel")).unwrap(), b"keep");
+        std::fs::remove_dir_all(&path).unwrap();
+    }
+
+    /// mkdir as a umask of 0277 would leave it: owner r-x only.
+    fn stripped_mkdir(path: &Path) -> io::Result<()> {
+        std::fs::create_dir(path)?;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o500))
+    }
+
+    #[test]
+    fn a_directory_created_here_under_a_stripping_umask_is_fixed_to_0700() {
+        let path = fresh("umask");
+
+        let dir = PrivateDir::claim_with(&path, stripped_mkdir).unwrap();
+
+        assert_eq!(
+            std::fs::symlink_metadata(&path).unwrap().mode() & 0o7777,
+            0o700
+        );
+        dir.verify().unwrap();
+        std::fs::remove_dir(&path).unwrap();
+    }
+
+    #[test]
+    fn a_pre_existing_directory_is_never_fixed_even_with_the_same_mode() {
+        let path = fresh("preexisting");
+        stripped_mkdir(&path).unwrap();
+
+        // mkdir reports EEXIST, so this call did not create it.
+        assert_eq!(
+            kind(PrivateDir::claim_with(&path, stripped_mkdir)),
+            io::ErrorKind::PermissionDenied
+        );
+
+        assert_eq!(
+            std::fs::symlink_metadata(&path).unwrap().mode() & 0o7777,
+            0o500
+        );
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        std::fs::remove_dir(&path).unwrap();
     }
 
     #[test]
