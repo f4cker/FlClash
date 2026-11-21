@@ -812,16 +812,18 @@ void main() {
   testWidgets('a plain prism_ui alert keeps the margin the frame assumes', (
     tester,
   ) async {
+    const window = Size(800, 600);
     await pump(
       tester,
-      size: narrow,
+      size: window,
       locale: const Locale('en'),
       textScale: 1.0,
     );
+    // Wider than the window: only prism_ui's margin decides where it ends.
     unawaited(
       dialogs.showCommonDialog<void>(
         context: tester.element(find.byType(SizedBox).first),
-        child: const AlertDialog(title: 'T', width: 560, child: Text('Body')),
+        child: const AlertDialog(title: 'T', width: 2000, child: Text('Body')),
       ),
     );
     await tester.pumpAndSettle();
@@ -830,8 +832,9 @@ void main() {
           .ancestor(of: find.text('Body'), matching: find.byType(Surface))
           .first,
     );
+    expect(panel.width, greaterThan(280));
     expect(panel.left, closeTo(ruleEditAlertMargin, 0.5));
-    expect(narrow.width - panel.right, closeTo(ruleEditAlertMargin, 0.5));
+    expect(window.width - panel.right, closeTo(ruleEditAlertMargin, 0.5));
     Navigator.of(tester.element(find.text('Body'))).pop();
     await tester.pumpAndSettle();
   });
@@ -840,12 +843,15 @@ void main() {
   (Future<bool?>, List<String>) openFrame(
     WidgetTester tester, {
     FocusNode? body,
+    bool dismissible = false,
+    double? narrowMargin,
   }) {
     final calls = <String>[];
     final result = dialogs.showCommonDialog<bool>(
       context: tester.element(find.byType(SizedBox).first),
-      dismissible: false,
+      dismissible: dismissible,
       child: RuleEditFrame(
+        narrowMargin: narrowMargin,
         title: 'Edit',
         subtitle: 'A rule',
         width: 560,
@@ -861,6 +867,42 @@ void main() {
     );
     return (result, calls);
   }
+
+  testWidgets('a dismissible narrow frame: a tap outside the panel closes it, '
+      'one inside does not', (tester) async {
+    await pump(
+      tester,
+      size: narrow,
+      locale: const Locale('en'),
+      textScale: 1.0,
+    );
+    for (final outside in [
+      const Offset(8, 320),
+      Offset(narrow.width - 8, 320),
+      Offset(narrow.width / 2, 4),
+    ]) {
+      final (result, calls) = openFrame(
+        tester,
+        dismissible: true,
+        narrowMargin: 16,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(OverflowBox), findsOneWidget);
+      expectInsets(tester, outer: 16, inner: 16);
+
+      await tester.tapAt(tester.getCenter(find.text('Body')));
+      await tester.pumpAndSettle();
+      expect(find.text('Body'), findsOneWidget, reason: 'inside');
+
+      Object? closed = 'open';
+      unawaited(result.then((value) => closed = value));
+      await tester.tapAt(outside);
+      await tester.pumpAndSettle();
+      expect(find.text('Body'), findsNothing, reason: '$outside');
+      expect(closed, isNull, reason: '$outside');
+      expect(calls, isEmpty);
+    }
+  });
 
   testWidgets(
     'en 1024x768: delete, leading, cancel, save keep their order '
