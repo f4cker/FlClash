@@ -222,6 +222,7 @@ class UpdateInstallerTests(unittest.TestCase):
         self.assertEqual(answer['code'], 'rolledBack', answer)
         self.assertEqual(self.installed_build(), '100')
         self.assertEqual(plistlib.loads((staged / 'Contents/Info.plist').read_bytes())['CFBundleVersion'], '101')
+        self.assertEqual(self.markers(staged.parent), ['.flash-update-staging'])
         run('codesign', '--verify', '--strict', self.target)
 
     def build_of(self, app):
@@ -257,6 +258,7 @@ class UpdateInstallerTests(unittest.TestCase):
         answer = self.call('install', staged, self.target, self.status, env=env)
         self.assertEqual(Path(answer['rescued']), rescue / 'Flash-100-2.app')
         self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
+        self.assertEqual(len(list(rescue.glob('failed-update-*.json'))), 2)
 
     def test_unmovable_previous_app_stays_unmarked(self):
         self.make_app(self.target, 100, 100)
@@ -276,6 +278,127 @@ class UpdateInstallerTests(unittest.TestCase):
         self.assertEqual(self.build_of(staged), '100')
         # Without its marker, the directory is no longer something install accepts either.
         self.assertEqual(self.call('install', staged, self.target, self.status)['code'], 'rejected')
+
+    def markers(self, directory):
+        return sorted(item.name for item in directory.iterdir() if item.name.startswith('.flash-update'))
+
+    def interrupted_install(self, staged, env):
+        result = subprocess.run([str(self.driver), 'install', str(staged), str(self.target), str(self.status)],
+                                capture_output=True, text=True, env={**os.environ, **env})
+        self.assertEqual(result.returncode, -9, result)
+        self.assertEqual(self.markers(staged.parent), ['.flash-update-rollback'])
+
+    def test_interrupted_install_keeps_the_previous_app_for_cleanup_to_rescue(self):
+        # Killed after the swap, or after a failed check before the swap back: 101 is installed but never passed
+        # its checks, so 100 in the staging directory may be the only good copy. Cleanup must not delete it.
+        rescue = self.case / 'Support/Flash/update-rescue'
+        for kill_at, extra in (('afterSwap', {}), ('beforeSwapBack', {'FC_TEST_FAIL_INSTALLED': '1'})):
+            with self.subTest(kill_at):
+                shutil.rmtree(rescue, ignore_errors=True)
+                shutil.rmtree(self.target, ignore_errors=True)
+                self.make_app(self.target, 100, 100)
+                staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+                self.interrupted_install(staged, {'FC_TEST_KILL': kill_at, **extra})
+                self.assertEqual((self.installed_build(), self.build_of(staged)), ('101', '100'))
+                self.call('cleanup', self.target, env={'FC_TEST_RESCUE_DIR': str(rescue)})
+                self.assertEqual(self.staging_dirs(), [])
+                self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
+                run('codesign', '--verify', '--strict', rescue / 'Flash-100.app')
+                record = json.loads((rescue / 'last-failed-update.json').read_text())
+                # A cleanup rescue records the installed build; only a live rollbackFailed knows the failed one.
+                self.assertEqual((record['previousBuild'], record['installedBuild'], record['moved'], record['problem']),
+                                 (100, 101, True, 'update interrupted before it finished'))
+                self.assertNotIn('failedBuild', record)
+                shutil.rmtree(self.case / 'build-101-101-1')
+
+    def test_interrupted_install_before_the_swap_removes_only_the_candidate(self):
+        self.make_app(self.target, 100, 100)
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        self.interrupted_install(staged, {'FC_TEST_KILL': 'beforeSwap'})
+        rescue = self.case / 'Support/Flash/update-rescue'
+        self.call('cleanup', self.target, env={'FC_TEST_RESCUE_DIR': str(rescue)})
+        self.assertEqual(self.staging_dirs(), [])
+        self.assertEqual(self.installed_build(), '100')
+        self.assertFalse(rescue.exists())
+
+    def interrupted(self, kill_at, extra=None):
+        self.make_app(self.target, 100, 100)
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        self.interrupted_install(staged, {'FC_TEST_KILL': kill_at, **(extra or {})})
+        return staged
+
+    def cleanup_with(self, rescue):
+        self.call('cleanup', self.target, env={'FC_TEST_RESCUE_DIR': str(rescue)})
+
+    def test_killed_before_the_marker_release(self):
+        # After a passed check the kept app is the verified previous one: rescued, not deleted.
+        rescue = self.case / 'rescue'
+        staged = self.interrupted('beforeRelease')
+        self.assertEqual((self.installed_build(), self.build_of(staged)), ('101', '100'))
+        self.cleanup_with(rescue)
+        self.assertEqual((self.staging_dirs(), self.build_of(rescue / 'Flash-100.app')), ([], '100'))
+
+    def test_killed_after_the_swap_back_before_the_marker_release(self):
+        # Swapped back: the kept app is the recorded candidate, the only thing cleanup may delete.
+        rescue = self.case / 'rescue'
+        staged = self.interrupted('beforeRelease', {'FC_TEST_FAIL_INSTALLED': '1'})
+        self.assertEqual((self.installed_build(), self.build_of(staged)), ('100', '101'))
+        self.cleanup_with(rescue)
+        self.assertEqual(self.staging_dirs(), [])
+        self.assertFalse(rescue.exists())
+
+    def test_a_downgrade_after_an_interrupted_install_keeps_the_previous_app(self):
+        # Interrupted after the swap, then the user installs an older build by hand: 100 is still not the candidate.
+        rescue = self.case / 'rescue'
+        self.interrupted('afterSwap')
+        shutil.rmtree(self.target)
+        self.make_app(self.target, 99, 99)
+        self.cleanup_with(rescue)
+        self.assertEqual((self.staging_dirs(), self.build_of(rescue / 'Flash-100.app')), ([], '100'))
+
+    def test_an_unreadable_kept_plist_is_rescued_not_deleted(self):
+        rescue = self.case / 'rescue'
+        staged = self.interrupted('beforeSwap')
+        (staged / 'Contents/Info.plist').chmod(0)
+        self.cleanup_with(rescue)
+        (rescue / 'Flash-previous.app/Contents/Info.plist').chmod(0o644)
+        self.assertEqual((self.staging_dirs(), self.build_of(rescue / 'Flash-previous.app')), ([], '101'))
+
+    def test_a_missing_or_linked_kept_app_leaves_the_directory_unmarked_with_a_record(self):
+        for case in ('missing', 'symlink'):
+            with self.subTest(case):
+                rescue = self.case / f'rescue-{case}'
+                elsewhere = self.case / f'elsewhere-{case}'
+                staged = self.interrupted('beforeSwap' if case == 'missing' else 'afterSwap')
+                staged.rename(elsewhere)
+                if case == 'symlink':
+                    staged.symlink_to(elsewhere)
+                self.cleanup_with(rescue)
+                self.assertEqual(self.markers(staged.parent), [])
+                self.assertEqual(self.build_of(elsewhere), '101' if case == 'missing' else '100')
+                record = json.loads((rescue / 'last-failed-update.json').read_text())
+                self.assertEqual((record['previousApp'], record['moved']), (str(staged.parent), False))
+                self.assertEqual(self.call('install', staged, self.target, self.status)['code'], 'rejected')
+                shutil.rmtree(staged.parent)
+                shutil.rmtree(self.target)
+                shutil.rmtree(self.case / 'build-101-101-1')
+
+    def test_cleanup_rescue_never_replaces_and_keeps_what_it_cannot_move(self):
+        rescue = self.case / 'rescue'
+        taken = rescue / 'Flash-100.app'
+        taken.mkdir(parents=True)
+        self.interrupted('afterSwap')
+        self.cleanup_with(rescue)
+        self.assertEqual((list(taken.iterdir()), self.build_of(rescue / 'Flash-100-2.app')), ([], '100'))
+        self.assertEqual(len(list(rescue.glob('failed-update-*.json'))), 1)
+        shutil.rmtree(self.target)
+        shutil.rmtree(self.case / 'build-101-101-1')
+        blocked = self.case / 'blocked'
+        blocked.mkdir(mode=0o500)
+        staged = self.interrupted('afterSwap')
+        self.cleanup_with(blocked / 'rescue')
+        blocked.chmod(0o700)
+        self.assertEqual((self.build_of(staged), self.markers(staged.parent)), ('100', []))
 
     def test_cleanup_deletes_only_marked_staging_directories(self):
         self.make_app(self.target, 100, 100)

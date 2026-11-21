@@ -35,17 +35,24 @@ NSString *FCUpdateInstalledBundle(void);
 NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSString *target, FCUpdatePolicy policy);
 
 // Checks the staged app again, swaps it with `target` (renamex_np RENAME_SWAP), checks the installed result and
-// swaps back when that fails. The replaced app stays in the staging directory until FCUpdateCleanup.
+// swaps back when that fails. The replaced app stays in the staging directory until FCUpdateCleanup. From just
+// before the swap until the installed app passed its checks (or was swapped back) the directory carries a rollback
+// marker instead of the staging marker.
 //
 // When the swap back fails too (rollbackFailed), the previous app is the only good copy: its staging directory
 // loses its marker, so no cleanup ever deletes it, and it moves to policy.rescueDirectory/Flash-<build>.app with
-// a record (last-failed-update.json) beside it. `rescued` is where it ends up (still the staging directory when
-// the move fails), `rescueMoved` whether it moved, `rescueVerified` whether an app with the previous build was
-// found there after the move.
+// a record beside it: last-failed-update.json, plus failed-update-<date>.json that later rescues never overwrite.
+// `rescued` is where it ends up (still the staging directory when the move fails), `rescueMoved` whether it moved,
+// `rescueVerified` whether an app with the previous build was found there after the move.
 NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy);
 
 // Removes this user's staging directories beside `target`, only those still carrying the marker FCUpdatePrepare
-// writes when it creates them (so never a previous app kept after rollbackFailed).
+// writes when it creates them (so never a previous app kept after rollbackFailed). A directory still carrying the
+// rollback marker (an install stopped mid-way) is never deleted for its marker: it is removed only when it still
+// holds the candidate recorded in that marker (same build and seal). Any other app in it moves to `rescueDirectory`
+// as after rollbackFailed; without an app bundle in it, it loses its markers, stays, and gets a record there.
+void FCUpdateCleanupKeeping(NSString *target, NSString *rescueDirectory);
+// FCUpdateCleanupKeeping with FCUpdateRescueDirectory().
 void FCUpdateCleanup(NSString *target);
 NSData * _Nullable FCUpdateCandidateSeal(NSString *bundle);
 NSDictionary *FCUpdateInstallExpected(NSString *staged, NSString *target, NSDictionary *expected, FCUpdatePolicy policy);
