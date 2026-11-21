@@ -65,6 +65,12 @@ Set<String>? mitmCurrentPolicies(WidgetRef ref) {
   };
 }
 
+/// The stacked buttons top to bottom: the one-row order, left to right.
+const _stackedOrder = [#leading, #cancel, #primary];
+
+/// What the body keeps in view when the stacked buttons run tall.
+const _minBodyHeight = 72.0;
+
 class _MitmRoutingRuleLine extends StatelessWidget {
   const _MitmRoutingRuleLine({required this.rule, this.policies});
 
@@ -354,10 +360,11 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
   /// [line] with Show More after it, 8 apart, until [shown].
   Widget _withMore(Widget line, bool shown, VoidCallback onPressed) => shown
       ? line
-      : Row(
+      : Wrap(
           spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Flexible(child: line),
+            line,
             MitmLinkButton(
               label: context.appLocalizations.showMore,
               onPressed: onPressed,
@@ -606,8 +613,11 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
       onPrimary: () => _import(true),
       leading: TextButton(
         onPressed: busy ? () {} : () => _import(false),
-        child: Text(l.mitmImportOnly),
+        child: Text(l.mitmImportOnly, textAlign: TextAlign.center),
       ),
+      stackedOrder: _stackedOrder,
+      minBodyHeight: _minBodyHeight,
+      narrowMargin: 16,
       // No scroll view of its own: the frame scrolls the body under its
       // pinned actions, and one nested in it could hide its own end.
       children: [

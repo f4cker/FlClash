@@ -8437,10 +8437,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmScriptHasUpdate => 'Actualización disponible';
 
   @override
-  String get mitmHasUpdate => 'Update available';
+  String get mitmHasUpdate => 'Actualización disponible';
 
   @override
-  String get mitmViewUpdate => 'View Update';
+  String get mitmViewUpdate => 'Ver actualización';
 
   @override
   String mitmScriptsFromModules(int count) {
@@ -8620,7 +8620,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmAdoptUpdate => 'Use New Version';
 
   @override
-  String get mitmChangeHosts => 'Decrypted hosts';
+  String get mitmChangeHosts => 'Hosts para descifrar';
 
   @override
   String get mitmChangeScripts => 'Scripts';
@@ -8649,12 +8649,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmExcludedCount(int count) {
-    return '$count excluded';
+    return 'Excluidos: $count';
   }
 
   @override
   String mitmMoreHosts(int count) {
-    return '$count more';
+    return 'Otros: $count';
   }
 
   @override
@@ -8678,20 +8678,20 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mitmImportOnly => 'Import Only';
+  String get mitmImportOnly => 'Solo importar';
 
   @override
-  String get mitmImportAndEnable => 'Import and Turn On';
+  String get mitmImportAndEnable => 'Importar y activar';
 
   @override
-  String get mitmImportModule => 'Import Module';
+  String get mitmImportModule => 'Importar módulo';
 
   @override
   String get mitmModuleImported => 'Módulo importado';
 
   @override
   String mitmModuleHostCount(int count) {
-    return '$count hosts';
+    return 'Hosts para descifrar: $count';
   }
 
   @override
@@ -8891,7 +8891,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmRulePolicyMissing(String policy) {
-    return 'The current profile has no “$policy”, so this rule won\'t take effect';
+    return 'El perfil actual no tiene «$policy», por lo que esta regla no tendrá efecto.';
   }
 
   @override
@@ -8904,7 +8904,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmRoutingRulesNotApplied =>
-      'The routing rules couldn\'t be applied. The previous setting has been restored.';
+      'No se pudieron aplicar las reglas de enrutamiento. Se ha restaurado la configuración anterior.';
 
   @override
   String get mitmRoutingRulesRevertFailed =>
@@ -8918,7 +8918,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Please wait. New connections try decryption again once the pause ends.';
 
   @override
-  String get mitmChecking => 'Checking…';
+  String get mitmChecking => 'Comprobando…';
 
   @override
   String rulesBelowListLast(String head, String last) {

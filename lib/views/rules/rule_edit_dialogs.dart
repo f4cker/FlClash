@@ -46,6 +46,9 @@ const _okInk = Color(0xFF16632C);
 const _warnInk = Color(0xFF8A5300);
 const _fieldGap = 14.0;
 const _stackedActionHeight = 44.0;
+
+/// prism_ui's alert margin; a test holds it to prism_ui's.
+const ruleEditAlertMargin = 40.0;
 const _labelGap = 6.0;
 const _validateDelay = Duration(milliseconds: 300);
 const _checkDelay = Duration(milliseconds: 500);
@@ -419,6 +422,12 @@ class RuleEditFrame extends StatelessWidget {
   /// GlobalKey: a button whose state lives in the dialog.
   final Widget? leading;
 
+  /// Stacked actions top to bottom by slot id; null keeps primary first.
+  final List<Symbol>? stackedOrder;
+  final double? minBodyHeight;
+
+  final double? narrowMargin;
+
   const RuleEditFrame({
     super.key,
     required this.title,
@@ -433,14 +442,28 @@ class RuleEditFrame extends StatelessWidget {
     this.onDelete,
     this.deleting = false,
     this.leading,
+    this.stackedOrder,
+    this.minBodyHeight,
+    this.narrowMargin,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => narrowMargin == null
+      ? _build(context, MediaQuery.sizeOf(context).width)
+      : LayoutBuilder(
+          builder: (context, constraints) =>
+              _build(context, constraints.maxWidth),
+        );
+
+  Widget _build(BuildContext context, double screen) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final screen = MediaQuery.sizeOf(context).width;
-    final effective = math.max(280.0, math.min(width, screen - 32));
+    final margin = narrowMargin;
+    final narrow = margin != null && screen < width + 2 * ruleEditAlertMargin;
+    final effective = math.max(
+      280.0,
+      math.min(width, screen - (narrow ? 2 * margin : 32)),
+    );
     final errorInk = colorScheme.brightness == Brightness.light
         ? _errorInk
         : const Color(0xFFF2B8B5);
@@ -506,69 +529,89 @@ class RuleEditFrame extends StatelessWidget {
       minimumSize: Size(0, _stackedActionHeight),
     );
     Widget stackedLabel(String text) => Text(text, textAlign: TextAlign.center);
-    final stacked = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 8,
-      children: [
+    final stackedActions = [
+      AdaptiveActionSlot(
+        id: #primary,
+        child: FilledButton(
+          style: stackedStyle,
+          onPressed: busy ? () {} : onPrimary,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 6,
+            children: [
+              if (busy && !deleting) spinner(colorScheme.onPrimary),
+              Flexible(child: stackedLabel(primaryLabel)),
+            ],
+          ),
+        ),
+      ),
+      if (leading case final leading?)
         AdaptiveActionSlot(
-          id: #primary,
-          child: FilledButton(
-            style: stackedStyle,
-            onPressed: busy ? () {} : onPrimary,
+          id: #leading,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _stackedActionHeight),
+            child: leading,
+          ),
+        ),
+      if (onDelete != null)
+        AdaptiveActionSlot(
+          id: #delete,
+          child: TextButton(
+            style: ButtonStyle(
+              minimumSize: const Size(0, _stackedActionHeight),
+              foregroundColor: WidgetStatePropertyAll(
+                busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+              ),
+            ),
+            onPressed: busy ? null : onDelete,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 6,
               children: [
-                if (busy && !deleting) spinner(colorScheme.onPrimary),
-                Flexible(child: stackedLabel(primaryLabel)),
+                if (deleting) spinner(_errorInk),
+                Flexible(child: stackedLabel(appLocalizations.delete)),
               ],
             ),
           ),
         ),
-        if (leading case final leading?)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _stackedActionHeight),
-            child: AdaptiveActionSlot(id: #leading, child: leading),
-          ),
-        if (onDelete != null)
-          AdaptiveActionSlot(
-            id: #delete,
-            child: TextButton(
-              style: ButtonStyle(
-                minimumSize: const Size(0, _stackedActionHeight),
-                foregroundColor: WidgetStatePropertyAll(
-                  busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
-                ),
-              ),
-              onPressed: busy ? null : onDelete,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  if (deleting) spinner(_errorInk),
-                  Flexible(child: stackedLabel(appLocalizations.delete)),
-                ],
-              ),
-            ),
-          ),
-        AdaptiveActionSlot(
-          id: #cancel,
-          child: TextButton(
-            style: stackedStyle,
-            onPressed: busy ? null : cancel,
-            child: stackedLabel(appLocalizations.cancel),
-          ),
+      AdaptiveActionSlot(
+        id: #cancel,
+        child: TextButton(
+          style: stackedStyle,
+          onPressed: busy ? null : cancel,
+          child: stackedLabel(appLocalizations.cancel),
         ),
-      ],
+      ),
+    ];
+    final order = stackedOrder;
+    final stacked = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: order == null
+          ? stackedActions
+          : [
+              for (final id in order)
+                ...stackedActions.where((slot) => slot.id == id),
+            ],
     );
-    final footer = AdaptiveActions(wide: wide, stacked: stacked);
-    return CallbackShortcuts(
+    Widget footer = AdaptiveActions(wide: wide, stacked: stacked);
+    if (narrow) {
+      const labelPadding = ButtonStyle(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+      );
+      footer = ButtonTheme.merge(
+        data: const ButtonThemeData(text: labelPadding, filled: labelPadding),
+        child: footer,
+      );
+    }
+    final dialog = CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): cancel},
       child: AlertDialog(
         title: title,
         width: effective,
         hasFields: true,
         child: PinnedFooter(
+          minBodyHeight: minBodyHeight,
           footer: Padding(
             padding: const EdgeInsets.only(top: 16),
             child: footer,
@@ -639,6 +682,12 @@ class RuleEditFrame extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (!narrow) return dialog;
+    // prism_ui insets by its margin; a wider box leaves [narrowMargin].
+    return OverflowBox(
+      maxWidth: screen + 2 * (ruleEditAlertMargin - margin),
+      child: dialog,
     );
   }
 }
@@ -1991,10 +2040,18 @@ class _RenderActionsSwitch extends RenderBox
 /// once the dialog's own scroll view would scroll, [body] alone scrolls in
 /// the height left.
 class PinnedFooter extends StatefulWidget {
-  const PinnedFooter({super.key, required this.body, required this.footer});
+  const PinnedFooter({
+    super.key,
+    required this.body,
+    required this.footer,
+    this.minBodyHeight,
+  });
 
   final Widget body;
   final Widget footer;
+
+  /// When set, [body] keeps this much and a taller [footer] scrolls itself.
+  final double? minBodyHeight;
 
   @override
   State<PinnedFooter> createState() => _PinnedFooterState();
@@ -2039,6 +2096,7 @@ class _PinnedFooterState extends State<PinnedFooter> {
         children: [widget.body, widget.footer],
       );
     }
+    final minBody = widget.minBodyHeight;
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: height),
       child: Column(
@@ -2046,7 +2104,15 @@ class _PinnedFooterState extends State<PinnedFooter> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Flexible(child: SingleChildScrollView(child: widget.body)),
-          widget.footer,
+          if (minBody == null)
+            widget.footer
+          else
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: math.max(0, height - minBody),
+              ),
+              child: SingleChildScrollView(child: widget.footer),
+            ),
         ],
       ),
     );

@@ -3409,8 +3409,8 @@
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmScriptHasUpdate": "Доступно обновление",
-  "mitmHasUpdate": "Update available",
-  "mitmViewUpdate": "View Update",
+  "mitmHasUpdate": "Доступно обновление",
+  "mitmViewUpdate": "Посмотреть обновление",
   "mitmScriptsFromModules": "{count, plural, one{Ещё {count} скрипт из модулей} few{Ещё {count} скрипта из модулей} many{Ещё {count} скриптов из модулей} other{Ещё {count} скрипта из модулей}}",
   "@mitmScriptsFromModules": {
     "placeholders": {
@@ -3539,8 +3539,8 @@
   },
   "mitmNotNow": "Not Now",
   "mitmAdoptUpdate": "Use New Version",
-  "mitmChangeHosts": "Decrypted hosts",
-  "mitmChangeScripts": "Scripts",
+  "mitmChangeHosts": "Хосты для расшифровки",
+  "mitmChangeScripts": "Скрипты",
   "mitmChangeRewrites": "Rewrites",
   "mitmNoChange": "No change",
   "mitmModuleConfirmTitle": "Confirm Module Import",
@@ -3548,7 +3548,7 @@
   "mitmModuleNoHosts": "This module adds no decrypted hosts.",
   "mitmAlreadyListed": "Already listed",
   "mitmNewHost": "New",
-  "mitmExcludedCount": "{count} excluded",
+  "mitmExcludedCount": "Исключено: {count}",
   "@mitmExcludedCount": {
     "placeholders": {
       "count": {
@@ -3556,7 +3556,7 @@
       }
     }
   },
-  "mitmMoreHosts": "{count} more",
+  "mitmMoreHosts": "Ещё: {count}",
   "@mitmMoreHosts": {
     "placeholders": {
       "count": {
@@ -3576,9 +3576,9 @@
     },
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmImportOnly": "Import Only",
-  "mitmImportAndEnable": "Import and Turn On",
-  "mitmImportModule": "Import Module",
+  "mitmImportOnly": "Только импорт",
+  "mitmImportAndEnable": "Импортировать и включить",
+  "mitmImportModule": "Импортировать модуль",
   "mitmModuleImported": "Модуль импортирован",
   "mitmModuleHostCount": "Хостов для расшифровки: {count}",
   "@mitmModuleHostCount": {
@@ -3716,14 +3716,14 @@
   "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
   "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
   "mitmModuleRuleCount": "{count, plural, one{{count} правило маршрутизации} few{{count} правила маршрутизации} many{{count} правил маршрутизации} other{{count} правила маршрутизации}}",
-  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
+  "mitmRulePolicyMissing": "В текущем профиле нет «{policy}», поэтому это правило не будет действовать.",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
-  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesNotApplied": "Не удалось применить правила маршрутизации. Предыдущая настройка восстановлена.",
   "mitmRoutingRulesRevertFailed": "Не удалось применить правила маршрутизации и восстановить прежнюю настройку. Проверьте текущие правила.",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…",
+  "mitmChecking": "Проверка…",
   "rulesBelowListLast": "{head} и {last}",
   "rulesBelowSubscription": "профиль подписки",
   "rulesBelowScript": "скрипты расширений",

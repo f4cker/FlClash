@@ -3409,8 +3409,8 @@
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmScriptHasUpdate": "업데이트 가능",
-  "mitmHasUpdate": "Update available",
-  "mitmViewUpdate": "View Update",
+  "mitmHasUpdate": "업데이트 있음",
+  "mitmViewUpdate": "업데이트 보기",
   "mitmScriptsFromModules": "{count, plural, =1{모듈에서 제공하는 스크립트 1개가 더 있습니다} other{모듈에서 제공하는 스크립트 {count}개가 더 있습니다}}",
   "@mitmScriptsFromModules": {
     "placeholders": {
@@ -3539,8 +3539,8 @@
   },
   "mitmNotNow": "Not Now",
   "mitmAdoptUpdate": "Use New Version",
-  "mitmChangeHosts": "Decrypted hosts",
-  "mitmChangeScripts": "Scripts",
+  "mitmChangeHosts": "복호화 대상 호스트",
+  "mitmChangeScripts": "스크립트",
   "mitmChangeRewrites": "Rewrites",
   "mitmNoChange": "No change",
   "mitmModuleConfirmTitle": "Confirm Module Import",
@@ -3548,7 +3548,7 @@
   "mitmModuleNoHosts": "This module adds no decrypted hosts.",
   "mitmAlreadyListed": "Already listed",
   "mitmNewHost": "New",
-  "mitmExcludedCount": "{count} excluded",
+  "mitmExcludedCount": "제외: {count}개",
   "@mitmExcludedCount": {
     "placeholders": {
       "count": {
@@ -3556,7 +3556,7 @@
       }
     }
   },
-  "mitmMoreHosts": "{count} more",
+  "mitmMoreHosts": "그 외: {count}개",
   "@mitmMoreHosts": {
     "placeholders": {
       "count": {
@@ -3576,9 +3576,9 @@
     },
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmImportOnly": "Import Only",
-  "mitmImportAndEnable": "Import and Turn On",
-  "mitmImportModule": "Import Module",
+  "mitmImportOnly": "가져오기만",
+  "mitmImportAndEnable": "가져오고 켜기",
+  "mitmImportModule": "모듈 가져오기",
   "mitmModuleImported": "모듈을 가져왔습니다",
   "mitmModuleHostCount": "복호화 대상 호스트 {count}개",
   "@mitmModuleHostCount": {
@@ -3716,14 +3716,14 @@
   "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
   "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
   "mitmModuleRuleCount": "{count, plural, =1{라우팅 규칙 1개} other{라우팅 규칙 {count}개}}",
-  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
+  "mitmRulePolicyMissing": "현재 프로필에 ‘{policy}’이(가) 없어 이 규칙이 적용되지 않습니다.",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
-  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesNotApplied": "라우팅 규칙을 적용하지 못했습니다. 이전 설정으로 복원했습니다.",
   "mitmRoutingRulesRevertFailed": "라우팅 규칙을 적용하지 못했고 이전 설정도 복원하지 못했습니다. 현재 규칙을 확인하세요.",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…",
+  "mitmChecking": "확인 중…",
   "rulesBelowListLast": "{head} 및 {last}",
   "rulesBelowSubscription": "구독 프로필",
   "rulesBelowScript": "확장 스크립트",
