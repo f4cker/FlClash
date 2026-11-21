@@ -419,6 +419,10 @@ class RuleEditFrame extends StatelessWidget {
   /// GlobalKey: a button whose state lives in the dialog.
   final Widget? leading;
 
+  /// Stacked actions top to bottom by slot id; null keeps primary first.
+  final List<Symbol>? stackedOrder;
+  final double? minBodyHeight;
+
   const RuleEditFrame({
     super.key,
     required this.title,
@@ -433,6 +437,8 @@ class RuleEditFrame extends StatelessWidget {
     this.onDelete,
     this.deleting = false,
     this.leading,
+    this.stackedOrder,
+    this.minBodyHeight,
   });
 
   @override
@@ -506,60 +512,70 @@ class RuleEditFrame extends StatelessWidget {
       minimumSize: Size(0, _stackedActionHeight),
     );
     Widget stackedLabel(String text) => Text(text, textAlign: TextAlign.center);
-    final stacked = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 8,
-      children: [
+    final stackedActions = [
+      AdaptiveActionSlot(
+        id: #primary,
+        child: FilledButton(
+          style: stackedStyle,
+          onPressed: busy ? () {} : onPrimary,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 6,
+            children: [
+              if (busy && !deleting) spinner(colorScheme.onPrimary),
+              Flexible(child: stackedLabel(primaryLabel)),
+            ],
+          ),
+        ),
+      ),
+      if (leading case final leading?)
         AdaptiveActionSlot(
-          id: #primary,
-          child: FilledButton(
-            style: stackedStyle,
-            onPressed: busy ? () {} : onPrimary,
+          id: #leading,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _stackedActionHeight),
+            child: leading,
+          ),
+        ),
+      if (onDelete != null)
+        AdaptiveActionSlot(
+          id: #delete,
+          child: TextButton(
+            style: ButtonStyle(
+              minimumSize: const Size(0, _stackedActionHeight),
+              foregroundColor: WidgetStatePropertyAll(
+                busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+              ),
+            ),
+            onPressed: busy ? null : onDelete,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 6,
               children: [
-                if (busy && !deleting) spinner(colorScheme.onPrimary),
-                Flexible(child: stackedLabel(primaryLabel)),
+                if (deleting) spinner(_errorInk),
+                Flexible(child: stackedLabel(appLocalizations.delete)),
               ],
             ),
           ),
         ),
-        if (leading case final leading?)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _stackedActionHeight),
-            child: AdaptiveActionSlot(id: #leading, child: leading),
-          ),
-        if (onDelete != null)
-          AdaptiveActionSlot(
-            id: #delete,
-            child: TextButton(
-              style: ButtonStyle(
-                minimumSize: const Size(0, _stackedActionHeight),
-                foregroundColor: WidgetStatePropertyAll(
-                  busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
-                ),
-              ),
-              onPressed: busy ? null : onDelete,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  if (deleting) spinner(_errorInk),
-                  Flexible(child: stackedLabel(appLocalizations.delete)),
-                ],
-              ),
-            ),
-          ),
-        AdaptiveActionSlot(
-          id: #cancel,
-          child: TextButton(
-            style: stackedStyle,
-            onPressed: busy ? null : cancel,
-            child: stackedLabel(appLocalizations.cancel),
-          ),
+      AdaptiveActionSlot(
+        id: #cancel,
+        child: TextButton(
+          style: stackedStyle,
+          onPressed: busy ? null : cancel,
+          child: stackedLabel(appLocalizations.cancel),
         ),
-      ],
+      ),
+    ];
+    final order = stackedOrder;
+    final stacked = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: order == null
+          ? stackedActions
+          : [
+              for (final id in order)
+                ...stackedActions.where((slot) => slot.id == id),
+            ],
     );
     final footer = AdaptiveActions(wide: wide, stacked: stacked);
     return CallbackShortcuts(
@@ -569,6 +585,7 @@ class RuleEditFrame extends StatelessWidget {
         width: effective,
         hasFields: true,
         child: PinnedFooter(
+          minBodyHeight: minBodyHeight,
           footer: Padding(
             padding: const EdgeInsets.only(top: 16),
             child: footer,
@@ -1991,10 +2008,18 @@ class _RenderActionsSwitch extends RenderBox
 /// once the dialog's own scroll view would scroll, [body] alone scrolls in
 /// the height left.
 class PinnedFooter extends StatefulWidget {
-  const PinnedFooter({super.key, required this.body, required this.footer});
+  const PinnedFooter({
+    super.key,
+    required this.body,
+    required this.footer,
+    this.minBodyHeight,
+  });
 
   final Widget body;
   final Widget footer;
+
+  /// When set, [body] keeps this much and a taller [footer] scrolls itself.
+  final double? minBodyHeight;
 
   @override
   State<PinnedFooter> createState() => _PinnedFooterState();
@@ -2039,6 +2064,7 @@ class _PinnedFooterState extends State<PinnedFooter> {
         children: [widget.body, widget.footer],
       );
     }
+    final minBody = widget.minBodyHeight;
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: height),
       child: Column(
@@ -2046,7 +2072,15 @@ class _PinnedFooterState extends State<PinnedFooter> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Flexible(child: SingleChildScrollView(child: widget.body)),
-          widget.footer,
+          if (minBody == null)
+            widget.footer
+          else
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: math.max(0, height - minBody),
+              ),
+              child: SingleChildScrollView(child: widget.footer),
+            ),
         ],
       ),
     );
