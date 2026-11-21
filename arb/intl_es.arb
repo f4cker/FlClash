@@ -3408,8 +3408,8 @@
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmScriptHasUpdate": "Actualización disponible",
-  "mitmHasUpdate": "Update available",
-  "mitmViewUpdate": "View Update",
+  "mitmHasUpdate": "Actualización disponible",
+  "mitmViewUpdate": "Ver actualización",
   "mitmScriptsFromModules": "{count, plural, =1{1 script más procede de módulos} other{{count} scripts más proceden de módulos}}",
   "@mitmScriptsFromModules": {
     "placeholders": {
@@ -3538,7 +3538,7 @@
   },
   "mitmNotNow": "Not Now",
   "mitmAdoptUpdate": "Use New Version",
-  "mitmChangeHosts": "Decrypted hosts",
+  "mitmChangeHosts": "Hosts para descifrar",
   "mitmChangeScripts": "Scripts",
   "mitmChangeRewrites": "Rewrites",
   "mitmNoChange": "No change",
@@ -3547,7 +3547,7 @@
   "mitmModuleNoHosts": "This module adds no decrypted hosts.",
   "mitmAlreadyListed": "Already listed",
   "mitmNewHost": "New",
-  "mitmExcludedCount": "{count} excluded",
+  "mitmExcludedCount": "Excluidos: {count}",
   "@mitmExcludedCount": {
     "placeholders": {
       "count": {
@@ -3555,7 +3555,7 @@
       }
     }
   },
-  "mitmMoreHosts": "{count} more",
+  "mitmMoreHosts": "Otros: {count}",
   "@mitmMoreHosts": {
     "placeholders": {
       "count": {
@@ -3575,11 +3575,11 @@
     },
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmImportOnly": "Import Only",
-  "mitmImportAndEnable": "Import and Turn On",
-  "mitmImportModule": "Import Module",
+  "mitmImportOnly": "Solo importar",
+  "mitmImportAndEnable": "Importar y activar",
+  "mitmImportModule": "Importar módulo",
   "mitmModuleImported": "Módulo importado",
-  "mitmModuleHostCount": "{count} hosts",
+  "mitmModuleHostCount": "Hosts para descifrar: {count}",
   "@mitmModuleHostCount": {
     "placeholders": {
       "count": {
@@ -3715,14 +3715,14 @@
   "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
   "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
   "mitmModuleRuleCount": "{count, plural, =1{1 regla de enrutamiento} other{{count} reglas de enrutamiento}}",
-  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
+  "mitmRulePolicyMissing": "El perfil actual no tiene «{policy}», por lo que esta regla no tendrá efecto.",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
-  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesNotApplied": "No se pudieron aplicar las reglas de enrutamiento. Se ha restaurado la configuración anterior.",
   "mitmRoutingRulesRevertFailed": "No se pudieron aplicar las reglas de enrutamiento ni restaurar la configuración anterior. Revisa las reglas actuales.",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…",
+  "mitmChecking": "Comprobando…",
   "rulesBelowListLast": "{head} y {last}",
   "rulesBelowSubscription": "el perfil de suscripción",
   "rulesBelowScript": "los scripts de extensión",

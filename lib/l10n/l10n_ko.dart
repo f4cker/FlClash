@@ -8203,10 +8203,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmScriptHasUpdate => '업데이트 가능';
 
   @override
-  String get mitmHasUpdate => 'Update available';
+  String get mitmHasUpdate => '업데이트 있음';
 
   @override
-  String get mitmViewUpdate => 'View Update';
+  String get mitmViewUpdate => '업데이트 보기';
 
   @override
   String mitmScriptsFromModules(int count) {
@@ -8381,10 +8381,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmAdoptUpdate => 'Use New Version';
 
   @override
-  String get mitmChangeHosts => 'Decrypted hosts';
+  String get mitmChangeHosts => '복호화 대상 호스트';
 
   @override
-  String get mitmChangeScripts => 'Scripts';
+  String get mitmChangeScripts => '스크립트';
 
   @override
   String get mitmChangeRewrites => 'Rewrites';
@@ -8410,12 +8410,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mitmExcludedCount(int count) {
-    return '$count excluded';
+    return '제외: $count개';
   }
 
   @override
   String mitmMoreHosts(int count) {
-    return '$count more';
+    return '그 외: $count개';
   }
 
   @override
@@ -8439,13 +8439,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mitmImportOnly => 'Import Only';
+  String get mitmImportOnly => '가져오기만';
 
   @override
-  String get mitmImportAndEnable => 'Import and Turn On';
+  String get mitmImportAndEnable => '가져오고 켜기';
 
   @override
-  String get mitmImportModule => 'Import Module';
+  String get mitmImportModule => '모듈 가져오기';
 
   @override
   String get mitmModuleImported => '모듈을 가져왔습니다';
@@ -8650,7 +8650,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mitmRulePolicyMissing(String policy) {
-    return 'The current profile has no “$policy”, so this rule won\'t take effect';
+    return '현재 프로필에 ‘$policy’이(가) 없어 이 규칙이 적용되지 않습니다.';
   }
 
   @override
@@ -8663,7 +8663,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmRoutingRulesNotApplied =>
-      'The routing rules couldn\'t be applied. The previous setting has been restored.';
+      '라우팅 규칙을 적용하지 못했습니다. 이전 설정으로 복원했습니다.';
 
   @override
   String get mitmRoutingRulesRevertFailed =>
@@ -8677,7 +8677,7 @@ class AppLocalizationsKo extends AppLocalizations {
       'Please wait. New connections try decryption again once the pause ends.';
 
   @override
-  String get mitmChecking => 'Checking…';
+  String get mitmChecking => '확인 중…';
 
   @override
   String rulesBelowListLast(String head, String last) {

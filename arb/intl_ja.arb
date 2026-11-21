@@ -3408,8 +3408,8 @@
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmScriptHasUpdate": "アップデートあり",
-  "mitmHasUpdate": "Update available",
-  "mitmViewUpdate": "View Update",
+  "mitmHasUpdate": "更新あり",
+  "mitmViewUpdate": "更新を確認",
   "mitmScriptsFromModules": "{count, plural, =1{他にモジュール由来のスクリプトが 1 件あります} other{他にモジュール由来のスクリプトが {count} 件あります}}",
   "@mitmScriptsFromModules": {
     "placeholders": {
@@ -3538,8 +3538,8 @@
   },
   "mitmNotNow": "Not Now",
   "mitmAdoptUpdate": "Use New Version",
-  "mitmChangeHosts": "Decrypted hosts",
-  "mitmChangeScripts": "Scripts",
+  "mitmChangeHosts": "復号対象ホスト",
+  "mitmChangeScripts": "スクリプト",
   "mitmChangeRewrites": "Rewrites",
   "mitmNoChange": "No change",
   "mitmModuleConfirmTitle": "Confirm Module Import",
@@ -3547,7 +3547,7 @@
   "mitmModuleNoHosts": "This module adds no decrypted hosts.",
   "mitmAlreadyListed": "Already listed",
   "mitmNewHost": "New",
-  "mitmExcludedCount": "{count} excluded",
+  "mitmExcludedCount": "除外：{count}件",
   "@mitmExcludedCount": {
     "placeholders": {
       "count": {
@@ -3555,7 +3555,7 @@
       }
     }
   },
-  "mitmMoreHosts": "{count} more",
+  "mitmMoreHosts": "その他：{count}件",
   "@mitmMoreHosts": {
     "placeholders": {
       "count": {
@@ -3575,9 +3575,9 @@
     },
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmImportOnly": "Import Only",
-  "mitmImportAndEnable": "Import and Turn On",
-  "mitmImportModule": "Import Module",
+  "mitmImportOnly": "インポートのみ",
+  "mitmImportAndEnable": "インポートして有効化",
+  "mitmImportModule": "モジュールをインポート",
   "mitmModuleImported": "モジュールをインポートしました",
   "mitmModuleHostCount": "ホスト {count} 件",
   "@mitmModuleHostCount": {
@@ -3715,14 +3715,14 @@
   "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
   "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
   "mitmModuleRuleCount": "{count, plural, =1{1 件の振り分けルール} other{{count} 件の振り分けルール}}",
-  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
+  "mitmRulePolicyMissing": "現在のプロファイルに「{policy}」がないため、このルールは適用されません。",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
-  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesNotApplied": "ルーティングルールを適用できませんでした。以前の設定に戻しました。",
   "mitmRoutingRulesRevertFailed": "ルーティングルールを適用できず、元の設定にも戻せませんでした。現在のルールを確認してください。",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…",
+  "mitmChecking": "確認中…",
   "rulesBelowListLast": "{head}と{last}",
   "rulesBelowSubscription": "サブスクリプション設定",
   "rulesBelowScript": "拡張スクリプト",

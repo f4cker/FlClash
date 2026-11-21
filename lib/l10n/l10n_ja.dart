@@ -8133,10 +8133,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmScriptHasUpdate => 'アップデートあり';
 
   @override
-  String get mitmHasUpdate => 'Update available';
+  String get mitmHasUpdate => '更新あり';
 
   @override
-  String get mitmViewUpdate => 'View Update';
+  String get mitmViewUpdate => '更新を確認';
 
   @override
   String mitmScriptsFromModules(int count) {
@@ -8311,10 +8311,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmAdoptUpdate => 'Use New Version';
 
   @override
-  String get mitmChangeHosts => 'Decrypted hosts';
+  String get mitmChangeHosts => '復号対象ホスト';
 
   @override
-  String get mitmChangeScripts => 'Scripts';
+  String get mitmChangeScripts => 'スクリプト';
 
   @override
   String get mitmChangeRewrites => 'Rewrites';
@@ -8340,12 +8340,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mitmExcludedCount(int count) {
-    return '$count excluded';
+    return '除外：$count件';
   }
 
   @override
   String mitmMoreHosts(int count) {
-    return '$count more';
+    return 'その他：$count件';
   }
 
   @override
@@ -8369,13 +8369,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get mitmImportOnly => 'Import Only';
+  String get mitmImportOnly => 'インポートのみ';
 
   @override
-  String get mitmImportAndEnable => 'Import and Turn On';
+  String get mitmImportAndEnable => 'インポートして有効化';
 
   @override
-  String get mitmImportModule => 'Import Module';
+  String get mitmImportModule => 'モジュールをインポート';
 
   @override
   String get mitmModuleImported => 'モジュールをインポートしました';
@@ -8580,7 +8580,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mitmRulePolicyMissing(String policy) {
-    return 'The current profile has no “$policy”, so this rule won\'t take effect';
+    return '現在のプロファイルに「$policy」がないため、このルールは適用されません。';
   }
 
   @override
@@ -8592,8 +8592,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get rulesViewInModule => 'View in module';
 
   @override
-  String get mitmRoutingRulesNotApplied =>
-      'The routing rules couldn\'t be applied. The previous setting has been restored.';
+  String get mitmRoutingRulesNotApplied => 'ルーティングルールを適用できませんでした。以前の設定に戻しました。';
 
   @override
   String get mitmRoutingRulesRevertFailed =>
@@ -8607,7 +8606,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'Please wait. New connections try decryption again once the pause ends.';
 
   @override
-  String get mitmChecking => 'Checking…';
+  String get mitmChecking => '確認中…';
 
   @override
   String rulesBelowListLast(String head, String last) {
