@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
@@ -1230,5 +1231,245 @@ void main() {
         );
       }
     }
+  }
+
+  /// The product of every fade above the panel: what share of it is drawn.
+  double panelOpacity(WidgetTester tester) {
+    var opacity = 1.0;
+    tester.element(find.byType(PinnedFooter)).visitAncestorElements((element) {
+      final widget = element.widget;
+      if (widget is LiquidGlassFade) {
+        opacity *= widget.opacity.value.clamp(0.0, 1.0);
+      } else if (widget is FadeTransition) {
+        opacity *= widget.opacity.value;
+      } else if (widget is Opacity) {
+        opacity *= widget.opacity;
+      }
+      return true;
+    });
+    return opacity;
+  }
+
+  Rect scaledAbout(Rect rect, Offset centre, double scale) => Rect.fromLTRB(
+    centre.dx + (rect.left - centre.dx) * scale,
+    centre.dy + (rect.top - centre.dy) * scale,
+    centre.dx + (rect.right - centre.dx) * scale,
+    centre.dy + (rect.bottom - centre.dy) * scale,
+  );
+
+  /// The alert's entry: 404 ms on one spring that both fades it in and
+  /// shrinks it from 1.2 times its size.
+  const entry = Duration(milliseconds: 404);
+
+  for (final tag in const ['en', 'ru']) {
+    for (final scale in const [1.0, 2.0]) {
+      final name = '$tag 320x640 ×${scale.toInt()}, real font, entry';
+
+      testWidgets(
+        '$name: past the window only while at most 0.6 opaque, and whole '
+        'on screen from 22% on',
+        skip: noArial != null,
+        (tester) async {
+          await realFont(tester);
+          const size = Size(320, 640);
+          final screen = Offset.zero & size;
+          await pump(tester, size: size, locale: Locale(tag), textScale: scale);
+          final (result, _) = open(tester);
+          Object? closed = 'open';
+          unawaited(result.then((value) => closed = value));
+          final l = currentAppLocalizations;
+          final frames = <(int, double, Rect, List<Rect>)>[];
+          for (var ms = 0; ms <= entry.inMilliseconds; ms++) {
+            await tester.pump(
+              ms == 0 ? Duration.zero : const Duration(milliseconds: 1),
+            );
+            frames.add((
+              ms,
+              panelOpacity(tester),
+              dialogRects(tester).$1,
+              [
+                for (final label in stackedLabels(l))
+                  tester.getRect(buttonOf(label)),
+              ],
+            ));
+          }
+          await tester.pumpAndSettle();
+          final (settled, _) = dialogRects(tester);
+          final centre = size.center(Offset.zero);
+          expect(
+            settled,
+            rectMoreOrLessEquals(
+              const Rect.fromLTRB(16, 24, 304, 616),
+              epsilon: 0.5,
+            ),
+          );
+
+          bool whole(Rect rect) => screen.intersect(rect) == rect;
+          var lastPastPanel = -1, lastPastButton = -1;
+          var opacityPast = 0.0, widestPast = 0.0;
+          for (final (ms, opacity, panel, buttons) in frames) {
+            final grown = scaledAbout(settled, centre, 1.2 - 0.2 * opacity);
+            expect(
+              panel,
+              rectMoreOrLessEquals(grown, epsilon: 0.5),
+              reason: '$ms ms',
+            );
+            if (!whole(panel)) {
+              lastPastPanel = ms;
+              opacityPast = math.max(opacityPast, opacity);
+              widestPast = math.max(widestPast, -panel.left);
+            }
+            if (!buttons.every(whole)) lastPastButton = ms;
+          }
+          final (_, first, firstPanel, _) = frames.first;
+          expect(first, 0);
+          expect(
+            firstPanel,
+            rectMoreOrLessEquals(
+              const Rect.fromLTRB(-12.8, -35.2, 332.8, 675.2),
+              epsilon: 0.5,
+            ),
+          );
+          expect(widestPast, closeTo(12.8, 0.1));
+          expect(lastPastPanel, 87);
+          expect(opacityPast, closeTo(0.591, 0.005));
+          expect(lastPastButton, 36);
+
+          const quarters = {
+            0: (0.0, Rect.fromLTRB(-12.8, -35.2, 332.8, 675.2)),
+            101: (0.671, Rect.fromLTRB(6.5, 4.5, 313.5, 635.5)),
+            202: (0.945, Rect.fromLTRB(14.4, 20.7, 305.6, 619.3)),
+            303: (0.993, Rect.fromLTRB(15.8, 23.6, 304.2, 616.4)),
+            404: (1.0, Rect.fromLTRB(16, 24, 304, 616)),
+          };
+          for (final MapEntry(key: ms, value: (opacity, rect))
+              in quarters.entries) {
+            final (_, drawn, panel, buttons) = frames[ms];
+            expect(drawn, closeTo(opacity, 0.001), reason: '$ms ms');
+            expect(
+              panel,
+              rectMoreOrLessEquals(rect, epsilon: 0.1),
+              reason: '$ms ms',
+            );
+            expect(whole(panel), ms > 0, reason: '$ms ms');
+            expect(buttons.every(whole), ms > 0, reason: '$ms ms');
+          }
+
+          await tester.tapAt(tester.getCenter(buttonOf(l.cancel)));
+          await tester.pumpAndSettle();
+          expect(closed, isNull);
+        },
+      );
+    }
+
+    testWidgets(
+      '$tag 320x640, entry: each action taken half way in acts',
+      skip: noArial != null,
+      (tester) async {
+        await realFont(tester);
+        await pump(
+          tester,
+          size: const Size(320, 640),
+          locale: Locale(tag),
+          textScale: 1,
+        );
+        final l = currentAppLocalizations;
+        for (final (label, enable) in [
+          (l.mitmImportOnly, false),
+          (l.cancel, null),
+          (l.mitmImportAndEnable, true),
+        ]) {
+          final (result, imports) = open(tester);
+          Object? closed = 'open';
+          unawaited(result.then((value) => closed = value));
+          await tester.pump();
+          await tester.pump(entry ~/ 2);
+          expect(panelOpacity(tester), inExclusiveRange(0.9, 0.99));
+          await tester.tapAt(tester.getCenter(buttonOf(label)));
+          await tester.pumpAndSettle();
+          expect(closed, enable, reason: label);
+          expect(imports, enable == null ? isEmpty : [enable], reason: label);
+        }
+      },
+    );
+
+    testWidgets(
+      '$tag 320x640, real font, nothing focused first: Esc does nothing '
+      'until Tab reaches an action, as on d2e42ee0',
+      skip: noArial != null,
+      (tester) async {
+        await realFont(tester);
+        await pump(
+          tester,
+          size: const Size(320, 640),
+          locale: Locale(tag),
+          textScale: 1,
+        );
+        final l = currentAppLocalizations;
+        String focused() {
+          final node = FocusManager.instance.primaryFocus;
+          if (node is FocusScopeNode &&
+              (node.debugLabel ?? '').contains('_ModalScopeState')) {
+            return 'route';
+          }
+          for (final label in [...stackedLabels(l), l.mitmMoreHosts(9)]) {
+            for (final element
+                in find.text(label, findRichText: true).evaluate()) {
+              if (Focus.of(element, createDependency: false) == node) {
+                return label;
+              }
+            }
+          }
+          return 'other';
+        }
+
+        for (final mid in [false, true]) {
+          final (result, imports) = open(tester);
+          Object? closed = 'open';
+          unawaited(result.then((value) => closed = value));
+          if (mid) {
+            await tester.pump();
+            await tester.pump(entry ~/ 2);
+          } else {
+            await tester.pumpAndSettle();
+          }
+          final why = mid ? 'half way in' : 'settled';
+          expect(focused(), 'route', reason: why);
+          expect(
+            await tester.sendKeyEvent(LogicalKeyboardKey.escape),
+            isFalse,
+            reason: why,
+          );
+          await tester.pumpAndSettle();
+          expect(closed, 'open', reason: why);
+          for (final label in [...stackedLabels(l), l.mitmMoreHosts(9)]) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pumpAndSettle();
+            expect(focused(), label, reason: why);
+          }
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+          await tester.pumpAndSettle();
+          expect(closed, isNull, reason: why);
+          expect(imports, isEmpty);
+        }
+
+        final (result, _) = open(tester);
+        Object? closed = 'open';
+        unawaited(result.then((value) => closed = value));
+        await tester.pump();
+        await tester.pump(entry ~/ 2);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        final firstTab = focused();
+        expect(firstTab, tag == 'ru' ? l.mitmMoreHosts(9) : 'route');
+        expect(stackedLabels(l), isNot(contains(firstTab)));
+        expect(closed, 'open');
+        await tester.tapAt(tester.getCenter(buttonOf(l.cancel)));
+        await tester.pumpAndSettle();
+        expect(closed, isNull);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 1));
+      },
+    );
   }
 }
