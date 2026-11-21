@@ -2022,7 +2022,7 @@ Cargo and registers `librust_api` as a code asset that Flutter bundles and signs
 the hook refuses `stable` and a target missing from that list. `rustup show` installs the pinned toolchain and those
 targets on first use.
 
-`flutter_rust_bridge_codegen generate` (see `.agents/commands.md`) writes `lib/src/rust/frb_generated.dart`,
+`make frb` (`tool/frb_codegen.sh`, see `.agents/commands.md`) writes `lib/src/rust/frb_generated.dart`,
 `frb_generated.io.dart`, `frb_generated.web.dart`, one `lib/src/rust/api/<module>.dart` per Rust API module, and
 `rust/src/frb_generated.rs`; none of them is edited by hand. A new Rust function is a public function in `rust/src/api/`,
 plus `pub mod <name>;` in `api/mod.rs` and an export from `lib/rust_api.dart` when it starts a new module. `RustLib` is

@@ -22,8 +22,8 @@ COMMENT_FILES = $(or $(FILES),$(shell git diff HEAD --name-only --diff-filter=d;
 
 .PHONY: help setup submodules pub-get doctor hooks worktrees \
 	gen gen-watch l10n status-icons frb site \
-	fmt fmt-check analyze test coverage lint strip-check hooks-test comment-density plugins-check setup-hooks-test \
-	rust-check changelog-verify check \
+	fmt fmt-check analyze test coverage lint strip-check hooks-test frb-test comment-density plugins-check \
+	setup-hooks-test rust-check changelog-verify check \
 	core-check core-test \
 	package package-android package-windows package-macos package-linux package-dry manifest \
 	run release-plan clean clean-core
@@ -68,8 +68,8 @@ l10n: ## Regenerate lib/l10n from the ARB files
 status-icons: ## Regenerate the tray icons
 	dart run tool/generate_status_icons.dart
 
-frb: ## Regenerate the flutter_rust_bridge bindings of plugins/rust_api
-	cd plugins/rust_api && flutter_rust_bridge_codegen generate
+frb: ## Regenerate the flutter_rust_bridge bindings of plugins/rust_api, pinned to its rust-toolchain.toml
+	bash tool/frb_codegen.sh
 
 site: ## Build the website into build/site
 	bash tool/build_site.sh
@@ -100,6 +100,9 @@ strip-check: ## Strip the rsFeature checks in a scratch copy and analyze what th
 
 hooks-test: ## Test the git hook scripts in tool/hooks
 	bash tool/hooks/test.sh
+
+frb-test: ## Test tool/frb_codegen.sh in a scratch copy (FRB_CODEGEN=path for the codegen cases)
+	bash tool/frb_codegen_test.sh
 
 comment-density: ## Hold uncommitted changes, or FILES=paths, to the comment cap
 	@files='$(strip $(COMMENT_FILES))'; \

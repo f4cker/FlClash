@@ -8,8 +8,9 @@ and bundles the resulting `librust_api` itself.
 
 - `rustup`, with the toolchain and targets pinned in `rust/rust-toolchain.toml` (installed on first build).
 - The Android NDK for Android builds.
-- `flutter_rust_bridge_codegen` matching the `flutter_rust_bridge` version in `pubspec.yaml`, to regenerate bindings:
+- `flutter_rust_bridge_codegen` matching the `flutter_rust_bridge` version in `pubspec.yaml`, to regenerate bindings
+  through the wrapper, which pins the toolchain and checks the loader stem (see `.agents/commands.md`):
 
 ```bash
-flutter_rust_bridge_codegen generate
+make frb   # at the repository root; or run tool/frb_codegen.sh from any directory
 ```
