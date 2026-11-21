@@ -222,7 +222,7 @@ class _RecentFeedState extends State<_RecentFeed> {
     return ValueListenableBuilder<TrackerInfosState>(
       valueListenable: widget.listController,
       builder: (context, state, _) {
-        final requests = widget.filters.apply(state.list);
+        final requests = widget.listController.shownBy(widget.filters);
         return NullStatusSwitcher(
           isEmpty: requests.isEmpty,
           isSearching: state.isSearching || widget.filters.isFiltering,
@@ -478,9 +478,9 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       return;
     }
     _snapshot = trackerInfos;
-    ref.read(requestsProvider.notifier).retainMitmStatuses([
-      for (final info in trackerInfos) info.id,
-    ]);
+    ref
+        .read(requestsProvider.notifier)
+        .retainMitmStatuses(trackerInfos.map((info) => info.id));
     _showSnapshot();
   }
 
@@ -539,7 +539,7 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     return ValueListenableBuilder<TrackerInfosState>(
       valueListenable: widget.listController,
       builder: (context, state, _) {
-        final connections = widget.filters.apply(state.list);
+        final connections = widget.listController.shownBy(widget.filters);
         // Nothing read yet: the failure stands in the content, never the
         // empty state.
         final unread = _failed && !_succeeded;
