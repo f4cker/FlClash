@@ -102,6 +102,9 @@ class _RequestsViewState extends ConsumerState<RequestsView>
       _live.value.trackerInfos.length,
     );
     if (query.isEmpty || length < throttledSearchLength) {
+      // Nothing waits behind a clear: the next keystroke is a fresh start.
+      _searchCooldown?.cancel();
+      _searchCooldown = null;
       _queuedSearch = null;
       _applySearch(query);
       return;
