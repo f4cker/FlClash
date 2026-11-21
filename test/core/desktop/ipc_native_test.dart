@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fl_clash/core/desktop/socket_address.dart';
 import 'package:fl_clash/core/desktop/transport.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +20,11 @@ Uint8List _frame(String payload) {
   return Uint8List.fromList([...header.buffer.asUint8List(), ...bytes]);
 }
 
+/// Socket directories must sit directly in the per-user temp dir on macOS.
+final Directory _base = Platform.isMacOS
+    ? Directory(darwinUserTempDir())
+    : Directory.systemTemp;
+
 void main() {
   late Directory directory;
   late String address;
@@ -27,7 +33,7 @@ void main() {
   setUpAll(initEditorNative);
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('ipc');
+    directory = await _base.createTemp('ipc');
     address = '${directory.path}/core.sock';
     transport = IpcCoreTransport(address: address);
   });
@@ -102,25 +108,35 @@ void main() {
 
   group('macOS private socket directory', () {
     test('an absent directory is created owner-only', () async {
-      final private = IpcCoreTransport(
-        address: '${directory.path}/app-501/core.sock',
-      );
+      final absent = '${directory.path}-absent';
+      final private = IpcCoreTransport(address: '$absent/core.sock');
 
       await private.open();
 
-      expect(
-        FileStat.statSync('${directory.path}/app-501').mode & 0x1ff,
-        0x1c0,
-      );
+      expect(FileStat.statSync(absent).mode & 0x1ff, 0x1c0);
       await private.close();
       expect(
-        FileSystemEntity.typeSync('${directory.path}/app-501/core.sock'),
+        FileSystemEntity.typeSync('$absent/core.sock'),
         FileSystemEntityType.notFound,
       );
+      Directory(absent).deleteSync();
+    });
+
+    test('a socket directory in public /tmp is refused', () async {
+      final public = '/tmp/ipc-public-$pid';
+      final refused = IpcCoreTransport(address: '$public/core.sock');
+
+      await expectLater(
+        refused.open(),
+        throwsA(contains('not directly inside the per-user temp dir')),
+      );
+
+      expect(Directory(public).existsSync(), isFalse);
+      await refused.close();
     });
 
     test('a directory others can enter is refused and kept', () async {
-      final shared = Directory('${directory.path}/shared')..createSync();
+      final shared = _base.createTempSync('ipcshared');
       await Process.run('chmod', ['755', shared.path]);
       final refused = IpcCoreTransport(address: '${shared.path}/core.sock');
 
@@ -128,6 +144,7 @@ void main() {
 
       expect(FileStat.statSync(shared.path).mode & 0x1ff, 0x1ed);
       await refused.close();
+      shared.deleteSync();
     });
 
     test(

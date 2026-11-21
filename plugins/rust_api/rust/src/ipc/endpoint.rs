@@ -2,11 +2,16 @@
 //! this user can enter, and a socket file inside it that is removed on
 //! shutdown only while it is still the one this process bound.
 //!
+//! The directory sits directly inside the per-user temp dir the system hands
+//! out (`confstr(_CS_DARWIN_USER_TEMP_DIR)`, `/var/folders/…/T`), which only
+//! this user can write to, so no other user can pre-create or squat it. There
+//! is no fallback to `/tmp` or to `$TMPDIR`.
+//!
 //! `bind(2)` takes a path and has no directory-fd form on macOS, so the
 //! directory is pinned by an open fd and its inode is checked before and after
 //! the bind; every later operation on the socket file is relative to that fd.
 
-use std::ffi::{CStr, CString};
+use std::ffi::{CStr, CString, OsStr};
 use std::fs::{DirBuilder, File, Metadata, OpenOptions};
 use std::io;
 use std::mem::MaybeUninit;
@@ -55,16 +60,21 @@ pub struct PrivateDir {
 }
 
 impl PrivateDir {
-    /// Creates the directory 0700 if it is absent. An existing one is used only
-    /// if it already passes every check; it is never chmod-ed, chown-ed or
-    /// deleted.
-    pub fn claim(path: &Path) -> io::Result<Self> {
-        Self::claim_with(path, |path| DirBuilder::new().mode(0o700).create(path))
+    /// `claim_with` as this user, with the real mkdir.
+    #[cfg(test)]
+    fn claim(path: &Path) -> io::Result<Self> {
+        Self::claim_with(path, current_uid(), mkdir_private)
     }
 
-    /// `claim` with the mkdir injected, so a umask that strips owner bits can
-    /// be simulated without changing the process-wide umask.
-    fn claim_with(path: &Path, mkdir: impl FnOnce(&Path) -> io::Result<()>) -> io::Result<Self> {
+    /// Creates the directory 0700 if it is absent. An existing one is used only
+    /// if it already passes every check; it is never chmod-ed, chown-ed or
+    /// deleted. `uid` and `mkdir` are injectable so that another user, or a
+    /// umask that strips owner bits, can be simulated in tests.
+    fn claim_with(
+        path: &Path,
+        uid: u32,
+        mkdir: impl FnOnce(&Path) -> io::Result<()>,
+    ) -> io::Result<Self> {
         let created = match mkdir(path) {
             Ok(()) => true,
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => false,
@@ -78,8 +88,6 @@ impl PrivateDir {
                 ))
             }
         };
-        // SAFETY: geteuid() takes no arguments and cannot fail.
-        let uid = unsafe { libc::geteuid() };
         let checked = std::fs::symlink_metadata(path)?;
         // Only a directory made by this very call may still have its mode
         // fixed; it is checked in full after that.
@@ -186,9 +194,97 @@ fn refused(path: &Path, reason: &str) -> io::Error {
     )
 }
 
-/// Splits a socket address into its private directory and file name, and
-/// claims the directory.
+fn current_uid() -> u32 {
+    // SAFETY: geteuid() takes no arguments and cannot fail.
+    unsafe { libc::geteuid() }
+}
+
+fn mkdir_private(path: &Path) -> io::Result<()> {
+    DirBuilder::new().mode(0o700).create(path)
+}
+
+/// The per-user temp dir from `confstr(_CS_DARWIN_USER_TEMP_DIR)`. `$TMPDIR`
+/// is not consulted: the environment can point it anywhere.
+pub fn user_temp_dir() -> io::Result<PathBuf> {
+    user_temp_dir_with(|buf, len| {
+        // SAFETY: `buf` is null with `len` 0, or valid for `len` bytes.
+        unsafe { libc::confstr(libc::_CS_DARWIN_USER_TEMP_DIR, buf, len) }
+    })
+}
+
+fn user_temp_dir_with(confstr: impl Fn(*mut libc::c_char, usize) -> usize) -> io::Result<PathBuf> {
+    let unavailable = |why: String| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "the per-user temp dir is unavailable: confstr(_CS_DARWIN_USER_TEMP_DIR) {why}; \
+                 not falling back to /tmp"
+            ),
+        )
+    };
+    let needed = confstr(std::ptr::null_mut(), 0);
+    if needed == 0 {
+        return Err(unavailable(format!(
+            "failed: {}",
+            io::Error::last_os_error()
+        )));
+    }
+    let mut buffer = vec![0_u8; needed];
+    let written = confstr(buffer.as_mut_ptr().cast(), buffer.len());
+    if written == 0 || written > buffer.len() {
+        return Err(unavailable("failed on the second call".into()));
+    }
+    let value = CStr::from_bytes_until_nul(&buffer)
+        .map_err(|_| unavailable("returned no terminating NUL".into()))?;
+    let path = PathBuf::from(OsStr::from_bytes(value.to_bytes()));
+    if !path.is_absolute() {
+        return Err(unavailable(format!(
+            "returned {path:?}, not an absolute path"
+        )));
+    }
+    Ok(path)
+}
+
+/// The base must be a real directory, owned by `uid`, that nobody else can
+/// enter or write to (mode `& 077 == 0`; the system makes it 0700).
+fn check_base(base: &Path, uid: u32) -> io::Result<()> {
+    let refused = |reason: String| {
+        io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            format!(
+                "refusing per-user temp dir {}: it {reason}; not falling back to /tmp",
+                base.display()
+            ),
+        )
+    };
+    let metadata = std::fs::symlink_metadata(base)
+        .map_err(|error| refused(format!("cannot be inspected: {error}")))?;
+    if metadata.file_type().is_symlink() {
+        return Err(refused("is a symbolic link".into()));
+    }
+    if !metadata.is_dir() {
+        return Err(refused("is not a directory".into()));
+    }
+    if metadata.uid() != uid {
+        return Err(refused(format!(
+            "is owned by uid {}, not {uid}",
+            metadata.uid()
+        )));
+    }
+    let mode = metadata.mode() & 0o7777;
+    if mode & 0o077 != 0 {
+        return Err(refused(format!("has mode {mode:o}, open to other users")));
+    }
+    Ok(())
+}
+
+/// Splits a socket address into its private directory and file name, checks
+/// that the directory sits directly in the per-user temp dir, and claims it.
 pub fn prepare(address: &str) -> io::Result<(PrivateDir, CString)> {
+    prepare_in(address, &user_temp_dir()?, current_uid())
+}
+
+fn prepare_in(address: &str, base: &Path, uid: u32) -> io::Result<(PrivateDir, CString)> {
     if address.len() > MAX_SOCKET_PATH {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -213,7 +309,18 @@ pub fn prepare(address: &str) -> io::Result<(PrivateDir, CString)> {
     }
     let name = CString::new(name.as_bytes())
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "IPC socket path has a NUL"))?;
-    Ok((PrivateDir::claim(parent)?, name))
+    if parent.parent() != Some(base) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "IPC socket directory {} is not directly inside the per-user temp dir {}",
+                parent.display(),
+                base.display()
+            ),
+        ));
+    }
+    check_base(base, uid)?;
+    Ok((PrivateDir::claim_with(parent, uid, mkdir_private)?, name))
 }
 
 /// Explains a failed bind. Never deletes anything.
@@ -315,7 +422,7 @@ mod tests {
     /// A fresh path under the temp dir that does not exist yet.
     fn fresh(label: &str) -> PathBuf {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
-        std::env::temp_dir().join(format!(
+        user_temp_dir().unwrap().join(format!(
             "fep-{label}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
@@ -388,16 +495,6 @@ mod tests {
         std::fs::remove_dir(&path).unwrap();
     }
 
-    #[test]
-    fn a_root_owned_directory_is_refused() {
-        // /tmp itself (or its target) is root's, and sticky 1777.
-        let tmp = std::fs::canonicalize("/tmp").unwrap();
-        assert_eq!(
-            kind(PrivateDir::claim(&tmp)),
-            io::ErrorKind::PermissionDenied
-        );
-    }
-
     fn entries(path: &Path) -> Vec<std::ffi::OsString> {
         let mut names: Vec<_> = std::fs::read_dir(path)
             .unwrap()
@@ -409,16 +506,24 @@ mod tests {
 
     #[test]
     fn claiming_a_directory_owned_by_someone_else_changes_nothing() {
-        // The canonical /tmp is root's: claim must reach the owner check,
-        // refuse, and leave its mode alone.
-        let tmp = std::fs::canonicalize("/tmp").unwrap();
-        let mode = std::fs::symlink_metadata(&tmp).unwrap().mode();
+        // As seen by another uid, this 0700 directory is someone else's.
+        let path = fresh("other");
+        std::fs::create_dir(&path).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let other = current_uid() + 1;
 
-        let error = PrivateDir::claim(&tmp).err().unwrap();
+        let error = PrivateDir::claim_with(&path, other, mkdir_private)
+            .err()
+            .unwrap();
 
         assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
-        assert!(error.to_string().contains("owned by uid 0"), "{error}");
-        assert_eq!(std::fs::symlink_metadata(&tmp).unwrap().mode(), mode);
+        assert!(error.to_string().contains("owned by uid"), "{error}");
+        assert_eq!(
+            std::fs::symlink_metadata(&path).unwrap().mode() & 0o7777,
+            0o700
+        );
+        assert!(entries(&path).is_empty());
+        std::fs::remove_dir(&path).unwrap();
     }
 
     #[test]
@@ -456,7 +561,7 @@ mod tests {
     fn a_directory_created_here_under_a_stripping_umask_is_fixed_to_0700() {
         let path = fresh("umask");
 
-        let dir = PrivateDir::claim_with(&path, stripped_mkdir).unwrap();
+        let dir = PrivateDir::claim_with(&path, current_uid(), stripped_mkdir).unwrap();
 
         assert_eq!(
             std::fs::symlink_metadata(&path).unwrap().mode() & 0o7777,
@@ -473,7 +578,7 @@ mod tests {
 
         // mkdir reports EEXIST, so this call did not create it.
         assert_eq!(
-            kind(PrivateDir::claim_with(&path, stripped_mkdir)),
+            kind(PrivateDir::claim_with(&path, current_uid(), stripped_mkdir)),
             io::ErrorKind::PermissionDenied
         );
 
@@ -536,11 +641,34 @@ mod tests {
         std::fs::remove_dir(&moved).unwrap();
     }
 
+    /// An address of exactly `len` bytes in a fresh subdir of the real base.
+    fn address_of_len(len: usize) -> (PathBuf, String) {
+        let dir = fresh("len");
+        let prefix = format!("{}/", dir.display());
+        assert!(prefix.len() < len, "the base is too long for this test");
+        let address = format!("{prefix}{}", "n".repeat(len - prefix.len()));
+        assert_eq!(address.len(), len);
+        (dir, address)
+    }
+
     #[test]
-    fn a_path_over_the_sun_path_limit_is_rejected_before_anything_is_created() {
-        let dir = fresh("long");
-        let address = format!("{}/{}", dir.display(), "x".repeat(MAX_SOCKET_PATH));
-        assert_eq!(kind(prepare(&address)), io::ErrorKind::InvalidInput);
+    fn a_path_exactly_at_the_sun_path_limit_is_accepted() {
+        let (dir, address) = address_of_len(MAX_SOCKET_PATH);
+
+        let (claimed, _name) = prepare(&address).unwrap();
+
+        claimed.verify().unwrap();
+        std::fs::remove_dir(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_path_one_byte_over_the_limit_is_rejected_before_anything_is_created() {
+        let (dir, address) = address_of_len(MAX_SOCKET_PATH + 1);
+
+        let error = prepare(&address).err().unwrap();
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert!(error.to_string().contains("sun_path"), "{error}");
         assert!(!dir.exists());
     }
 
@@ -550,6 +678,121 @@ mod tests {
             kind(prepare("relative/core.sock")),
             io::ErrorKind::InvalidInput
         );
+    }
+
+    #[test]
+    fn the_base_comes_from_confstr_and_is_ours_and_private() {
+        let base = user_temp_dir().unwrap();
+
+        assert!(base.is_absolute());
+        check_base(&base, current_uid()).unwrap();
+    }
+
+    #[test]
+    fn a_confstr_failure_is_an_error_without_fallback() {
+        let error = user_temp_dir_with(|_, _| 0).unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::NotFound);
+        assert!(
+            error.to_string().contains("not falling back to /tmp"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn a_relative_confstr_result_is_an_error() {
+        let fake = |buf: *mut libc::c_char, len: usize| {
+            let value = b"relative/T/\0";
+            if !buf.is_null() && len >= value.len() {
+                // SAFETY: `buf` holds `len` bytes.
+                unsafe { std::ptr::copy_nonoverlapping(value.as_ptr().cast(), buf, value.len()) };
+            }
+            value.len()
+        };
+
+        assert_eq!(
+            user_temp_dir_with(fake).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+    }
+
+    #[test]
+    fn another_users_base_is_refused() {
+        // Our own base, seen by a different uid, is someone else's.
+        let base = user_temp_dir().unwrap();
+        let other = current_uid() + 1;
+        let address = format!("{}/sub-{}/core.sock", base.display(), std::process::id());
+
+        let error = prepare_in(&address, &base, other).err().unwrap();
+
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(error.to_string().contains("owned by uid"), "{error}");
+        assert!(!Path::new(&address).parent().unwrap().exists());
+    }
+
+    #[test]
+    fn a_missing_base_is_refused_without_fallback() {
+        let base = fresh("nobase");
+        let address = format!("{}/sub/core.sock", base.display());
+
+        let error = prepare_in(&address, &base, current_uid()).err().unwrap();
+
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(
+            error.to_string().contains("not falling back to /tmp"),
+            "{error}"
+        );
+        assert!(!base.exists());
+    }
+
+    #[test]
+    fn a_symlinked_base_is_refused() {
+        let target = fresh("basetarget");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let link = fresh("baselink");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        let address = format!("{}/sub/core.sock", link.display());
+
+        let error = prepare_in(&address, &link, current_uid()).err().unwrap();
+
+        assert!(error.to_string().contains("symbolic link"), "{error}");
+        assert!(entries(&target).is_empty());
+        std::fs::remove_file(&link).unwrap();
+        std::fs::remove_dir(&target).unwrap();
+    }
+
+    #[test]
+    fn a_base_open_to_others_is_refused_and_kept() {
+        let base = fresh("openbase");
+        std::fs::create_dir(&base).unwrap();
+        std::fs::set_permissions(&base, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let address = format!("{}/sub/core.sock", base.display());
+
+        let error = prepare_in(&address, &base, current_uid()).err().unwrap();
+
+        assert!(error.to_string().contains("open to other users"), "{error}");
+        assert_eq!(
+            std::fs::symlink_metadata(&base).unwrap().mode() & 0o7777,
+            0o755
+        );
+        assert!(entries(&base).is_empty());
+        std::fs::remove_dir(&base).unwrap();
+    }
+
+    #[test]
+    fn a_socket_dir_outside_the_base_is_refused() {
+        let base = user_temp_dir().unwrap();
+        for address in [
+            "/tmp/com.layoute.flash-501/core.sock".to_owned(),
+            format!("{}/a/b/core.sock", base.display()),
+            format!("{}/a/../b/core.sock", base.display()),
+        ] {
+            let error = prepare_in(&address, &base, current_uid()).err().unwrap();
+
+            assert_eq!(error.kind(), io::ErrorKind::InvalidInput, "{address}");
+            assert!(error.to_string().contains("not directly inside"), "{error}");
+        }
     }
 
     #[test]

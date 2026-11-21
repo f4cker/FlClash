@@ -242,16 +242,33 @@ mod tests {
 
     const WAIT: Duration = Duration::from_secs(5);
 
+    /// Where socket directories live: the per-user temp dir on macOS.
+    fn base() -> std::path::PathBuf {
+        #[cfg(target_os = "macos")]
+        {
+            endpoint::user_temp_dir().unwrap()
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            std::env::temp_dir()
+        }
+    }
+
+    /// A path directly in the base that does not exist yet.
+    fn fresh_dir() -> std::path::PathBuf {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        base().join(format!(
+            "fipc-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed),
+        ))
+    }
+
     /// A fresh owner-only directory per call, as the app's private one.
     fn private_dir() -> std::path::PathBuf {
         use std::os::unix::fs::DirBuilderExt;
 
-        static NEXT: AtomicUsize = AtomicUsize::new(0);
-        let dir = std::env::temp_dir().join(format!(
-            "fipc-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed),
-        ));
+        let dir = fresh_dir();
         std::fs::DirBuilder::new().mode(0o700).create(&dir).unwrap();
         dir
     }
@@ -615,7 +632,7 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn an_absent_socket_directory_is_created_owner_only() {
-        let dir = private_dir().join("app-501");
+        let dir = fresh_dir();
         let path = dir.join("core.sock").to_str().unwrap().to_owned();
 
         let server = Server::bind(path).unwrap();
@@ -691,6 +708,50 @@ mod tests {
         assert!(!Path::new(&path).exists());
         assert_eq!(std::fs::read(&neighbour).unwrap(), b"neighbour");
         assert!(dir.is_dir());
+    }
+
+    #[cfg(target_os = "macos")]
+    fn address_of_len(len: usize) -> String {
+        let prefix = format!("{}/", private_dir().display());
+        let address = format!("{prefix}{}", "n".repeat(len - prefix.len()));
+        assert_eq!(address.len(), len);
+        address
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_socket_path_exactly_at_the_sun_path_limit_binds_and_serves() {
+        let path = address_of_len(endpoint::MAX_SOCKET_PATH);
+        let (server, events) = serve(&path);
+
+        let _peer = connect(&path);
+
+        expect_connected(&events);
+        server.close();
+        assert!(!Path::new(&path).exists());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_socket_path_one_byte_over_the_limit_fails_clearly() {
+        let path = address_of_len(endpoint::MAX_SOCKET_PATH + 1);
+
+        let error = Server::bind(path.clone()).err().unwrap();
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert!(error.to_string().contains("sun_path"), "{error}");
+        assert!(!Path::new(&path).exists());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_socket_directory_in_public_tmp_is_refused() {
+        let path = format!("/tmp/fipc-public-{}/core.sock", std::process::id());
+
+        let error = Server::bind(path.clone()).err().unwrap();
+
+        assert!(error.to_string().contains("not directly inside"), "{error}");
+        assert!(!Path::new(&path).parent().unwrap().exists());
     }
 
     #[test]

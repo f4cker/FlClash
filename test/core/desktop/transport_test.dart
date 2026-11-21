@@ -444,7 +444,7 @@ void main() {
     late List<String> tried;
     late int counter;
 
-    Future<String> next() async => '/tmp/app-501/${++counter}.sock';
+    Future<String> next() async => '/user-temp/sub/${++counter}.sock';
 
     setUp(() {
       tried = [];
@@ -460,13 +460,13 @@ void main() {
         },
       );
       await transport.open();
-      expect(transport.address, '/tmp/app-501/1.sock');
+      expect(transport.address, '/user-temp/sub/1.sock');
 
       await transport.reset();
       await transport.open();
 
-      expect(tried, ['/tmp/app-501/1.sock', '/tmp/app-501/2.sock']);
-      expect(transport.address, '/tmp/app-501/2.sock');
+      expect(tried, ['/user-temp/sub/1.sock', '/user-temp/sub/2.sock']);
+      expect(transport.address, '/user-temp/sub/2.sock');
       await transport.close();
     });
 
