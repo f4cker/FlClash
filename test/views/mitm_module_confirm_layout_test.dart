@@ -87,6 +87,7 @@ void main() {
     required Size size,
     required Locale locale,
     required double textScale,
+    TextDirection? textDirection,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -118,7 +119,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: TestApp(locale: locale, child: const SizedBox()),
+        child: TestApp(
+          locale: locale,
+          textDirection: textDirection,
+          child: const SizedBox(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -280,13 +285,59 @@ void main() {
     WidgetTester tester, {
     required double outer,
     required double inner,
+    double start = 0,
+    double end = 0,
   }) {
     final (panel, content) = dialogRects(tester);
-    final window = tester.view.physicalSize.width;
-    expect(panel.left, closeTo(outer, 0.5), reason: 'left margin');
+    final window = tester.view.physicalSize.width - end;
+    expect(panel.left - start, closeTo(outer, 0.5), reason: 'left margin');
     expect(window - panel.right, closeTo(outer, 0.5), reason: 'right margin');
     expect(content.left - panel.left, closeTo(inner, 0.5));
     expect(panel.right - content.right, closeTo(inner, 0.5));
+  }
+
+  /// Opens the dialog in a narrow window between [start] and [end] insets:
+  /// 16pt margins, 12pt label padding, actions as wide as the content, Tab
+  /// in row order and Esc cancelling.
+  Future<void> expectNarrow(
+    WidgetTester tester, {
+    double start = 0,
+    double end = 0,
+  }) async {
+    final (result, imports) = open(tester);
+    await tester.pumpAndSettle();
+    final l = currentAppLocalizations;
+    expect(tester.takeException(), isNull);
+
+    expectInsets(tester, outer: 16, inner: 16, start: start, end: end);
+    final (_, content) = dialogRects(tester);
+    for (final label in stackedLabels(l)) {
+      final padding = labelPadding(tester, label);
+      expect(padding.left, 12, reason: label);
+      expect(padding.right, 12, reason: label);
+      final button = tester.getRect(buttonOf(label));
+      expect(button.left, closeTo(content.left, 0.5), reason: label);
+      expect(button.right, closeTo(content.right, 0.5), reason: label);
+    }
+
+    FocusNode nodeOf(String label) =>
+        Focus.of(tester.element(find.text(label)), createDependency: false);
+    final labels = stackedLabels(l);
+    nodeOf(labels.first).requestFocus();
+    await tester.pumpAndSettle();
+    for (final label in labels.skip(1)) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus, nodeOf(label));
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    Object? closed = 'open';
+    unawaited(result.then((value) => closed = value));
+    await tester.pumpAndSettle();
+    expect(closed, isNull);
+    expect(imports, isEmpty);
+    expect(tester.takeException(), isNull);
   }
 
   /// The scroll view the body scrolls in, apart from the actions.
@@ -385,24 +436,15 @@ void main() {
         expect(await result, isNull);
       });
 
-      testWidgets('$name: 16pt from the window, 16pt inside, labels '
-          '12pt in', (tester) async {
-        await pump(tester, size: narrow, locale: locale, textScale: scale);
-        final (result, _) = open(tester);
-        await tester.pumpAndSettle();
-        final l = currentAppLocalizations;
-        expect(tester.takeException(), isNull);
-
-        expectInsets(tester, outer: 16, inner: 16);
-        for (final label in stackedLabels(l)) {
-          final padding = labelPadding(tester, label);
-          expect(padding.left, 12, reason: label);
-          expect(padding.right, 12, reason: label);
-        }
-
-        await tapButton(tester, l.cancel, capturePrints());
-        expect(await result, isNull);
-      });
+      for (final size in const [narrow, Size(320, 640)]) {
+        testWidgets('$tag ${size.width.toInt()}x640 ×${scale.toInt()}: 16pt '
+            'margins, labels 12pt in, full-width actions, keyboard', (
+          tester,
+        ) async {
+          await pump(tester, size: size, locale: locale, textScale: scale);
+          await expectNarrow(tester);
+        });
+      }
 
       testWidgets('$name: rewrite counts wrap beside Show More', (
         tester,
@@ -661,6 +703,139 @@ void main() {
     }
   }
 
+  testWidgets('uneven side insets: 16pt from each safe edge, centred in '
+      'the safe area', (tester) async {
+    tester.view.padding = const FakeViewPadding(left: 24, right: 8);
+    addTearDown(tester.view.resetPadding);
+    await pump(
+      tester,
+      size: narrow,
+      locale: const Locale('ru'),
+      textScale: 2.0,
+    );
+    await expectNarrow(tester, start: 24, end: 8);
+  });
+
+  testWidgets('RTL 360x640: the stack, its margins and Tab order are as in '
+      'LTR', (tester) async {
+    await pump(
+      tester,
+      size: narrow,
+      locale: const Locale('en'),
+      textScale: 1.0,
+      textDirection: TextDirection.rtl,
+    );
+    final (result, _) = open(tester);
+    await tester.pumpAndSettle();
+    final tops = [
+      for (final label in stackedLabels(currentAppLocalizations))
+        tester.getRect(buttonOf(label)).top,
+    ];
+    for (var i = 1; i < tops.length; i++) {
+      expect(tops[i], greaterThan(tops[i - 1]));
+    }
+    await tapButton(tester, currentAppLocalizations.cancel, capturePrints());
+    expect(await result, isNull);
+    await expectNarrow(tester);
+  });
+
+  testWidgets(
+    'RTL 1024x768: the row mirrors, Tab keeps the row order, Enter acts',
+    skip: noArial != null,
+    (tester) async {
+      await realFont(tester);
+      await pump(
+        tester,
+        size: const Size(1024, 768),
+        locale: const Locale('en'),
+        textScale: 1.0,
+        textDirection: TextDirection.rtl,
+      );
+      final (result, imports) = open(tester);
+      await tester.pumpAndSettle();
+      final l = currentAppLocalizations;
+      final labels = stackedLabels(l);
+      final centers = [
+        for (final label in labels) tester.getCenter(buttonOf(label)),
+      ];
+      for (var i = 1; i < centers.length; i++) {
+        expect(centers[i].dy, closeTo(centers[0].dy, 0.5));
+        expect(centers[i].dx, lessThan(centers[i - 1].dx), reason: labels[i]);
+      }
+      FocusNode nodeOf(String label) =>
+          Focus.of(tester.element(find.text(label)), createDependency: false);
+      nodeOf(labels.first).requestFocus();
+      await tester.pumpAndSettle();
+      for (final label in labels.skip(1)) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(FocusManager.instance.primaryFocus, nodeOf(label));
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      Object? closed = 'open';
+      unawaited(result.then((value) => closed = value));
+      await tester.pumpAndSettle();
+      expect(closed, isTrue);
+      expect(imports, [true]);
+    },
+  );
+
+  testWidgets('a barrier tap leaves the dialog open', (tester) async {
+    await pump(
+      tester,
+      size: narrow,
+      locale: const Locale('en'),
+      textScale: 1.0,
+    );
+    final (result, imports) = open(tester);
+    await tester.pumpAndSettle();
+    final (panel, _) = dialogRects(tester);
+    for (final spot in [
+      Offset(panel.left / 2, panel.center.dy),
+      Offset(narrow.width - panel.left / 2, panel.center.dy),
+      Offset(narrow.width / 2, 4),
+    ]) {
+      await tester.tapAt(spot);
+      await tester.pumpAndSettle();
+      expect(find.byType(PinnedFooter), findsOneWidget, reason: '$spot');
+    }
+    Object? closed = 'open';
+    unawaited(result.then((value) => closed = value));
+    await tester.pump();
+    expect(closed, 'open');
+    expect(imports, isEmpty);
+    await tapButton(tester, currentAppLocalizations.cancel, capturePrints());
+    expect(closed, isNull);
+  });
+
+  testWidgets('a plain prism_ui alert keeps the margin the frame assumes', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      size: narrow,
+      locale: const Locale('en'),
+      textScale: 1.0,
+    );
+    unawaited(
+      dialogs.showCommonDialog<void>(
+        context: tester.element(find.byType(SizedBox).first),
+        child: const AlertDialog(title: 'T', width: 560, child: Text('Body')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final panel = tester.getRect(
+      find
+          .ancestor(of: find.text('Body'), matching: find.byType(Surface))
+          .first,
+    );
+    expect(panel.left, closeTo(ruleEditAlertMargin, 0.5));
+    expect(narrow.width - panel.right, closeTo(ruleEditAlertMargin, 0.5));
+    Navigator.of(tester.element(find.text('Body'))).pop();
+    await tester.pumpAndSettle();
+  });
+
   /// A frame with every kind of action: delete, a leading one, cancel, save.
   (Future<bool?>, List<String>) openFrame(
     WidgetTester tester, {
@@ -833,6 +1008,24 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('other frames keep the alert margin, no OverflowBox', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      size: narrow,
+      locale: const Locale('en'),
+      textScale: 2.0,
+    );
+    final (result, _) = openFrame(tester);
+    await tester.pumpAndSettle();
+    expectInsets(tester, outer: ruleEditAlertMargin, inner: 16);
+    expect(find.byType(OverflowBox), findsNothing);
+    Navigator.of(tester.element(find.text('Body'))).pop();
+    await tester.pumpAndSettle();
+    expect(await result, isNull);
+  });
 
   testWidgets('other frames keep the default stack: save first, cancel last, '
       'the footer pinned without a scroll view of its own', (tester) async {

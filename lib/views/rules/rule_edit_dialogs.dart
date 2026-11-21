@@ -47,7 +47,8 @@ const _warnInk = Color(0xFF8A5300);
 const _fieldGap = 14.0;
 const _stackedActionHeight = 44.0;
 
-const _alertMargin = 40.0;
+/// prism_ui's alert margin; a test holds it to prism_ui's.
+const ruleEditAlertMargin = 40.0;
 const _labelGap = 6.0;
 const _validateDelay = Duration(milliseconds: 300);
 const _checkDelay = Duration(milliseconds: 500);
@@ -447,12 +448,18 @@ class RuleEditFrame extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => narrowMargin == null
+      ? _build(context, MediaQuery.sizeOf(context).width)
+      : LayoutBuilder(
+          builder: (context, constraints) =>
+              _build(context, constraints.maxWidth),
+        );
+
+  Widget _build(BuildContext context, double screen) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final screen = MediaQuery.sizeOf(context).width;
     final margin = narrowMargin;
-    final narrow = margin != null && screen < width + 2 * _alertMargin;
+    final narrow = margin != null && screen < width + 2 * ruleEditAlertMargin;
     final effective = math.max(
       280.0,
       math.min(width, screen - (narrow ? 2 * margin : 32)),
@@ -677,9 +684,9 @@ class RuleEditFrame extends StatelessWidget {
       ),
     );
     if (!narrow) return dialog;
-    // prism_ui insets by [_alertMargin]; a wider box leaves [narrowMargin].
+    // prism_ui insets by its margin; a wider box leaves [narrowMargin].
     return OverflowBox(
-      maxWidth: screen + 2 * (_alertMargin - margin),
+      maxWidth: screen + 2 * (ruleEditAlertMargin - margin),
       child: dialog,
     );
   }

@@ -21,6 +21,9 @@ class TestApp extends StatelessWidget {
   final bool remoteFocus;
   final LiquidGlassQuality? liquidGlass;
 
+  /// Overrides the locale's direction, for a layout under RTL.
+  final TextDirection? textDirection;
+
   const TestApp({
     super.key,
     required this.child,
@@ -34,6 +37,7 @@ class TestApp extends StatelessWidget {
     this.themeMode,
     this.remoteFocus = false,
     this.liquidGlass,
+    this.textDirection,
   });
 
   static Widget _identity(Widget child) => child;
@@ -55,7 +59,12 @@ class TestApp extends StatelessWidget {
       emojiFont: (family: FontFamily.twEmoji.value, pattern: emojiPattern),
       remoteFocus: remoteFocus,
       liquidGlass: liquidGlass,
-      builder: (context, child) => wrapViewScopes(context, child!),
+      builder: (context, child) => wrapViewScopes(
+        context,
+        textDirection == null
+            ? child!
+            : Directionality(textDirection: textDirection!, child: child!),
+      ),
       home: homeBuilder(child),
     );
     return overrides.isNotEmpty || wrapInProviderScope
