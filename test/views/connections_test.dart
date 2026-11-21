@@ -5,6 +5,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/features/features.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/core.dart';
@@ -376,6 +377,58 @@ void main() {
     await pumpSettled(tester);
     expect(topOf('beta.test'), lessThan(topOf('gamma.test')));
     expect(topOf('gamma.test'), lessThan(topOf('alpha.test')));
+
+    await teardownView(tester);
+  });
+
+  testWidgets('over a long list a search runs at once, then at most once '
+      'per interval with the last query typed', (tester) async {
+    whenConnections<RankedTrackerInfos>(
+      core,
+      () async => [
+        _tracker(id: 'needle', host: 'needle.test', download: 1),
+        _tracker(id: 'pin', host: 'pin.test', download: 2),
+        for (var i = 0; i < throttledSearchLength; i++)
+          _tracker(id: 'c$i', host: 'h$i.test', download: 1000 + i),
+      ],
+    );
+
+    await pumpConnections(tester);
+    await pumpSettled(tester);
+    expect(find.textContaining('needle.test'), findsNothing);
+
+    await tester.tap(find.byGlyph(AppGlyphs.search));
+    await tester.pump(commonDuration);
+    await tester.pump(commonDuration);
+    // The first keystroke after a pause is searched at once.
+    await tester.enterText(find.byType(TextField), 'needle');
+    await tester.pump();
+    expect(find.byType(TrackerInfoTableRow), findsOneWidget);
+    expect(find.textContaining('needle.test'), findsWidgets);
+
+    // Within the interval only the last query typed is kept, for its end.
+    await tester.enterText(find.byType(TextField), 'p');
+    await tester.enterText(find.byType(TextField), 'pin');
+    await tester.pump(searchThrottle ~/ 2);
+    expect(find.textContaining('needle.test'), findsWidgets);
+    expect(find.textContaining('pin.test'), findsNothing);
+
+    await tester.pump(searchThrottle);
+    await tester.pump();
+    await pumpSettled(tester);
+    expect(find.byType(TrackerInfoTableRow), findsOneWidget);
+    expect(find.textContaining('pin.test'), findsWidgets);
+
+    // Clearing the query is never held back, and drops a query kept for the
+    // end of the interval.
+    await tester.enterText(find.byType(TextField), 'h1');
+    await tester.enterText(find.byType(TextField), 'pin');
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(TrackerInfoTableRow).evaluate().length, greaterThan(1));
+    await pumpSettled(tester);
+    expect(find.byType(TrackerInfoTableRow).evaluate().length, greaterThan(1));
 
     await teardownView(tester);
   });
