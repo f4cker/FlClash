@@ -9112,6 +9112,14 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get mitmRuleRegexInvalid =>
+      'Expresión regular no válida. Esta regla no tendrá efecto.';
+
+  @override
+  String get mitmRuleUnverified =>
+      'No se pudo validar esta regla. Es posible que no tenga efecto.';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return 'Ignorado: $reason';
   }

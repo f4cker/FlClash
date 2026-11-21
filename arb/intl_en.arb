@@ -3798,6 +3798,8 @@
   "mitmSkipVerifyRisk": "Turning it on stops checking the certificates of these hosts' servers, so a server posing as one of them goes unnoticed: {hosts}",
   "mitmModuleHostsIgnored": "These hostnames will be ignored: {hosts}. Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.",
   "mitmModuleHostsSkipped": "These hostnames will also be skipped: {hosts}. Entries that are too broad, belong to Apple services, or are invalid will not be used for decryption.",
+  "mitmRuleRegexInvalid": "Invalid regular expression. This rule will not take effect.",
+  "mitmRuleUnverified": "Could not validate this rule. It may not take effect.",
   "mitmHostIgnored": "Ignored: {reason}",
   "mitmHostReasonUnknown": "Reason unknown",
   "mitmHostReasonEmbeddedWildcard": "* in the middle of a name is not supported",

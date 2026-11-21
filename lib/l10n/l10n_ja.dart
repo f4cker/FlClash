@@ -8809,6 +8809,12 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get mitmRuleRegexInvalid => '正規表現が無効です。このルールは適用されません。';
+
+  @override
+  String get mitmRuleUnverified => 'このルールを検証できませんでした。適用されるか確認できません。';
+
+  @override
   String mitmHostIgnored(Object reason) {
     return '無視されました：$reason';
   }

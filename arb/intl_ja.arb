@@ -3779,6 +3779,8 @@
   "mitmSkipVerifyRisk": "オンにすると、次のホストのサーバー証明書を検証しなくなり、それらになりすましたサーバーに気付けなくなります：{hosts}",
   "mitmModuleHostsIgnored": "次のホスト名は無視されます：{hosts}。api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。",
   "mitmModuleHostsSkipped": "次のホスト名もスキップされます：{hosts}。範囲が広すぎるもの、Apple のサービスに属するもの、形式が正しくないものは復号に使用されません。",
+  "mitmRuleRegexInvalid": "正規表現が無効です。このルールは適用されません。",
+  "mitmRuleUnverified": "このルールを検証できませんでした。適用されるか確認できません。",
   "mitmHostIgnored": "無視されました：{reason}",
   "mitmHostReasonUnknown": "理由不明",
   "mitmHostReasonEmbeddedWildcard": "名前の途中にある * には対応していません",

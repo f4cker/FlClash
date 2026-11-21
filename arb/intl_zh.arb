@@ -2490,6 +2490,8 @@
   "mitmSkipVerifyRisk": "开启后，将不再校验下列主机的服务器证书，冒充这些服务器的连接不会被发现：{hosts}",
   "mitmModuleHostsIgnored": "以下主机名将被忽略：{hosts}。请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。",
   "mitmModuleHostsSkipped": "以下主机名也将被跳过：{hosts}。范围过宽、属于 Apple 服务或格式无效的条目不会用于解密。",
+  "mitmRuleRegexInvalid": "正则表达式无效，此规则不会生效。",
+  "mitmRuleUnverified": "未能校验此规则，无法确认是否会生效。",
   "mitmHostIgnored": "已忽略：{reason}",
   "mitmHostReasonUnknown": "原因未知",
   "mitmHostReasonEmbeddedWildcard": "不支持名称中间的 *",
