@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fl_clash/core/desktop/socket_address.dart';
 import 'package:fl_clash/core/desktop/transport.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +20,11 @@ Uint8List _frame(String payload) {
   return Uint8List.fromList([...header.buffer.asUint8List(), ...bytes]);
 }
 
+/// Socket directories must sit directly in the per-user temp dir on macOS.
+final Directory _base = Platform.isMacOS
+    ? Directory(darwinUserTempDir())
+    : Directory.systemTemp;
+
 void main() {
   late Directory directory;
   late String address;
@@ -27,7 +33,7 @@ void main() {
   setUpAll(initEditorNative);
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('ipc');
+    directory = await _base.createTemp('ipc');
     address = '${directory.path}/core.sock';
     transport = IpcCoreTransport(address: address);
   });
@@ -87,14 +93,97 @@ void main() {
     );
   });
 
-  test('an address that cannot be bound fails the transport', () async {
-    final unbindable = IpcCoreTransport(
-      address: '${directory.path}/missing/core.sock',
+  test(
+    'an address that cannot be bound fails the transport',
+    () async {
+      // Only the socket's own directory is created; a missing grandparent is not.
+      // macOS refuses this address earlier; see the private directory group.
+      final unbindable = IpcCoreTransport(
+        address: '${directory.path}/missing/nested/core.sock',
+      );
+
+      await expectLater(unbindable.open(), throwsA(anything));
+
+      expect(unbindable.state, DesktopTransportState.failed);
+      expect(Directory('${directory.path}/missing').existsSync(), isFalse);
+      await unbindable.close();
+    },
+    skip: Platform.isMacOS
+        ? 'macOS: covered by the nested-address test'
+        : false,
+  );
+
+  group('macOS private socket directory', () {
+    test('an absent directory is created owner-only', () async {
+      final absent = '${directory.path}-absent';
+      final private = IpcCoreTransport(address: '$absent/core.sock');
+
+      await private.open();
+
+      expect(FileStat.statSync(absent).mode & 0x1ff, 0x1c0);
+      await private.close();
+      expect(
+        FileSystemEntity.typeSync('$absent/core.sock'),
+        FileSystemEntityType.notFound,
+      );
+      Directory(absent).deleteSync();
+    });
+
+    test('a nested address is refused before anything is created', () async {
+      // The placement check runs before any mkdir, so even the socket's
+      // own directory is not made. A missing grandparent inside a valid
+      // base is covered in Rust with an injected base.
+      final nested = IpcCoreTransport(
+        address: '${directory.path}/missing/nested/core.sock',
+      );
+
+      await expectLater(
+        nested.open(),
+        throwsA(contains('not directly inside the per-user temp dir')),
+      );
+
+      expect(nested.state, DesktopTransportState.failed);
+      expect(directory.listSync(), isEmpty);
+      await nested.close();
+    });
+
+    test('a socket directory in public /tmp is refused', () async {
+      final public = '/tmp/ipc-public-$pid';
+      final refused = IpcCoreTransport(address: '$public/core.sock');
+
+      await expectLater(
+        refused.open(),
+        throwsA(contains('not directly inside the per-user temp dir')),
+      );
+
+      expect(Directory(public).existsSync(), isFalse);
+      await refused.close();
+    });
+
+    test('a directory others can enter is refused and kept', () async {
+      final shared = _base.createTempSync('ipcshared');
+      await Process.run('chmod', ['755', shared.path]);
+      final refused = IpcCoreTransport(address: '${shared.path}/core.sock');
+
+      await expectLater(refused.open(), throwsA(contains('refusing')));
+
+      expect(FileStat.statSync(shared.path).mode & 0x1ff, 0x1ed);
+      await refused.close();
+      shared.deleteSync();
+    });
+
+    test(
+      'an existing file at the name is kept and reported as taken',
+      () async {
+        final taken = File('${directory.path}/taken.sock')
+          ..writeAsStringSync('keep');
+        final transport = IpcCoreTransport(address: taken.path);
+
+        await expectLater(transport.open(), throwsA(startsWith('EADDRINUSE')));
+
+        expect(taken.readAsStringSync(), 'keep');
+        await transport.close();
+      },
     );
-
-    await expectLater(unbindable.open(), throwsA(anything));
-
-    expect(unbindable.state, DesktopTransportState.failed);
-    await unbindable.close();
-  });
+  }, skip: Platform.isMacOS ? false : 'the private directory is macOS-only');
 }

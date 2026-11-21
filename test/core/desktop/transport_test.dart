@@ -439,4 +439,99 @@ void main() {
       await expectLater(transport.reset(), throwsStateError);
     });
   });
+
+  group('IpcCoreTransport.unique', () {
+    late List<String> tried;
+    late int counter;
+
+    Future<String> next() async => '/user-temp/sub/${++counter}.sock';
+
+    setUp(() {
+      tried = [];
+      counter = 0;
+    });
+
+    test('binds a fresh name on every open and reports it', () async {
+      final transport = IpcCoreTransport.unique(
+        nextAddress: next,
+        bind: (address) async {
+          tried.add(address);
+          return _FakeIpcServer();
+        },
+      );
+      await transport.open();
+      expect(transport.address, '/user-temp/sub/1.sock');
+
+      await transport.reset();
+      await transport.open();
+
+      expect(tried, ['/user-temp/sub/1.sock', '/user-temp/sub/2.sock']);
+      expect(transport.address, '/user-temp/sub/2.sock');
+      await transport.close();
+    });
+
+    test('a taken name is retried under a new one', () async {
+      final transport = IpcCoreTransport.unique(
+        nextAddress: next,
+        bind: (address) async {
+          tried.add(address);
+          if (tried.length < 3) {
+            // FRB throws the Rust error String itself.
+            // ignore: only_throw_errors
+            throw 'EADDRINUSE: $address already exists and was left alone';
+          }
+          return _FakeIpcServer();
+        },
+      );
+
+      await transport.open();
+
+      expect(tried, hasLength(3));
+      expect(tried.toSet(), hasLength(3));
+      expect(transport.address, tried.last);
+      await transport.close();
+    });
+
+    test('gives up after the attempt limit with a clear error', () async {
+      final transport = IpcCoreTransport.unique(
+        nextAddress: next,
+        bind: (address) async {
+          tried.add(address);
+          // ignore: only_throw_errors
+          throw 'EADDRINUSE: $address already exists and was left alone';
+        },
+      );
+
+      await expectLater(
+        transport.open(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('all 8 random names were already taken'),
+          ),
+        ),
+      );
+
+      expect(tried, hasLength(8));
+      expect(transport.state, DesktopTransportState.failed);
+      await transport.close();
+    });
+
+    test('any other bind error is not retried', () async {
+      final transport = IpcCoreTransport.unique(
+        nextAddress: next,
+        bind: (address) async {
+          tried.add(address);
+          // ignore: only_throw_errors
+          throw 'refusing IPC socket directory /tmp/app-501: it is a symbolic link';
+        },
+      );
+
+      await expectLater(transport.open(), throwsA(contains('symbolic link')));
+
+      expect(tried, hasLength(1));
+      await transport.close();
+    });
+  });
 }

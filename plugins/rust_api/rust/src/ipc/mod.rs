@@ -1,5 +1,7 @@
 #[cfg(not(target_os = "android"))]
 mod access;
+#[cfg(target_os = "macos")]
+mod endpoint;
 #[cfg(not(target_os = "android"))]
 mod frame;
 #[cfg(not(target_os = "android"))]
