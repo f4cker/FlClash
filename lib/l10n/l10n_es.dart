@@ -4122,7 +4122,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmModuleRulesDesc =>
-      'Module routing rules go after the added rules and before the profile\'s own.';
+      'Las reglas de enrutamiento del módulo van después de las reglas añadidas y antes de las propias del perfil.';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -7775,109 +7775,109 @@ class AppLocalizationsEs extends AppLocalizations {
       'Si está desactivado, solo se descifran las conexiones HTTP/1.1; las conexiones que solo admiten HTTP/2 no se descifrarán.';
 
   @override
-  String get mitmRewriteAndScripts => 'Rewrite & Scripts';
+  String get mitmRewriteAndScripts => 'Reescritura y scripts';
 
   @override
-  String get mitmRewrite => 'Rewrite';
+  String get mitmRewrite => 'Reescritura';
 
   @override
   String mitmRewriteRuleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count reglas',
+      one: '1 regla',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteInvalidCount(int count) {
-    return '$count invalid';
+    return '$count no válidas';
   }
 
   @override
-  String get mitmRewriteNoneAdded => 'None added';
+  String get mitmRewriteNoneAdded => 'No se ha añadido ninguna';
 
   @override
   String mitmRewriteSubtitle(Object profile, int count, int enabled) {
-    return 'Profile “$profile” · $count rewrite rules, $enabled on';
+    return 'Perfil «$profile» · $count reglas de reescritura, $enabled activadas';
   }
 
   @override
-  String get mitmRewriteGroupReject => 'URL Reject';
+  String get mitmRewriteGroupReject => 'Bloqueo de URL';
 
   @override
-  String get mitmRewriteGroupRedirect => 'URL Redirect';
+  String get mitmRewriteGroupRedirect => 'Redirección de URL';
 
   @override
-  String get mitmRewriteGroupHeader => 'Request & Response Headers';
+  String get mitmRewriteGroupHeader => 'Cabeceras de solicitud y respuesta';
 
   @override
-  String get mitmRewriteGroupBody => 'Request & Response Bodies';
+  String get mitmRewriteGroupBody => 'Cuerpos de solicitud y respuesta';
 
   @override
-  String get mitmRewriteActReject => 'Block';
+  String get mitmRewriteActReject => 'Bloquear';
 
   @override
   String mitmRewriteActRedirect(Object code) {
-    return '$code redirect';
+    return 'Redirección $code';
   }
 
   @override
-  String get mitmRewriteActUrl => 'Rewrite URL';
+  String get mitmRewriteActUrl => 'Reescribir URL';
 
   @override
-  String get mitmRewriteActRequestHeader => 'Request header';
+  String get mitmRewriteActRequestHeader => 'Cabecera de solicitud';
 
   @override
-  String get mitmRewriteActResponseHeader => 'Response header';
+  String get mitmRewriteActResponseHeader => 'Cabecera de respuesta';
 
   @override
-  String get mitmRewriteActRequestBody => 'Request body';
+  String get mitmRewriteActRequestBody => 'Cuerpo de solicitud';
 
   @override
-  String get mitmRewriteActResponseBody => 'Response body';
+  String get mitmRewriteActResponseBody => 'Cuerpo de respuesta';
 
   @override
-  String get mitmRewriteActMapLocal => 'Local response';
+  String get mitmRewriteActMapLocal => 'Respuesta local';
 
   @override
-  String get mitmRewriteRejectError => 'Return an error';
+  String get mitmRewriteRejectError => 'Devolver un error';
 
   @override
-  String get mitmRewriteReject200 => 'Return an empty page';
+  String get mitmRewriteReject200 => 'Devolver una página en blanco';
 
   @override
-  String get mitmRewriteRejectImage => 'Return a blank image';
+  String get mitmRewriteRejectImage => 'Devolver una imagen en blanco';
 
   @override
-  String get mitmRewriteRejectDict => 'Return an empty JSON object';
+  String get mitmRewriteRejectDict => 'Devolver un objeto JSON vacío';
 
   @override
-  String get mitmRewriteRejectArray => 'Return an empty JSON array';
+  String get mitmRewriteRejectArray => 'Devolver un array JSON vacío';
 
   @override
-  String get mitmRewriteRejectDrop => 'Drop the connection';
+  String get mitmRewriteRejectDrop => 'Cerrar la conexión';
 
   @override
   String mitmRewriteHeaderAdd(Object name) {
-    return 'Add $name';
+    return 'Añadir $name';
   }
 
   @override
   String mitmRewriteHeaderDel(Object name) {
-    return 'Remove $name';
+    return 'Eliminar $name';
   }
 
   @override
   String mitmRewriteHeaderReplace(Object name) {
-    return 'Replace $name';
+    return 'Sustituir $name';
   }
 
   @override
   String mitmRewriteHeaderReplaceRegex(Object name) {
-    return 'Replace in $name';
+    return 'Sustituir en $name';
   }
 
   @override
@@ -7885,25 +7885,25 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count replacements',
-      one: '1 replacement',
+      other: '$count sustituciones',
+      one: '1 sustitución',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteBodyLimit(Object size) {
-    return 'Up to $size';
+    return 'Hasta $size';
   }
 
   @override
   String mitmRewriteInvalid(Object reason) {
-    return 'Invalid rule: $reason';
+    return 'Regla no válida: $reason';
   }
 
   @override
   String mitmRewriteInvalidSpoken(Object reason) {
-    return 'Invalid rule, $reason';
+    return 'Regla no válida, $reason';
   }
 
   @override
@@ -7913,66 +7913,66 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmRewriteNotApplied(Object reason) {
-    return 'The change didn\'t take effect: $reason';
+    return 'El cambio no se aplicó: $reason';
   }
 
   @override
-  String get mitmRewriteEnableAll => 'Turn All On';
+  String get mitmRewriteEnableAll => 'Activar todas';
 
   @override
-  String get mitmRewriteDisableAll => 'Turn All Off';
+  String get mitmRewriteDisableAll => 'Desactivar todas';
 
   @override
-  String get mitmRewriteCopyAll => 'Copy All Rules';
+  String get mitmRewriteCopyAll => 'Copiar todas las reglas';
 
   @override
-  String get mitmRewriteDeleteInvalid => 'Delete Invalid Rules';
+  String get mitmRewriteDeleteInvalid => 'Eliminar reglas no válidas';
 
   @override
   String mitmRewriteDeleteInvalidConfirm(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count invalid rules',
-      one: '1 invalid rule',
+      other: '$count reglas no válidas',
+      one: '1 regla no válida',
     );
-    return 'Delete $_temp0?';
+    return '¿Eliminar $_temp0?';
   }
 
   @override
   String get mitmRewriteOff =>
-      'Decryption is off, so rewrite rules won\'t take effect.';
+      'El descifrado está desactivado, por lo que las reglas de reescritura no se aplicarán.';
 
   @override
-  String get mitmRewriteGoTurnOn => 'Turn On';
+  String get mitmRewriteGoTurnOn => 'Activar';
 
   @override
-  String get mitmRewriteEmptyTitle => 'No rewrite rules yet';
+  String get mitmRewriteEmptyTitle => 'Aún no hay reglas de reescritura';
 
   @override
-  String get mitmRewriteEmptyDesc => 'Paste rules to import them.';
+  String get mitmRewriteEmptyDesc => 'Pega las reglas para importarlas.';
 
   @override
-  String get mitmRewritePaste => 'Paste to Import';
+  String get mitmRewritePaste => 'Pegar para importar';
 
   @override
-  String get mitmRewriteSearchHint => 'Search rewrite rules';
+  String get mitmRewriteSearchHint => 'Buscar reglas de reescritura';
 
   @override
-  String get mitmRewriteImportTitle => 'Import Rewrite Rules';
+  String get mitmRewriteImportTitle => 'Importar reglas de reescritura';
 
   @override
   String get mitmRewriteImportDesc =>
-      'Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.';
+      'Pega las reglas de reescritura, una por línea. Las secciones [URL Rewrite], [Header Rewrite], [Body Rewrite] y [Map Local] de Surge se reconocen por sus títulos.';
 
   @override
   String mitmRewriteImportReady(int count, Object detail) {
-    return 'Ready to import $count: $detail';
+    return 'Listas para importar: $count · $detail';
   }
 
   @override
   String mitmRewriteImportLineError(int line, Object reason) {
-    return 'Line $line can\'t be imported: $reason';
+    return 'No se puede importar la línea $line: $reason';
   }
 
   @override
@@ -7980,158 +7980,162 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more lines have errors',
-      one: '1 more line has errors',
+      other: 'Hay $count líneas más con errores',
+      one: 'Hay 1 línea más con errores',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteImportDuplicate(int line) {
-    return 'Line $line is already there and will be skipped';
+    return 'La línea $line ya existe y se omitirá';
   }
 
   @override
-  String get mitmRewritePlace => 'Place';
+  String get mitmRewritePlace => 'Ubicación';
 
   @override
-  String get mitmRewritePlaceEnd => 'End of each group';
+  String get mitmRewritePlaceEnd => 'Al final de cada grupo';
 
   @override
-  String get mitmRewritePlaceStart => 'Start of each group';
+  String get mitmRewritePlaceStart => 'Al principio de cada grupo';
 
   @override
   String mitmRewriteImportButton(int count) {
-    return 'Import $count';
+    return 'Importar $count';
   }
 
   @override
-  String get mitmRewriteImporting => 'Importing…';
+  String get mitmRewriteImporting => 'Importando…';
 
   @override
   String mitmRewriteImported(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: 'Se han importado $count reglas',
+      one: 'Se ha importado 1 regla',
     );
-    return 'Imported $_temp0';
+    return '$_temp0';
   }
 
   @override
-  String get mitmRewriteEditTitle => 'Edit Rewrite Rule';
+  String get mitmRewriteEditTitle => 'Editar regla de reescritura';
 
   @override
   String mitmRewriteEditSubtitle(Object group, int number) {
-    return '$group · Rule $number';
+    return '$group · Regla $number';
   }
 
   @override
-  String get mitmRewritePreviewType => 'Type';
+  String get mitmRewritePreviewType => 'Tipo';
 
   @override
-  String get mitmRewritePreviewMatch => 'Matches';
+  String get mitmRewritePreviewMatch => 'Coincidencias';
 
   @override
-  String get mitmRewritePreviewAction => 'Action';
+  String get mitmRewritePreviewAction => 'Acción';
 
   @override
-  String get mitmRewriteUnparsable => 'Can\'t parse';
+  String get mitmRewriteUnparsable => 'No se puede analizar';
 
   @override
   String mitmRewriteSectionChanged(Object group) {
-    return 'This line belongs in $group; it will move there.';
+    return 'Esta línea pertenece a $group; se trasladará allí.';
   }
 
   @override
   String mitmRewriteBadgeApplied(Object type) {
-    return 'Rewritten · $type';
+    return 'Reescrita · $type';
   }
 
   @override
   String mitmRewriteBadgeFailed(Object reason) {
-    return 'Rewrite failed · $reason';
+    return 'Error de reescritura · $reason';
   }
 
   @override
-  String get mitmRewriteRewritten => 'Rewritten';
+  String get mitmRewriteRewritten => 'Reescrita';
 
   @override
-  String get mitmRewriteFailedShort => 'Rewrite failed';
+  String get mitmRewriteFailedShort => 'Error de reescritura';
 
   @override
-  String get mitmRewriteAppliedTitle => 'Rewrite applied';
+  String get mitmRewriteAppliedTitle => 'Reescritura aplicada';
 
   @override
   String mitmRewriteHitCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count reglas',
+      one: '1 regla',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteFailedTitle(Object reason) {
-    return 'Rewrite failed: $reason';
+    return 'Error de reescritura: $reason';
   }
 
   @override
-  String get mitmRewritePassedThrough => 'Not rewritten; passed on unchanged';
+  String get mitmRewritePassedThrough =>
+      'No se reescribió; se transmitió sin cambios';
 
   @override
   String mitmRewriteRuleRef(Object rule) {
-    return 'Rule $rule';
+    return 'Regla $rule';
   }
 
   @override
-  String get mitmRewriteViewInList => 'Show in Rewrite';
+  String get mitmRewriteViewInList => 'Mostrar en Reescritura';
 
   @override
-  String get mitmRewriteBefore => 'Before';
+  String get mitmRewriteBefore => 'Antes';
 
   @override
-  String get mitmRewriteAfter => 'After';
+  String get mitmRewriteAfter => 'Después';
 
   @override
-  String get mitmRewriteRuleRemoved => 'The rule is no longer in this profile';
+  String get mitmRewriteRuleRemoved => 'La regla ya no está en este perfil';
 
   @override
-  String get mitmRewriteSkipOversize => 'Content over the size limit';
+  String get mitmRewriteSkipOversize =>
+      'El contenido supera el límite de tamaño';
 
   @override
-  String get mitmRewriteSkipDecode => 'Couldn\'t decompress the content';
+  String get mitmRewriteSkipDecode => 'No se pudo descomprimir el contenido';
 
   @override
   String get mitmRewriteSkipNotText =>
-      'Content isn\'t in a supported text format';
+      'El contenido no tiene un formato de texto compatible';
 
   @override
-  String get mitmRewriteSkipEncoding => 'Unsupported content encoding';
+  String get mitmRewriteSkipEncoding =>
+      'Codificación de contenido no compatible';
 
   @override
-  String get mitmRewriteSkipTimeout => 'The pattern took too long to match';
+  String get mitmRewriteSkipTimeout =>
+      'La búsqueda de coincidencias del patrón tardó demasiado';
 
   @override
-  String get mitmRewriteSkipCrossHost => 'Can\'t rewrite to another host';
+  String get mitmRewriteSkipCrossHost => 'No se puede reescribir a otro host';
 
   @override
-  String get mitmRewriteSkipInvalidUrl => 'The rewritten URL is invalid';
+  String get mitmRewriteSkipInvalidUrl => 'La URL reescrita no es válida';
 
   @override
-  String get mitmRewriteSkipStreaming => 'The content is a stream';
+  String get mitmRewriteSkipStreaming => 'El contenido es un flujo continuo';
 
   @override
-  String get mitmRewriteSkipUploading => 'The request was still uploading';
+  String get mitmRewriteSkipUploading => 'La solicitud aún se estaba enviando';
 
   @override
-  String get mitmRewriteSkipRead => 'Couldn\'t read the content';
+  String get mitmRewriteSkipRead => 'No se pudo leer el contenido';
 
   @override
-  String get mitmRewriteSkipOther => 'Rewrite not applied';
+  String get mitmRewriteSkipOther => 'Reescritura no aplicada';
 
   @override
   String mitmRewriteRejectDetail(Object text, Object type) {
@@ -8140,174 +8144,222 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmRewriteErrorFramingHeader(String value) {
-    return '$value controls how the message is sent and can\'t be rewritten.';
+    return '$value controla cómo se envía el mensaje y no se puede reescribir.';
   }
 
   @override
   String mitmRewriteErrorNeedsValue(String value) {
-    return '$value needs a value.';
+    return '$value necesita un valor.';
   }
 
   @override
   String get mitmRewriteErrorBodyHead =>
-      'A body rewrite must start with http-request or http-response.';
+      'Una reescritura del cuerpo debe comenzar por http-request o http-response.';
 
   @override
   String get mitmRewriteErrorHeaderLineBreak =>
-      'A header value can\'t contain a line break.';
+      'El valor de una cabecera no puede contener saltos de línea.';
 
   @override
   String get mitmRewriteErrorNeedsReplacementUrl =>
-      'A redirect or URL rewrite needs a target URL.';
+      'Una redirección o reescritura de URL necesita una URL de destino.';
 
   @override
   String get mitmRewriteErrorDataUrl =>
-      'Remote content must be downloaded before a local response can use it.';
+      'El contenido remoto debe descargarse antes de poder usarlo en una respuesta local.';
 
   @override
-  String get mitmRewriteErrorDataBase64 => 'The content isn\'t valid Base64.';
+  String get mitmRewriteErrorDataBase64 => 'El contenido no es Base64 válido.';
 
   @override
   String mitmRewriteErrorDataFileName(String value) {
-    return 'The content must name a file in the resources folder; got $value.';
+    return 'El contenido debe indicar un archivo de la carpeta de recursos; se recibió $value.';
   }
 
   @override
-  String get mitmRewriteErrorFileNeedsData => 'The file type needs a file.';
+  String get mitmRewriteErrorFileNeedsData =>
+      'El tipo de archivo necesita un archivo.';
 
   @override
   String get mitmRewriteErrorBodyTooLarge =>
-      'The decoded content is over the rewrite size limit.';
+      'El contenido decodificado supera el límite de tamaño para la reescritura.';
 
   @override
   String get mitmRewriteErrorEmptyRegex =>
-      'The regular expression can\'t be empty.';
+      'La expresión regular no puede estar vacía.';
 
   @override
-  String get mitmRewriteErrorEmptyRule => 'The rule can\'t be empty.';
+  String get mitmRewriteErrorEmptyRule => 'La regla no puede estar vacía.';
 
   @override
   String mitmRewriteErrorUrlFieldCount(String value) {
-    return 'Enter a regular expression, a replacement and a type; found $value items.';
+    return 'Introduce una expresión regular, una sustitución y un tipo; se encontraron $value elementos.';
   }
 
   @override
   String get mitmRewriteErrorBodyPairs =>
-      'After the URL regular expression, enter pairs of a pattern and its replacement.';
+      'Después de la expresión regular de la URL, introduce pares de patrón y sustitución.';
 
   @override
   String get mitmRewriteErrorHeaderFields =>
-      'Enter the request or response type, a regular expression, an action and a header, plus a value when needed.';
+      'Introduce el tipo de solicitud o respuesta, una expresión regular, una acción y una cabecera, además de un valor cuando sea necesario.';
 
   @override
   String mitmRewriteErrorKeyValue(String value) {
-    return 'Use the key=value format; got $value.';
+    return 'Usa el formato key=value; se recibió $value.';
   }
 
   @override
   String get mitmRewriteErrorHeaderFormat =>
-      'The header is invalid; use a:b|c:d or Base64.';
+      'La cabecera no es válida; usa a:b|c:d o Base64.';
 
   @override
   String get mitmRewriteErrorHeaderReplaceRegex =>
-      'header-replace-regex needs a regular expression and a replacement.';
+      'header-replace-regex necesita una expresión regular y una sustitución.';
 
   @override
   String get mitmRewriteErrorUrlRegex =>
-      'The URL regular expression is invalid.';
+      'La expresión regular de la URL no es válida.';
 
   @override
   String mitmRewriteErrorBodyRegex(String value) {
-    return 'The content regular expression $value is invalid.';
+    return 'La expresión regular de contenido $value no es válida.';
   }
 
   @override
   String mitmRewriteErrorInvalidHeader(String value) {
-    return 'The header $value is invalid.';
+    return 'La cabecera $value no es válida.';
   }
 
   @override
   String mitmRewriteErrorHeaderName(String value) {
-    return 'The header name $value is invalid.';
+    return 'El nombre de cabecera $value no es válido.';
   }
 
   @override
   String get mitmRewriteErrorHeaderRegex =>
-      'The header regular expression is invalid.';
+      'La expresión regular de la cabecera no es válida.';
 
   @override
   String get mitmRewriteErrorJq =>
-      'Rewriting content with jq isn\'t supported yet.';
+      'La reescritura de contenido con jq aún no es compatible.';
 
   @override
   String mitmRewriteErrorLocalUnreadable(String value) {
-    return 'Can\'t read the local response file $value.';
+    return 'No se puede leer el archivo de respuesta local $value.';
   }
 
   @override
   String mitmRewriteErrorLocalTooLarge(String value) {
-    return 'The local response file $value is over 16 MiB.';
+    return 'El archivo de respuesta local $value supera los 16 MiB.';
   }
 
   @override
   String get mitmRewriteErrorRegexTimeout =>
-      'The regular expression took too long to match.';
+      'La búsqueda de coincidencias de la expresión regular tardó demasiado.';
 
   @override
   String mitmRewriteErrorStatusCode(String value) {
-    return 'The status code must be between 200 and 999; got $value.';
+    return 'El código de estado debe estar entre 200 y 999; se recibió $value.';
   }
 
   @override
   String mitmRewriteErrorUrlType(String value) {
-    return 'Unsupported URL rewrite type: $value.';
+    return 'Tipo de reescritura de URL no compatible: $value.';
   }
 
   @override
   String mitmRewriteErrorDataType(String value) {
-    return 'Unsupported content type: $value.';
+    return 'Tipo de contenido no compatible: $value.';
   }
 
   @override
   String mitmRewriteErrorHeaderAction(String value) {
-    return 'Unsupported header action: $value.';
+    return 'Acción de cabecera no compatible: $value.';
   }
 
   @override
   String mitmRewriteErrorParameter(String value) {
-    return 'Unsupported parameter: $value.';
+    return 'Parámetro no compatible: $value.';
   }
 
   @override
   String mitmRewriteErrorSection(String value) {
-    return 'Unsupported section: $value.';
+    return 'Sección no compatible: $value.';
   }
 
   @override
   String mitmRewriteErrorUnterminatedQuote(String value) {
-    return 'Unclosed quote in $value.';
+    return 'Hay una comilla sin cerrar en $value.';
   }
 
   @override
   String get mitmRewriteErrorOutsideSection =>
-      'This line isn\'t under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].';
+      'Esta línea no está dentro de [URL Rewrite], [Header Rewrite], [Body Rewrite] ni [Map Local].';
 
   @override
-  String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
-
-  @override
-  String get mitmRewriteErrorDetails => 'Details';
+  String get mitmRewriteErrorGeneric => 'El formato de la regla no es válido.';
 
   @override
   String get mitmRewriteFailureGeneric =>
-      'something went wrong, and the rules are unchanged.';
+      'se produjo un error y las reglas no se modificaron.';
 
   @override
-  String get mitmRewriteMatchedTitle => 'Rule matched';
+  String get mitmScriptErrorLine =>
+      'La línea del script tiene un formato incorrecto o le falta el tipo de solicitud/respuesta.';
+
+  @override
+  String mitmScriptErrorType(String type) {
+    return 'Tipo de script no compatible: $type.';
+  }
+
+  @override
+  String get mitmScriptErrorPattern => 'Falta el patrón de coincidencia.';
+
+  @override
+  String get mitmScriptErrorPath => 'Falta la ruta del script.';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'El número de bytes debe ser un número: $value.';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return 'El número de segundos debe ser un número: $value.';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => 'El argumento no es JSON válido.';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'No se puede leer el archivo: $filename.';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'El archivo supera los 8 MiB: $filename.';
+  }
+
+  @override
+  String get mitmScriptErrorUnreadableNoName => 'No se puede leer el archivo.';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => 'El archivo supera los 8 MiB.';
+
+  @override
+  String get mitmScriptErrorSyntax => 'No se ha podido compilar el script.';
+
+  @override
+  String get viewOriginalError => 'Ver error original';
+
+  @override
+  String get mitmRewriteMatchedTitle => 'Regla coincidente';
 
   @override
   String mitmRewriteNotAppliedTitle(String value) {
-    return 'Rewrite not applied: $value';
+    return 'Reescritura no aplicada: $value';
   }
 
   @override
@@ -8331,46 +8383,46 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmScriptInvalidCount(int count) {
-    return '$count invalid';
+    return '$count no válidos';
   }
 
   @override
   String mitmModuleCount(int count, int enabled) {
-    return '$count modules, $enabled on';
+    return '$count módulos, $enabled activados';
   }
 
   @override
   String mitmScriptSubtitle(Object profile, int count, int enabled) {
-    return 'Profile “$profile” · $count scripts, $enabled on';
+    return 'Perfil «$profile» · $count scripts, $enabled activados';
   }
 
   @override
-  String get mitmScriptGroupRequest => 'Request Scripts';
+  String get mitmScriptGroupRequest => 'Scripts de solicitud';
 
   @override
-  String get mitmScriptGroupResponse => 'Response Scripts';
+  String get mitmScriptGroupResponse => 'Scripts de respuesta';
 
   @override
-  String get mitmScriptKindRequest => 'Request';
+  String get mitmScriptKindRequest => 'Solicitud';
 
   @override
-  String get mitmScriptKindResponse => 'Response';
+  String get mitmScriptKindResponse => 'Respuesta';
 
   @override
-  String get mitmScriptNeedsBody => 'Needs body';
+  String get mitmScriptNeedsBody => 'Necesita el cuerpo';
 
   @override
   String mitmScriptRemoteSource(Object source, Object time) {
-    return '$source · checked $time';
+    return '$source · comprobado $time';
   }
 
   @override
   String mitmScriptLocalSource(Object file) {
-    return 'Local file · $file';
+    return 'Archivo local · $file';
   }
 
   @override
-  String get mitmScriptHasUpdate => 'Update available';
+  String get mitmScriptHasUpdate => 'Actualización disponible';
 
   @override
   String get mitmHasUpdate => 'Update available';
@@ -8383,29 +8435,29 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more scripts come from modules',
-      one: '1 more script comes from modules',
+      other: '$count scripts más proceden de módulos',
+      one: '1 script más procede de módulos',
     );
     return '$_temp0';
   }
 
   @override
   String get mitmScriptsOff =>
-      'HTTPS decryption is off, so scripts don\'t run.';
+      'El descifrado HTTPS está desactivado, por lo que los scripts no se ejecutan.';
 
   @override
   String get mitmScriptHostNotDecrypted =>
-      'This host isn\'t decrypted, so the script won\'t run';
+      'Este host no se descifra, por lo que el script no se ejecutará';
 
   @override
   String get mitmAddToDecryption => 'Add to Decryption';
 
   @override
-  String get mitmScriptsEmptyTitle => 'No scripts yet';
+  String get mitmScriptsEmptyTitle => 'Aún no hay scripts';
 
   @override
   String get mitmScriptsEmptyBody =>
-      'Once added, a script runs on the requests or responses it matches.';
+      'Una vez añadido, un script se ejecuta en las solicitudes o respuestas que coincidan con él.';
 
   @override
   String get mitmAddScript => 'Add Script';
@@ -8414,14 +8466,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmCheckAllUpdates => 'Check All for Updates';
 
   @override
-  String get mitmScriptCopyAll => 'Copy All Lines';
+  String get mitmScriptCopyAll => 'Copiar todas las líneas';
 
   @override
-  String get mitmScriptDeleteInvalid => 'Delete Invalid Scripts';
+  String get mitmScriptDeleteInvalid => 'Eliminar scripts no válidos';
 
   @override
   String mitmScriptDeleteInvalidConfirm(int count) {
-    return 'Delete $count invalid scripts?';
+    return '¿Eliminar $count scripts no válidos?';
   }
 
   @override
@@ -8435,37 +8487,38 @@ class AppLocalizationsEs extends AppLocalizations {
       'Paste lines from a Surge config\'s [Script] section, one script per line, or just a script URL.';
 
   @override
-  String get mitmScriptType => 'Type';
+  String get mitmScriptType => 'Tipo';
 
   @override
-  String get mitmScriptPattern => 'URL Pattern';
+  String get mitmScriptPattern => 'Patrón de URL';
 
   @override
-  String get mitmScriptTimeout => 'Timeout';
+  String get mitmScriptTimeout => 'Tiempo de espera';
 
   @override
   String mitmScriptPasteOk(int count, int requests, int responses) {
-    return '$count can be added: $requests request, $responses response';
+    return 'Se pueden añadir $count: $requests de solicitud, $responses de respuesta';
   }
 
   @override
   String mitmScriptPasteLineError(int line, Object reason) {
-    return 'Line $line can\'t be added: $reason';
+    return 'No se puede añadir la línea $line: $reason';
   }
 
   @override
   String get mitmScriptUnsupportedType =>
-      'This kind of script isn\'t supported yet';
+      'Este tipo de script aún no es compatible';
 
   @override
-  String get mitmScriptUnreadable => 'Not a script line';
+  String get mitmScriptUnreadable =>
+      'No es una línea de configuración de script';
 
   @override
-  String get mitmScriptNoPattern => 'No URL pattern';
+  String get mitmScriptNoPattern => 'Falta el patrón de URL';
 
   @override
   String get mitmScriptNoPath =>
-      'script-path must be a URL; add a local script with “From File…”';
+      'script-path debe ser una URL; para añadir un script local, usa «Desde archivo…»';
 
   @override
   String get mitmAddFromFile => 'From File…';
@@ -8507,35 +8560,35 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmAddAndEnable => 'Add and Turn On';
 
   @override
-  String get mitmScriptDownloading => 'Downloading and checking…';
+  String get mitmScriptDownloading => 'Descargando y comprobando…';
 
   @override
   String mitmScriptsAdded(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts added',
-      one: '1 script added',
+      other: 'Se han añadido $count scripts',
+      one: 'Se ha añadido 1 script',
     );
     return '$_temp0';
   }
 
   @override
-  String get mitmScriptEmpty => 'The script is empty';
+  String get mitmScriptEmpty => 'El script está vacío';
 
   @override
   String mitmScriptDownloadFailed(Object name, Object reason) {
-    return 'Couldn\'t download $name: $reason';
+    return 'No se pudo descargar $name: $reason';
   }
 
   @override
   String mitmScriptCannotLoad(Object name, Object reason) {
-    return '$name can\'t be loaded: $reason';
+    return 'No se puede cargar $name: $reason';
   }
 
   @override
   String mitmScriptCheckFailed(Object reason) {
-    return 'Couldn\'t check for updates: $reason';
+    return 'No se pudieron buscar actualizaciones: $reason';
   }
 
   @override
@@ -8593,21 +8646,21 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mitmModuleRewrites => 'Rewrite rules';
+  String get mitmModuleRewrites => 'Reglas de reescritura';
 
   @override
-  String get mitmModuleRoutingRules => 'Routing rules';
+  String get mitmModuleRoutingRules => 'Reglas de enrutamiento';
 
   @override
-  String get mitmModuleUnsupported => 'Not supported';
+  String get mitmModuleUnsupported => 'No compatible';
 
   @override
   String mitmModuleUnsupportedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count lines won\'t be imported.',
-      one: '1 line won\'t be imported.',
+      other: 'No se importarán $count líneas.',
+      one: 'No se importará 1 línea.',
     );
     return '$_temp0';
   }
@@ -8622,7 +8675,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmImportModule => 'Import Module';
 
   @override
-  String get mitmModuleImported => 'Module imported';
+  String get mitmModuleImported => 'Módulo importado';
 
   @override
   String mitmModuleHostCount(int count) {
@@ -8631,32 +8684,32 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmModuleRewriteCount(int count) {
-    return '$count rewrites';
+    return '$count reescrituras';
   }
 
   @override
   String mitmModuleUnsupportedLines(int count) {
-    return '$count lines not supported';
+    return '$count líneas no compatibles';
   }
 
   @override
   String mitmModuleRemoteSource(Object time) {
-    return 'Remote · updated $time';
+    return 'Remoto · actualizado $time';
   }
 
   @override
   String get mitmModuleLocalSource => 'Local';
 
   @override
-  String get mitmModulesEmptyTitle => 'No modules yet';
+  String get mitmModulesEmptyTitle => 'Aún no hay módulos';
 
   @override
   String get mitmModulesEmptyBody =>
-      'Once imported, you can see what a module sets up.';
+      'Una vez importado un módulo, puedes ver su configuración.';
 
   @override
   String mitmScriptsRan(int count) {
-    return 'Scripts ran · $count';
+    return 'Scripts ejecutados · $count';
   }
 
   @override
@@ -8664,42 +8717,43 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts didn\'t finish; the message passed unchanged.',
-      one: '1 script didn\'t finish; the message passed unchanged.',
+      other:
+          '$count scripts no terminaron; el mensaje se transmitió sin cambios.',
+      one: '1 script no terminó; el mensaje se transmitió sin cambios.',
     );
     return '$_temp0';
   }
 
   @override
   String mitmScriptDone(Object took) {
-    return 'Finished · $took';
+    return 'Finalizado · $took';
   }
 
   @override
-  String get mitmScriptTimedOut => 'Script timed out';
+  String get mitmScriptTimedOut => 'El script agotó el tiempo de espera';
 
   @override
   String mitmScriptFailed(Object reason) {
-    return 'Script failed: $reason';
+    return 'Error del script: $reason';
   }
 
   @override
   String mitmScriptNotRun(Object reason) {
-    return 'Script didn\'t run: $reason';
+    return 'El script no se ejecutó: $reason';
   }
 
   @override
-  String get mitmScriptMemory => 'over the memory limit';
+  String get mitmScriptMemory => 'superó el límite de memoria';
 
   @override
-  String get mitmScriptBusy => 'too many scripts running';
+  String get mitmScriptBusy => 'hay demasiados scripts en ejecución';
 
   @override
-  String get mitmScriptNoDone => 'the script never called \$done';
+  String get mitmScriptNoDone => 'el script no llamó a \$done';
 
   @override
   String mitmScriptLogExpand(int count) {
-    return 'Show All ($count lines)';
+    return 'Mostrar todo ($count líneas)';
   }
 
   @override
@@ -8707,8 +8761,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count requests sent',
-      one: '1 request sent',
+      other: '$count solicitudes enviadas',
+      one: '1 solicitud enviada',
     );
     return '$_temp0';
   }
@@ -8738,12 +8792,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmScriptLoadFailed(Object reason) {
-    return 'The script can\'t be loaded: $reason.';
+    return 'No se puede cargar el script: $reason.';
   }
 
   @override
   String mitmModuleLoadFailed(Object reason) {
-    return 'The module can\'t be loaded: $reason.';
+    return 'No se puede cargar el módulo: $reason.';
   }
 
   @override
@@ -8752,7 +8806,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmScriptFoundUpdate(Object time) {
-    return 'New version found $time';
+    return 'Nueva versión encontrada $time';
   }
 
   @override
@@ -8817,8 +8871,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count routing rules',
-      one: '1 routing rule',
+      other: '$count reglas de enrutamiento',
+      one: '1 regla de enrutamiento',
     );
     return '$_temp0';
   }

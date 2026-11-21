@@ -416,7 +416,7 @@ void main() {
       await tester.tap(row);
       await settle(tester, 12);
       await tester.tap(
-        find.text(currentAppLocalizations.mitmRewriteErrorDetails),
+        find.text(currentAppLocalizations.viewOriginalError),
       );
       await settle(tester, 3);
       await capture(tester, 'rw-invalid-$tone');

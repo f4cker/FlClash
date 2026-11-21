@@ -125,6 +125,17 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'hostname': [
           {'index': 0, 'code': 'over-broad', 'message': 'too broad'},
         ],
+        'script': [
+          {
+            'index': 0,
+            'code': 'invalidRule',
+            'kind': 'scriptType',
+            'args': ['"cron"'],
+            'message': '"cron" scripts are not supported',
+          },
+          // A Core before codes: no kind, the message only.
+          {'index': 2, 'code': 'invalidRule', 'message': 'script broke'},
+        ],
       },
       CoreMethod.mitmCertificate => {
         'pem': '-----BEGIN CERTIFICATE-----',
@@ -693,6 +704,31 @@ void main() {
       MitmList.urlRewrite: {1: 'unknown type "x"'},
       // A hostname's issue is read by its code, for the app to word.
       MitmList.hostname: {0: 'over-broad'},
+      MitmList.script: {
+        0: '"cron" scripts are not supported',
+        2: 'script broke',
+      },
+    });
+  });
+
+  test('validateMitmScripts reads each issue with its code and args', () async {
+    final handler = _RecordingCoreHandler();
+    const lines = ['a = type=cron', 'b', 'c'];
+
+    final issues = await handler.validateMitmScripts(lines);
+
+    expect(
+      handler.calls[CoreMethod.mitmValidate],
+      const MitmRules(script: lines).toJson(),
+    );
+    expect(issues, {
+      0: const MitmRewriteIssue(
+        section: 'script',
+        kind: 'scriptType',
+        args: ['"cron"'],
+        message: '"cron" scripts are not supported',
+      ),
+      2: const MitmRewriteIssue(section: 'script', message: 'script broke'),
     });
   });
 

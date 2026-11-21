@@ -3902,7 +3902,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmModuleRulesDesc =>
-      'Module routing rules go after the added rules and before the profile\'s own.';
+      'モジュールの振り分けルールは、追加ルールの後、プロファイル自身のルールの前に適用されます。';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -7498,109 +7498,109 @@ class AppLocalizationsJa extends AppLocalizations {
       'オフにすると、HTTP/1.1 の接続のみ復号します。HTTP/2 のみに対応した接続は復号しません。';
 
   @override
-  String get mitmRewriteAndScripts => 'Rewrite & Scripts';
+  String get mitmRewriteAndScripts => '書き換えとスクリプト';
 
   @override
-  String get mitmRewrite => 'Rewrite';
+  String get mitmRewrite => '書き換え';
 
   @override
   String mitmRewriteRuleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count 件のルール',
+      one: '1 件のルール',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteInvalidCount(int count) {
-    return '$count invalid';
+    return '無効 $count 件';
   }
 
   @override
-  String get mitmRewriteNoneAdded => 'None added';
+  String get mitmRewriteNoneAdded => '未追加';
 
   @override
   String mitmRewriteSubtitle(Object profile, int count, int enabled) {
-    return 'Profile “$profile” · $count rewrite rules, $enabled on';
+    return 'プロファイル「$profile」 · 書き換えルール $count 件、うち $enabled 件がオン';
   }
 
   @override
-  String get mitmRewriteGroupReject => 'URL Reject';
+  String get mitmRewriteGroupReject => 'URL のブロック';
 
   @override
-  String get mitmRewriteGroupRedirect => 'URL Redirect';
+  String get mitmRewriteGroupRedirect => 'URL のリダイレクト';
 
   @override
-  String get mitmRewriteGroupHeader => 'Request & Response Headers';
+  String get mitmRewriteGroupHeader => 'リクエスト・レスポンスヘッダー';
 
   @override
-  String get mitmRewriteGroupBody => 'Request & Response Bodies';
+  String get mitmRewriteGroupBody => 'リクエスト・レスポンスボディ';
 
   @override
-  String get mitmRewriteActReject => 'Block';
+  String get mitmRewriteActReject => 'ブロック';
 
   @override
   String mitmRewriteActRedirect(Object code) {
-    return '$code redirect';
+    return '$code リダイレクト';
   }
 
   @override
-  String get mitmRewriteActUrl => 'Rewrite URL';
+  String get mitmRewriteActUrl => 'URL を書き換え';
 
   @override
-  String get mitmRewriteActRequestHeader => 'Request header';
+  String get mitmRewriteActRequestHeader => 'リクエストヘッダー';
 
   @override
-  String get mitmRewriteActResponseHeader => 'Response header';
+  String get mitmRewriteActResponseHeader => 'レスポンスヘッダー';
 
   @override
-  String get mitmRewriteActRequestBody => 'Request body';
+  String get mitmRewriteActRequestBody => 'リクエストボディ';
 
   @override
-  String get mitmRewriteActResponseBody => 'Response body';
+  String get mitmRewriteActResponseBody => 'レスポンスボディ';
 
   @override
-  String get mitmRewriteActMapLocal => 'Local response';
+  String get mitmRewriteActMapLocal => 'ローカルレスポンス';
 
   @override
-  String get mitmRewriteRejectError => 'Return an error';
+  String get mitmRewriteRejectError => 'エラーを返す';
 
   @override
-  String get mitmRewriteReject200 => 'Return an empty page';
+  String get mitmRewriteReject200 => '空白ページを返す';
 
   @override
-  String get mitmRewriteRejectImage => 'Return a blank image';
+  String get mitmRewriteRejectImage => '空白画像を返す';
 
   @override
-  String get mitmRewriteRejectDict => 'Return an empty JSON object';
+  String get mitmRewriteRejectDict => '空の JSON オブジェクトを返す';
 
   @override
-  String get mitmRewriteRejectArray => 'Return an empty JSON array';
+  String get mitmRewriteRejectArray => '空の JSON 配列を返す';
 
   @override
-  String get mitmRewriteRejectDrop => 'Drop the connection';
+  String get mitmRewriteRejectDrop => '接続を切断';
 
   @override
   String mitmRewriteHeaderAdd(Object name) {
-    return 'Add $name';
+    return '$name を追加';
   }
 
   @override
   String mitmRewriteHeaderDel(Object name) {
-    return 'Remove $name';
+    return '$name を削除';
   }
 
   @override
   String mitmRewriteHeaderReplace(Object name) {
-    return 'Replace $name';
+    return '$name を置換';
   }
 
   @override
   String mitmRewriteHeaderReplaceRegex(Object name) {
-    return 'Replace in $name';
+    return '$name 内を置換';
   }
 
   @override
@@ -7608,94 +7608,93 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count replacements',
-      one: '1 replacement',
+      other: '$count 箇所を置換',
+      one: '1 箇所を置換',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteBodyLimit(Object size) {
-    return 'Up to $size';
+    return '上限 $size';
   }
 
   @override
   String mitmRewriteInvalid(Object reason) {
-    return 'Invalid rule: $reason';
+    return '無効なルール：$reason';
   }
 
   @override
   String mitmRewriteInvalidSpoken(Object reason) {
-    return 'Invalid rule, $reason';
+    return '無効なルール、$reason';
   }
 
   @override
   String mitmRewriteToggleLabel(Object action, Object url) {
-    return '$action, $url';
+    return '$action、$url';
   }
 
   @override
   String mitmRewriteNotApplied(Object reason) {
-    return 'The change didn\'t take effect: $reason';
+    return '変更を適用できませんでした：$reason';
   }
 
   @override
-  String get mitmRewriteEnableAll => 'Turn All On';
+  String get mitmRewriteEnableAll => 'すべてオンにする';
 
   @override
-  String get mitmRewriteDisableAll => 'Turn All Off';
+  String get mitmRewriteDisableAll => 'すべてオフにする';
 
   @override
-  String get mitmRewriteCopyAll => 'Copy All Rules';
+  String get mitmRewriteCopyAll => 'すべてのルールをコピー';
 
   @override
-  String get mitmRewriteDeleteInvalid => 'Delete Invalid Rules';
+  String get mitmRewriteDeleteInvalid => '無効なルールを削除';
 
   @override
   String mitmRewriteDeleteInvalidConfirm(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count invalid rules',
-      one: '1 invalid rule',
+      other: '無効なルール $count 件を削除しますか？',
+      one: '無効なルール 1 件を削除しますか？',
     );
-    return 'Delete $_temp0?';
+    return '$_temp0';
   }
 
   @override
-  String get mitmRewriteOff =>
-      'Decryption is off, so rewrite rules won\'t take effect.';
+  String get mitmRewriteOff => '復号がオフのため、書き換えルールは適用されません。';
 
   @override
-  String get mitmRewriteGoTurnOn => 'Turn On';
+  String get mitmRewriteGoTurnOn => 'オンにする';
 
   @override
-  String get mitmRewriteEmptyTitle => 'No rewrite rules yet';
+  String get mitmRewriteEmptyTitle => '書き換えルールはまだありません';
 
   @override
-  String get mitmRewriteEmptyDesc => 'Paste rules to import them.';
+  String get mitmRewriteEmptyDesc => 'ルールを貼り付けてインポートできます。';
 
   @override
-  String get mitmRewritePaste => 'Paste to Import';
+  String get mitmRewritePaste => '貼り付けてインポート';
 
   @override
-  String get mitmRewriteSearchHint => 'Search rewrite rules';
+  String get mitmRewriteSearchHint => '書き換えルールを検索';
 
   @override
-  String get mitmRewriteImportTitle => 'Import Rewrite Rules';
+  String get mitmRewriteImportTitle => '書き換えルールをインポート';
 
   @override
   String get mitmRewriteImportDesc =>
-      'Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.';
+      '書き換えルールを 1 行に 1 件ずつ貼り付けてください。Surge の [URL Rewrite]、[Header Rewrite]、[Body Rewrite]、[Map Local] セクションはタイトルで認識されます。';
 
   @override
   String mitmRewriteImportReady(int count, Object detail) {
-    return 'Ready to import $count: $detail';
+    return '$count 件をインポートできます：$detail';
   }
 
   @override
   String mitmRewriteImportLineError(int line, Object reason) {
-    return 'Line $line can\'t be imported: $reason';
+    return '$line 行目をインポートできません：$reason';
   }
 
   @override
@@ -7703,346 +7702,384 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more lines have errors',
-      one: '1 more line has errors',
+      other: '他に $count 行にエラーがあります',
+      one: '他に 1 行にエラーがあります',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteImportDuplicate(int line) {
-    return 'Line $line is already there and will be skipped';
+    return '$line 行目は既に存在するためスキップします';
   }
 
   @override
-  String get mitmRewritePlace => 'Place';
+  String get mitmRewritePlace => '配置';
 
   @override
-  String get mitmRewritePlaceEnd => 'End of each group';
+  String get mitmRewritePlaceEnd => '各グループの末尾';
 
   @override
-  String get mitmRewritePlaceStart => 'Start of each group';
+  String get mitmRewritePlaceStart => '各グループの先頭';
 
   @override
   String mitmRewriteImportButton(int count) {
-    return 'Import $count';
+    return '$count 件をインポート';
   }
 
   @override
-  String get mitmRewriteImporting => 'Importing…';
+  String get mitmRewriteImporting => 'インポート中…';
 
   @override
   String mitmRewriteImported(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count 件のルールをインポートしました',
+      one: '1 件のルールをインポートしました',
     );
-    return 'Imported $_temp0';
+    return '$_temp0';
   }
 
   @override
-  String get mitmRewriteEditTitle => 'Edit Rewrite Rule';
+  String get mitmRewriteEditTitle => '書き換えルールを編集';
 
   @override
   String mitmRewriteEditSubtitle(Object group, int number) {
-    return '$group · Rule $number';
+    return '$group · ルール $number';
   }
 
   @override
-  String get mitmRewritePreviewType => 'Type';
+  String get mitmRewritePreviewType => '種類';
 
   @override
-  String get mitmRewritePreviewMatch => 'Matches';
+  String get mitmRewritePreviewMatch => '一致条件';
 
   @override
-  String get mitmRewritePreviewAction => 'Action';
+  String get mitmRewritePreviewAction => '操作';
 
   @override
-  String get mitmRewriteUnparsable => 'Can\'t parse';
+  String get mitmRewriteUnparsable => '解析できません';
 
   @override
   String mitmRewriteSectionChanged(Object group) {
-    return 'This line belongs in $group; it will move there.';
+    return 'この行は「$group」に属するため、保存後に移動します。';
   }
 
   @override
   String mitmRewriteBadgeApplied(Object type) {
-    return 'Rewritten · $type';
+    return '書き換え済み · $type';
   }
 
   @override
   String mitmRewriteBadgeFailed(Object reason) {
-    return 'Rewrite failed · $reason';
+    return '書き換え失敗 · $reason';
   }
 
   @override
-  String get mitmRewriteRewritten => 'Rewritten';
+  String get mitmRewriteRewritten => '書き換え済み';
 
   @override
-  String get mitmRewriteFailedShort => 'Rewrite failed';
+  String get mitmRewriteFailedShort => '書き換え失敗';
 
   @override
-  String get mitmRewriteAppliedTitle => 'Rewrite applied';
+  String get mitmRewriteAppliedTitle => '書き換えを適用しました';
 
   @override
   String mitmRewriteHitCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count 件のルール',
+      one: '1 件のルール',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteFailedTitle(Object reason) {
-    return 'Rewrite failed: $reason';
+    return '書き換え失敗：$reason';
   }
 
   @override
-  String get mitmRewritePassedThrough => 'Not rewritten; passed on unchanged';
+  String get mitmRewritePassedThrough => '書き換えずにそのまま通過しました';
 
   @override
   String mitmRewriteRuleRef(Object rule) {
-    return 'Rule $rule';
+    return 'ルール $rule';
   }
 
   @override
-  String get mitmRewriteViewInList => 'Show in Rewrite';
+  String get mitmRewriteViewInList => '書き換えで表示';
 
   @override
-  String get mitmRewriteBefore => 'Before';
+  String get mitmRewriteBefore => '書き換え前';
 
   @override
-  String get mitmRewriteAfter => 'After';
+  String get mitmRewriteAfter => '書き換え後';
 
   @override
-  String get mitmRewriteRuleRemoved => 'The rule is no longer in this profile';
+  String get mitmRewriteRuleRemoved => 'このルールは現在のプロファイルにありません';
 
   @override
-  String get mitmRewriteSkipOversize => 'Content over the size limit';
+  String get mitmRewriteSkipOversize => '内容がサイズ上限を超えています';
 
   @override
-  String get mitmRewriteSkipDecode => 'Couldn\'t decompress the content';
+  String get mitmRewriteSkipDecode => '内容を展開できませんでした';
 
   @override
-  String get mitmRewriteSkipNotText =>
-      'Content isn\'t in a supported text format';
+  String get mitmRewriteSkipNotText => 'サポートされているテキスト形式ではありません';
 
   @override
-  String get mitmRewriteSkipEncoding => 'Unsupported content encoding';
+  String get mitmRewriteSkipEncoding => 'サポートされていないコンテンツエンコーディングです';
 
   @override
-  String get mitmRewriteSkipTimeout => 'The pattern took too long to match';
+  String get mitmRewriteSkipTimeout => 'パターンの一致に時間がかかりすぎました';
 
   @override
-  String get mitmRewriteSkipCrossHost => 'Can\'t rewrite to another host';
+  String get mitmRewriteSkipCrossHost => '別のホストには書き換えられません';
 
   @override
-  String get mitmRewriteSkipInvalidUrl => 'The rewritten URL is invalid';
+  String get mitmRewriteSkipInvalidUrl => '書き換え後の URL が無効です';
 
   @override
-  String get mitmRewriteSkipStreaming => 'The content is a stream';
+  String get mitmRewriteSkipStreaming => '内容がストリームです';
 
   @override
-  String get mitmRewriteSkipUploading => 'The request was still uploading';
+  String get mitmRewriteSkipUploading => 'リクエストのアップロードがまだ完了していませんでした';
 
   @override
-  String get mitmRewriteSkipRead => 'Couldn\'t read the content';
+  String get mitmRewriteSkipRead => '内容を読み取れませんでした';
 
   @override
-  String get mitmRewriteSkipOther => 'Rewrite not applied';
+  String get mitmRewriteSkipOther => '書き換えは適用されませんでした';
 
   @override
   String mitmRewriteRejectDetail(Object text, Object type) {
-    return '$text ($type)';
+    return '$text（$type）';
   }
 
   @override
   String mitmRewriteErrorFramingHeader(String value) {
-    return '$value controls how the message is sent and can\'t be rewritten.';
+    return '$value はメッセージの送信方法を制御するため、書き換えられません。';
   }
 
   @override
   String mitmRewriteErrorNeedsValue(String value) {
-    return '$value needs a value.';
+    return '$value には値が必要です。';
   }
 
   @override
   String get mitmRewriteErrorBodyHead =>
-      'A body rewrite must start with http-request or http-response.';
+      'ボディの書き換えは http-request または http-response で始める必要があります。';
 
   @override
-  String get mitmRewriteErrorHeaderLineBreak =>
-      'A header value can\'t contain a line break.';
+  String get mitmRewriteErrorHeaderLineBreak => 'ヘッダーの値に改行は使用できません。';
 
   @override
   String get mitmRewriteErrorNeedsReplacementUrl =>
-      'A redirect or URL rewrite needs a target URL.';
+      'リダイレクトまたは URL の書き換えにはターゲット URL が必要です。';
 
   @override
   String get mitmRewriteErrorDataUrl =>
-      'Remote content must be downloaded before a local response can use it.';
+      'リモートの内容をローカルレスポンスに使用するには、先にダウンロードする必要があります。';
 
   @override
-  String get mitmRewriteErrorDataBase64 => 'The content isn\'t valid Base64.';
+  String get mitmRewriteErrorDataBase64 => '内容が有効な Base64 ではありません。';
 
   @override
   String mitmRewriteErrorDataFileName(String value) {
-    return 'The content must name a file in the resources folder; got $value.';
+    return '内容にはリソースフォルダー内のファイルを指定してください。現在の値：$value。';
   }
 
   @override
-  String get mitmRewriteErrorFileNeedsData => 'The file type needs a file.';
+  String get mitmRewriteErrorFileNeedsData => 'ファイルタイプにはファイルの指定が必要です。';
 
   @override
-  String get mitmRewriteErrorBodyTooLarge =>
-      'The decoded content is over the rewrite size limit.';
+  String get mitmRewriteErrorBodyTooLarge => 'デコード後の内容が書き換えのサイズ上限を超えています。';
 
   @override
-  String get mitmRewriteErrorEmptyRegex =>
-      'The regular expression can\'t be empty.';
+  String get mitmRewriteErrorEmptyRegex => '正規表現を空にすることはできません。';
 
   @override
-  String get mitmRewriteErrorEmptyRule => 'The rule can\'t be empty.';
+  String get mitmRewriteErrorEmptyRule => 'ルールを空にすることはできません。';
 
   @override
   String mitmRewriteErrorUrlFieldCount(String value) {
-    return 'Enter a regular expression, a replacement and a type; found $value items.';
+    return '正規表現、置換内容、種類を入力してください。検出された項目数：$value。';
   }
 
   @override
   String get mitmRewriteErrorBodyPairs =>
-      'After the URL regular expression, enter pairs of a pattern and its replacement.';
+      'URL の正規表現の後に、パターンと置換内容を対にして入力してください。';
 
   @override
   String get mitmRewriteErrorHeaderFields =>
-      'Enter the request or response type, a regular expression, an action and a header, plus a value when needed.';
+      'リクエストまたはレスポンスの種類、正規表現、操作、ヘッダーを入力し、必要に応じて値も入力してください。';
 
   @override
   String mitmRewriteErrorKeyValue(String value) {
-    return 'Use the key=value format; got $value.';
+    return 'key=value 形式を使用してください。現在の値：$value。';
   }
 
   @override
   String get mitmRewriteErrorHeaderFormat =>
-      'The header is invalid; use a:b|c:d or Base64.';
+      'ヘッダーが無効です。a:b|c:d または Base64 を使用してください。';
 
   @override
   String get mitmRewriteErrorHeaderReplaceRegex =>
-      'header-replace-regex needs a regular expression and a replacement.';
+      'header-replace-regex には正規表現と置換内容が必要です。';
 
   @override
-  String get mitmRewriteErrorUrlRegex =>
-      'The URL regular expression is invalid.';
+  String get mitmRewriteErrorUrlRegex => 'URL の正規表現が無効です。';
 
   @override
   String mitmRewriteErrorBodyRegex(String value) {
-    return 'The content regular expression $value is invalid.';
+    return '内容の正規表現 $value が無効です。';
   }
 
   @override
   String mitmRewriteErrorInvalidHeader(String value) {
-    return 'The header $value is invalid.';
+    return 'ヘッダー $value が無効です。';
   }
 
   @override
   String mitmRewriteErrorHeaderName(String value) {
-    return 'The header name $value is invalid.';
+    return 'ヘッダー名 $value が無効です。';
   }
 
   @override
-  String get mitmRewriteErrorHeaderRegex =>
-      'The header regular expression is invalid.';
+  String get mitmRewriteErrorHeaderRegex => 'ヘッダーの正規表現が無効です。';
 
   @override
-  String get mitmRewriteErrorJq =>
-      'Rewriting content with jq isn\'t supported yet.';
+  String get mitmRewriteErrorJq => 'jq を使用した内容の書き換えはまだサポートされていません。';
 
   @override
   String mitmRewriteErrorLocalUnreadable(String value) {
-    return 'Can\'t read the local response file $value.';
+    return 'ローカルレスポンスファイル $value を読み取れません。';
   }
 
   @override
   String mitmRewriteErrorLocalTooLarge(String value) {
-    return 'The local response file $value is over 16 MiB.';
+    return 'ローカルレスポンスファイル $value は 16 MiB を超えています。';
   }
 
   @override
-  String get mitmRewriteErrorRegexTimeout =>
-      'The regular expression took too long to match.';
+  String get mitmRewriteErrorRegexTimeout => '正規表現の一致に時間がかかりすぎました。';
 
   @override
   String mitmRewriteErrorStatusCode(String value) {
-    return 'The status code must be between 200 and 999; got $value.';
+    return 'ステータスコードは 200～999 にしてください。現在の値：$value。';
   }
 
   @override
   String mitmRewriteErrorUrlType(String value) {
-    return 'Unsupported URL rewrite type: $value.';
+    return 'サポートされていない URL 書き換えの種類：$value。';
   }
 
   @override
   String mitmRewriteErrorDataType(String value) {
-    return 'Unsupported content type: $value.';
+    return 'サポートされていないコンテンツの種類：$value。';
   }
 
   @override
   String mitmRewriteErrorHeaderAction(String value) {
-    return 'Unsupported header action: $value.';
+    return 'サポートされていないヘッダー操作：$value。';
   }
 
   @override
   String mitmRewriteErrorParameter(String value) {
-    return 'Unsupported parameter: $value.';
+    return 'サポートされていないパラメーター：$value。';
   }
 
   @override
   String mitmRewriteErrorSection(String value) {
-    return 'Unsupported section: $value.';
+    return 'サポートされていないセクション：$value。';
   }
 
   @override
   String mitmRewriteErrorUnterminatedQuote(String value) {
-    return 'Unclosed quote in $value.';
+    return '$value の引用符が閉じられていません。';
   }
 
   @override
   String get mitmRewriteErrorOutsideSection =>
-      'This line isn\'t under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].';
+      'この行は [URL Rewrite]、[Header Rewrite]、[Body Rewrite]、[Map Local] のいずれのセクションにも含まれていません。';
 
   @override
-  String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
+  String get mitmRewriteErrorGeneric => 'ルールの形式が無効です。';
 
   @override
-  String get mitmRewriteErrorDetails => 'Details';
+  String get mitmRewriteFailureGeneric => 'エラーが発生しました。ルールは変更されていません。';
 
   @override
-  String get mitmRewriteFailureGeneric =>
-      'something went wrong, and the rules are unchanged.';
+  String get mitmScriptErrorLine =>
+      'スクリプト行の形式が正しくないか、リクエスト／レスポンスの種類が指定されていません。';
 
   @override
-  String get mitmRewriteMatchedTitle => 'Rule matched';
-
-  @override
-  String mitmRewriteNotAppliedTitle(String value) {
-    return 'Rewrite not applied: $value';
+  String mitmScriptErrorType(String type) {
+    return 'サポートされていないスクリプトの種類：$type。';
   }
 
   @override
-  String get mitmScripts => 'Scripts';
+  String get mitmScriptErrorPattern => '一致パターンが指定されていません。';
+
+  @override
+  String get mitmScriptErrorPath => 'スクリプトのパスが指定されていません。';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'バイト数には数値を指定してください：$value。';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return '秒数には数値を指定してください：$value。';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => '引数が有効な JSON ではありません。';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'ファイルを読み取れません：$filename。';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'ファイルが 8 MiB を超えています：$filename。';
+  }
+
+  @override
+  String get mitmScriptErrorUnreadableNoName => 'ファイルを読み取れません。';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => 'ファイルが 8 MiB を超えています。';
+
+  @override
+  String get mitmScriptErrorSyntax => 'スクリプトをコンパイルできません。';
+
+  @override
+  String get viewOriginalError => '元のエラーを表示';
+
+  @override
+  String get mitmRewriteMatchedTitle => 'ルールが一致しました';
+
+  @override
+  String mitmRewriteNotAppliedTitle(String value) {
+    return '書き換えは適用されませんでした：$value';
+  }
+
+  @override
+  String get mitmScripts => 'スクリプト';
 
   @override
   String mitmScriptCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts',
-      one: '1 script',
+      other: '$count 件のスクリプト',
+      one: '1 件のスクリプト',
     );
     return '$_temp0';
   }
@@ -8054,46 +8091,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mitmScriptInvalidCount(int count) {
-    return '$count invalid';
+    return '無効 $count 件';
   }
 
   @override
   String mitmModuleCount(int count, int enabled) {
-    return '$count modules, $enabled on';
+    return 'モジュール $count 件、うち $enabled 件がオン';
   }
 
   @override
   String mitmScriptSubtitle(Object profile, int count, int enabled) {
-    return 'Profile “$profile” · $count scripts, $enabled on';
+    return 'プロファイル「$profile」 · スクリプト $count 件、うち $enabled 件がオン';
   }
 
   @override
-  String get mitmScriptGroupRequest => 'Request Scripts';
+  String get mitmScriptGroupRequest => 'リクエストスクリプト';
 
   @override
-  String get mitmScriptGroupResponse => 'Response Scripts';
+  String get mitmScriptGroupResponse => 'レスポンススクリプト';
 
   @override
-  String get mitmScriptKindRequest => 'Request';
+  String get mitmScriptKindRequest => 'リクエスト';
 
   @override
-  String get mitmScriptKindResponse => 'Response';
+  String get mitmScriptKindResponse => 'レスポンス';
 
   @override
-  String get mitmScriptNeedsBody => 'Needs body';
+  String get mitmScriptNeedsBody => 'ボディが必要';
 
   @override
   String mitmScriptRemoteSource(Object source, Object time) {
-    return '$source · checked $time';
+    return '$source · $time に確認';
   }
 
   @override
   String mitmScriptLocalSource(Object file) {
-    return 'Local file · $file';
+    return 'ローカルファイル · $file';
   }
 
   @override
-  String get mitmScriptHasUpdate => 'Update available';
+  String get mitmScriptHasUpdate => 'アップデートあり';
 
   @override
   String get mitmHasUpdate => 'Update available';
@@ -8106,29 +8143,26 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more scripts come from modules',
-      one: '1 more script comes from modules',
+      other: '他にモジュール由来のスクリプトが $count 件あります',
+      one: '他にモジュール由来のスクリプトが 1 件あります',
     );
     return '$_temp0';
   }
 
   @override
-  String get mitmScriptsOff =>
-      'HTTPS decryption is off, so scripts don\'t run.';
+  String get mitmScriptsOff => 'HTTPS 復号がオフのため、スクリプトは実行されません。';
 
   @override
-  String get mitmScriptHostNotDecrypted =>
-      'This host isn\'t decrypted, so the script won\'t run';
+  String get mitmScriptHostNotDecrypted => 'このホストは復号されないため、スクリプトは実行されません';
 
   @override
   String get mitmAddToDecryption => 'Add to Decryption';
 
   @override
-  String get mitmScriptsEmptyTitle => 'No scripts yet';
+  String get mitmScriptsEmptyTitle => 'スクリプトはまだありません';
 
   @override
-  String get mitmScriptsEmptyBody =>
-      'Once added, a script runs on the requests or responses it matches.';
+  String get mitmScriptsEmptyBody => 'スクリプトを追加すると、一致するリクエストまたはレスポンスで実行されます。';
 
   @override
   String get mitmAddScript => 'Add Script';
@@ -8137,14 +8171,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmCheckAllUpdates => 'Check All for Updates';
 
   @override
-  String get mitmScriptCopyAll => 'Copy All Lines';
+  String get mitmScriptCopyAll => 'すべての行をコピー';
 
   @override
-  String get mitmScriptDeleteInvalid => 'Delete Invalid Scripts';
+  String get mitmScriptDeleteInvalid => '無効なスクリプトを削除';
 
   @override
   String mitmScriptDeleteInvalidConfirm(int count) {
-    return 'Delete $count invalid scripts?';
+    return '無効なスクリプト $count 件を削除しますか？';
   }
 
   @override
@@ -8158,37 +8192,36 @@ class AppLocalizationsJa extends AppLocalizations {
       'Paste lines from a Surge config\'s [Script] section, one script per line, or just a script URL.';
 
   @override
-  String get mitmScriptType => 'Type';
+  String get mitmScriptType => '種類';
 
   @override
-  String get mitmScriptPattern => 'URL Pattern';
+  String get mitmScriptPattern => 'URL パターン';
 
   @override
-  String get mitmScriptTimeout => 'Timeout';
+  String get mitmScriptTimeout => 'タイムアウト';
 
   @override
   String mitmScriptPasteOk(int count, int requests, int responses) {
-    return '$count can be added: $requests request, $responses response';
+    return '$count 件を追加できます：リクエスト $requests 件、レスポンス $responses 件';
   }
 
   @override
   String mitmScriptPasteLineError(int line, Object reason) {
-    return 'Line $line can\'t be added: $reason';
+    return '$line 行目を追加できません：$reason';
   }
 
   @override
-  String get mitmScriptUnsupportedType =>
-      'This kind of script isn\'t supported yet';
+  String get mitmScriptUnsupportedType => 'この種類のスクリプトはまだサポートされていません';
 
   @override
-  String get mitmScriptUnreadable => 'Not a script line';
+  String get mitmScriptUnreadable => 'スクリプトの設定行ではありません';
 
   @override
-  String get mitmScriptNoPattern => 'No URL pattern';
+  String get mitmScriptNoPattern => 'URL パターンがありません';
 
   @override
   String get mitmScriptNoPath =>
-      'script-path must be a URL; add a local script with “From File…”';
+      'script-path には URL を指定してください。ローカルスクリプトは「ファイルから…」で追加してください';
 
   @override
   String get mitmAddFromFile => 'From File…';
@@ -8230,35 +8263,35 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmAddAndEnable => 'Add and Turn On';
 
   @override
-  String get mitmScriptDownloading => 'Downloading and checking…';
+  String get mitmScriptDownloading => 'ダウンロードして確認中…';
 
   @override
   String mitmScriptsAdded(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts added',
-      one: '1 script added',
+      other: 'スクリプトを $count 件追加しました',
+      one: 'スクリプトを 1 件追加しました',
     );
     return '$_temp0';
   }
 
   @override
-  String get mitmScriptEmpty => 'The script is empty';
+  String get mitmScriptEmpty => 'スクリプトが空です';
 
   @override
   String mitmScriptDownloadFailed(Object name, Object reason) {
-    return 'Couldn\'t download $name: $reason';
+    return '$name をダウンロードできませんでした：$reason';
   }
 
   @override
   String mitmScriptCannotLoad(Object name, Object reason) {
-    return '$name can\'t be loaded: $reason';
+    return '$name を読み込めません：$reason';
   }
 
   @override
   String mitmScriptCheckFailed(Object reason) {
-    return 'Couldn\'t check for updates: $reason';
+    return 'アップデートを確認できませんでした：$reason';
   }
 
   @override
@@ -8316,21 +8349,21 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get mitmModuleRewrites => 'Rewrite rules';
+  String get mitmModuleRewrites => '書き換えルール';
 
   @override
-  String get mitmModuleRoutingRules => 'Routing rules';
+  String get mitmModuleRoutingRules => '振り分けルール';
 
   @override
-  String get mitmModuleUnsupported => 'Not supported';
+  String get mitmModuleUnsupported => 'サポート対象外';
 
   @override
   String mitmModuleUnsupportedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count lines won\'t be imported.',
-      one: '1 line won\'t be imported.',
+      other: '$count 行はインポートされません。',
+      one: '1 行はインポートされません。',
     );
     return '$_temp0';
   }
@@ -8345,41 +8378,40 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmImportModule => 'Import Module';
 
   @override
-  String get mitmModuleImported => 'Module imported';
+  String get mitmModuleImported => 'モジュールをインポートしました';
 
   @override
   String mitmModuleHostCount(int count) {
-    return '$count hosts';
+    return 'ホスト $count 件';
   }
 
   @override
   String mitmModuleRewriteCount(int count) {
-    return '$count rewrites';
+    return '書き換え $count 件';
   }
 
   @override
   String mitmModuleUnsupportedLines(int count) {
-    return '$count lines not supported';
+    return 'サポート対象外 $count 行';
   }
 
   @override
   String mitmModuleRemoteSource(Object time) {
-    return 'Remote · updated $time';
+    return 'リモート · $time に更新';
   }
 
   @override
-  String get mitmModuleLocalSource => 'Local';
+  String get mitmModuleLocalSource => 'ローカル';
 
   @override
-  String get mitmModulesEmptyTitle => 'No modules yet';
+  String get mitmModulesEmptyTitle => 'モジュールはまだありません';
 
   @override
-  String get mitmModulesEmptyBody =>
-      'Once imported, you can see what a module sets up.';
+  String get mitmModulesEmptyBody => 'モジュールをインポートすると、その設定内容を確認できます。';
 
   @override
   String mitmScriptsRan(int count) {
-    return 'Scripts ran · $count';
+    return 'スクリプト実行済み · $count 件';
   }
 
   @override
@@ -8387,42 +8419,42 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts didn\'t finish; the message passed unchanged.',
-      one: '1 script didn\'t finish; the message passed unchanged.',
+      other: '$count 件のスクリプトが完了せず、メッセージは変更されずに通過しました。',
+      one: '1 件のスクリプトが完了せず、メッセージは変更されずに通過しました。',
     );
     return '$_temp0';
   }
 
   @override
   String mitmScriptDone(Object took) {
-    return 'Finished · $took';
+    return '完了 · $took';
   }
 
   @override
-  String get mitmScriptTimedOut => 'Script timed out';
+  String get mitmScriptTimedOut => 'スクリプトがタイムアウトしました';
 
   @override
   String mitmScriptFailed(Object reason) {
-    return 'Script failed: $reason';
+    return 'スクリプトが失敗しました：$reason';
   }
 
   @override
   String mitmScriptNotRun(Object reason) {
-    return 'Script didn\'t run: $reason';
+    return 'スクリプトは実行されませんでした：$reason';
   }
 
   @override
-  String get mitmScriptMemory => 'over the memory limit';
+  String get mitmScriptMemory => 'メモリ上限を超えています';
 
   @override
-  String get mitmScriptBusy => 'too many scripts running';
+  String get mitmScriptBusy => '実行中のスクリプトが多すぎます';
 
   @override
-  String get mitmScriptNoDone => 'the script never called \$done';
+  String get mitmScriptNoDone => 'スクリプトが \$done を呼び出しませんでした';
 
   @override
   String mitmScriptLogExpand(int count) {
-    return 'Show All ($count lines)';
+    return 'すべて表示（$count 行）';
   }
 
   @override
@@ -8430,8 +8462,8 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count requests sent',
-      one: '1 request sent',
+      other: '$count 件のリクエストを送信しました',
+      one: '1 件のリクエストを送信しました',
     );
     return '$_temp0';
   }
@@ -8461,12 +8493,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mitmScriptLoadFailed(Object reason) {
-    return 'The script can\'t be loaded: $reason.';
+    return 'スクリプトを読み込めません：$reason。';
   }
 
   @override
   String mitmModuleLoadFailed(Object reason) {
-    return 'The module can\'t be loaded: $reason.';
+    return 'モジュールを読み込めません：$reason。';
   }
 
   @override
@@ -8475,7 +8507,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mitmScriptFoundUpdate(Object time) {
-    return 'New version found $time';
+    return '$time に新しいバージョンを検出';
   }
 
   @override
@@ -8540,8 +8572,8 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count routing rules',
-      one: '1 routing rule',
+      other: '$count 件の振り分けルール',
+      one: '1 件の振り分けルール',
     );
     return '$_temp0';
   }

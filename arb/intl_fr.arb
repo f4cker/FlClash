@@ -1260,7 +1260,7 @@
   "arguments": "Arguments",
   "mitmRoutingRules": "Règles de routage",
   "mitmIgnoredLines": "Lignes ignorées",
-  "mitmModuleRulesDesc": "Module routing rules go after the added rules and before the profile's own.",
+  "mitmModuleRulesDesc": "Les règles de routage du module sont placées après les règles ajoutées et avant celles du profil.",
   "mitmModuleSystemTip": "Écrit pour {system} ; certaines lignes peuvent ne pas correspondre aux applications de cet appareil.",
   "mitmSkipSection": "La section [{section}] n’est pas prise en charge",
   "mitmSkipSetting": "Ce réglage n’est pas pris en charge",
@@ -2774,518 +2774,566 @@
   "ipxUnknown": "Unknown",
   "mitmHttp2": "Déchiffrer HTTP/2",
   "mitmHttp2Desc": "Désactivé, seules les connexions HTTP/1.1 sont déchiffrées ; les connexions qui ne prennent en charge que HTTP/2 ne seront pas déchiffrées.",
-  "mitmRewriteAndScripts": "Rewrite & Scripts",
+  "mitmRewriteAndScripts": "Réécriture et scripts",
   "@mitmRewriteAndScripts": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewrite": "Rewrite",
+  "mitmRewrite": "Réécriture",
   "@mitmRewrite": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRuleCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "mitmRewriteRuleCount": "{count, plural, =1{1 règle} other{{count} règles}}",
   "@mitmRewriteRuleCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteInvalidCount": "{count} invalid",
+  "mitmRewriteInvalidCount": "{count} non valides",
   "@mitmRewriteInvalidCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteNoneAdded": "None added",
+  "mitmRewriteNoneAdded": "Aucune règle ajoutée",
   "@mitmRewriteNoneAdded": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSubtitle": "Profile “{profile}” · {count} rewrite rules, {enabled} on",
+  "mitmRewriteSubtitle": "Profil « {profile} » · {count} règles de réécriture, dont {enabled} activées",
   "@mitmRewriteSubtitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupReject": "URL Reject",
+  "mitmRewriteGroupReject": "Blocage d’URL",
   "@mitmRewriteGroupReject": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupRedirect": "URL Redirect",
+  "mitmRewriteGroupRedirect": "Redirection d’URL",
   "@mitmRewriteGroupRedirect": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupHeader": "Request & Response Headers",
+  "mitmRewriteGroupHeader": "En-têtes des requêtes et des réponses",
   "@mitmRewriteGroupHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGroupBody": "Request & Response Bodies",
+  "mitmRewriteGroupBody": "Corps des requêtes et des réponses",
   "@mitmRewriteGroupBody": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActReject": "Block",
+  "mitmRewriteActReject": "Bloquer",
   "@mitmRewriteActReject": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActRedirect": "{code} redirect",
+  "mitmRewriteActRedirect": "Redirection {code}",
   "@mitmRewriteActRedirect": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActUrl": "Rewrite URL",
+  "mitmRewriteActUrl": "Réécrire l’URL",
   "@mitmRewriteActUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActRequestHeader": "Request header",
+  "mitmRewriteActRequestHeader": "En-tête de requête",
   "@mitmRewriteActRequestHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActResponseHeader": "Response header",
+  "mitmRewriteActResponseHeader": "En-tête de réponse",
   "@mitmRewriteActResponseHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActRequestBody": "Request body",
+  "mitmRewriteActRequestBody": "Corps de requête",
   "@mitmRewriteActRequestBody": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActResponseBody": "Response body",
+  "mitmRewriteActResponseBody": "Corps de réponse",
   "@mitmRewriteActResponseBody": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteActMapLocal": "Local response",
+  "mitmRewriteActMapLocal": "Réponse locale",
   "@mitmRewriteActMapLocal": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectError": "Return an error",
+  "mitmRewriteRejectError": "Renvoyer une erreur",
   "@mitmRewriteRejectError": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteReject200": "Return an empty page",
+  "mitmRewriteReject200": "Renvoyer une page vide",
   "@mitmRewriteReject200": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectImage": "Return a blank image",
+  "mitmRewriteRejectImage": "Renvoyer une image vierge",
   "@mitmRewriteRejectImage": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectDict": "Return an empty JSON object",
+  "mitmRewriteRejectDict": "Renvoyer un objet JSON vide",
   "@mitmRewriteRejectDict": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectArray": "Return an empty JSON array",
+  "mitmRewriteRejectArray": "Renvoyer un tableau JSON vide",
   "@mitmRewriteRejectArray": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRejectDrop": "Drop the connection",
+  "mitmRewriteRejectDrop": "Interrompre la connexion",
   "@mitmRewriteRejectDrop": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderAdd": "Add {name}",
+  "mitmRewriteHeaderAdd": "Ajouter {name}",
   "@mitmRewriteHeaderAdd": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderDel": "Remove {name}",
+  "mitmRewriteHeaderDel": "Supprimer {name}",
   "@mitmRewriteHeaderDel": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderReplace": "Replace {name}",
+  "mitmRewriteHeaderReplace": "Remplacer {name}",
   "@mitmRewriteHeaderReplace": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHeaderReplaceRegex": "Replace in {name}",
+  "mitmRewriteHeaderReplaceRegex": "Remplacer dans {name}",
   "@mitmRewriteHeaderReplaceRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBodyReplace": "{count, plural, =1{1 replacement} other{{count} replacements}}",
+  "mitmRewriteBodyReplace": "{count, plural, =1{1 remplacement} other{{count} remplacements}}",
   "@mitmRewriteBodyReplace": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBodyLimit": "Up to {size}",
+  "mitmRewriteBodyLimit": "Jusqu’à {size}",
   "@mitmRewriteBodyLimit": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteInvalid": "Invalid rule: {reason}",
+  "mitmRewriteInvalid": "Règle non valide : {reason}",
   "@mitmRewriteInvalid": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteInvalidSpoken": "Invalid rule, {reason}",
+  "mitmRewriteInvalidSpoken": "Règle non valide, {reason}",
   "@mitmRewriteInvalidSpoken": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmRewriteToggleLabel": "{action}, {url}",
   "@mitmRewriteToggleLabel": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteNotApplied": "The change didn't take effect: {reason}",
+  "mitmRewriteNotApplied": "La modification n’a pas pris effet : {reason}",
   "@mitmRewriteNotApplied": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEnableAll": "Turn All On",
+  "mitmRewriteEnableAll": "Tout activer",
   "@mitmRewriteEnableAll": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteDisableAll": "Turn All Off",
+  "mitmRewriteDisableAll": "Tout désactiver",
   "@mitmRewriteDisableAll": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteCopyAll": "Copy All Rules",
+  "mitmRewriteCopyAll": "Copier toutes les règles",
   "@mitmRewriteCopyAll": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteDeleteInvalid": "Delete Invalid Rules",
+  "mitmRewriteDeleteInvalid": "Supprimer les règles non valides",
   "@mitmRewriteDeleteInvalid": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteDeleteInvalidConfirm": "Delete {count, plural, =1{1 invalid rule} other{{count} invalid rules}}?",
+  "mitmRewriteDeleteInvalidConfirm": "Supprimer {count, plural, =1{1 règle non valide} other{{count} règles non valides}} ?",
   "@mitmRewriteDeleteInvalidConfirm": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteOff": "Decryption is off, so rewrite rules won't take effect.",
+  "mitmRewriteOff": "Le déchiffrement est désactivé : les règles de réécriture ne prendront pas effet.",
   "@mitmRewriteOff": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteGoTurnOn": "Turn On",
+  "mitmRewriteGoTurnOn": "Activer",
   "@mitmRewriteGoTurnOn": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEmptyTitle": "No rewrite rules yet",
+  "mitmRewriteEmptyTitle": "Aucune règle de réécriture",
   "@mitmRewriteEmptyTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEmptyDesc": "Paste rules to import them.",
+  "mitmRewriteEmptyDesc": "Collez des règles pour les importer.",
   "@mitmRewriteEmptyDesc": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePaste": "Paste to Import",
+  "mitmRewritePaste": "Coller pour importer",
   "@mitmRewritePaste": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSearchHint": "Search rewrite rules",
+  "mitmRewriteSearchHint": "Rechercher des règles de réécriture",
   "@mitmRewriteSearchHint": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportTitle": "Import Rewrite Rules",
+  "mitmRewriteImportTitle": "Importer des règles de réécriture",
   "@mitmRewriteImportTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportDesc": "Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.",
+  "mitmRewriteImportDesc": "Collez les règles de réécriture, une par ligne. Les sections Surge [URL Rewrite], [Header Rewrite], [Body Rewrite] et [Map Local] sont reconnues par leur titre.",
   "@mitmRewriteImportDesc": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportReady": "Ready to import {count}: {detail}",
+  "mitmRewriteImportReady": "Prêt à importer {count} règles : {detail}",
   "@mitmRewriteImportReady": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportLineError": "Line {line} can't be imported: {reason}",
+  "mitmRewriteImportLineError": "Impossible d’importer la ligne {line} : {reason}",
   "@mitmRewriteImportLineError": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportMoreErrors": "{count, plural, =1{1 more line has errors} other{{count} more lines have errors}}",
+  "mitmRewriteImportMoreErrors": "{count, plural, =1{1 autre ligne comporte des erreurs} other{{count} autres lignes comportent des erreurs}}",
   "@mitmRewriteImportMoreErrors": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportDuplicate": "Line {line} is already there and will be skipped",
+  "mitmRewriteImportDuplicate": "La ligne {line} existe déjà et sera ignorée",
   "@mitmRewriteImportDuplicate": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePlace": "Place",
+  "mitmRewritePlace": "Emplacement",
   "@mitmRewritePlace": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePlaceEnd": "End of each group",
+  "mitmRewritePlaceEnd": "Fin de chaque groupe",
   "@mitmRewritePlaceEnd": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePlaceStart": "Start of each group",
+  "mitmRewritePlaceStart": "Début de chaque groupe",
   "@mitmRewritePlaceStart": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImportButton": "Import {count}",
+  "mitmRewriteImportButton": "Importer {count} règles",
   "@mitmRewriteImportButton": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImporting": "Importing…",
+  "mitmRewriteImporting": "Importation…",
   "@mitmRewriteImporting": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteImported": "Imported {count, plural, =1{1 rule} other{{count} rules}}",
+  "mitmRewriteImported": "{count, plural, =1{1 règle importée} other{{count} règles importées}}",
   "@mitmRewriteImported": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEditTitle": "Edit Rewrite Rule",
+  "mitmRewriteEditTitle": "Modifier la règle de réécriture",
   "@mitmRewriteEditTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteEditSubtitle": "{group} · Rule {number}",
+  "mitmRewriteEditSubtitle": "{group} · Règle {number}",
   "@mitmRewriteEditSubtitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmRewritePreviewType": "Type",
   "@mitmRewritePreviewType": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePreviewMatch": "Matches",
+  "mitmRewritePreviewMatch": "URL correspondante",
   "@mitmRewritePreviewMatch": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmRewritePreviewAction": "Action",
   "@mitmRewritePreviewAction": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteUnparsable": "Can't parse",
+  "mitmRewriteUnparsable": "Analyse impossible",
   "@mitmRewriteUnparsable": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSectionChanged": "This line belongs in {group}; it will move there.",
+  "mitmRewriteSectionChanged": "Cette ligne appartient au groupe {group} ; elle y sera déplacée à l’enregistrement.",
   "@mitmRewriteSectionChanged": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBadgeApplied": "Rewritten · {type}",
+  "mitmRewriteBadgeApplied": "Réécrit · {type}",
   "@mitmRewriteBadgeApplied": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBadgeFailed": "Rewrite failed · {reason}",
+  "mitmRewriteBadgeFailed": "Échec de la réécriture · {reason}",
   "@mitmRewriteBadgeFailed": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRewritten": "Rewritten",
+  "mitmRewriteRewritten": "Réécrit",
   "@mitmRewriteRewritten": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteFailedShort": "Rewrite failed",
+  "mitmRewriteFailedShort": "Échec de la réécriture",
   "@mitmRewriteFailedShort": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteAppliedTitle": "Rewrite applied",
+  "mitmRewriteAppliedTitle": "Réécriture appliquée",
   "@mitmRewriteAppliedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteHitCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "mitmRewriteHitCount": "{count, plural, =1{1 règle} other{{count} règles}}",
   "@mitmRewriteHitCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteFailedTitle": "Rewrite failed: {reason}",
+  "mitmRewriteFailedTitle": "Échec de la réécriture : {reason}",
   "@mitmRewriteFailedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewritePassedThrough": "Not rewritten; passed on unchanged",
+  "mitmRewritePassedThrough": "Non réécrit ; transmis sans modification",
   "@mitmRewritePassedThrough": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRuleRef": "Rule {rule}",
+  "mitmRewriteRuleRef": "Règle {rule}",
   "@mitmRewriteRuleRef": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteViewInList": "Show in Rewrite",
+  "mitmRewriteViewInList": "Afficher dans Réécriture",
   "@mitmRewriteViewInList": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteBefore": "Before",
+  "mitmRewriteBefore": "Avant",
   "@mitmRewriteBefore": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteAfter": "After",
+  "mitmRewriteAfter": "Après",
   "@mitmRewriteAfter": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteRuleRemoved": "The rule is no longer in this profile",
+  "mitmRewriteRuleRemoved": "La règle ne figure plus dans ce profil",
   "@mitmRewriteRuleRemoved": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipOversize": "Content over the size limit",
+  "mitmRewriteSkipOversize": "Contenu dépassant la taille maximale",
   "@mitmRewriteSkipOversize": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipDecode": "Couldn't decompress the content",
+  "mitmRewriteSkipDecode": "Impossible de décompresser le contenu",
   "@mitmRewriteSkipDecode": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipNotText": "Content isn't in a supported text format",
+  "mitmRewriteSkipNotText": "Le contenu n’est pas dans un format texte pris en charge",
   "@mitmRewriteSkipNotText": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipEncoding": "Unsupported content encoding",
+  "mitmRewriteSkipEncoding": "Encodage du contenu non pris en charge",
   "@mitmRewriteSkipEncoding": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipTimeout": "The pattern took too long to match",
+  "mitmRewriteSkipTimeout": "La recherche de correspondance a pris trop de temps",
   "@mitmRewriteSkipTimeout": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipCrossHost": "Can't rewrite to another host",
+  "mitmRewriteSkipCrossHost": "Impossible de réécrire vers un autre hôte",
   "@mitmRewriteSkipCrossHost": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipInvalidUrl": "The rewritten URL is invalid",
+  "mitmRewriteSkipInvalidUrl": "L’URL réécrite n’est pas valide",
   "@mitmRewriteSkipInvalidUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipStreaming": "The content is a stream",
+  "mitmRewriteSkipStreaming": "Le contenu est un flux continu",
   "@mitmRewriteSkipStreaming": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipUploading": "The request was still uploading",
+  "mitmRewriteSkipUploading": "L’envoi de la requête était encore en cours",
   "@mitmRewriteSkipUploading": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipRead": "Couldn't read the content",
+  "mitmRewriteSkipRead": "Impossible de lire le contenu",
   "@mitmRewriteSkipRead": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteSkipOther": "Rewrite not applied",
+  "mitmRewriteSkipOther": "Réécriture non appliquée",
   "@mitmRewriteSkipOther": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmRewriteRejectDetail": "{text} ({type})",
   "@mitmRewriteRejectDetail": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteErrorFramingHeader": "{value} controls how the message is sent and can't be rewritten.",
-  "mitmRewriteErrorNeedsValue": "{value} needs a value.",
-  "mitmRewriteErrorBodyHead": "A body rewrite must start with http-request or http-response.",
-  "mitmRewriteErrorHeaderLineBreak": "A header value can't contain a line break.",
-  "mitmRewriteErrorNeedsReplacementUrl": "A redirect or URL rewrite needs a target URL.",
-  "mitmRewriteErrorDataUrl": "Remote content must be downloaded before a local response can use it.",
-  "mitmRewriteErrorDataBase64": "The content isn't valid Base64.",
-  "mitmRewriteErrorDataFileName": "The content must name a file in the resources folder; got {value}.",
-  "mitmRewriteErrorFileNeedsData": "The file type needs a file.",
-  "mitmRewriteErrorBodyTooLarge": "The decoded content is over the rewrite size limit.",
-  "mitmRewriteErrorEmptyRegex": "The regular expression can't be empty.",
-  "mitmRewriteErrorEmptyRule": "The rule can't be empty.",
-  "mitmRewriteErrorUrlFieldCount": "Enter a regular expression, a replacement and a type; found {value} items.",
-  "mitmRewriteErrorBodyPairs": "After the URL regular expression, enter pairs of a pattern and its replacement.",
-  "mitmRewriteErrorHeaderFields": "Enter the request or response type, a regular expression, an action and a header, plus a value when needed.",
-  "mitmRewriteErrorKeyValue": "Use the key=value format; got {value}.",
-  "mitmRewriteErrorHeaderFormat": "The header is invalid; use a:b|c:d or Base64.",
-  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex needs a regular expression and a replacement.",
-  "mitmRewriteErrorUrlRegex": "The URL regular expression is invalid.",
-  "mitmRewriteErrorBodyRegex": "The content regular expression {value} is invalid.",
-  "mitmRewriteErrorInvalidHeader": "The header {value} is invalid.",
-  "mitmRewriteErrorHeaderName": "The header name {value} is invalid.",
-  "mitmRewriteErrorHeaderRegex": "The header regular expression is invalid.",
-  "mitmRewriteErrorJq": "Rewriting content with jq isn't supported yet.",
-  "mitmRewriteErrorLocalUnreadable": "Can't read the local response file {value}.",
-  "mitmRewriteErrorLocalTooLarge": "The local response file {value} is over 16 MiB.",
-  "mitmRewriteErrorRegexTimeout": "The regular expression took too long to match.",
-  "mitmRewriteErrorStatusCode": "The status code must be between 200 and 999; got {value}.",
-  "mitmRewriteErrorUrlType": "Unsupported URL rewrite type: {value}.",
-  "mitmRewriteErrorDataType": "Unsupported content type: {value}.",
-  "mitmRewriteErrorHeaderAction": "Unsupported header action: {value}.",
-  "mitmRewriteErrorParameter": "Unsupported parameter: {value}.",
-  "mitmRewriteErrorSection": "Unsupported section: {value}.",
-  "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
-  "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
-  "mitmRewriteErrorGeneric": "The rule's format is invalid.",
-  "mitmRewriteErrorDetails": "Details",
-  "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "mitmRewriteErrorFramingHeader": "{value} contrôle la transmission du message et ne peut pas être réécrit.",
+  "mitmRewriteErrorNeedsValue": "{value} nécessite une valeur.",
+  "mitmRewriteErrorBodyHead": "Une règle de réécriture du corps doit commencer par http-request ou http-response.",
+  "mitmRewriteErrorHeaderLineBreak": "La valeur d’un en-tête ne peut pas contenir de saut de ligne.",
+  "mitmRewriteErrorNeedsReplacementUrl": "Une redirection ou une réécriture d’URL nécessite une URL cible.",
+  "mitmRewriteErrorDataUrl": "Le contenu distant doit être téléchargé avant de pouvoir être utilisé dans une réponse locale.",
+  "mitmRewriteErrorDataBase64": "Le contenu n’est pas un Base64 valide.",
+  "mitmRewriteErrorDataFileName": "Le contenu doit désigner un fichier du dossier des ressources ; valeur actuelle : {value}.",
+  "mitmRewriteErrorFileNeedsData": "Le type fichier nécessite un fichier.",
+  "mitmRewriteErrorBodyTooLarge": "Le contenu décodé dépasse la taille maximale autorisée pour la réécriture.",
+  "mitmRewriteErrorEmptyRegex": "L’expression régulière ne peut pas être vide.",
+  "mitmRewriteErrorEmptyRule": "La règle ne peut pas être vide.",
+  "mitmRewriteErrorUrlFieldCount": "Saisissez une expression régulière, un remplacement et un type ; {value} éléments trouvés.",
+  "mitmRewriteErrorBodyPairs": "Après l’expression régulière de l’URL, saisissez des paires composées d’un motif et de son remplacement.",
+  "mitmRewriteErrorHeaderFields": "Saisissez le type de requête ou de réponse, une expression régulière, une action et un en-tête, ainsi qu’une valeur si nécessaire.",
+  "mitmRewriteErrorKeyValue": "Utilisez le format key=value ; valeur actuelle : {value}.",
+  "mitmRewriteErrorHeaderFormat": "L’en-tête n’est pas valide ; utilisez a:b|c:d ou Base64.",
+  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex nécessite une expression régulière et un remplacement.",
+  "mitmRewriteErrorUrlRegex": "L’expression régulière de l’URL n’est pas valide.",
+  "mitmRewriteErrorBodyRegex": "L’expression régulière du contenu {value} n’est pas valide.",
+  "mitmRewriteErrorInvalidHeader": "L’en-tête {value} n’est pas valide.",
+  "mitmRewriteErrorHeaderName": "Le nom d’en-tête {value} n’est pas valide.",
+  "mitmRewriteErrorHeaderRegex": "L’expression régulière de l’en-tête n’est pas valide.",
+  "mitmRewriteErrorJq": "La réécriture du contenu avec jq n’est pas encore prise en charge.",
+  "mitmRewriteErrorLocalUnreadable": "Impossible de lire le fichier de réponse locale {value}.",
+  "mitmRewriteErrorLocalTooLarge": "Le fichier de réponse locale {value} dépasse 16 MiB.",
+  "mitmRewriteErrorRegexTimeout": "La recherche de correspondance de l’expression régulière a pris trop de temps.",
+  "mitmRewriteErrorStatusCode": "Le code d’état doit être compris entre 200 et 999 ; valeur actuelle : {value}.",
+  "mitmRewriteErrorUrlType": "Type de réécriture d’URL non pris en charge : {value}.",
+  "mitmRewriteErrorDataType": "Type de contenu non pris en charge : {value}.",
+  "mitmRewriteErrorHeaderAction": "Action sur l’en-tête non prise en charge : {value}.",
+  "mitmRewriteErrorParameter": "Paramètre non pris en charge : {value}.",
+  "mitmRewriteErrorSection": "Section non prise en charge : {value}.",
+  "mitmRewriteErrorUnterminatedQuote": "Guillemet non fermé dans {value}.",
+  "mitmRewriteErrorOutsideSection": "Cette ligne ne se trouve pas dans une section [URL Rewrite], [Header Rewrite], [Body Rewrite] ou [Map Local].",
+  "mitmRewriteErrorGeneric": "Le format de la règle n’est pas valide.",
+  "mitmRewriteFailureGeneric": "Une erreur s’est produite et les règles restent inchangées.",
+  "mitmScriptErrorLine": "La ligne du script est mal formatée ou le type de requête/réponse est manquant.",
+  "@mitmScriptErrorLine": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorType": "Type de script non pris en charge : {type}.",
+  "@mitmScriptErrorType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPattern": "Motif de correspondance manquant.",
+  "@mitmScriptErrorPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorPath": "Chemin du script manquant.",
+  "@mitmScriptErrorPath": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorMaxSize": "Le nombre d’octets doit être numérique : {value}.",
+  "@mitmScriptErrorMaxSize": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTimeout": "Le nombre de secondes doit être numérique : {value}.",
+  "@mitmScriptErrorTimeout": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorArgument": "L’argument n’est pas un JSON valide.",
+  "@mitmScriptErrorArgument": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorUnreadable": "Impossible de lire le fichier : {filename}.",
+  "@mitmScriptErrorUnreadable": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLarge": "Le fichier dépasse 8 MiB : {filename}.",
+  "@mitmScriptErrorTooLarge": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorUnreadableNoName": "Impossible de lire le fichier.",
+  "@mitmScriptErrorUnreadableNoName": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLargeNoName": "Le fichier dépasse 8 MiB.",
+  "@mitmScriptErrorTooLargeNoName": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorSyntax": "Impossible de compiler le script.",
+  "@mitmScriptErrorSyntax": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "viewOriginalError": "Voir l’erreur d’origine",
+  "@viewOriginalError": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
   "@mitmRewriteErrorFramingHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorNeedsValue": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyHead": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderLineBreak": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorNeedsReplacementUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataUrl": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataBase64": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataFileName": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorFileNeedsData": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyTooLarge": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorEmptyRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorEmptyRule": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUrlFieldCount": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyPairs": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderFields": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorKeyValue": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderFormat": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderReplaceRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUrlRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorBodyRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorInvalidHeader": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderName": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderRegex": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorJq": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorLocalUnreadable": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorLocalTooLarge": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorRegexTimeout": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorStatusCode": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUrlType": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorDataType": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorHeaderAction": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorParameter": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorSection": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorUnterminatedQuote": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorOutsideSection": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "@mitmRewriteErrorGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "@mitmRewriteErrorDetails": {
-    "description": "PROVISIONAL: English text, awaiting translation"
-  },
-  "mitmRewriteMatchedTitle": "Rule matched",
+  "mitmRewriteMatchedTitle": "Règle correspondante",
   "@mitmRewriteMatchedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmRewriteNotAppliedTitle": "Rewrite not applied: {value}",
+  "mitmRewriteNotAppliedTitle": "Réécriture non appliquée : {value}",
   "@mitmRewriteNotAppliedTitle": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmScripts": "Scripts",
   "mitmScriptCount": "{count, plural, =1{1 script} other{{count} scripts}}",
@@ -3294,7 +3342,8 @@
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmUpdateCount": "{count} with updates",
   "@mitmUpdateCount": {
@@ -3304,15 +3353,16 @@
       }
     }
   },
-  "mitmScriptInvalidCount": "{count} invalid",
+  "mitmScriptInvalidCount": "{count} non valides",
   "@mitmScriptInvalidCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleCount": "{count} modules, {enabled} on",
+  "mitmModuleCount": "{count} modules, dont {enabled} activés",
   "@mitmModuleCount": {
     "placeholders": {
       "count": {
@@ -3321,9 +3371,10 @@
       "enabled": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptSubtitle": "Profile “{profile}” · {count} scripts, {enabled} on",
+  "mitmScriptSubtitle": "Profil « {profile} » · {count} scripts, dont {enabled} activés",
   "@mitmScriptSubtitle": {
     "placeholders": {
       "profile": {},
@@ -3333,61 +3384,66 @@
       "enabled": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptGroupRequest": "Request Scripts",
-  "mitmScriptGroupResponse": "Response Scripts",
-  "mitmScriptKindRequest": "Request",
-  "mitmScriptKindResponse": "Response",
-  "mitmScriptNeedsBody": "Needs body",
-  "mitmScriptRemoteSource": "{source} · checked {time}",
+  "mitmScriptGroupRequest": "Scripts de requête",
+  "mitmScriptGroupResponse": "Scripts de réponse",
+  "mitmScriptKindRequest": "Requête",
+  "mitmScriptKindResponse": "Réponse",
+  "mitmScriptNeedsBody": "Nécessite le corps",
+  "mitmScriptRemoteSource": "{source} · vérifié {time}",
   "@mitmScriptRemoteSource": {
     "placeholders": {
       "source": {},
       "time": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptLocalSource": "Local file · {file}",
+  "mitmScriptLocalSource": "Fichier local · {file}",
   "@mitmScriptLocalSource": {
     "placeholders": {
       "file": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptHasUpdate": "Update available",
+  "mitmScriptHasUpdate": "Mise à jour disponible",
   "mitmHasUpdate": "Update available",
   "mitmViewUpdate": "View Update",
-  "mitmScriptsFromModules": "{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}",
+  "mitmScriptsFromModules": "{count, plural, =1{1 autre script provient de modules} other{{count} autres scripts proviennent de modules}}",
   "@mitmScriptsFromModules": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptsOff": "HTTPS decryption is off, so scripts don't run.",
-  "mitmScriptHostNotDecrypted": "This host isn't decrypted, so the script won't run",
+  "mitmScriptsOff": "Le déchiffrement HTTPS est désactivé : les scripts ne s’exécutent pas.",
+  "mitmScriptHostNotDecrypted": "Cet hôte n’est pas déchiffré : le script ne s’exécutera pas",
   "mitmAddToDecryption": "Add to Decryption",
-  "mitmScriptsEmptyTitle": "No scripts yet",
-  "mitmScriptsEmptyBody": "Once added, a script runs on the requests or responses it matches.",
+  "mitmScriptsEmptyTitle": "Aucun script",
+  "mitmScriptsEmptyBody": "Une fois ajouté, un script s’exécute sur les requêtes ou réponses qui correspondent à ses critères.",
   "mitmAddScript": "Add Script",
   "mitmCheckAllUpdates": "Check All for Updates",
-  "mitmScriptCopyAll": "Copy All Lines",
-  "mitmScriptDeleteInvalid": "Delete Invalid Scripts",
-  "mitmScriptDeleteInvalidConfirm": "Delete {count} invalid scripts?",
+  "mitmScriptCopyAll": "Copier toutes les lignes",
+  "mitmScriptDeleteInvalid": "Supprimer les scripts non valides",
+  "mitmScriptDeleteInvalidConfirm": "Supprimer {count} scripts non valides ?",
   "@mitmScriptDeleteInvalidConfirm": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmCheckUpdate": "Check for Update",
   "mitmCopyLine": "Copy Line",
   "mitmAddScriptHint": "Paste lines from a Surge config's [Script] section, one script per line, or just a script URL.",
   "mitmScriptType": "Type",
-  "mitmScriptPattern": "URL Pattern",
-  "mitmScriptTimeout": "Timeout",
-  "mitmScriptPasteOk": "{count} can be added: {requests} request, {responses} response",
+  "mitmScriptPattern": "Motif d’URL",
+  "mitmScriptTimeout": "Délai d’expiration",
+  "mitmScriptPasteOk": "{count} scripts peuvent être ajoutés : {requests} de requête, {responses} de réponse",
   "@mitmScriptPasteOk": {
     "placeholders": {
       "count": {
@@ -3399,21 +3455,23 @@
       "responses": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptPasteLineError": "Line {line} can't be added: {reason}",
+  "mitmScriptPasteLineError": "Impossible d’ajouter la ligne {line} : {reason}",
   "@mitmScriptPasteLineError": {
     "placeholders": {
       "line": {
         "type": "int"
       },
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptUnsupportedType": "This kind of script isn't supported yet",
-  "mitmScriptUnreadable": "Not a script line",
-  "mitmScriptNoPattern": "No URL pattern",
-  "mitmScriptNoPath": "script-path must be a URL; add a local script with “From File…”",
+  "mitmScriptUnsupportedType": "Ce type de script n’est pas encore pris en charge",
+  "mitmScriptUnreadable": "Ce n’est pas une ligne de configuration de script",
+  "mitmScriptNoPattern": "Motif d’URL manquant",
+  "mitmScriptNoPath": "script-path doit être une URL ; ajoutez un script local avec « Depuis un fichier… »",
   "mitmAddFromFile": "From File…",
   "mitmContinue": "Continue",
   "mitmScriptConfirmTitle": "Confirm Scripts",
@@ -3430,35 +3488,39 @@
   },
   "mitmAlsoDecryptHosts": "Also add these hosts to decryption",
   "mitmAddAndEnable": "Add and Turn On",
-  "mitmScriptDownloading": "Downloading and checking…",
-  "mitmScriptsAdded": "{count, plural, =1{1 script added} other{{count} scripts added}}",
+  "mitmScriptDownloading": "Téléchargement et vérification…",
+  "mitmScriptsAdded": "{count, plural, =1{1 script ajouté} other{{count} scripts ajoutés}}",
   "@mitmScriptsAdded": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptEmpty": "The script is empty",
-  "mitmScriptDownloadFailed": "Couldn't download {name}: {reason}",
+  "mitmScriptEmpty": "Le script est vide",
+  "mitmScriptDownloadFailed": "Impossible de télécharger {name} : {reason}",
   "@mitmScriptDownloadFailed": {
     "placeholders": {
       "name": {},
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptCannotLoad": "{name} can't be loaded: {reason}",
+  "mitmScriptCannotLoad": "Impossible de charger {name} : {reason}",
   "@mitmScriptCannotLoad": {
     "placeholders": {
       "name": {},
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptCheckFailed": "Couldn't check for updates: {reason}",
+  "mitmScriptCheckFailed": "Impossible de rechercher des mises à jour : {reason}",
   "@mitmScriptCheckFailed": {
     "placeholders": {
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmUpdateTitle": "{name} has an update",
   "@mitmUpdateTitle": {
@@ -3501,114 +3563,127 @@
       }
     }
   },
-  "mitmModuleRewrites": "Rewrite rules",
-  "mitmModuleRoutingRules": "Routing rules",
-  "mitmModuleUnsupported": "Not supported",
-  "mitmModuleUnsupportedCount": "{count, plural, =1{1 line won't be imported.} other{{count} lines won't be imported.}}",
+  "mitmModuleRewrites": "Règles de réécriture",
+  "mitmModuleRoutingRules": "Règles de routage",
+  "mitmModuleUnsupported": "Non pris en charge",
+  "mitmModuleUnsupportedCount": "{count, plural, =1{1 ligne ne sera pas importée.} other{{count} lignes ne seront pas importées.}}",
   "@mitmModuleUnsupportedCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmImportOnly": "Import Only",
   "mitmImportAndEnable": "Import and Turn On",
   "mitmImportModule": "Import Module",
-  "mitmModuleImported": "Module imported",
-  "mitmModuleHostCount": "{count} hosts",
+  "mitmModuleImported": "Module importé",
+  "mitmModuleHostCount": "{count} hôtes déchiffrés",
   "@mitmModuleHostCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleRewriteCount": "{count} rewrites",
+  "mitmModuleRewriteCount": "{count} réécritures",
   "@mitmModuleRewriteCount": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleUnsupportedLines": "{count} lines not supported",
+  "mitmModuleUnsupportedLines": "{count} lignes non prises en charge",
   "@mitmModuleUnsupportedLines": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmModuleRemoteSource": "Remote · updated {time}",
+  "mitmModuleRemoteSource": "Distant · mis à jour {time}",
   "@mitmModuleRemoteSource": {
     "placeholders": {
       "time": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmModuleLocalSource": "Local",
-  "mitmModulesEmptyTitle": "No modules yet",
-  "mitmModulesEmptyBody": "Once imported, you can see what a module sets up.",
-  "mitmScriptsRan": "Scripts ran · {count}",
+  "mitmModulesEmptyTitle": "Aucun module",
+  "mitmModulesEmptyBody": "Une fois un module importé, vous pouvez consulter sa configuration.",
+  "mitmScriptsRan": "Scripts exécutés · {count}",
   "@mitmScriptsRan": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged.} other{{count} scripts didn't finish; the message passed unchanged.}}",
+  "mitmScriptsPassed": "{count, plural, =1{1 script ne s’est pas terminé ; le message a été transmis sans modification.} other{{count} scripts ne se sont pas terminés ; le message a été transmis sans modification.}}",
   "@mitmScriptsPassed": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptDone": "Finished · {took}",
+  "mitmScriptDone": "Terminé · {took}",
   "@mitmScriptDone": {
     "placeholders": {
       "took": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptTimedOut": "Script timed out",
+  "mitmScriptTimedOut": "Le délai d’exécution du script a expiré",
   "@mitmScriptTimedOut": {
     "placeholders": {
       "seconds": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptFailed": "Script failed: {reason}",
+  "mitmScriptFailed": "Échec du script : {reason}",
   "@mitmScriptFailed": {
     "placeholders": {
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptNotRun": "Script didn't run: {reason}",
+  "mitmScriptNotRun": "Le script ne s’est pas exécuté : {reason}",
   "@mitmScriptNotRun": {
     "placeholders": {
       "reason": {}
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptMemory": "over the memory limit",
-  "mitmScriptBusy": "too many scripts running",
-  "mitmScriptNoDone": "the script never called $done",
-  "mitmScriptLogExpand": "Show All ({count} lines)",
+  "mitmScriptMemory": "limite de mémoire dépassée",
+  "mitmScriptBusy": "trop de scripts en cours d’exécution",
+  "mitmScriptNoDone": "le script n’a jamais appelé $done",
+  "mitmScriptLogExpand": "Tout afficher ({count} lignes)",
   "@mitmScriptLogExpand": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
-  "mitmScriptRequestsSent": "{count, plural, =1{1 request sent} other{{count} requests sent}}",
+  "mitmScriptRequestsSent": "{count, plural, =1{1 requête envoyée} other{{count} requêtes envoyées}}",
   "@mitmScriptRequestsSent": {
     "placeholders": {
       "count": {
         "type": "int"
       }
-    }
+    },
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmViewInScripts": "Show in Scripts",
   "mitmViewInModule": "Show in Module",
@@ -3619,15 +3694,15 @@
     }
   },
   "@mitmRewriteFailureGeneric": {
-    "description": "PROVISIONAL: English text, awaiting translation"
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
   "mitmUpdateCheckFailedKept": "Couldn't check for updates; the current version still works.",
   "mitmUpdateDownloadFailedKept": "Couldn't download the new version; the current version still works.",
   "mitmUpdateInvalidKept": "The new version can't be loaded; the current version still works.",
-  "mitmScriptLoadFailed": "The script can't be loaded: {reason}.",
-  "mitmModuleLoadFailed": "The module can't be loaded: {reason}.",
+  "mitmScriptLoadFailed": "Impossible de charger le script : {reason}.",
+  "mitmModuleLoadFailed": "Impossible de charger le module : {reason}.",
   "mitmPendingKept": "A new version is waiting; the current version keeps running.",
-  "mitmScriptFoundUpdate": "New version found {time}",
+  "mitmScriptFoundUpdate": "Nouvelle version détectée {time}",
   "mitmAlsoDecryptHost": "Also add {host} to decryption",
   "mitmDiffAdded": "{count, plural, =1{+1 line} other{+{count} lines}}",
   "mitmDiffRemoved": "{count, plural, =1{−1 line} other{−{count} lines}}",
@@ -3639,7 +3714,7 @@
   "mitmPauseSignRefusedHint": "Check that HTTPS decryption is on. New connections try decryption again once the pause ends.",
   "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
   "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
-  "mitmModuleRuleCount": "{count, plural, =1{1 routing rule} other{{count} routing rules}}",
+  "mitmModuleRuleCount": "{count, plural, =1{1 règle de routage} other{{count} règles de routage}}",
   "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
@@ -3825,5 +3900,122 @@
   "ipNotQueried": "Pas encore recherchée",
   "ipFlagLookupNote": "Sélectionnez le drapeau de la carte pour rechercher à nouveau l’IP de sortie et le pays. S’il n’y a pas encore de rapport ou si la dernière recherche a échoué, Flash essaiera aussi d’obtenir un rapport ipx.al.",
   "ipTypeExplain": "Type : la catégorie de réseau de l’IP, par exemple résidentiel, mobile, entreprise ou centre de données.",
-  "ipQualityExplain": "Qualité : la catégorie correspondant au score de santé ipx.al (0–100)."
+  "ipQualityExplain": "Qualité : la catégorie correspondant au score de santé ipx.al (0–100).",
+  "@mitmModules": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModule": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRulesDesc": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScripts": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptGroupRequest": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptGroupResponse": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptKindRequest": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptKindResponse": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNeedsBody": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptHasUpdate": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptsOff": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptHostNotDecrypted": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptsEmptyTitle": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptsEmptyBody": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptCopyAll": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptDeleteInvalid": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptTimeout": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptUnsupportedType": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptUnreadable": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNoPattern": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNoPath": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptDownloading": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptEmpty": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRewrites": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRoutingRules": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleUnsupported": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleImported": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleLocalSource": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModulesEmptyTitle": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModulesEmptyBody": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptMemory": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptBusy": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptNoDone": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptLoadFailed": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleLoadFailed": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmScriptFoundUpdate": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "@mitmModuleRuleCount": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  }
 }

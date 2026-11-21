@@ -13691,17 +13691,89 @@ abstract class AppLocalizations {
   /// **'The rule\'s format is invalid.'**
   String get mitmRewriteErrorGeneric;
 
-  /// No description provided for @mitmRewriteErrorDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Details'**
-  String get mitmRewriteErrorDetails;
-
   /// No description provided for @mitmRewriteFailureGeneric.
   ///
   /// In en, this message translates to:
   /// **'something went wrong, and the rules are unchanged.'**
   String get mitmRewriteFailureGeneric;
+
+  /// No description provided for @mitmScriptErrorLine.
+  ///
+  /// In en, this message translates to:
+  /// **'The script line has an invalid format or is missing a request/response type.'**
+  String get mitmScriptErrorLine;
+
+  /// No description provided for @mitmScriptErrorType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported script type: {type}.'**
+  String mitmScriptErrorType(String type);
+
+  /// No description provided for @mitmScriptErrorPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing match pattern.'**
+  String get mitmScriptErrorPattern;
+
+  /// No description provided for @mitmScriptErrorPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing script path.'**
+  String get mitmScriptErrorPath;
+
+  /// No description provided for @mitmScriptErrorMaxSize.
+  ///
+  /// In en, this message translates to:
+  /// **'The byte count must be a number: {value}.'**
+  String mitmScriptErrorMaxSize(String value);
+
+  /// No description provided for @mitmScriptErrorTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The number of seconds must be a number: {value}.'**
+  String mitmScriptErrorTimeout(String value);
+
+  /// No description provided for @mitmScriptErrorArgument.
+  ///
+  /// In en, this message translates to:
+  /// **'The argument is not valid JSON.'**
+  String get mitmScriptErrorArgument;
+
+  /// No description provided for @mitmScriptErrorUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot read file: {filename}.'**
+  String mitmScriptErrorUnreadable(String filename);
+
+  /// No description provided for @mitmScriptErrorTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'File exceeds 8 MiB: {filename}.'**
+  String mitmScriptErrorTooLarge(String filename);
+
+  /// When the script's own name is not known: no file name, the stored one only behind viewOriginalError.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot read the script file.'**
+  String get mitmScriptErrorUnreadableNoName;
+
+  /// When the script's own name is not known: no file name, the stored one only behind viewOriginalError.
+  ///
+  /// In en, this message translates to:
+  /// **'The script file exceeds 8 MiB.'**
+  String get mitmScriptErrorTooLargeNoName;
+
+  /// Headline only; the raw compile error is never translated and sits behind viewOriginalError.
+  ///
+  /// In en, this message translates to:
+  /// **'The script could not be compiled.'**
+  String get mitmScriptErrorSyntax;
+
+  /// Toggles the Core's or the system's untranslated error text, shown verbatim and collapsed by default.
+  ///
+  /// In en, this message translates to:
+  /// **'View original error'**
+  String get viewOriginalError;
 
   /// No description provided for @mitmRewriteMatchedTitle.
   ///

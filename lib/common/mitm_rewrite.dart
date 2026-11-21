@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -318,12 +320,140 @@ String mitmRewriteSurgeText(Iterable<MitmRewrite> rewrites) {
   return (text: buffer.join('\n'), lines: lines);
 }
 
-/// Why a rule cannot be taken, in the user's language, from the stable code
-/// the Core gives it; a code this app does not know reads as a generic
-/// format error, with the Core's own text left for the details.
-String mitmRewriteIssueText(AppLocalizations l, MitmRewriteIssue issue) {
+/// An error as the app shows it: [text] in the user's language, and [raw]
+/// the Core's or the system's own text, untranslated, for the details
+/// behind 查看原始错误; null when there is none to show.
+typedef MitmShownError = ({String text, String? raw});
+
+/// A value the Core quoted (Go strconv.Quote) as the user wrote it, for a
+/// sentence that already sets it off after a colon. An empty value, or one
+/// with spaces at its ends, keeps its quotes so it can be seen; a value Go
+/// quoted in a way JSON does not read (\x, \a, \v, \U) stays as it came.
+String mitmUnquotedArg(String value) {
+  if (value.length < 2 || !value.startsWith('"') || !value.endsWith('"')) {
+    return value;
+  }
+  try {
+    final decoded = jsonDecode(value);
+    if (decoded is! String || decoded.isEmpty || decoded.trim() != decoded) {
+      return value;
+    }
+    return decoded;
+  } on FormatException {
+    return value;
+  }
+}
+
+/// [issue] as the app shows it: its code in the user's words, the Core's
+/// own text behind the details. [scriptName] is the script's name as the
+/// user knows it, for the file the Core names by its stored name.
+MitmShownError mitmIssueError(
+  AppLocalizations l,
+  MitmRewriteIssue issue, {
+  String? scriptName,
+}) => (
+  text: mitmRewriteIssueText(l, issue, scriptName: scriptName),
+  raw: issue.message.trim().isEmpty ? null : issue.message,
+);
+
+/// [issue] for the script [name] under a sentence that names it already,
+/// as "{name} can't be loaded: …": the reason names no file, so the name
+/// reads once; the stored name only in the details.
+MitmShownError mitmScriptCannotLoadError(
+  AppLocalizations l,
+  String name,
+  MitmRewriteIssue issue,
+) {
+  final error = mitmIssueError(l, issue);
+  return (text: l.mitmScriptCannotLoad(name, error.text), raw: error.raw);
+}
+
+const _storedIssueMark = '\u0001mitm-issue:';
+
+/// [issue] as a script row keeps it in its error text, so the row can word
+/// it in whatever language the app is in when it is shown, and keep the
+/// Core's own text for the details.
+String mitmStoredIssue(MitmRewriteIssue issue) =>
+    '$_storedIssueMark${jsonEncode({'kind': issue.kind, 'args': issue.args, 'message': issue.message})}';
+
+/// The issue [mitmStoredIssue] kept in [error]; null for text the app wrote
+/// as it is, as a download failure or a row from before issues were kept.
+MitmRewriteIssue? mitmIssueOfStored(String? error) {
+  if (error == null || !error.startsWith(_storedIssueMark)) return null;
+  try {
+    final json = jsonDecode(error.substring(_storedIssueMark.length));
+    if (json case {
+      'kind': final String kind,
+      'message': final String message,
+    }) {
+      return MitmRewriteIssue(
+        section: MitmList.script.key,
+        kind: kind,
+        args: [
+          if (json['args'] case final List args)
+            for (final arg in args) '$arg',
+        ],
+        message: message,
+      );
+    }
+  } on FormatException {
+    // Not ours after all: shown as it is.
+  }
+  return null;
+}
+
+/// A script row's error text as the app shows it; [scriptName] as for
+/// [mitmIssueError].
+MitmShownError mitmStoredError(
+  AppLocalizations l,
+  String error, {
+  String? scriptName,
+}) => switch (mitmIssueOfStored(error)) {
+  final issue? => mitmIssueError(l, issue, scriptName: scriptName),
+  null when error.startsWith(_storedIssueMark) => (
+    text: l.mitmRewriteErrorGeneric,
+    raw: null,
+  ),
+  null => (text: error, raw: null),
+};
+
+/// Why a rule or a script cannot be taken, in the user's language, from the
+/// stable code the Core gives it; a code this app does not know reads as a
+/// generic format error, with the Core's own text left for the details.
+/// A script's compile error is never put in these words: only in the
+/// details.
+///
+/// The Core names a script file by the name the app stored it under, a
+/// hash the user never sees: [scriptName], the name on the row, stands for
+/// it, and without one the words name no file. The stored name is only in
+/// the details.
+String mitmRewriteIssueText(
+  AppLocalizations l,
+  MitmRewriteIssue issue, {
+  String? scriptName,
+}) {
   final value = issue.args.firstOrNull ?? '';
+  final file = switch (scriptName?.trim()) {
+    final name? when name.isNotEmpty => name,
+    _ => null,
+  };
   return switch (issue.kind) {
+    'scriptLine' => l.mitmScriptErrorLine,
+    'scriptType' => l.mitmScriptErrorType(mitmUnquotedArg(value)),
+    'scriptPattern' => l.mitmScriptErrorPattern,
+    'scriptPath' => l.mitmScriptErrorPath,
+    'scriptMaxSize' => l.mitmScriptErrorMaxSize(mitmUnquotedArg(value)),
+    'scriptTimeout' => l.mitmScriptErrorTimeout(mitmUnquotedArg(value)),
+    'scriptArgument' => l.mitmScriptErrorArgument,
+    'scriptUnreadable' => switch (file) {
+      final file? => l.mitmScriptErrorUnreadable(file),
+      null => l.mitmScriptErrorUnreadableNoName,
+    },
+    'scriptTooLarge' => switch (file) {
+      final file? => l.mitmScriptErrorTooLarge(file),
+      null => l.mitmScriptErrorTooLargeNoName,
+    },
+    'scriptSyntax' => l.mitmScriptErrorSyntax,
     'framingHeader' => l.mitmRewriteErrorFramingHeader(value),
     'needsValue' => l.mitmRewriteErrorNeedsValue(value),
     'bodyHead' => l.mitmRewriteErrorBodyHead,

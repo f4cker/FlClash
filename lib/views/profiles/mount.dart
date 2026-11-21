@@ -1059,11 +1059,15 @@ class MountBanner extends StatelessWidget {
     this.title,
     this.actionLabel,
     this.onAction,
+    this.raw,
   });
 
   final MountBannerLevel level;
   final List<String> lines;
   final String? title;
+
+  /// Untranslated text behind the lines, behind 查看原始错误.
+  final String? raw;
 
   /// A text button after the lines, as 详情 on a collapsed banner.
   final String? actionLabel;
@@ -1122,6 +1126,15 @@ class MountBanner extends StatelessWidget {
                             .copyWith(color: foreground),
                       ),
                     for (final line in lines) Text(line, style: style),
+                    if (raw case final raw?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: RawErrorDetails(
+                          key: ValueKey(raw),
+                          raw: raw,
+                          color: foreground,
+                        ),
+                      ),
                   ],
                 ),
               ),

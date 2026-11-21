@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -116,7 +117,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
   final _pending = <int>{};
   final _flashing = <int>{};
   final _rowKeys = <int, GlobalKey>{};
-  String? _error;
+  MitmShownError? _error;
   Timer? _flashTimer;
   bool _revealed = false;
 
@@ -158,7 +159,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = mitmScriptFailureText(context.appLocalizations, error);
+          _error = mitmScriptFailure(context.appLocalizations, error);
         });
       }
     } finally {
@@ -216,7 +217,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = mitmScriptFailureText(context.appLocalizations, error);
+          _error = mitmScriptFailure(context.appLocalizations, error);
         });
       }
       return;
@@ -385,7 +386,11 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
     final hosts = mitmDecryptedHosts(ref);
     final banners = [
       if (_error case final error?)
-        MountBanner(level: MountBannerLevel.error, lines: [error]),
+        MountBanner(
+          level: MountBannerLevel.error,
+          lines: [error.text],
+          raw: error.raw,
+        ),
       if (!decrypting)
         MountBanner(
           level: MountBannerLevel.info,
@@ -594,7 +599,10 @@ class MitmScriptRow extends StatelessWidget {
     final l = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final dark = colorScheme.brightness == Brightness.dark;
-    final error = script.error;
+    final error = switch (script.error) {
+      final error? => mitmStoredError(l, error, scriptName: info.name),
+      null => null,
+    };
     final secondary = AppTextStyle.footnote
         .of(context)
         .copyWith(color: colorScheme.onSurfaceVariant);
@@ -611,12 +619,16 @@ class MitmScriptRow extends StatelessWidget {
     final unloadable = script.unloadable;
     final Widget third;
     if (error != null) {
+      // The Core's own words stay out of the line: on hover only.
       third = Tooltip(
-        message: error,
+        message: error.raw ?? error.text,
         hoverDelay: const Duration(milliseconds: 500),
         child: MitmMarkedLine(
           unloadable
-              ? l.mitmScriptLoadFailed(error)
+              // The sentence ends the reason: its own stop goes.
+              ? l.mitmScriptLoadFailed(
+                  error.text.replaceFirst(RegExp(r'[.。．]$'), ''),
+                )
               : mitmKeptFailureText(l, script.failure),
           style: AppTextStyle.footnote
               .of(context)

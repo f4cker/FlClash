@@ -130,7 +130,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
   bool _rules = true;
   bool _allRules = false;
   bool? _busy;
-  String? _error;
+  MitmShownError? _error;
 
   Future<void> _import(bool enable) async {
     setState(() {
@@ -144,7 +144,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
       if (!mounted) return;
       setState(() {
         _busy = null;
-        _error = mitmScriptFailureText(context.appLocalizations, error);
+        _error = mitmScriptFailure(context.appLocalizations, error);
       });
     }
   }
@@ -391,7 +391,8 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
       title: l.mitmModuleConfirmTitle,
       subtitle: '${widget.name} · ${widget.source}',
       width: 560,
-      error: _error,
+      error: _error?.text,
+      errorRaw: _error?.raw,
       busy: busy,
       primaryLabel: l.mitmImportAndEnable,
       onPrimary: () => _import(true),

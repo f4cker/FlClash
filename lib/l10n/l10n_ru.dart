@@ -4080,7 +4080,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmModuleRulesDesc =>
-      'Module routing rules go after the added rules and before the profile\'s own.';
+      'Правила маршрутизации модуля располагаются после добавленных правил и перед правилами самого профиля.';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -7725,109 +7725,111 @@ class AppLocalizationsRu extends AppLocalizations {
       'Если выключено, расшифровываются только соединения HTTP/1.1; соединения, поддерживающие только HTTP/2, не расшифровываются.';
 
   @override
-  String get mitmRewriteAndScripts => 'Rewrite & Scripts';
+  String get mitmRewriteAndScripts => 'Перезапись и скрипты';
 
   @override
-  String get mitmRewrite => 'Rewrite';
+  String get mitmRewrite => 'Перезапись';
 
   @override
   String mitmRewriteRuleCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count правила',
+      many: '$count правил',
+      few: '$count правила',
+      one: '$count правило',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteInvalidCount(int count) {
-    return '$count invalid';
+    return 'Ошибок: $count';
   }
 
   @override
-  String get mitmRewriteNoneAdded => 'None added';
+  String get mitmRewriteNoneAdded => 'Не добавлено';
 
   @override
   String mitmRewriteSubtitle(Object profile, int count, int enabled) {
-    return 'Profile “$profile” · $count rewrite rules, $enabled on';
+    return 'Профиль «$profile» · правил перезаписи: $count, включено: $enabled';
   }
 
   @override
-  String get mitmRewriteGroupReject => 'URL Reject';
+  String get mitmRewriteGroupReject => 'Блокировка URL';
 
   @override
-  String get mitmRewriteGroupRedirect => 'URL Redirect';
+  String get mitmRewriteGroupRedirect => 'Перенаправление URL';
 
   @override
-  String get mitmRewriteGroupHeader => 'Request & Response Headers';
+  String get mitmRewriteGroupHeader => 'Заголовки запросов и ответов';
 
   @override
-  String get mitmRewriteGroupBody => 'Request & Response Bodies';
+  String get mitmRewriteGroupBody => 'Тела запросов и ответов';
 
   @override
-  String get mitmRewriteActReject => 'Block';
+  String get mitmRewriteActReject => 'Блокировать';
 
   @override
   String mitmRewriteActRedirect(Object code) {
-    return '$code redirect';
+    return 'Перенаправление $code';
   }
 
   @override
-  String get mitmRewriteActUrl => 'Rewrite URL';
+  String get mitmRewriteActUrl => 'Перезаписать URL';
 
   @override
-  String get mitmRewriteActRequestHeader => 'Request header';
+  String get mitmRewriteActRequestHeader => 'Заголовок запроса';
 
   @override
-  String get mitmRewriteActResponseHeader => 'Response header';
+  String get mitmRewriteActResponseHeader => 'Заголовок ответа';
 
   @override
-  String get mitmRewriteActRequestBody => 'Request body';
+  String get mitmRewriteActRequestBody => 'Тело запроса';
 
   @override
-  String get mitmRewriteActResponseBody => 'Response body';
+  String get mitmRewriteActResponseBody => 'Тело ответа';
 
   @override
-  String get mitmRewriteActMapLocal => 'Local response';
+  String get mitmRewriteActMapLocal => 'Локальный ответ';
 
   @override
-  String get mitmRewriteRejectError => 'Return an error';
+  String get mitmRewriteRejectError => 'Вернуть ошибку';
 
   @override
-  String get mitmRewriteReject200 => 'Return an empty page';
+  String get mitmRewriteReject200 => 'Вернуть пустую страницу';
 
   @override
-  String get mitmRewriteRejectImage => 'Return a blank image';
+  String get mitmRewriteRejectImage => 'Вернуть пустое изображение';
 
   @override
-  String get mitmRewriteRejectDict => 'Return an empty JSON object';
+  String get mitmRewriteRejectDict => 'Вернуть пустой объект JSON';
 
   @override
-  String get mitmRewriteRejectArray => 'Return an empty JSON array';
+  String get mitmRewriteRejectArray => 'Вернуть пустой массив JSON';
 
   @override
-  String get mitmRewriteRejectDrop => 'Drop the connection';
+  String get mitmRewriteRejectDrop => 'Разорвать соединение';
 
   @override
   String mitmRewriteHeaderAdd(Object name) {
-    return 'Add $name';
+    return 'Добавить $name';
   }
 
   @override
   String mitmRewriteHeaderDel(Object name) {
-    return 'Remove $name';
+    return 'Удалить $name';
   }
 
   @override
   String mitmRewriteHeaderReplace(Object name) {
-    return 'Replace $name';
+    return 'Заменить $name';
   }
 
   @override
   String mitmRewriteHeaderReplaceRegex(Object name) {
-    return 'Replace in $name';
+    return 'Заменить в $name по регулярному выражению';
   }
 
   @override
@@ -7835,25 +7837,27 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count replacements',
-      one: '1 replacement',
+      other: '$count замены',
+      many: '$count замен',
+      few: '$count замены',
+      one: '$count замена',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteBodyLimit(Object size) {
-    return 'Up to $size';
+    return 'Не более $size';
   }
 
   @override
   String mitmRewriteInvalid(Object reason) {
-    return 'Invalid rule: $reason';
+    return 'Ошибка в правиле: $reason';
   }
 
   @override
   String mitmRewriteInvalidSpoken(Object reason) {
-    return 'Invalid rule, $reason';
+    return 'Ошибка в правиле, $reason';
   }
 
   @override
@@ -7863,66 +7867,68 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mitmRewriteNotApplied(Object reason) {
-    return 'The change didn\'t take effect: $reason';
+    return 'Изменение не вступило в силу: $reason';
   }
 
   @override
-  String get mitmRewriteEnableAll => 'Turn All On';
+  String get mitmRewriteEnableAll => 'Включить все';
 
   @override
-  String get mitmRewriteDisableAll => 'Turn All Off';
+  String get mitmRewriteDisableAll => 'Выключить все';
 
   @override
-  String get mitmRewriteCopyAll => 'Copy All Rules';
+  String get mitmRewriteCopyAll => 'Копировать все правила';
 
   @override
-  String get mitmRewriteDeleteInvalid => 'Delete Invalid Rules';
+  String get mitmRewriteDeleteInvalid => 'Удалить правила с ошибками';
 
   @override
   String mitmRewriteDeleteInvalidConfirm(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count invalid rules',
-      one: '1 invalid rule',
+      other: '$count правила с ошибками',
+      many: '$count правил с ошибками',
+      few: '$count правила с ошибками',
+      one: '$count правило с ошибкой',
     );
-    return 'Delete $_temp0?';
+    return 'Удалить $_temp0?';
   }
 
   @override
   String get mitmRewriteOff =>
-      'Decryption is off, so rewrite rules won\'t take effect.';
+      'Расшифровка выключена, поэтому правила перезаписи не действуют.';
 
   @override
-  String get mitmRewriteGoTurnOn => 'Turn On';
+  String get mitmRewriteGoTurnOn => 'Включить';
 
   @override
-  String get mitmRewriteEmptyTitle => 'No rewrite rules yet';
+  String get mitmRewriteEmptyTitle => 'Правил перезаписи пока нет';
 
   @override
-  String get mitmRewriteEmptyDesc => 'Paste rules to import them.';
+  String get mitmRewriteEmptyDesc => 'Вставьте правила для импорта.';
 
   @override
-  String get mitmRewritePaste => 'Paste to Import';
+  String get mitmRewritePaste => 'Вставить для импорта';
 
   @override
-  String get mitmRewriteSearchHint => 'Search rewrite rules';
+  String get mitmRewriteSearchHint => 'Поиск правил перезаписи';
 
   @override
-  String get mitmRewriteImportTitle => 'Import Rewrite Rules';
+  String get mitmRewriteImportTitle => 'Импорт правил перезаписи';
 
   @override
   String get mitmRewriteImportDesc =>
-      'Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.';
+      'Вставьте правила перезаписи, по одному на строку. Разделы Surge [URL Rewrite], [Header Rewrite], [Body Rewrite] и [Map Local] распознаются по заголовкам.';
 
   @override
   String mitmRewriteImportReady(int count, Object detail) {
-    return 'Ready to import $count: $detail';
+    return 'Готово к импорту: $count · $detail';
   }
 
   @override
   String mitmRewriteImportLineError(int line, Object reason) {
-    return 'Line $line can\'t be imported: $reason';
+    return 'Не удалось импортировать строку $line: $reason';
   }
 
   @override
@@ -7930,158 +7936,169 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more lines have errors',
-      one: '1 more line has errors',
+      other: 'Ещё $count строки содержат ошибки',
+      many: 'Ещё $count строк содержат ошибки',
+      few: 'Ещё $count строки содержат ошибки',
+      one: 'Ещё $count строка содержит ошибки',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteImportDuplicate(int line) {
-    return 'Line $line is already there and will be skipped';
+    return 'Строка $line уже существует и будет пропущена';
   }
 
   @override
-  String get mitmRewritePlace => 'Place';
+  String get mitmRewritePlace => 'Расположение';
 
   @override
-  String get mitmRewritePlaceEnd => 'End of each group';
+  String get mitmRewritePlaceEnd => 'В конце каждой группы';
 
   @override
-  String get mitmRewritePlaceStart => 'Start of each group';
+  String get mitmRewritePlaceStart => 'В начале каждой группы';
 
   @override
   String mitmRewriteImportButton(int count) {
-    return 'Import $count';
+    return 'Импортировать: $count';
   }
 
   @override
-  String get mitmRewriteImporting => 'Importing…';
+  String get mitmRewriteImporting => 'Импорт…';
 
   @override
   String mitmRewriteImported(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count правила',
+      many: '$count правил',
+      few: '$count правила',
+      one: '$count правило',
     );
-    return 'Imported $_temp0';
+    return 'Импортировано: $_temp0';
   }
 
   @override
-  String get mitmRewriteEditTitle => 'Edit Rewrite Rule';
+  String get mitmRewriteEditTitle => 'Изменить правило перезаписи';
 
   @override
   String mitmRewriteEditSubtitle(Object group, int number) {
-    return '$group · Rule $number';
+    return '$group · Правило $number';
   }
 
   @override
-  String get mitmRewritePreviewType => 'Type';
+  String get mitmRewritePreviewType => 'Тип';
 
   @override
-  String get mitmRewritePreviewMatch => 'Matches';
+  String get mitmRewritePreviewMatch => 'Совпадение';
 
   @override
-  String get mitmRewritePreviewAction => 'Action';
+  String get mitmRewritePreviewAction => 'Действие';
 
   @override
-  String get mitmRewriteUnparsable => 'Can\'t parse';
+  String get mitmRewriteUnparsable => 'Не удалось разобрать';
 
   @override
   String mitmRewriteSectionChanged(Object group) {
-    return 'This line belongs in $group; it will move there.';
+    return 'Эта строка относится к группе «$group» и будет перемещена туда после сохранения.';
   }
 
   @override
   String mitmRewriteBadgeApplied(Object type) {
-    return 'Rewritten · $type';
+    return 'Перезаписано · $type';
   }
 
   @override
   String mitmRewriteBadgeFailed(Object reason) {
-    return 'Rewrite failed · $reason';
+    return 'Ошибка перезаписи · $reason';
   }
 
   @override
-  String get mitmRewriteRewritten => 'Rewritten';
+  String get mitmRewriteRewritten => 'Перезаписано';
 
   @override
-  String get mitmRewriteFailedShort => 'Rewrite failed';
+  String get mitmRewriteFailedShort => 'Ошибка перезаписи';
 
   @override
-  String get mitmRewriteAppliedTitle => 'Rewrite applied';
+  String get mitmRewriteAppliedTitle => 'Перезапись применена';
 
   @override
   String mitmRewriteHitCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count rules',
-      one: '1 rule',
+      other: '$count правила',
+      many: '$count правил',
+      few: '$count правила',
+      one: '$count правило',
     );
     return '$_temp0';
   }
 
   @override
   String mitmRewriteFailedTitle(Object reason) {
-    return 'Rewrite failed: $reason';
+    return 'Ошибка перезаписи: $reason';
   }
 
   @override
-  String get mitmRewritePassedThrough => 'Not rewritten; passed on unchanged';
+  String get mitmRewritePassedThrough =>
+      'Перезапись не выполнена; передано без изменений';
 
   @override
   String mitmRewriteRuleRef(Object rule) {
-    return 'Rule $rule';
+    return 'Правило $rule';
   }
 
   @override
-  String get mitmRewriteViewInList => 'Show in Rewrite';
+  String get mitmRewriteViewInList => 'Показать в разделе перезаписи';
 
   @override
-  String get mitmRewriteBefore => 'Before';
+  String get mitmRewriteBefore => 'До';
 
   @override
-  String get mitmRewriteAfter => 'After';
+  String get mitmRewriteAfter => 'После';
 
   @override
-  String get mitmRewriteRuleRemoved => 'The rule is no longer in this profile';
+  String get mitmRewriteRuleRemoved => 'Правила больше нет в этом профиле';
 
   @override
-  String get mitmRewriteSkipOversize => 'Content over the size limit';
+  String get mitmRewriteSkipOversize =>
+      'Размер содержимого превышает ограничение';
 
   @override
-  String get mitmRewriteSkipDecode => 'Couldn\'t decompress the content';
+  String get mitmRewriteSkipDecode => 'Не удалось распаковать содержимое';
 
   @override
   String get mitmRewriteSkipNotText =>
-      'Content isn\'t in a supported text format';
+      'Формат текста содержимого не поддерживается';
 
   @override
-  String get mitmRewriteSkipEncoding => 'Unsupported content encoding';
+  String get mitmRewriteSkipEncoding =>
+      'Кодировка содержимого не поддерживается';
 
   @override
-  String get mitmRewriteSkipTimeout => 'The pattern took too long to match';
+  String get mitmRewriteSkipTimeout =>
+      'Превышено время сопоставления с шаблоном';
 
   @override
-  String get mitmRewriteSkipCrossHost => 'Can\'t rewrite to another host';
+  String get mitmRewriteSkipCrossHost =>
+      'Нельзя перезаписать URL на другой хост';
 
   @override
-  String get mitmRewriteSkipInvalidUrl => 'The rewritten URL is invalid';
+  String get mitmRewriteSkipInvalidUrl => 'Перезаписанный URL недействителен';
 
   @override
-  String get mitmRewriteSkipStreaming => 'The content is a stream';
+  String get mitmRewriteSkipStreaming => 'Содержимое передаётся потоком';
 
   @override
-  String get mitmRewriteSkipUploading => 'The request was still uploading';
+  String get mitmRewriteSkipUploading => 'Загрузка запроса ещё не завершена';
 
   @override
-  String get mitmRewriteSkipRead => 'Couldn\'t read the content';
+  String get mitmRewriteSkipRead => 'Не удалось прочитать содержимое';
 
   @override
-  String get mitmRewriteSkipOther => 'Rewrite not applied';
+  String get mitmRewriteSkipOther => 'Перезапись не применена';
 
   @override
   String mitmRewriteRejectDetail(Object text, Object type) {
@@ -8090,186 +8107,237 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mitmRewriteErrorFramingHeader(String value) {
-    return '$value controls how the message is sent and can\'t be rewritten.';
+    return '$value управляет передачей сообщения и не может быть перезаписан.';
   }
 
   @override
   String mitmRewriteErrorNeedsValue(String value) {
-    return '$value needs a value.';
+    return 'Для $value необходимо указать значение.';
   }
 
   @override
   String get mitmRewriteErrorBodyHead =>
-      'A body rewrite must start with http-request or http-response.';
+      'Правило перезаписи тела должно начинаться с http-request или http-response.';
 
   @override
   String get mitmRewriteErrorHeaderLineBreak =>
-      'A header value can\'t contain a line break.';
+      'Значение заголовка не может содержать перевод строки.';
 
   @override
   String get mitmRewriteErrorNeedsReplacementUrl =>
-      'A redirect or URL rewrite needs a target URL.';
+      'Для перенаправления или перезаписи URL необходимо указать целевой URL.';
 
   @override
   String get mitmRewriteErrorDataUrl =>
-      'Remote content must be downloaded before a local response can use it.';
+      'Удалённое содержимое нужно скачать, прежде чем использовать его для локального ответа.';
 
   @override
-  String get mitmRewriteErrorDataBase64 => 'The content isn\'t valid Base64.';
+  String get mitmRewriteErrorDataBase64 =>
+      'Содержимое не является корректным Base64.';
 
   @override
   String mitmRewriteErrorDataFileName(String value) {
-    return 'The content must name a file in the resources folder; got $value.';
+    return 'Необходимо указать файл в папке ресурсов; указано: $value.';
   }
 
   @override
-  String get mitmRewriteErrorFileNeedsData => 'The file type needs a file.';
+  String get mitmRewriteErrorFileNeedsData =>
+      'Для типа «файл» необходимо указать файл.';
 
   @override
   String get mitmRewriteErrorBodyTooLarge =>
-      'The decoded content is over the rewrite size limit.';
+      'Размер декодированного содержимого превышает ограничение для перезаписи.';
 
   @override
   String get mitmRewriteErrorEmptyRegex =>
-      'The regular expression can\'t be empty.';
+      'Регулярное выражение не может быть пустым.';
 
   @override
-  String get mitmRewriteErrorEmptyRule => 'The rule can\'t be empty.';
+  String get mitmRewriteErrorEmptyRule => 'Правило не может быть пустым.';
 
   @override
   String mitmRewriteErrorUrlFieldCount(String value) {
-    return 'Enter a regular expression, a replacement and a type; found $value items.';
+    return 'Укажите регулярное выражение, замену и тип; указано элементов: $value.';
   }
 
   @override
   String get mitmRewriteErrorBodyPairs =>
-      'After the URL regular expression, enter pairs of a pattern and its replacement.';
+      'После регулярного выражения URL укажите пары из шаблона и замены.';
 
   @override
   String get mitmRewriteErrorHeaderFields =>
-      'Enter the request or response type, a regular expression, an action and a header, plus a value when needed.';
+      'Укажите тип запроса или ответа, регулярное выражение, действие и заголовок, а при необходимости — значение.';
 
   @override
   String mitmRewriteErrorKeyValue(String value) {
-    return 'Use the key=value format; got $value.';
+    return 'Используйте формат key=value; указано: $value.';
   }
 
   @override
   String get mitmRewriteErrorHeaderFormat =>
-      'The header is invalid; use a:b|c:d or Base64.';
+      'Недопустимый заголовок; используйте формат a:b|c:d или Base64.';
 
   @override
   String get mitmRewriteErrorHeaderReplaceRegex =>
-      'header-replace-regex needs a regular expression and a replacement.';
+      'Для header-replace-regex необходимы регулярное выражение и замена.';
 
   @override
   String get mitmRewriteErrorUrlRegex =>
-      'The URL regular expression is invalid.';
+      'Недопустимое регулярное выражение URL.';
 
   @override
   String mitmRewriteErrorBodyRegex(String value) {
-    return 'The content regular expression $value is invalid.';
+    return 'Недопустимое регулярное выражение содержимого: $value.';
   }
 
   @override
   String mitmRewriteErrorInvalidHeader(String value) {
-    return 'The header $value is invalid.';
+    return 'Недопустимый заголовок: $value.';
   }
 
   @override
   String mitmRewriteErrorHeaderName(String value) {
-    return 'The header name $value is invalid.';
+    return 'Недопустимое имя заголовка: $value.';
   }
 
   @override
   String get mitmRewriteErrorHeaderRegex =>
-      'The header regular expression is invalid.';
+      'Недопустимое регулярное выражение заголовка.';
 
   @override
   String get mitmRewriteErrorJq =>
-      'Rewriting content with jq isn\'t supported yet.';
+      'Перезапись содержимого с помощью jq пока не поддерживается.';
 
   @override
   String mitmRewriteErrorLocalUnreadable(String value) {
-    return 'Can\'t read the local response file $value.';
+    return 'Не удалось прочитать файл локального ответа $value.';
   }
 
   @override
   String mitmRewriteErrorLocalTooLarge(String value) {
-    return 'The local response file $value is over 16 MiB.';
+    return 'Размер файла локального ответа $value превышает 16 МиБ.';
   }
 
   @override
   String get mitmRewriteErrorRegexTimeout =>
-      'The regular expression took too long to match.';
+      'Превышено время сопоставления с регулярным выражением.';
 
   @override
   String mitmRewriteErrorStatusCode(String value) {
-    return 'The status code must be between 200 and 999; got $value.';
+    return 'Код состояния должен быть от 200 до 999; указано: $value.';
   }
 
   @override
   String mitmRewriteErrorUrlType(String value) {
-    return 'Unsupported URL rewrite type: $value.';
+    return 'Неподдерживаемый тип перезаписи URL: $value.';
   }
 
   @override
   String mitmRewriteErrorDataType(String value) {
-    return 'Unsupported content type: $value.';
+    return 'Неподдерживаемый тип содержимого: $value.';
   }
 
   @override
   String mitmRewriteErrorHeaderAction(String value) {
-    return 'Unsupported header action: $value.';
+    return 'Неподдерживаемое действие с заголовком: $value.';
   }
 
   @override
   String mitmRewriteErrorParameter(String value) {
-    return 'Unsupported parameter: $value.';
+    return 'Неподдерживаемый параметр: $value.';
   }
 
   @override
   String mitmRewriteErrorSection(String value) {
-    return 'Unsupported section: $value.';
+    return 'Неподдерживаемый раздел: $value.';
   }
 
   @override
   String mitmRewriteErrorUnterminatedQuote(String value) {
-    return 'Unclosed quote in $value.';
+    return 'Незакрытая кавычка в $value.';
   }
 
   @override
   String get mitmRewriteErrorOutsideSection =>
-      'This line isn\'t under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].';
+      'Эта строка не находится в разделе [URL Rewrite], [Header Rewrite], [Body Rewrite] или [Map Local].';
 
   @override
-  String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
-
-  @override
-  String get mitmRewriteErrorDetails => 'Details';
+  String get mitmRewriteErrorGeneric => 'Недопустимый формат правила.';
 
   @override
   String get mitmRewriteFailureGeneric =>
-      'something went wrong, and the rules are unchanged.';
+      'произошла ошибка, правила остались без изменений.';
 
   @override
-  String get mitmRewriteMatchedTitle => 'Rule matched';
+  String get mitmScriptErrorLine =>
+      'Неверный формат строки скрипта или не указан тип запроса/ответа.';
 
   @override
-  String mitmRewriteNotAppliedTitle(String value) {
-    return 'Rewrite not applied: $value';
+  String mitmScriptErrorType(String type) {
+    return 'Неподдерживаемый тип скрипта: $type.';
   }
 
   @override
-  String get mitmScripts => 'Scripts';
+  String get mitmScriptErrorPattern => 'Не указан шаблон сопоставления.';
+
+  @override
+  String get mitmScriptErrorPath => 'Не указан путь к скрипту.';
+
+  @override
+  String mitmScriptErrorMaxSize(String value) {
+    return 'Количество байтов должно быть числом: $value.';
+  }
+
+  @override
+  String mitmScriptErrorTimeout(String value) {
+    return 'Количество секунд должно быть числом: $value.';
+  }
+
+  @override
+  String get mitmScriptErrorArgument => 'Аргумент не является корректным JSON.';
+
+  @override
+  String mitmScriptErrorUnreadable(String filename) {
+    return 'Не удалось прочитать файл: $filename.';
+  }
+
+  @override
+  String mitmScriptErrorTooLarge(String filename) {
+    return 'Размер файла превышает 8 MiB: $filename.';
+  }
+
+  @override
+  String get mitmScriptErrorUnreadableNoName => 'Не удалось прочитать файл.';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => 'Размер файла превышает 8 MiB.';
+
+  @override
+  String get mitmScriptErrorSyntax => 'Не удалось скомпилировать скрипт.';
+
+  @override
+  String get viewOriginalError => 'Показать исходную ошибку';
+
+  @override
+  String get mitmRewriteMatchedTitle => 'Правило совпало';
+
+  @override
+  String mitmRewriteNotAppliedTitle(String value) {
+    return 'Перезапись не применена: $value';
+  }
+
+  @override
+  String get mitmScripts => 'Скрипты';
 
   @override
   String mitmScriptCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts',
-      one: '1 script',
+      other: '$count скрипта',
+      many: '$count скриптов',
+      few: '$count скрипта',
+      one: '$count скрипт',
     );
     return '$_temp0';
   }
@@ -8281,46 +8349,46 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mitmScriptInvalidCount(int count) {
-    return '$count invalid';
+    return 'Ошибок: $count';
   }
 
   @override
   String mitmModuleCount(int count, int enabled) {
-    return '$count modules, $enabled on';
+    return 'Модулей: $count, включено: $enabled';
   }
 
   @override
   String mitmScriptSubtitle(Object profile, int count, int enabled) {
-    return 'Profile “$profile” · $count scripts, $enabled on';
+    return 'Профиль «$profile» · скриптов: $count, включено: $enabled';
   }
 
   @override
-  String get mitmScriptGroupRequest => 'Request Scripts';
+  String get mitmScriptGroupRequest => 'Скрипты запросов';
 
   @override
-  String get mitmScriptGroupResponse => 'Response Scripts';
+  String get mitmScriptGroupResponse => 'Скрипты ответов';
 
   @override
-  String get mitmScriptKindRequest => 'Request';
+  String get mitmScriptKindRequest => 'Запрос';
 
   @override
-  String get mitmScriptKindResponse => 'Response';
+  String get mitmScriptKindResponse => 'Ответ';
 
   @override
-  String get mitmScriptNeedsBody => 'Needs body';
+  String get mitmScriptNeedsBody => 'Требуется тело';
 
   @override
   String mitmScriptRemoteSource(Object source, Object time) {
-    return '$source · checked $time';
+    return '$source · проверено $time';
   }
 
   @override
   String mitmScriptLocalSource(Object file) {
-    return 'Local file · $file';
+    return 'Локальный файл · $file';
   }
 
   @override
-  String get mitmScriptHasUpdate => 'Update available';
+  String get mitmScriptHasUpdate => 'Доступно обновление';
 
   @override
   String get mitmHasUpdate => 'Update available';
@@ -8333,29 +8401,31 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more scripts come from modules',
-      one: '1 more script comes from modules',
+      other: 'Ещё $count скрипта из модулей',
+      many: 'Ещё $count скриптов из модулей',
+      few: 'Ещё $count скрипта из модулей',
+      one: 'Ещё $count скрипт из модулей',
     );
     return '$_temp0';
   }
 
   @override
   String get mitmScriptsOff =>
-      'HTTPS decryption is off, so scripts don\'t run.';
+      'Расшифровка HTTPS выключена, поэтому скрипты не выполняются.';
 
   @override
   String get mitmScriptHostNotDecrypted =>
-      'This host isn\'t decrypted, so the script won\'t run';
+      'Этот хост не расшифровывается, поэтому скрипт не выполнится';
 
   @override
   String get mitmAddToDecryption => 'Add to Decryption';
 
   @override
-  String get mitmScriptsEmptyTitle => 'No scripts yet';
+  String get mitmScriptsEmptyTitle => 'Скриптов пока нет';
 
   @override
   String get mitmScriptsEmptyBody =>
-      'Once added, a script runs on the requests or responses it matches.';
+      'Добавленный скрипт выполняется для подходящих запросов или ответов.';
 
   @override
   String get mitmAddScript => 'Add Script';
@@ -8364,14 +8434,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmCheckAllUpdates => 'Check All for Updates';
 
   @override
-  String get mitmScriptCopyAll => 'Copy All Lines';
+  String get mitmScriptCopyAll => 'Копировать все строки';
 
   @override
-  String get mitmScriptDeleteInvalid => 'Delete Invalid Scripts';
+  String get mitmScriptDeleteInvalid => 'Удалить скрипты с ошибками';
 
   @override
   String mitmScriptDeleteInvalidConfirm(int count) {
-    return 'Delete $count invalid scripts?';
+    return 'Удалить скрипты с ошибками: $count?';
   }
 
   @override
@@ -8385,37 +8455,37 @@ class AppLocalizationsRu extends AppLocalizations {
       'Paste lines from a Surge config\'s [Script] section, one script per line, or just a script URL.';
 
   @override
-  String get mitmScriptType => 'Type';
+  String get mitmScriptType => 'Тип';
 
   @override
-  String get mitmScriptPattern => 'URL Pattern';
+  String get mitmScriptPattern => 'Шаблон URL';
 
   @override
-  String get mitmScriptTimeout => 'Timeout';
+  String get mitmScriptTimeout => 'Время ожидания';
 
   @override
   String mitmScriptPasteOk(int count, int requests, int responses) {
-    return '$count can be added: $requests request, $responses response';
+    return 'Можно добавить: $count · запросов: $requests, ответов: $responses';
   }
 
   @override
   String mitmScriptPasteLineError(int line, Object reason) {
-    return 'Line $line can\'t be added: $reason';
+    return 'Не удалось добавить строку $line: $reason';
   }
 
   @override
   String get mitmScriptUnsupportedType =>
-      'This kind of script isn\'t supported yet';
+      'Этот тип скриптов пока не поддерживается';
 
   @override
-  String get mitmScriptUnreadable => 'Not a script line';
+  String get mitmScriptUnreadable => 'Это не строка конфигурации скрипта';
 
   @override
-  String get mitmScriptNoPattern => 'No URL pattern';
+  String get mitmScriptNoPattern => 'Не указан шаблон URL';
 
   @override
   String get mitmScriptNoPath =>
-      'script-path must be a URL; add a local script with “From File…”';
+      'В script-path необходимо указать URL; локальный скрипт добавьте через «Из файла…»';
 
   @override
   String get mitmAddFromFile => 'From File…';
@@ -8457,35 +8527,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmAddAndEnable => 'Add and Turn On';
 
   @override
-  String get mitmScriptDownloading => 'Downloading and checking…';
+  String get mitmScriptDownloading => 'Загрузка и проверка…';
 
   @override
   String mitmScriptsAdded(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts added',
-      one: '1 script added',
+      other: 'Добавлено $count скрипта',
+      many: 'Добавлено $count скриптов',
+      few: 'Добавлено $count скрипта',
+      one: 'Добавлен $count скрипт',
     );
     return '$_temp0';
   }
 
   @override
-  String get mitmScriptEmpty => 'The script is empty';
+  String get mitmScriptEmpty => 'Скрипт пуст';
 
   @override
   String mitmScriptDownloadFailed(Object name, Object reason) {
-    return 'Couldn\'t download $name: $reason';
+    return 'Не удалось скачать $name: $reason';
   }
 
   @override
   String mitmScriptCannotLoad(Object name, Object reason) {
-    return '$name can\'t be loaded: $reason';
+    return 'Не удалось загрузить $name: $reason';
   }
 
   @override
   String mitmScriptCheckFailed(Object reason) {
-    return 'Couldn\'t check for updates: $reason';
+    return 'Не удалось проверить обновления: $reason';
   }
 
   @override
@@ -8543,21 +8615,23 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get mitmModuleRewrites => 'Rewrite rules';
+  String get mitmModuleRewrites => 'Правила перезаписи';
 
   @override
-  String get mitmModuleRoutingRules => 'Routing rules';
+  String get mitmModuleRoutingRules => 'Правила маршрутизации';
 
   @override
-  String get mitmModuleUnsupported => 'Not supported';
+  String get mitmModuleUnsupported => 'Не поддерживается';
 
   @override
   String mitmModuleUnsupportedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count lines won\'t be imported.',
-      one: '1 line won\'t be imported.',
+      other: '$count строки не будут импортированы.',
+      many: '$count строк не будут импортированы.',
+      few: '$count строки не будут импортированы.',
+      one: '$count строка не будет импортирована.',
     );
     return '$_temp0';
   }
@@ -8572,41 +8646,41 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmImportModule => 'Import Module';
 
   @override
-  String get mitmModuleImported => 'Module imported';
+  String get mitmModuleImported => 'Модуль импортирован';
 
   @override
   String mitmModuleHostCount(int count) {
-    return '$count hosts';
+    return 'Хостов для расшифровки: $count';
   }
 
   @override
   String mitmModuleRewriteCount(int count) {
-    return '$count rewrites';
+    return 'Правил перезаписи: $count';
   }
 
   @override
   String mitmModuleUnsupportedLines(int count) {
-    return '$count lines not supported';
+    return 'Не поддерживается строк: $count';
   }
 
   @override
   String mitmModuleRemoteSource(Object time) {
-    return 'Remote · updated $time';
+    return 'Удалённый · обновлено $time';
   }
 
   @override
-  String get mitmModuleLocalSource => 'Local';
+  String get mitmModuleLocalSource => 'Локальный';
 
   @override
-  String get mitmModulesEmptyTitle => 'No modules yet';
+  String get mitmModulesEmptyTitle => 'Модулей пока нет';
 
   @override
   String get mitmModulesEmptyBody =>
-      'Once imported, you can see what a module sets up.';
+      'После импорта модуля можно посмотреть его настройки.';
 
   @override
   String mitmScriptsRan(int count) {
-    return 'Scripts ran · $count';
+    return 'Скрипты выполнены · $count';
   }
 
   @override
@@ -8614,42 +8688,45 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts didn\'t finish; the message passed unchanged.',
-      one: '1 script didn\'t finish; the message passed unchanged.',
+      other: '$count скрипта не завершились; сообщение передано без изменений.',
+      many: '$count скриптов не завершились; сообщение передано без изменений.',
+      few: '$count скрипта не завершились; сообщение передано без изменений.',
+      one: '$count скрипт не завершился; сообщение передано без изменений.',
     );
     return '$_temp0';
   }
 
   @override
   String mitmScriptDone(Object took) {
-    return 'Finished · $took';
+    return 'Завершено · $took';
   }
 
   @override
-  String get mitmScriptTimedOut => 'Script timed out';
+  String get mitmScriptTimedOut => 'Превышено время выполнения скрипта';
 
   @override
   String mitmScriptFailed(Object reason) {
-    return 'Script failed: $reason';
+    return 'Ошибка скрипта: $reason';
   }
 
   @override
   String mitmScriptNotRun(Object reason) {
-    return 'Script didn\'t run: $reason';
+    return 'Скрипт не выполнен: $reason';
   }
 
   @override
-  String get mitmScriptMemory => 'over the memory limit';
+  String get mitmScriptMemory => 'превышено ограничение памяти';
 
   @override
-  String get mitmScriptBusy => 'too many scripts running';
+  String get mitmScriptBusy =>
+      'одновременно выполняется слишком много скриптов';
 
   @override
-  String get mitmScriptNoDone => 'the script never called \$done';
+  String get mitmScriptNoDone => 'скрипт не вызвал \$done';
 
   @override
   String mitmScriptLogExpand(int count) {
-    return 'Show All ($count lines)';
+    return 'Показать все строки ($count)';
   }
 
   @override
@@ -8657,8 +8734,10 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count requests sent',
-      one: '1 request sent',
+      other: 'Отправлено $count запроса',
+      many: 'Отправлено $count запросов',
+      few: 'Отправлено $count запроса',
+      one: 'Отправлен $count запрос',
     );
     return '$_temp0';
   }
@@ -8688,12 +8767,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mitmScriptLoadFailed(Object reason) {
-    return 'The script can\'t be loaded: $reason.';
+    return 'Не удалось загрузить скрипт: $reason.';
   }
 
   @override
   String mitmModuleLoadFailed(Object reason) {
-    return 'The module can\'t be loaded: $reason.';
+    return 'Не удалось загрузить модуль: $reason.';
   }
 
   @override
@@ -8702,7 +8781,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mitmScriptFoundUpdate(Object time) {
-    return 'New version found $time';
+    return 'Новая версия найдена $time';
   }
 
   @override
@@ -8767,8 +8846,10 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count routing rules',
-      one: '1 routing rule',
+      other: '$count правила маршрутизации',
+      many: '$count правил маршрутизации',
+      few: '$count правила маршрутизации',
+      one: '$count правило маршрутизации',
     );
     return '$_temp0';
   }

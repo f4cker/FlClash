@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -631,6 +632,21 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
           },
         };
       });
+      when(() => core.validateMitmScripts(any())).thenAnswer((
+        invocation,
+      ) async {
+        final lines = invocation.positionalArguments.single as List<String>;
+        return {
+          for (final (index, line) in lines.indexed)
+            if (line.contains(_badScript))
+              index: const MitmRewriteIssue(
+                section: 'script',
+                kind: 'scriptSyntax',
+                args: ['SyntaxError'],
+                message: 'script does not compile: SyntaxError',
+              ),
+        };
+      });
       container.dispose();
       container = ProviderContainer(
         overrides: [
@@ -705,7 +721,11 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
       final checked = await checkMitmScriptUpdate(container.read, 1, script);
 
       expect(checked.failure, MitmUpdateFailure.invalid);
-      expect(checked.error, 'SyntaxError');
+      // Kept with its code, so the row words it in the app's language and
+      // keeps the Core's text for the details.
+      final issue = mitmIssueOfStored(checked.error);
+      expect(issue?.kind, 'scriptSyntax');
+      expect(issue?.message, 'script does not compile: SyntaxError');
       expect(checked.hasPending, isFalse);
       expect(checked.file, script.file);
     });
