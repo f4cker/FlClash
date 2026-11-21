@@ -17,9 +17,22 @@ class TrackerInfoListController extends ValueNotifier<TrackerInfosState> {
 
   final _search = TrackerSearch();
 
+  TrackerInfosState? _trackerInfosOf;
+  List<TrackerInfo> _trackerInfos = const [];
+
+  /// [value]'s connections as one list per state: the generated getter wraps
+  /// them in a new view at each read, which no memo below would know again.
+  List<TrackerInfo> get _stateTrackerInfos {
+    if (!identical(value, _trackerInfosOf)) {
+      _trackerInfosOf = value;
+      _trackerInfos = value.trackerInfos;
+    }
+    return _trackerInfos;
+  }
+
   /// What [TrackerInfosStateExt.list] gives for [value], searched once per
   /// list and query.
-  List<TrackerInfo> get list => _search.apply(value.trackerInfos, value.query);
+  List<TrackerInfo> get list => _search.apply(_stateTrackerInfos, value.query);
 
   List<TrackerInfo>? _filtered;
   List<RecordFilter>? _filteredBy;

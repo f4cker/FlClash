@@ -1,16 +1,19 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 /// Searches connections as [TrackerInfosStateExt.list] does, but keeps each
 /// connection's search text by id: a live poll decodes every connection
 /// anew, so a text kept by identity would be rebuilt for all of them at every
-/// poll. A text is reused only while the fields it was read from are equal,
-/// and the kept texts are only those of the last list searched.
+/// poll. A text is reused only while the fields it was read from are equal
+/// and its app labels, rechecked when the apps or the locale change, are the
+/// same; the kept texts are only those of the last list searched.
 class TrackerSearch {
   final _texts = <String, _SearchText>{};
   var _pass = 0;
   final _appsChanges = ProcessAppsChanges();
+  Locale? _locale;
 
   List<TrackerInfo>? _source;
   String? _query;
@@ -19,17 +22,23 @@ class TrackerSearch {
   @visibleForTesting
   int textsBuilt = 0;
 
+  @visibleForTesting
+  int get textsKept => _texts.length;
+
   List<TrackerInfo> apply(List<TrackerInfo> trackerInfos, String query) {
     final searchQuery = SearchQuery(query);
     if (searchQuery.isEmpty) {
       return trackerInfos;
     }
-    final appsChanged = _appsChanges.take();
-    if (!appsChanged && identical(trackerInfos, _source) && query == _query) {
+    final locale = currentAppLocale;
+    // A system service is found by its localized name.
+    final labelsChanged = _appsChanges.take() | (locale != _locale);
+    _locale = locale;
+    if (!labelsChanged && identical(trackerInfos, _source) && query == _query) {
       return _result;
     }
     final pass = ++_pass;
-    final recheckLabels = appsChanged && !system.isAndroid;
+    final recheckLabels = labelsChanged && !system.isAndroid;
     final result = <TrackerInfo>[];
     for (final trackerInfo in trackerInfos) {
       var text = _texts[trackerInfo.id];
