@@ -3165,6 +3165,14 @@
       }
     }
   },
+  "mitmScriptErrorUnreadableNoName": "Cannot read the script file.",
+  "@mitmScriptErrorUnreadableNoName": {
+    "description": "When the script's own name is not known: no file name, the stored one only behind viewOriginalError."
+  },
+  "mitmScriptErrorTooLargeNoName": "The script file exceeds 8 MiB.",
+  "@mitmScriptErrorTooLargeNoName": {
+    "description": "When the script's own name is not known: no file name, the stored one only behind viewOriginalError."
+  },
   "mitmScriptErrorSyntax": "The script could not be compiled.",
   "@mitmScriptErrorSyntax": {
     "description": "Headline only; the raw compile error is never translated and sits behind viewOriginalError."

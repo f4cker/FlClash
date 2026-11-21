@@ -345,9 +345,14 @@ String mitmUnquotedArg(String value) {
 }
 
 /// [issue] as the app shows it: its code in the user's words, the Core's
-/// own text behind the details.
-MitmShownError mitmIssueError(AppLocalizations l, MitmRewriteIssue issue) => (
-  text: mitmRewriteIssueText(l, issue),
+/// own text behind the details. [scriptName] is the script's name as the
+/// user knows it, for the file the Core names by its stored name.
+MitmShownError mitmIssueError(
+  AppLocalizations l,
+  MitmRewriteIssue issue, {
+  String? scriptName,
+}) => (
+  text: mitmRewriteIssueText(l, issue, scriptName: scriptName),
   raw: issue.message.trim().isEmpty ? null : issue.message,
 );
 
@@ -385,24 +390,41 @@ MitmRewriteIssue? mitmIssueOfStored(String? error) {
   return null;
 }
 
-/// A script row's error text as the app shows it.
-MitmShownError mitmStoredError(AppLocalizations l, String error) =>
-    switch (mitmIssueOfStored(error)) {
-      final issue? => mitmIssueError(l, issue),
-      null when error.startsWith(_storedIssueMark) => (
-        text: l.mitmRewriteErrorGeneric,
-        raw: null,
-      ),
-      null => (text: error, raw: null),
-    };
+/// A script row's error text as the app shows it; [scriptName] as for
+/// [mitmIssueError].
+MitmShownError mitmStoredError(
+  AppLocalizations l,
+  String error, {
+  String? scriptName,
+}) => switch (mitmIssueOfStored(error)) {
+  final issue? => mitmIssueError(l, issue, scriptName: scriptName),
+  null when error.startsWith(_storedIssueMark) => (
+    text: l.mitmRewriteErrorGeneric,
+    raw: null,
+  ),
+  null => (text: error, raw: null),
+};
 
 /// Why a rule or a script cannot be taken, in the user's language, from the
 /// stable code the Core gives it; a code this app does not know reads as a
 /// generic format error, with the Core's own text left for the details.
 /// A script's compile error is never put in these words: only in the
 /// details.
-String mitmRewriteIssueText(AppLocalizations l, MitmRewriteIssue issue) {
+///
+/// The Core names a script file by the name the app stored it under, a
+/// hash the user never sees: [scriptName], the name on the row, stands for
+/// it, and without one the words name no file. The stored name is only in
+/// the details.
+String mitmRewriteIssueText(
+  AppLocalizations l,
+  MitmRewriteIssue issue, {
+  String? scriptName,
+}) {
   final value = issue.args.firstOrNull ?? '';
+  final file = switch (scriptName?.trim()) {
+    final name? when name.isNotEmpty => name,
+    _ => null,
+  };
   return switch (issue.kind) {
     'scriptLine' => l.mitmScriptErrorLine,
     'scriptType' => l.mitmScriptErrorType(mitmUnquotedArg(value)),
@@ -411,9 +433,14 @@ String mitmRewriteIssueText(AppLocalizations l, MitmRewriteIssue issue) {
     'scriptMaxSize' => l.mitmScriptErrorMaxSize(mitmUnquotedArg(value)),
     'scriptTimeout' => l.mitmScriptErrorTimeout(mitmUnquotedArg(value)),
     'scriptArgument' => l.mitmScriptErrorArgument,
-    // A file name the app gave the stored script, sent unquoted.
-    'scriptUnreadable' => l.mitmScriptErrorUnreadable(value),
-    'scriptTooLarge' => l.mitmScriptErrorTooLarge(value),
+    'scriptUnreadable' => switch (file) {
+      final file? => l.mitmScriptErrorUnreadable(file),
+      null => l.mitmScriptErrorUnreadableNoName,
+    },
+    'scriptTooLarge' => switch (file) {
+      final file? => l.mitmScriptErrorTooLarge(file),
+      null => l.mitmScriptErrorTooLargeNoName,
+    },
     'scriptSyntax' => l.mitmScriptErrorSyntax,
     'framingHeader' => l.mitmRewriteErrorFramingHeader(value),
     'needsValue' => l.mitmRewriteErrorNeedsValue(value),

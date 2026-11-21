@@ -80,6 +80,19 @@ const _maxSize = MitmRewriteIssue(
   args: ['"10k"'],
   message: 'max-size must be a number of bytes, got "10k"',
 );
+// The Core names the file the app stored the script under.
+const _unreadable = MitmRewriteIssue(
+  section: 'script',
+  kind: 'scriptUnreadable',
+  args: ['3f9a0c51e2b7d4a6.js'],
+  message: 'script file 3f9a0c51e2b7d4a6.js cannot be read',
+);
+const _tooLarge = MitmRewriteIssue(
+  section: 'script',
+  kind: 'scriptTooLarge',
+  args: ['3f9a0c51e2b7d4a6.js'],
+  message: 'script file 3f9a0c51e2b7d4a6.js is over 8 MiB',
+);
 const _refused = CoreMethodException(
   code: 'internal',
   message:
@@ -95,6 +108,9 @@ class _Errors extends StatelessWidget {
     final l = context.appLocalizations;
     final syntax = mitmIssueError(l, _syntax);
     final maxSize = mitmIssueError(l, _maxSize);
+    final unreadable = mitmIssueError(l, _unreadable, scriptName: '签到.js');
+    // No name the user knows to give: the words name no file.
+    final tooLarge = mitmIssueError(l, _tooLarge);
     final refused = mitmRewriteNotAppliedError(l, _refused);
     return ColoredBox(
       color: context.colorScheme.surface,
@@ -113,6 +129,16 @@ class _Errors extends StatelessWidget {
               level: MountBannerLevel.error,
               lines: [l.mitmScriptCannotLoad('签到.js', maxSize.text)],
               raw: maxSize.raw,
+            ),
+            MountBanner(
+              level: MountBannerLevel.error,
+              lines: [l.mitmScriptCannotLoad('签到.js', unreadable.text)],
+              raw: unreadable.raw,
+            ),
+            MountBanner(
+              level: MountBannerLevel.error,
+              lines: [tooLarge.text],
+              raw: tooLarge.raw,
             ),
             Expanded(
               child: Align(
@@ -191,11 +217,11 @@ void main() {
   }
 
   const variants = [
-    ('zh-light', Locale('zh', 'CN'), Brightness.light, Size(600, 760)),
-    ('en-dark', Locale('en'), Brightness.dark, Size(600, 760)),
-    ('ru-light', Locale('ru'), Brightness.light, Size(600, 760)),
+    ('zh-light', Locale('zh', 'CN'), Brightness.light, Size(600, 900)),
+    ('en-dark', Locale('en'), Brightness.dark, Size(600, 900)),
+    ('ru-light', Locale('ru'), Brightness.light, Size(600, 900)),
     // The narrowest a dialog gets, for the long Russian lines to wrap.
-    ('ru-narrow', Locale('ru'), Brightness.light, Size(360, 900)),
+    ('ru-narrow', Locale('ru'), Brightness.light, Size(360, 1100)),
   ];
   for (final (name, locale, brightness, size) in variants) {
     testWidgets('errors-$name', skip: skip != null, (tester) async {
@@ -231,14 +257,16 @@ void main() {
       await settle(tester);
       final l = lookupAppLocalizations(locale);
       final toggles = find.text(l.viewOriginalError);
-      expect(toggles, findsNWidgets(3));
+      expect(toggles, findsNWidgets(5));
       expect(find.textContaining('SyntaxError'), findsNothing);
+      expect(find.textContaining('3f9a0c51'), findsNothing);
       await capture(tester, '$name-collapsed');
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 5; i++) {
         await tester.tap(toggles.at(i));
         await settle(tester);
       }
       expect(find.textContaining('SyntaxError'), findsOneWidget);
+      expect(find.textContaining('3f9a0c51'), findsNWidgets(2));
       await capture(tester, '$name-expanded');
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 1));

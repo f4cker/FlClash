@@ -8121,6 +8121,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get mitmScriptErrorUnreadableNoName => '파일을 읽을 수 없습니다.';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => '파일이 8 MiB를 초과합니다.';
+
+  @override
   String get mitmScriptErrorSyntax => '스크립트를 컴파일할 수 없습니다.';
 
   @override

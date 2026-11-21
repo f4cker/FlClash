@@ -8051,6 +8051,12 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get mitmScriptErrorUnreadableNoName => 'ファイルを読み取れません。';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => 'ファイルが 8 MiB を超えています。';
+
+  @override
   String get mitmScriptErrorSyntax => 'スクリプトをコンパイルできません。';
 
   @override

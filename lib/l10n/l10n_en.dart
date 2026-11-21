@@ -8284,6 +8284,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mitmScriptErrorUnreadableNoName => 'Cannot read the script file.';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => 'The script file exceeds 8 MiB.';
+
+  @override
   String get mitmScriptErrorSyntax => 'The script could not be compiled.';
 
   @override

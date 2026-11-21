@@ -8307,6 +8307,12 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get mitmScriptErrorUnreadableNoName => 'Не удалось прочитать файл.';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => 'Размер файла превышает 8 MiB.';
+
+  @override
   String get mitmScriptErrorSyntax => 'Не удалось скомпилировать скрипт.';
 
   @override

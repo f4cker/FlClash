@@ -2301,6 +2301,8 @@
   "mitmScriptErrorArgument": "参数不是有效的 JSON。",
   "mitmScriptErrorUnreadable": "无法读取文件：{filename}。",
   "mitmScriptErrorTooLarge": "文件超过 8 MiB：{filename}。",
+  "mitmScriptErrorUnreadableNoName": "无法读取脚本文件。",
+  "mitmScriptErrorTooLargeNoName": "脚本文件超过 8 MiB。",
   "mitmScriptErrorSyntax": "脚本无法编译。",
   "viewOriginalError": "查看原始错误",
   "mitmRewriteMatchedTitle": "命中规则",

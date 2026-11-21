@@ -13751,6 +13751,18 @@ abstract class AppLocalizations {
   /// **'File exceeds 8 MiB: {filename}.'**
   String mitmScriptErrorTooLarge(String filename);
 
+  /// When the script's own name is not known: no file name, the stored one only behind viewOriginalError.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot read the script file.'**
+  String get mitmScriptErrorUnreadableNoName;
+
+  /// When the script's own name is not known: no file name, the stored one only behind viewOriginalError.
+  ///
+  /// In en, this message translates to:
+  /// **'The script file exceeds 8 MiB.'**
+  String get mitmScriptErrorTooLargeNoName;
+
   /// Headline only; the raw compile error is never translated and sits behind viewOriginalError.
   ///
   /// In en, this message translates to:

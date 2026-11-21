@@ -7637,6 +7637,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get mitmScriptErrorUnreadableNoName => '无法读取脚本文件。';
+
+  @override
+  String get mitmScriptErrorTooLargeNoName => '脚本文件超过 8 MiB。';
+
+  @override
   String get mitmScriptErrorSyntax => '脚本无法编译。';
 
   @override

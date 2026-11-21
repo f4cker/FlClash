@@ -3203,6 +3203,14 @@
   "@mitmScriptErrorTooLarge": {
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
+  "mitmScriptErrorUnreadableNoName": "ファイルを読み取れません。",
+  "@mitmScriptErrorUnreadableNoName": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLargeNoName": "ファイルが 8 MiB を超えています。",
+  "@mitmScriptErrorTooLargeNoName": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
   "mitmScriptErrorSyntax": "スクリプトをコンパイルできません。",
   "@mitmScriptErrorSyntax": {
     "description": "DRAFT: copywriter draft, not yet native-reviewed"

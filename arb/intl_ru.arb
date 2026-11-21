@@ -3203,6 +3203,14 @@
   "@mitmScriptErrorTooLarge": {
     "description": "DRAFT: copywriter draft, not yet native-reviewed"
   },
+  "mitmScriptErrorUnreadableNoName": "Не удалось прочитать файл.",
+  "@mitmScriptErrorUnreadableNoName": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
+  "mitmScriptErrorTooLargeNoName": "Размер файла превышает 8 MiB.",
+  "@mitmScriptErrorTooLargeNoName": {
+    "description": "DRAFT: copywriter draft, not yet native-reviewed"
+  },
   "mitmScriptErrorSyntax": "Не удалось скомпилировать скрипт.",
   "@mitmScriptErrorSyntax": {
     "description": "DRAFT: copywriter draft, not yet native-reviewed"

@@ -600,7 +600,7 @@ class MitmScriptRow extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final dark = colorScheme.brightness == Brightness.dark;
     final error = switch (script.error) {
-      final error? => mitmStoredError(l, error),
+      final error? => mitmStoredError(l, error, scriptName: info.name),
       null => null,
     };
     final secondary = AppTextStyle.footnote

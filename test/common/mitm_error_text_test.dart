@@ -53,15 +53,16 @@ void main() {
         '参数不是有效的 JSON。',
         'The argument is not valid JSON.',
       ),
+      // Without the script's own name: no file named (see below).
       'scriptUnreadable': (
         ['ab12.js'],
-        '无法读取文件：ab12.js。',
-        'Cannot read file: ab12.js.',
+        '无法读取脚本文件。',
+        'Cannot read the script file.',
       ),
       'scriptTooLarge': (
         ['ab12.js'],
-        '文件超过 8 MiB：ab12.js。',
-        'File exceeds 8 MiB: ab12.js.',
+        '脚本文件超过 8 MiB。',
+        'The script file exceeds 8 MiB.',
       ),
       'scriptSyntax': (
         ['SyntaxError: Unexpected token (line 1)'],
@@ -164,6 +165,76 @@ void main() {
       expect(
         mitmStoredError(en, stored).text,
         'Unsupported script type: cron.',
+      );
+    });
+
+    test('a stored script file reads by the name the user knows', () {
+      const stored = '3f9a0c51e2b7d4a6.js';
+      for (final (kind, message) in [
+        ('scriptUnreadable', 'script file $stored cannot be read'),
+        ('scriptTooLarge', 'script file $stored is over 8 MiB'),
+      ]) {
+        final issue = MitmRewriteIssue(
+          section: 'script',
+          kind: kind,
+          args: const [stored],
+          message: message,
+        );
+        for (final l in [zh, en, ru]) {
+          final shown = mitmIssueError(l, issue, scriptName: '签到.js');
+          expect(shown.text, contains('签到.js'));
+          expect(shown.text, isNot(contains(stored)));
+          // The stored name only behind 查看原始错误, as the Core said it.
+          expect(shown.raw, message);
+          final row = mitmStoredError(
+            l,
+            mitmStoredIssue(issue),
+            scriptName: '签到.js',
+          );
+          expect(row, shown);
+        }
+        expect(
+          mitmIssueError(zh, issue, scriptName: '签到.js').text,
+          kind == 'scriptUnreadable' ? '无法读取文件：签到.js。' : '文件超过 8 MiB：签到.js。',
+        );
+        // No name to give, or a blank one: no file named, never a guess
+        // from the stored name, which stays only in the details.
+        for (final l in [zh, en, ru]) {
+          final generic = kind == 'scriptUnreadable'
+              ? l.mitmScriptErrorUnreadableNoName
+              : l.mitmScriptErrorTooLargeNoName;
+          for (final name in [null, '', '  ']) {
+            final shown = mitmIssueError(l, issue, scriptName: name);
+            expect(shown, (text: generic, raw: message));
+            expect(
+              mitmStoredError(l, mitmStoredIssue(issue), scriptName: name),
+              shown,
+            );
+          }
+        }
+        expect(
+          mitmIssueError(zh, issue).text,
+          kind == 'scriptUnreadable' ? '无法读取脚本文件。' : '脚本文件超过 8 MiB。',
+        );
+        expect(
+          mitmIssueError(en, issue).text,
+          kind == 'scriptUnreadable'
+              ? 'Cannot read the script file.'
+              : 'The script file exceeds 8 MiB.',
+        );
+      }
+    });
+
+    test('other codes ignore the script name', () {
+      const issue = MitmRewriteIssue(
+        section: 'script',
+        kind: 'scriptMaxSize',
+        args: ['"10k"'],
+        message: 'max-size must be a number of bytes, got "10k"',
+      );
+      expect(
+        mitmIssueError(zh, issue, scriptName: '签到.js'),
+        mitmIssueError(zh, issue),
       );
     });
 

@@ -203,9 +203,10 @@ Future<List<MitmScript>> prepareMitmScripts(
         .map((entry) => (entry.key, entry.value))
         .first;
     final l = currentAppLocalizations;
-    final error = mitmIssueError(l, issue);
+    final name = drafts[index].info.name;
+    final error = mitmIssueError(l, issue, scriptName: name);
     throw _ScriptException(
-      l.mitmScriptCannotLoad(drafts[index].info.name, error.text),
+      l.mitmScriptCannotLoad(name, error.text),
       raw: error.raw,
     );
   }
