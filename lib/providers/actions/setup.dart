@@ -82,6 +82,7 @@ class SetupAction extends _$SetupAction {
       await preferences.getCompositionRevision() < 1;
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
+  Future<void>? _initialRun;
   DateTime? _startTime;
   var _resumeOnRestart = false;
   ({String digest, Set<String> names})? _outboundNames;
@@ -222,16 +223,30 @@ class SetupAction extends _$SetupAction {
   Future<DateTime?> serviceStartTime() async => service?.getRunTime();
 
   Future<void> initStatus() async {
-    if (!globalState.needInitStatus) {
-      return;
+    if (globalState.needInitStatus && _initialRun == null) {
+      await _restoreStatus();
     }
+    Future<void>? joined;
+    while (!identical(joined, _initialRun)) {
+      joined = _initialRun;
+      await joined;
+    }
+  }
+
+  Future<void> _restoreStatus() async {
     // Visibility observers must not publish a resumed start during review.
     _deferRunningPublication = true;
     _launching = true;
     try {
-      _startTime = await serviceStartTime();
-      if (_isRunning) {
-        globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
+      final startTime = await serviceStartTime();
+      final running = startTime?.isBeforeNow ?? false;
+      final digest = running ? await preferences.getAppliedConfigMd5() : null;
+      if (_initialRun != null) {
+        return;
+      }
+      _startTime = startTime;
+      if (running) {
+        globalState.lastConfigMd5 = digest;
         await _run(true, initialize: true, resume: true);
       } else if (ref.read(appSettingProvider).autoRun) {
         await setRunning(true, initialize: true);
@@ -353,12 +368,19 @@ class SetupAction extends _$SetupAction {
       previousStartTime: _startTime,
     );
     _latestRunRequest = request;
-    if (!running) {
+    final Future<bool> task;
+    if (running) {
+      _deferRunningPublication = true;
+      task = _beginStart(request);
+    } else {
       _setLocalRunning(false);
-      return _stop(request);
+      task = _stop(request);
     }
-    _deferRunningPublication = true;
-    return _beginStart(request);
+    if (initialize || _initialRun != null && !ref.read(initProvider)) {
+      // The caller reports the outcome. Bootstrap waits for the transition to settle.
+      _initialRun = task.then<void>((_) {}, onError: (Object _) {});
+    }
+    return task;
   }
 
   Future<bool> _beginStart(_RunRequest request) async {
