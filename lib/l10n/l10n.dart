@@ -1095,7 +1095,7 @@ abstract class AppLocalizations {
   /// No description provided for @externalControllerDesc.
   ///
   /// In en, this message translates to:
-  /// **'The external controller lets you control the core on port 9090.'**
+  /// **'The external controller listens on port 9090.'**
   String get externalControllerDesc;
 
   /// No description provided for @externalControllerSecret.
@@ -1635,7 +1635,7 @@ abstract class AppLocalizations {
   /// No description provided for @writeToSystemDesc.
   ///
   /// In en, this message translates to:
-  /// **'Write to system also sets the system clock; Android ignores it.'**
+  /// **'Write to system has no effect on Android.'**
   String get writeToSystemDesc;
 
   /// No description provided for @sniffer.
@@ -1655,12 +1655,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Force DNS mapping'**
   String get forceDnsMapping;
-
-  /// No description provided for @forceDnsMappingDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Force DNS mapping also sniffs connections whose domain came from a DNS mapping.'**
-  String get forceDnsMappingDesc;
 
   /// No description provided for @parsePureIp.
   ///
@@ -1725,7 +1719,7 @@ abstract class AppLocalizations {
   /// No description provided for @dnsOverrideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Entries added here replace the DNS of every URL and file profile; anything not added keeps the profile\'s own setting. Custom profiles set their DNS in their content.'**
+  /// **'Added entries replace the DNS of URL and file profiles.'**
   String get dnsOverrideDesc;
 
   /// No description provided for @settingEntries.
@@ -1785,7 +1779,7 @@ abstract class AppLocalizations {
   /// No description provided for @respectRulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Respect rules routes DNS connections by the rules and needs a Proxy Server Nameserver.'**
+  /// **'Respect rules needs a Proxy Server Nameserver.'**
   String get respectRulesDesc;
 
   /// No description provided for @dnsMode.
@@ -5799,7 +5793,7 @@ abstract class AppLocalizations {
   /// No description provided for @strictRouteDesc.
   ///
   /// In en, this message translates to:
-  /// **'Strict route keeps traffic such as DNS from bypassing TUN, and with IPv6 off it blocks this device\'s IPv6 connections.'**
+  /// **'With IPv6 off, strict route also blocks this device’s IPv6 connections.'**
   String get strictRouteDesc;
 
   /// No description provided for @initFailed.
@@ -5853,7 +5847,7 @@ abstract class AppLocalizations {
   /// No description provided for @disableIcmpForwardingDesc.
   ///
   /// In en, this message translates to:
-  /// **'With ICMP forwarding disabled, TUN answers ping itself, so ping no longer shows the real latency.'**
+  /// **'With ICMP forwarding disabled, ping no longer shows the real latency.'**
   String get disableIcmpForwardingDesc;
 
   /// No description provided for @excludeInterface.
@@ -5871,7 +5865,7 @@ abstract class AppLocalizations {
   /// No description provided for @includeInterfaceDesc.
   ///
   /// In en, this message translates to:
-  /// **'Only traffic arriving on included interfaces goes through TUN, and excluded interfaces no longer apply.'**
+  /// **'Once set, excluded interfaces no longer apply.'**
   String get includeInterfaceDesc;
 
   /// No description provided for @includeUid.
@@ -5919,19 +5913,19 @@ abstract class AppLocalizations {
   /// No description provided for @tunOverrideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Entries added here replace the TUN settings of every profile; anything not added keeps the profile\'s own setting. Entries a custom profile adds itself take precedence.'**
+  /// **'Added entries override every profile; a custom profile’s own entries win.'**
   String get tunOverrideDesc;
 
   /// No description provided for @generalOverrideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Entries added here replace the setting of every profile; anything not added keeps the profile\'s own setting, or the core default when the profile has none.'**
+  /// **'Added entries replace every profile’s own setting.'**
   String get generalOverrideDesc;
 
   /// No description provided for @profileTunSettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Applies to this profile only and takes precedence over the TUN override entries in the network settings.'**
+  /// **'For this profile only; wins over the TUN overrides in network settings.'**
   String get profileTunSettingsDesc;
 
   /// No description provided for @settingsCount.

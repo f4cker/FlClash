@@ -543,7 +543,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get externalControllerDesc =>
-      'El controlador externo permite controlar el núcleo en el puerto 9090.';
+      'El controlador externo escucha en el puerto 9090.';
 
   @override
   String get externalControllerSecret => 'Clave del controlador externo';
@@ -829,7 +829,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get writeToSystemDesc =>
-      'Escribir en el sistema también ajusta el reloj del sistema; Android lo ignora.';
+      'Escribir en el sistema no tiene efecto en Android.';
 
   @override
   String get sniffer => 'Sniffer';
@@ -839,10 +839,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'Forzar mapeo DNS';
-
-  @override
-  String get forceDnsMappingDesc =>
-      'Forzar mapeo DNS también analiza las conexiones cuyo dominio provino de un mapeo DNS.';
 
   @override
   String get parsePureIp => 'Analizar IP pura';
@@ -877,7 +873,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dnsOverrideDesc =>
-      'Las entradas añadidas aquí sustituyen el DNS de todos los perfiles de URL y de archivo; lo que no añadas conserva el ajuste del propio perfil. Los perfiles personalizados definen su DNS en su contenido.';
+      'Las entradas añadidas sustituyen el DNS de los perfiles de URL y de archivo.';
 
   @override
   String get settingEntries => 'ajustes';
@@ -909,7 +905,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get respectRulesDesc =>
-      'Respetar reglas enruta las conexiones DNS según las reglas y requiere un Proxy Server Nameserver.';
+      'Respetar reglas requiere un Proxy Server Nameserver.';
 
   @override
   String get dnsMode => 'Modo DNS';
@@ -3346,7 +3342,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get strictRouteDesc =>
-      'La ruta estricta evita que el tráfico, como el DNS, eluda TUN y, con IPv6 desactivado, bloquea las conexiones IPv6 de este dispositivo.';
+      'Con IPv6 desactivado, la ruta estricta también bloquea las conexiones IPv6 de este dispositivo.';
 
   @override
   String get initFailed => 'Error al iniciar';
@@ -3378,7 +3374,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'Con el reenvío ICMP desactivado, TUN responde él mismo al ping, por lo que ping ya no muestra la latencia real.';
+      'Con el reenvío ICMP desactivado, ping ya no muestra la latencia real.';
 
   @override
   String get excludeInterface => 'Interfaces excluidas';
@@ -3388,7 +3384,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get includeInterfaceDesc =>
-      'Solo el tráfico que llega por las interfaces incluidas pasa por TUN, y las interfaces excluidas dejan de aplicarse.';
+      'Una vez definido, las interfaces excluidas dejan de aplicarse.';
 
   @override
   String get includeUid => 'ID de usuario incluidos';
@@ -3415,15 +3411,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      'Las entradas añadidas aquí sustituyen los ajustes de TUN de todos los perfiles; lo que no añadas conserva el ajuste del propio perfil. Las entradas que añade un perfil personalizado tienen prioridad.';
+      'Las entradas añadidas sustituyen las de todos los perfiles; las de un perfil personalizado tienen prioridad.';
 
   @override
   String get generalOverrideDesc =>
-      'Las entradas añadidas aquí sustituyen el ajuste correspondiente de todos los perfiles; lo que no añadas conserva el ajuste del propio perfil, o el valor predeterminado del núcleo si el perfil no lo define.';
+      'Las entradas añadidas sustituyen el ajuste de cada perfil.';
 
   @override
   String get profileTunSettingsDesc =>
-      'Se aplica solo a este perfil y tiene prioridad sobre las entradas de sobrescritura de TUN de los ajustes de red.';
+      'Solo para este perfil; tiene prioridad sobre las sobrescrituras de TUN de los ajustes de red.';
 
   @override
   String settingsCount(num count) {

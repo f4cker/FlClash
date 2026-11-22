@@ -518,7 +518,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get externalController => '外部コントローラー';
 
   @override
-  String get externalControllerDesc => '外部コントローラーを有効にすると、ポート 9090 でコアを制御できます。';
+  String get externalControllerDesc => '外部コントローラーはポート 9090 で待ち受けます。';
 
   @override
   String get externalControllerSecret => '外部コントローラーのシークレット';
@@ -797,8 +797,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get writeToSystem => 'システムに書き込む';
 
   @override
-  String get writeToSystemDesc =>
-      'システムに書き込むを有効にするとシステムクロックも設定します。Android では無視されます。';
+  String get writeToSystemDesc => 'システムに書き込むは Android では無効です。';
 
   @override
   String get sniffer => 'スニッファー';
@@ -808,10 +807,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'DNSマッピングを強制';
-
-  @override
-  String get forceDnsMappingDesc =>
-      'DNS マッピングを強制すると、DNS マッピングでドメインを得た接続もスニッフィングします。';
 
   @override
   String get parsePureIp => '純粋なIPを解析';
@@ -844,8 +839,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addOverrideEntry => '上書き項目を追加';
 
   @override
-  String get dnsOverrideDesc =>
-      'ここで追加した項目は、すべての URL・ファイルプロファイルの DNS を上書きします。追加していない項目はプロファイル自身の設定のままです。カスタムプロファイルの DNS はその内容で設定します。';
+  String get dnsOverrideDesc => '追加した項目は URL・ファイルプロファイルの DNS を上書きします。';
 
   @override
   String get settingEntries => '設定項目';
@@ -875,8 +869,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get respectRules => 'ルールに従う';
 
   @override
-  String get respectRulesDesc =>
-      'ルールに従うを有効にすると DNS 接続がルールに従います。Proxy Server Nameserver の設定が必要です。';
+  String get respectRulesDesc => 'ルールに従うには Proxy Server Nameserver の設定が必要です。';
 
   @override
   String get dnsMode => 'DNSモード';
@@ -3176,8 +3169,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get routingMark => 'ルーティングマーク';
 
   @override
-  String get strictRouteDesc =>
-      '厳格なルーティングは DNS などの通信が TUN を迂回するのを防ぎます。IPv6 がオフの場合、この端末の IPv6 通信は遮断されます。';
+  String get strictRouteDesc => 'IPv6 がオフの場合、厳格なルーティングはこの端末の IPv6 通信も遮断します。';
 
   @override
   String get initFailed => '起動に失敗しました';
@@ -3209,7 +3201,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'ICMP 転送を無効にすると TUN が ping に直接応答するため、ping に実際の遅延が表示されなくなります。';
+      'ICMP 転送を無効にすると、ping に実際の遅延が表示されなくなります。';
 
   @override
   String get excludeInterface => '除外インターフェース';
@@ -3218,8 +3210,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get includeInterface => '対象インターフェース';
 
   @override
-  String get includeInterfaceDesc =>
-      '対象インターフェースから入る通信だけが TUN を通り、除外インターフェースは無効になります。';
+  String get includeInterfaceDesc => '設定すると、除外インターフェースは無効になります。';
 
   @override
   String get includeUid => '対象ユーザー ID';
@@ -3246,15 +3237,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      'ここで追加した項目は、すべてのプロファイルの TUN 設定を上書きします。追加していない項目はプロファイル自身の設定のままです。カスタムプロファイル自身が追加した項目が優先されます。';
+      '追加した項目はすべてのプロファイルを上書きします。カスタムプロファイル自身の項目が優先されます。';
 
   @override
-  String get generalOverrideDesc =>
-      'ここで追加した項目は、すべてのプロファイルの該当設定を上書きします。追加していない項目はプロファイル自身の設定のままで、プロファイルにない場合はコアの既定値を使います。';
+  String get generalOverrideDesc => '追加した項目はすべてのプロファイルの該当設定を上書きします。';
 
   @override
   String get profileTunSettingsDesc =>
-      'このプロファイルにのみ適用され、ネットワーク設定の TUN 上書き項目より優先されます。';
+      'このプロファイルのみに適用され、ネットワーク設定の TUN 上書きより優先されます。';
 
   @override
   String settingsCount(num count) {
