@@ -935,15 +935,18 @@ class TrackerInfoDetailView extends ConsumerWidget {
     final appLocalizations = context.appLocalizations;
     // A connection the Core decrypted always has the tab: what it holds, or
     // why it holds nothing, is read from the Core, not from the settings.
-    return DetailTabs(
-      tabs: [
-        (appLocalizations.overview, _buildOverview),
-        if (trackerInfo.metadata.mitm)
-          (
-            appLocalizations.httpRequests,
-            (_) => MitmExchangesView(trackerInfo: trackerInfo),
-          ),
-      ],
+    return ListTextScope(
+      scale: ListTextScale.compact,
+      child: DetailTabs(
+        tabs: [
+          (appLocalizations.overview, _buildOverview),
+          if (trackerInfo.metadata.mitm)
+            (
+              appLocalizations.httpRequests,
+              (_) => MitmExchangesView(trackerInfo: trackerInfo),
+            ),
+        ],
+      ),
     );
   }
 }

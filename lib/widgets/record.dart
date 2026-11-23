@@ -158,6 +158,8 @@ class RecordArrow extends StatelessWidget {
   }
 }
 
+const _valueGap = 24.0;
+
 class DetailRow extends StatelessWidget {
   final String title;
   final Widget? value;
@@ -205,7 +207,7 @@ class DetailRow extends StatelessWidget {
           ? Text(title)
           : Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              spacing: 20,
+              spacing: _valueGap,
               children: [
                 Text(title),
                 Expanded(
