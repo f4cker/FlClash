@@ -113,8 +113,8 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   /// Bumped by every stop; a check begun before one goes no further.
   int _epoch = 0;
 
-  /// Bumped when a load is given up on or the slot is taken: the load,
-  /// still running, then sends the Core nothing.
+  /// Bumped when the slot is taken: a load still running then sends the
+  /// Core nothing.
   int _loadGeneration = 0;
   bool _closed = false;
   DateTime? _passphraseRetryAt;
@@ -293,7 +293,6 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       _hold(true);
       return MitmTrust.ready;
     } catch (error) {
-      if (error is TimeoutException) _loadGeneration++;
       _negatives = 0;
       if (!ref.mounted) return null;
       switch (_refusal(error)) {
@@ -342,15 +341,19 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       final retryAt = _passphraseRetryAt;
       if (retryAt != null && DateTime.now().isBefore(retryAt)) return null;
       _passphraseRetryAt = DateTime.now().add(passphraseBackoff);
+      final reading = Stopwatch()..start();
       final passphrase = await ref
           .read(mitmPassphraseStoreProvider)
           ?.readPassphrase(ca.fingerprint);
-      if (stale() || abandoned()) return null;
+      if (passphrase != null) _passphraseRetryAt = null;
+      if (stale() || abandoned()) {
+        if (passphrase != null) _restart();
+        return null;
+      }
       if (passphrase == null) {
         _failed(MitmCoreCaFailure.passphraseMissing);
         return null;
       }
-      _passphraseRetryAt = null;
       final loaded = await core.setMitmCa(
         MitmCaSecret(
           p12: p12,
@@ -371,6 +374,8 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
         return null;
       }
       _loaded = key;
+      // Its round gave up waiting: lease now, not a renewal later.
+      if (reading.elapsed >= checkBudget) _kick();
     }
     final leaf = await core.issueMitmCheck();
     if (leaf.check == null) {

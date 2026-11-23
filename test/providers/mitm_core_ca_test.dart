@@ -611,6 +611,33 @@ void main() {
       });
 
       expect(loadedInside, 0);
+      await settle();
+      expect(passphrases.reads, 2);
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.leased,
+      );
+    });
+
+    test('a keychain read approved after its budget leases at once', () async {
+      MitmCoreCaLease.checkBudget = const Duration(milliseconds: 20);
+      MitmCoreCaLease.renewEvery = const Duration(minutes: 5);
+      passphrases.gate = Completer<void>();
+      setMitm(coreMitm());
+      final lease = container.read(mitmCoreCaProvider.notifier);
+      expect(await lease.checkNow(), isNull);
+      expect(leases, isEmpty);
+
+      passphrases.gate!.complete();
+      await settle();
+
+      expect(passphrases.reads, 1);
+      expect(loaded, hasLength(1));
+      expect(leases, hasLength(1));
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.leased,
+      );
     });
 
     test('a CA set after its budget is not taken as loaded', () async {
@@ -831,32 +858,35 @@ void main() {
       },
     );
 
-    test('the trust row reads ready right after a Core to Core switch', () async {
-      passphrases.values[_pendingFp] = 'pending secret';
-      setMitm(
-        coreMitm().copyWith(
-          pendingCaP12: _pendingP12,
-          pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
-        ),
-      );
-      await started();
-      container.listen(mitmTrustStateProvider, (_, _) {});
-      await container.read(mitmTrustStateProvider.future);
-      passphrases.deleteGate = Completer<void>();
+    test(
+      'the trust row reads ready right after a Core to Core switch',
+      () async {
+        passphrases.values[_pendingFp] = 'pending secret';
+        setMitm(
+          coreMitm().copyWith(
+            pendingCaP12: _pendingP12,
+            pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
+          ),
+        );
+        await started();
+        container.listen(mitmTrustStateProvider, (_, _) {});
+        await container.read(mitmTrustStateProvider.future);
+        passphrases.deleteGate = Completer<void>();
 
-      final switched = migration().verify();
-      await settle();
-      final row = container.read(mitmTrustStateProvider);
-      passphrases.deleteGate!.complete();
+        final switched = migration().verify();
+        await settle();
+        final row = container.read(mitmTrustStateProvider);
+        passphrases.deleteGate!.complete();
 
-      expect(await switched, MitmMigrationOutcome.switched);
-      expect(row.hasError, isFalse);
-      await settle();
-      expect(
-        container.read(mitmTrustStateProvider).value?.trust,
-        MitmTrust.ready,
-      );
-    });
+        expect(await switched, MitmMigrationOutcome.switched);
+        expect(row.hasError, isFalse);
+        await settle();
+        expect(
+          container.read(mitmTrustStateProvider).value?.trust,
+          MitmTrust.ready,
+        );
+      },
+    );
 
     test(
       'importing the CA in use is refused and keeps its passphrase',
