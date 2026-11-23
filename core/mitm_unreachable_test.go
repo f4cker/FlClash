@@ -88,6 +88,29 @@ func withUnreachableMitm(t *testing.T, setup MitmSetup, scripts ...string) *x509
 	return roots
 }
 
+// A dial that succeeds to a site that hangs up at once.
+type mitmHangUpSite struct{ C.ProxyAdapter }
+
+func (mitmHangUpSite) DialContext(context.Context, *C.Metadata) (C.Conn, error) {
+	near, far := net.Pipe()
+	_ = far.Close()
+	return mitmSelectionConn{N.NewExtendedConn(near)}, nil
+}
+
+// A tracker over the flow's own connection.
+type unreachableTracked struct {
+	mitmSelectionConn
+	flow any
+}
+
+func (c unreachableTracked) Upstream() any { return c.flow }
+
+func sitelessFlows() int {
+	n := 0
+	mitmSiteless.Range(func(any, any) bool { n++; return true })
+	return n
+}
+
 // done closes once the actual tunnel let go of the flow.
 func unreachableFlow(t *testing.T, host string, port uint16) (net.Conn, <-chan struct{}) {
 	t.Helper()
@@ -161,6 +184,47 @@ func TestMitmUnreachableHostIsAnsweredByItsScript(t *testing.T) {
 	}
 	_ = client.Close()
 	<-done
+	if n := sitelessFlows(); n != 0 {
+		t.Fatalf("%d flows left offered a stand-in", n)
+	}
+}
+
+func TestMitmHungUpSiteIsAnsweredAndLetGo(t *testing.T) {
+	roots := withUnreachableMitm(t, MitmSetup{Hostname: []string{"script.hub"}}, scriptHubLine)
+	tunnel.UpdateProxies(map[string]C.Proxy{"DIRECT": adapter.NewProxy(mitmHangUpSite{outbound.NewDirect()})}, nil)
+	let := make(chan *C.Metadata, 2)
+	oldDone := tunnel.TCPInterceptDone
+	tunnel.TCPInterceptDone = func(metadata *C.Metadata) { let <- metadata; oldDone(metadata) }
+	t.Cleanup(func() { tunnel.TCPInterceptDone = oldDone })
+	raw, done := unreachableFlow(t, "script.hub", mitmHTTPSPort)
+	client := tls.Client(raw, &tls.Config{ServerName: "script.hub", RootCAs: roots, NextProtos: []string{"http/1.1"}})
+	if status, body := unreachableGet(t, client, bufio.NewReader(client), "script.hub", "/"); status != 200 || body != "hub https://script.hub/" {
+		t.Fatalf("script answer %d %q", status, body)
+	}
+	_ = client.Close()
+	<-done
+	if n := sitelessFlows(); n != 0 || len(let) != 1 {
+		t.Fatalf("%d flows left offered a stand-in, %d let go", n, len(let))
+	}
+}
+
+type unreachableCloseCount struct {
+	net.Conn
+	closed *int
+	under  any
+}
+
+func (c unreachableCloseCount) Close() error  { *c.closed++; return nil }
+func (c unreachableCloseCount) Upstream() any { return c.under }
+
+func TestMitmFailedSiteClosesOnlyItsOwnConnection(t *testing.T) {
+	var flowClosed, sharedClosed int
+	shared := unreachableCloseCount{closed: &sharedClosed}
+	flow := unreachableCloseCount{closed: &flowClosed, under: shared}
+	mitmCloseUnderTracker(unreachableTracked{flow: flow})
+	if flowClosed != 1 || sharedClosed != 0 {
+		t.Fatalf("flow closed %d, shared session closed %d", flowClosed, sharedClosed)
+	}
 }
 
 // A listed host no rule could answer fails as it always did: no TLS.
@@ -207,7 +271,8 @@ func TestMitmUnreachableTLSFailureIsAnsweredByItsScript(t *testing.T) {
 			_ = proxyRaw.Close()
 			return
 		}
-		selected(client, mitmSelectionConn{N.NewExtendedConn(proxySite)})
+		site := mitmSelectionConn{N.NewExtendedConn(proxySite)}
+		selected(client, unreachableTracked{mitmSelectionConn: site, flow: site})
 		_ = proxySite.Close()
 	}()
 	client := tls.Client(clientRaw, &tls.Config{ServerName: "script.hub", RootCAs: roots, NextProtos: []string{"http/1.1"}})

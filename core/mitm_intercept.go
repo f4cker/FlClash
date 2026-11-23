@@ -123,6 +123,7 @@ func init() {
 		tunnel.TCPInterceptWanted = mitmInterceptWanted
 		tunnel.TCPIntercept = mitmIntercept
 		tunnel.TCPInterceptUnreachable = mitmUnreachableStandIn
+		tunnel.TCPInterceptDone = mitmInterceptDone
 		tunnel.UDPDrop = mitmDropsUDP
 	}
 }

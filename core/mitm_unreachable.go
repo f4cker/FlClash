@@ -47,6 +47,8 @@ func mitmOfferStandIn(metadata *C.Metadata, intercept tunnel.TCPInterceptor, hos
 	}
 }
 
+func mitmInterceptDone(metadata *C.Metadata) { mitmSiteless.Delete(metadata) }
+
 func mitmUnreachableStandIn(metadata *C.Metadata, proxy C.Proxy) C.Conn {
 	chosen, ok := mitmSiteless.LoadAndDelete(metadata)
 	if !ok {
@@ -73,17 +75,13 @@ func mitmUnreachableStandIn(metadata *C.Metadata, proxy C.Proxy) C.Conn {
 	return &mitmUnreachableConn{ExtendedConn: N.NewExtendedConn(near), chain: C.Chain{proxy.Name()}}
 }
 
+// The flow's own connection, one below the tracker: anything further down
+// may be a session other flows share.
 func mitmCloseUnderTracker(remote net.Conn) {
-	var conn any = remote
-	for range 8 {
-		wrapper, ok := conn.(interface{ Upstream() any })
-		if !ok {
-			break
+	if tracker, ok := remote.(interface{ Upstream() any }); ok {
+		if conn, ok := tracker.Upstream().(io.Closer); ok {
+			_ = conn.Close()
 		}
-		conn = wrapper.Upstream()
-	}
-	if closer, ok := conn.(io.Closer); ok {
-		_ = closer.Close()
 	}
 }
 
