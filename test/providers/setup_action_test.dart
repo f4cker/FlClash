@@ -3982,6 +3982,74 @@ void main() {
       verify(() => core.readConfig(any())).called(1);
     });
 
+    test('the CA p12 reaches no script, isolate or built profile', () async {
+      final secret = 'Q0FQMTJTRUNSRVQx' * 20;
+      final pending = 'UEVORElOR1NFQ1Ix' * 20;
+      final mitm = Mitm(
+        caP12: MitmCaP12(secret),
+        pendingCaP12: MitmCaP12(pending),
+      );
+      final patchConfig = PatchClashConfig(mitm: mitm);
+      final input = realProfileInput(
+        MakeRealProfileState(
+          profilesPath: '/profiles',
+          profileId: 5,
+          rawConfig: const {},
+          realPatchConfig: patchConfig,
+          appendSystemDns: false,
+          proxyGroups: const [],
+          rules: const [],
+          addedRules: const [],
+          defaultUA: 'ua',
+        ),
+      );
+      expect(input.realPatchConfig.mitm, mitm.withoutCaSecrets);
+      expect(json.encode(input.realPatchConfig), isNot(contains(secret)));
+
+      final engine = scriptEvaluator;
+      addTearDown(() => scriptEvaluator = engine);
+      final seen = <String>[];
+      scriptEvaluator =
+          ({required String script, required String config}) async {
+            seen.add(config);
+            return config;
+          };
+      final script = await Script(
+        id: 79,
+        label: 'script',
+        lastUpdateTime: DateTime(2026),
+      ).save('const main = (config) => config;');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.readConfig(any())).thenAnswer((_) async => {});
+      final scoped = ProviderContainer(
+        overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mitm: mitm));
+
+      final res = await scoped
+          .read(setupActionProvider.notifier)
+          .getProfile(
+            setupState: nullProfileSetupState.copyWith(
+              profileId: 5,
+              script: script,
+            ),
+            patchConfig: patchConfig,
+          );
+
+      expect(seen, hasLength(1));
+      for (final text in [...seen, res.yaml]) {
+        expect(text, isNot(contains(secret)));
+        expect(text, isNot(contains(pending)));
+        expect(text, isNot(contains('ca-p12')));
+      }
+    });
+
     test('puts the added rules ahead of what the script returns', () async {
       final engine = scriptEvaluator;
       addTearDown(() => scriptEvaluator = engine);

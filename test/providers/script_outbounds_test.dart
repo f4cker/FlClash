@@ -7,6 +7,7 @@ import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/state.dart';
@@ -72,6 +73,42 @@ void main() {
     container.listen(provider, (_, _) {});
     return container.read(provider.future);
   }
+
+  test('a script never sees the CA p12 stored in the app config', () async {
+    final secret = 'Q0FQMTJTRUNSRVQx' * 20;
+    final inputs = <String>[];
+    scriptEvaluator = ({required String script, required String config}) async {
+      inputs.add(config);
+      return config;
+    };
+    final profile = Profile.normal(label: 'sub').copyWith(scriptId: script.id);
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(() => TestProfiles([profile])),
+        scriptsProvider.overrideWith(() => TestScripts([script])),
+        coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+      ],
+    );
+    addTearDown(container.dispose);
+    container
+        .read(patchClashConfigProvider.notifier)
+        .update(
+          (state) => state.copyWith(
+            mitm: Mitm(
+              caP12: MitmCaP12(secret),
+              pendingCaP12: MitmCaP12(secret),
+            ),
+          ),
+        );
+    final provider = scriptOutboundsProvider(profile.id);
+    container.listen(provider, (_, _) {});
+
+    await container.read(provider.future);
+
+    expect(inputs, hasLength(1));
+    expect(inputs.single, isNot(contains(secret)));
+    expect(inputs.single, isNot(contains('ca-p12')));
+  });
 
   test('lists the groups the script hands the core', () async {
     final inputs = <Map<String, dynamic>>[];

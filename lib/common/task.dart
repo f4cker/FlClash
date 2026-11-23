@@ -228,8 +228,18 @@ Map<String, String> injectAddedRuleSets(
 }
 
 Future<RealProfile> makeRealProfileTask(MakeRealProfileState data) async {
-  return compute<MakeRealProfileState, RealProfile>(_makeRealProfileTask, data);
+  return compute<MakeRealProfileState, RealProfile>(
+    _makeRealProfileTask,
+    realProfileInput(data),
+  );
 }
+
+/// What crosses into the isolate: never the CA's p12.
+@visibleForTesting
+MakeRealProfileState realProfileInput(MakeRealProfileState data) =>
+    data.copyWith.realPatchConfig(
+      mitm: data.realPatchConfig.mitm.withoutCaSecrets,
+    );
 
 Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   final rawConfig = Map.from(data.rawConfig);
