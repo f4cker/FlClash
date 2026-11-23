@@ -606,7 +606,10 @@ class MountAction extends _$MountAction {
         });
       }
       final setup = ref.read(setupActionProvider.notifier);
-      final applied = await setup.applyProfile(silence: true);
+      final applied = await setup.applyProfile(
+        silence: true,
+        announceMountSkips: true,
+      );
       return await _scheduler.run(() async {
         final outcome = await _confirm(saved, applied: applied);
         if (outcome != MountSaveOutcome.unknown) await _settle(saved);
@@ -693,7 +696,7 @@ class MountAction extends _$MountAction {
     _ => null,
   };
 
-  /// A subscription's own problem does not hold the edit.
+  /// A subscription's own problem does not hold the edit: the apply skips it.
   Future<MountEditIssue?> preflightEdit(int targetId, List<int> data) async {
     final target = await database.mountsDao.target(targetId);
     if (target == null || target.sourceIds.isEmpty) return null;
@@ -720,22 +723,34 @@ class MountAction extends _$MountAction {
     } finally {
       await edited.safeDelete();
     }
-    final error = preflight.error;
-    if (error == null) return null;
-    commonPrint.log(
-      'edited profile rejected with its mounts: $error',
-      logLevel: LogLevel.warning,
-    );
+    String? sourceName(int id) =>
+        mounts.sources.where((source) => source.id == id).firstOrNull?.label;
+    if (preflight.error case final error?) {
+      commonPrint.log(
+        'edited profile rejected with its mounts: $error',
+        logLevel: LogLevel.warning,
+      );
+      return (
+        reason: mountRejectedReason(
+          error,
+          currentAppLocalizations,
+          sourceName: sourceName,
+        ),
+        blocking: true,
+      );
+    }
+    final skips = switch (preflight.report) {
+      final report? => mountSkipsOf(report),
+      null => const <MountSkip>[],
+    };
+    if (skips.isEmpty) return null;
     return (
-      reason: mountRejectedReason(
-        error,
+      reason: mountSkipReasons(
+        skips,
+        sourceName,
         currentAppLocalizations,
-        sourceName: (id) => mounts.sources
-            .where((source) => source.id == id)
-            .firstOrNull
-            ?.label,
-      ),
-      blocking: !isMountSourceProblem(error),
+      ).join('\n'),
+      blocking: false,
     );
   }
 

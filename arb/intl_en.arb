@@ -1821,6 +1821,27 @@
   "mountEntryMenu": "Mount subscription nodes…",
   "mountedCount": "{count, plural, =1{1 subscription mounted} other{{count} subscriptions mounted}}",
   "mountCardFailed": "{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}",
+  "mountSkipAppliedLead": "Problem subscriptions were skipped; the rest of the configuration is active:",
+  "profileEditMountSkipLead": "Problem subscriptions will be skipped. You can still save the configuration:",
+  "mountCardSkippedOne": "1 subscription skipped: {name} ({reason})",
+  "@mountCardSkippedOne": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mountCardSkippedMany": "{count} subscriptions skipped · View details",
+  "mountSkipShortMissing": "local copy missing",
+  "mountSkipShortReadError": "local copy unreadable",
+  "mountSkipShortInvalid": "has nodes Flash cannot read",
+  "mountSkipShortUnsupported": "no mountable node list",
+  "@mountCardSkippedMany": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "mountCardUnreadable": "Could not read mount status",
   "mountPillSemantics": "{label}, target profile {profileName}",
   "@mountPillSemantics": {

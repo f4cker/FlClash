@@ -6,6 +6,7 @@ import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/banner.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -171,6 +172,21 @@ Future<MountCardSummary?> mountCardSummary(Ref ref, int targetId) async {
   final target = await ref.watch(mountTargetProvider(targetId).future);
   final records = await ref.watch(mountSourceStatusesProvider.future);
   return mountCardSummaryOf(target, records);
+}
+
+/// By target, the sources its last running apply skipped; a later apply
+/// that runs replaces them, and one that fails leaves them as the Core does.
+final mountSkipsProvider =
+    NotifierProvider<MountSkips, Map<int, List<MountSkip>>>(MountSkips.new);
+
+class MountSkips extends Notifier<Map<int, List<MountSkip>>> {
+  @override
+  Map<int, List<MountSkip>> build() => const {};
+
+  void record(int targetId, List<MountSkip> skips) {
+    if (const DeepCollectionEquality().equals(state[targetId], skips)) return;
+    state = {...state, targetId: skips};
+  }
 }
 
 @Riverpod(keepAlive: true)

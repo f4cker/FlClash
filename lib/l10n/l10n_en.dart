@@ -5498,6 +5498,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mountSkipAppliedLead =>
+      'Problem subscriptions were skipped; the rest of the configuration is active:';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Problem subscriptions will be skipped. You can still save the configuration:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '1 subscription skipped: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '$count subscriptions skipped · View details';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'local copy missing';
+
+  @override
+  String get mountSkipShortReadError => 'local copy unreadable';
+
+  @override
+  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+
+  @override
+  String get mountSkipShortUnsupported => 'no mountable node list';
+
+  @override
   String get mountCardUnreadable => 'Could not read mount status';
 
   @override

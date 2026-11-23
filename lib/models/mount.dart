@@ -523,12 +523,25 @@ MountSaveOutcome? confirmMounts(MountRuntimeState state, String revision) {
   final sources = {for (final source in state.sources) source.id: source};
   final groups = {for (final group in state.groups) group.name: group};
   final consistent =
-      report.sources.every((source) => sources[source.id]?.matches ?? false) &&
+      report.sources.every(
+        (source) =>
+            source.status != MountSourceStatus.nodes ||
+            (sources[source.id]?.matches ?? false),
+      ) &&
       report.groups.every((group) => groups[group.name]?.present ?? false);
   return consistent
       ? MountSaveOutcome.applied
       : MountSaveOutcome.appliedUnverified;
 }
+
+typedef MountSkip = ({int sourceId, MountSourceStatus status});
+
+/// The sources the Core left out of [report] as their copies were unreadable.
+List<MountSkip> mountSkipsOf(MountReport report) => [
+  for (final source in report.sources)
+    if (source.status != MountSourceStatus.nodes)
+      (sourceId: source.id, status: source.status),
+];
 
 MountSourceItem mountSourceItem(
   Profile profile,

@@ -1185,6 +1185,7 @@ class _TestSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,
@@ -1281,6 +1282,7 @@ class _InitializingSetupAction extends _RaceSetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,

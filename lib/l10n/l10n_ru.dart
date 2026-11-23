@@ -5495,6 +5495,44 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get mountSkipAppliedLead =>
+      'Подписки с проблемами пропущены; остальные настройки применены:';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Подписки с проблемами будут пропущены. Конфигурацию всё равно можно сохранить:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return 'Пропущена 1 подписка: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Пропущено $count подписки',
+      many: 'Пропущено $count подписок',
+      few: 'Пропущены $count подписки',
+      one: 'Пропущена $count подписка',
+    );
+    return '$_temp0 · Подробнее';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'local copy missing';
+
+  @override
+  String get mountSkipShortReadError => 'local copy unreadable';
+
+  @override
+  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+
+  @override
+  String get mountSkipShortUnsupported => 'no mountable node list';
+
+  @override
   String get mountCardUnreadable => 'Could not read mount status';
 
   @override

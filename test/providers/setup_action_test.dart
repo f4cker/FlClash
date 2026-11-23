@@ -176,6 +176,7 @@ class TestSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,
@@ -3019,6 +3020,127 @@ void main() {
         printed,
         contains(contains('mounted profile rejected: proxy-groups: G: fetch')),
       );
+    });
+
+    test('an apply that skips a subscription records it, and warns only '
+        'when the user asked for the apply', () async {
+      final profile = Profile.normal(label: 'p');
+      final core = _MockCoreHandlerInterface();
+      const sources = [
+        MountSource(id: 2, label: 'Air', path: '/p/2.yaml'),
+        MountSource(id: 3, label: 'Sea', path: '/p/3.yaml'),
+      ];
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      when(() => core.getExternalProviders()).thenAnswer((_) async => []);
+      when(
+        () => core.getProxies(),
+      ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
+      var kept = false;
+      when(() => core.setupConfig(any())).thenAnswer((_) async {
+        if (!kept) return;
+        throw const CoreMethodException(
+          code: 'mount_rejected',
+          message: 'proxy group G: missing X',
+          details: {'outcome': 'kept'},
+        );
+      });
+      var revision = 'r1';
+      var skipped = <int>{2};
+      when(() => core.getMountState()).thenAnswer(
+        (_) async => MountRuntimeState(
+          report: MountReport(
+            target: profile.id,
+            revision: revision,
+            sources: [
+              for (final source in sources)
+                MountSourceReport(
+                  id: source.id,
+                  provider: 'flash-mount-${source.id}',
+                  status: skipped.contains(source.id)
+                      ? MountSourceStatus.missing
+                      : MountSourceStatus.nodes,
+                ),
+            ],
+          ),
+        ),
+      );
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: MountSetup(
+                target: profile.id,
+                revision: revision,
+                sources: sources,
+              ),
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      addTearDown(() => globalState.lastConfigCounts = null);
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+      final setupAction = scoped.read(setupActionProvider.notifier);
+      final appLocalizations = currentAppLocalizations;
+      List<String> banners() => [
+        for (final line in printed)
+          if (line.startsWith('[APP] banner: '))
+            line.substring('[APP] banner: '.length),
+      ];
+      Future<void> apply({required bool silence, bool announce = false}) {
+        revision = '$revision+';
+        scoped.invalidate(setupStateProvider);
+        printed.clear();
+        return setupAction.applyProfile(
+          silence: silence,
+          announceMountSkips: announce,
+        );
+      }
+
+      await apply(silence: true);
+      expect(scoped.read(mountSkipsProvider)[profile.id], [
+        (sourceId: 2, status: MountSourceStatus.missing),
+      ]);
+      expect(banners(), isEmpty);
+
+      await apply(silence: false);
+      expect(banners().single.split('\n'), [
+        appLocalizations.mountSkipAppliedLead,
+        appLocalizations.mountSourceMissingReason('Air'),
+      ]);
+
+      skipped = {2, 3};
+      await apply(silence: true, announce: true);
+      expect(banners().single.split('\n'), [
+        appLocalizations.mountSkipAppliedLead,
+        appLocalizations.mountSourceMissingReason('Air'),
+        appLocalizations.mountSourceMissingReason('Sea'),
+      ]);
+
+      kept = true;
+      await apply(silence: false);
+      expect(banners().single, startsWith(appLocalizations.mountApplyKept));
+      expect(
+        banners().single,
+        isNot(contains(appLocalizations.mountSkipAppliedLead)),
+      );
+      expect(scoped.read(mountSkipsProvider)[profile.id], hasLength(2));
+
+      kept = false;
+      skipped = {};
+      await apply(silence: false);
+      expect(scoped.read(mountSkipsProvider)[profile.id], isEmpty);
+      expect(banners(), isEmpty);
     });
 
     test('an apply keeps the profile on the names the Core followed its '

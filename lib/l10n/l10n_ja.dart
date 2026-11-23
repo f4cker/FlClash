@@ -5306,6 +5306,34 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get mountSkipAppliedLead => '問題のあるサブスクリプションをスキップし、それ以外の設定を適用しました：';
+
+  @override
+  String get profileEditMountSkipLead => '問題のあるサブスクリプションはスキップされます。設定は保存できます：';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '今回スキップしたサブスクリプション：$name（$reason）';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '今回 $count 件をスキップ · 詳細を見る';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'local copy missing';
+
+  @override
+  String get mountSkipShortReadError => 'local copy unreadable';
+
+  @override
+  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+
+  @override
+  String get mountSkipShortUnsupported => 'no mountable node list';
+
+  @override
   String get mountCardUnreadable => 'Could not read mount status';
 
   @override

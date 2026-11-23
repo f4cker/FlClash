@@ -5128,6 +5128,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get mountSkipAppliedLead => '已跳过有问题的订阅，其余配置已生效：';
+
+  @override
+  String get profileEditMountSkipLead => '有问题的订阅将被跳过，仍可保存配置：';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '本次跳过 1 份：$name（$reason）';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '本次跳过 $count 份 · 查看详情';
+  }
+
+  @override
+  String get mountSkipShortMissing => '本地副本缺失';
+
+  @override
+  String get mountSkipShortReadError => '本地副本无法读取';
+
+  @override
+  String get mountSkipShortInvalid => '含无法读取的节点';
+
+  @override
+  String get mountSkipShortUnsupported => '未提供可挂载的节点列表';
+
+  @override
   String get mountCardUnreadable => '挂载状态读取失败';
 
   @override

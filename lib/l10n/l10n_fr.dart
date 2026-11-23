@@ -5549,6 +5549,36 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get mountSkipAppliedLead =>
+      'Les abonnements présentant un problème ont été ignorés ; le reste de la configuration est actif :';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Les abonnements présentant un problème seront ignorés. Vous pouvez tout de même enregistrer la configuration :';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '1 abonnement ignoré : $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '$count abonnements ignorés · Voir les détails';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'local copy missing';
+
+  @override
+  String get mountSkipShortReadError => 'local copy unreadable';
+
+  @override
+  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+
+  @override
+  String get mountSkipShortUnsupported => 'no mountable node list';
+
+  @override
   String get mountCardUnreadable => 'Could not read mount status';
 
   @override

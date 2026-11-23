@@ -52,10 +52,13 @@ Future<void> saveProfileEdit(
       logLevel: LogLevel.warning,
     );
   }
-  final message = mountIssue == null
-      ? null
-      : '${currentAppLocalizations.profileEditMountRejected}\n'
-            '${mountIssue.reason}';
+  final message = switch (mountIssue) {
+    null => null,
+    (:final reason, blocking: true) =>
+      '${currentAppLocalizations.profileEditMountRejected}\n$reason',
+    (:final reason, blocking: false) =>
+      '${currentAppLocalizations.profileEditMountSkipLead}\n$reason',
+  };
   if (message != null && mountIssue!.blocking) {
     unawaited(
       dialogs.showAlert(

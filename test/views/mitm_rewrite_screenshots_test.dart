@@ -415,9 +415,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
       await tester.tap(row);
       await settle(tester, 12);
-      await tester.tap(
-        find.text(currentAppLocalizations.viewOriginalError),
-      );
+      await tester.tap(find.text(currentAppLocalizations.viewOriginalError));
       await settle(tester, 3);
       await capture(tester, 'rw-invalid-$tone');
       await done(tester);

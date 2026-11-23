@@ -5377,6 +5377,34 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get mountSkipAppliedLead => '문제가 있는 구독은 건너뛰고 나머지 설정을 적용했습니다:';
+
+  @override
+  String get profileEditMountSkipLead => '문제가 있는 구독은 건너뜁니다. 설정은 저장할 수 있습니다:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '이번에 건너뛴 구독 1개: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '이번에 $count개 건너뜀 · 자세히 보기';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'local copy missing';
+
+  @override
+  String get mountSkipShortReadError => 'local copy unreadable';
+
+  @override
+  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+
+  @override
+  String get mountSkipShortUnsupported => 'no mountable node list';
+
+  @override
   String get mountCardUnreadable => 'Could not read mount status';
 
   @override

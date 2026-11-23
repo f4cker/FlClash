@@ -25,6 +25,7 @@ class _MockCore extends Mock implements CoreHandlerInterface {}
 class _FakeSetupAction extends SetupAction {
   static bool result = true;
   static int applied = 0;
+  static bool announced = false;
   static int revisionTick = 0;
   static int queued = 0;
 
@@ -38,12 +39,14 @@ class _FakeSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
   }) async {
     applied++;
+    announced = announceMountSkips;
     revisionTick++;
     return result;
   }
@@ -209,6 +212,7 @@ void main() {
     _FakeSetupAction.result = true;
     _FakeSetupAction.revisionTick = 0;
     _FakeSetupAction.applied = 0;
+    _FakeSetupAction.announced = false;
     _FakeSetupAction.queued = 0;
     _FakeProfilesAction.downloads = 0;
     _FakeProfilesAction.beforeDownload = null;
@@ -309,7 +313,7 @@ void main() {
   }
 
   test('an edit is preflighted with its mounts only when it has some, and '
-      'a refusal names the subscription', () async {
+      'a skipped subscription is named without holding it', () async {
     final container = build();
     final edited = Uint8List.fromList(utf8.encode('proxy-groups: []\n'));
     expect(await action(container).preflightEdit(1, edited), isNull);
@@ -340,7 +344,17 @@ void main() {
       ),
     ).thenAnswer((invocation) async {
       calls.add(invocation.namedArguments);
-      return const MountPreflight(error: 'mount source 2 is invalid');
+      return const MountPreflight(
+        report: MountReport(
+          sources: [
+            MountSourceReport(
+              id: 2,
+              provider: 'flash-mount-2',
+              status: MountSourceStatus.invalid,
+            ),
+          ],
+        ),
+      );
     });
     expect(await action(container).preflightEdit(1, edited), (
       reason: currentAppLocalizations.mountSourceInvalidReason('Air'),
@@ -1090,6 +1104,7 @@ void main() {
       expect(result.outcome, MountSaveOutcome.applied);
       expect(result.lostSelections, isEmpty);
       expect(_FakeSetupAction.applied, 1);
+      expect(_FakeSetupAction.announced, isTrue);
       expect((await testDatabase.mountsDao.target(1))!.pending, isNull);
     });
 

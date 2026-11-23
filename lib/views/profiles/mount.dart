@@ -1837,18 +1837,21 @@ class MountPill extends StatelessWidget {
     required this.profile,
     required this.summary,
     this.unreadable = false,
+    this.skipped = false,
   });
 
   final Profile profile;
   final MountCardSummary? summary;
   final bool unreadable;
 
+  final bool skipped;
+
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final label = _pillLabel(appLocalizations, unreadable ? null : summary);
-    final warn = unreadable || (summary?.failed ?? 0) > 0;
+    final warn = unreadable || skipped || (summary?.failed ?? 0) > 0;
     final semantics = [
       appLocalizations.mountPillSemantics(label, profile.realLabel),
       if (warn) appLocalizations.mountPillFailedSemantics,
@@ -1901,6 +1904,60 @@ class MountPill extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Under the card of the running profile: the subscriptions its config left
+/// out, by name and reason for one, as a count opening the list for more.
+class MountSkipLine extends ConsumerWidget {
+  const MountSkipLine({super.key, required this.profile, required this.skips});
+
+  final Profile profile;
+  final List<MountSkip> skips;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appLocalizations = context.appLocalizations;
+    final profiles = ref.watch(profilesProvider);
+    String nameOf(int id) => profiles.getProfile(id)?.realLabel ?? '#$id';
+    final style = AppTextStyle.footnote
+        .of(context)
+        .copyWith(color: context.colorScheme.warning);
+    if (skips.length == 1) {
+      final skip = skips.single;
+      return Text(
+        appLocalizations.mountCardSkippedOne(
+          nameOf(skip.sourceId),
+          mountSourceShortReason(skip.status, appLocalizations),
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      );
+    }
+    final label = appLocalizations.mountCardSkippedMany(skips.length);
+    void showDetails() => dialogs.showAlert(
+      title: profile.realLabel,
+      message: TextSpan(
+        text: mountSkipReasons(skips, nameOf, appLocalizations).join('\n'),
+      ),
+    );
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: showDetails,
+      child: PressRegion(
+        onTap: showDetails,
+        shape: AppShape.all(AppCorner.sm),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: style,
         ),
       ),
     );

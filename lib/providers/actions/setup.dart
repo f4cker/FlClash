@@ -91,6 +91,9 @@ class SetupAction extends _$SetupAction {
   var _pendingForceApply = false;
   List<String> _lostMountSelections = const [];
 
+  /// The applies of a launch are not the user's, so warn of no skip.
+  bool _launching = false;
+
   /// Groups whose mounted selection the last apply dropped.
   List<String> get lostMountSelections => _lostMountSelections;
 
@@ -224,14 +227,19 @@ class SetupAction extends _$SetupAction {
     }
     // Visibility observers must not publish a resumed start during review.
     _deferRunningPublication = true;
-    _startTime = await serviceStartTime();
-    if (_isRunning) {
-      globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
-      await _run(true, initialize: true, resume: true);
-    } else if (ref.read(appSettingProvider).autoRun) {
-      await setRunning(true, initialize: true);
-    } else {
-      await globalState.safeRun(() => applyAutomatic(force: true));
+    _launching = true;
+    try {
+      _startTime = await serviceStartTime();
+      if (_isRunning) {
+        globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
+        await _run(true, initialize: true, resume: true);
+      } else if (ref.read(appSettingProvider).autoRun) {
+        await setRunning(true, initialize: true);
+      } else {
+        await globalState.safeRun(() => applyAutomatic(force: true));
+      }
+    } finally {
+      _launching = false;
     }
   }
 
@@ -985,9 +993,11 @@ class SetupAction extends _$SetupAction {
       _setupScheduler.run(task);
 
   // Failed builds and cancelled reviews never reach the Core setup step.
+  /// [announceMountSkips] warns of skipped subscriptions even when silent.
   Future<bool> applyProfile({
     bool silence = false,
     bool force = false,
+    bool announceMountSkips = false,
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
   }) async {
@@ -995,6 +1005,7 @@ class SetupAction extends _$SetupAction {
       force: force,
       owns: owns,
       silence: silence,
+      announceMountSkips: announceMountSkips,
       preloadInvoke: preloadInvoke,
     );
     return result != _SetupTaskResult.failed;
@@ -1025,6 +1036,7 @@ class SetupAction extends _$SetupAction {
     bool automatic = false,
     bool silence = false,
     bool force = false,
+    bool announceMountSkips = false,
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
     void Function(String reason)? onMountRejected,
@@ -1043,6 +1055,7 @@ class SetupAction extends _$SetupAction {
           automatic: automatic,
           force: force,
           silence: silence,
+          announceMountSkips: announceMountSkips,
           preloadInvoke: preloadInvoke,
           onMountRejected: onMountRejected,
           onUpdated: () async {
@@ -1394,21 +1407,53 @@ class SetupAction extends _$SetupAction {
     );
   }
 
-  /// Keeps the profile on the names the Core followed, unless changed since.
-  Future<void> _followMountSelections(
-    int targetId,
-    Map<String, String> sent,
-  ) async {
+  Future<void> _afterMountedApply(
+    MountSetup mounts,
+    Map<String, String> sent, {
+    required bool announce,
+  }) async {
     final MountRuntimeState state;
     try {
       state = await _core.getMountState();
     } catch (error) {
       commonPrint.log(
-        'mount selections unread: ${compactError(error)}',
+        'mount state after apply unread: ${compactError(error)}',
         logLevel: coreFailureLogLevel(error),
       );
       return;
     }
+    final report = state.report;
+    if (report != null &&
+        report.target == mounts.target &&
+        report.revision == mounts.revision) {
+      final skips = mountSkipsOf(report);
+      ref.read(mountSkipsProvider.notifier).record(mounts.target, skips);
+      if (announce && skips.isNotEmpty) {
+        dialogs.showBanner(
+          [
+            currentAppLocalizations.mountSkipAppliedLead,
+            ...mountSkipReasons(
+              skips,
+              (id) => mounts.sources
+                  .where((source) => source.id == id)
+                  .firstOrNull
+                  ?.label,
+              currentAppLocalizations,
+            ),
+          ].join('\n'),
+          level: BannerLevel.warning,
+        );
+      }
+    }
+    await _followMountSelections(mounts.target, sent, state);
+  }
+
+  /// Keeps the profile on the names the Core followed, unless changed since.
+  Future<void> _followMountSelections(
+    int targetId,
+    Map<String, String> sent,
+    MountRuntimeState state,
+  ) async {
     final profile = ref.read(profilesProvider).getProfile(targetId);
     if (profile == null ||
         state.report?.target != targetId ||
@@ -1806,6 +1851,7 @@ class SetupAction extends _$SetupAction {
     bool force = false,
     bool Function()? owns,
     bool silence = false,
+    bool announceMountSkips = false,
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
     void Function(String reason)? onMountRejected,
@@ -2109,7 +2155,13 @@ class SetupAction extends _$SetupAction {
           }
         }
         if (setupParams.mounts case final mounts?) {
-          await _followMountSelections(mounts.target, setupParams.selectedMap);
+          await _afterMountedApply(
+            mounts,
+            setupParams.selectedMap,
+            announce: announceMountSkips || !silence && !_launching,
+          );
+        } else if (profile != null) {
+          ref.read(mountSkipsProvider.notifier).record(profile.id, const []);
         }
         await onUpdated?.call();
       },

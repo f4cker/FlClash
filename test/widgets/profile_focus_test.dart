@@ -687,4 +687,102 @@ void main() {
       expect(find.text(selected.label), findsNothing);
     });
   });
+
+  group('the skip line', () {
+    final target = Profile.normal(label: 'target');
+    final other = Profile.normal(label: 'other');
+    final air = urlProfile('Air');
+    final sea = urlProfile('Sea');
+
+    Finder pillOf(String label) => find.descendant(
+      of: find.ancestor(
+        of: find.text(label),
+        matching: find.byType(ProfileItem),
+      ),
+      matching: find.byType(MountPill),
+    );
+
+    Future<ProviderContainer> pumpSkips(
+      WidgetTester tester,
+      List<MountSkip> skips,
+    ) async {
+      final container = await pumpProfiles(
+        tester,
+        profiles: [target, other, air, sea],
+        currentProfileId: target.id,
+        summaries: {
+          target.id: () async => const MountCardSummary(mounted: 2, failed: 0),
+          other.id: () async => const MountCardSummary(mounted: 1, failed: 0),
+        },
+      );
+      container.read(mountSkipsProvider.notifier)
+        ..record(target.id, skips)
+        ..record(other.id, [
+          (sourceId: sea.id, status: MountSourceStatus.invalid),
+        ]);
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    testWidgets('names one skipped subscription with a short reason, on the '
+        'running profile only', (tester) async {
+      final l10n = currentAppLocalizations;
+      await pumpSkips(tester, [
+        (sourceId: air.id, status: MountSourceStatus.missing),
+      ]);
+
+      expect(
+        find.text(l10n.mountCardSkippedOne('Air', l10n.mountSkipShortMissing)),
+        findsOneWidget,
+      );
+      expect(find.byType(MountSkipLine), findsOneWidget);
+      expect(tester.widget<MountPill>(pillOf('target')).skipped, isTrue);
+      expect(tester.widget<MountPill>(pillOf('other')).skipped, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('counts several and lists each with its reason when tapped', (
+      tester,
+    ) async {
+      final l10n = currentAppLocalizations;
+      await pumpSkips(tester, [
+        (sourceId: air.id, status: MountSourceStatus.missing),
+        (sourceId: sea.id, status: MountSourceStatus.unsupported),
+      ]);
+
+      await tester.tap(find.text(l10n.mountCardSkippedMany(2)));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          '${l10n.mountSourceMissingReason('Air')}\n'
+          '${l10n.mountSourceUnsupportedReason('Sea')}',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('goes once an apply runs with every subscription', (
+      tester,
+    ) async {
+      final l10n = currentAppLocalizations;
+      final container = await pumpSkips(tester, [
+        (sourceId: air.id, status: MountSourceStatus.readError),
+      ]);
+      expect(find.byType(MountSkipLine), findsOneWidget);
+
+      container.read(mountSkipsProvider.notifier).record(target.id, const []);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MountSkipLine), findsNothing);
+      expect(
+        find.text(
+          l10n.mountCardSkippedOne('Air', l10n.mountSkipShortReadError),
+        ),
+        findsNothing,
+      );
+      expect(tester.widget<MountPill>(pillOf('target')).skipped, isFalse);
+    });
+  });
 }

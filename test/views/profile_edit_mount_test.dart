@@ -112,7 +112,10 @@ void main() {
     final result = await save(tester, (reason: reason, blocking: false));
     expect(result.popped, [data]);
     expect(find.text('save'), findsNothing);
-    expect(banner(result.printed), contains(reason));
+    expect(
+      banner(result.printed),
+      '${currentAppLocalizations.profileEditMountSkipLead}\n$reason',
+    );
   });
 
   testWidgets('without mounts, or a preflight that cannot run, the edit '
