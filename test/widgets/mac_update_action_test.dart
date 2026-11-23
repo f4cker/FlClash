@@ -235,8 +235,6 @@ void main() {
         isUser: true,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, '查看更新'));
-      await tester.pumpAndSettle();
       await tester.tap(
         find.text(currentAppLocalizations.macUpdateDownloadAndInstall),
       );
@@ -263,12 +261,71 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
-      expect(find.text('查看更新'), findsOneWidget);
+      expect(find.text('下载并安装'), findsOneWidget);
+      expect(find.text('查看更新'), findsNothing);
       expect(calls, isEmpty);
       await tester.tap(find.widgetWithText(TextButton, '取消'));
       await tester.pumpAndSettle();
       await shown;
+      expect(find.byType(AlertDialog), findsNothing);
     });
+
+    testWidgets(
+      'one dialog carries notes and size and its confirm starts the download',
+      (tester) async {
+        await pump(tester);
+        final shown = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('发现新版本'), findsOneWidget);
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        expect(find.textContaining('Published release notes'), findsOneWidget);
+        expect(find.textContaining('大小：'), findsOneWidget);
+        expect(find.widgetWithText(TextButton, '取消'), findsOneWidget);
+        expect(find.text('查看更新'), findsNothing);
+        await tester.tap(find.widgetWithText(TextButton, '下载并安装'));
+        await tester.pumpAndSettle();
+        await shown;
+        expect(find.text('发现新版本'), findsNothing);
+        await settleUntil(tester, () => calls.contains('prepare'));
+        expect(
+          adapter.requested.single.path,
+          endsWith('/Flash-1.0.0-macos-arm64.zip'),
+        );
+        await settleUntil(
+          tester,
+          () => container.read(updateDownloadStateProvider) is UpdateReady,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(currentAppLocalizations.macUpdateLater));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 10));
+      },
+    );
+
+    testWidgets(
+      'automatic check offers one dialog whose cancel stops reminding',
+      (tester) async {
+        await pump(tester);
+        expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+        final shown = action.checkUpdateResultHandle(action.answer);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.textContaining('Published release notes'), findsOneWidget);
+        expect(find.textContaining('大小：'), findsOneWidget);
+        expect(find.text('下载并安装'), findsOneWidget);
+        await tester.tap(find.widgetWithText(TextButton, '不再提示'));
+        await tester.pumpAndSettle();
+        await shown;
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(container.read(appSettingProvider).autoCheckUpdate, isFalse);
+        expect(calls, isEmpty);
+        expect(adapter.requested, isEmpty);
+      },
+    );
 
     testWidgets(
       'whole immediate action rechecks, verifies, installs then exits once',
@@ -502,10 +559,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.textContaining('检查未完成'), findsNothing);
         expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
-        expect(find.text('查看更新'), findsOneWidget);
+        expect(find.text('下载并安装'), findsOneWidget);
         await tester.tap(find.text(currentAppLocalizations.noLongerRemind));
         await tester.pumpAndSettle();
         await shown;
+        expect(find.byType(AlertDialog), findsNothing);
         expect(calls, isEmpty);
       },
     );
