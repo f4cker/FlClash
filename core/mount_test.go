@@ -10,11 +10,13 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
+	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
 	"go.yaml.in/yaml/v3"
 )
@@ -479,6 +481,56 @@ rules:
 	}
 	if currentConfig != running || handleMountState().Report.Revision != "r1" {
 		t.Error("a rejected mounted profile replaced the running config")
+	}
+}
+
+func TestApplyConfigLogsWhyAMountedCandidateWasNotCommitted(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() { setMountState(nil, false, false) })
+	good := writeMountFile(t, home, "base.yaml", `proxy-groups:
+  - {name: G, type: select, include-all-providers: true}
+rules:
+  - MATCH,G
+`)
+	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+	params := &SetupParams{
+		Base:   &SetupBase{Path: good, Overlay: "{}"},
+		Mounts: &MountSetup{Revision: "r1", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
+	}
+	if err := applyConfig(params); err != nil {
+		t.Fatalf("applyConfig = %v", err)
+	}
+	running := currentConfig
+	// The mounted check passes; only the commit onto config.yaml fails.
+	if err := os.Remove(runningConfigPath()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(runningConfigPath(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeMountFile(t, runningConfigPath(), "held", "x")
+	subscriber := log.Subscribe()
+	defer log.UnSubscribe(subscriber)
+
+	params.Mounts = &MountSetup{Revision: "r2", Sources: params.Mounts.Sources}
+	err := applyConfig(params)
+
+	var methodErr *MethodError
+	if !errors.As(err, &methodErr) || methodErr.Code != "mount_rejected" ||
+		!reflect.DeepEqual(methodErr.Details, map[string]string{"outcome": mountOutcomeKept}) {
+		t.Fatalf("applyConfig = %v, want mount_rejected kept", err)
+	}
+	if currentConfig != running {
+		t.Error("a candidate that was not committed replaced the running config")
+	}
+	logged := drainLogStream(t, subscriber, time.Second, func(payload string) bool {
+		return strings.Contains(payload, "mounted profile rejected, the running config stays") &&
+			strings.Contains(payload, methodErr.Message)
+	})
+	if !logged {
+		t.Errorf("the rejection %q was not logged", methodErr.Message)
 	}
 }
 

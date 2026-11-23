@@ -212,6 +212,7 @@ func applyConfig(params *SetupParams) error {
 			return configRejected(err, "not_applied")
 		}
 		if currentConfig != nil && runningConfigKeepable() {
+			logError("mounted profile rejected, the running config stays: %v", err)
 			return mountRejected(err, mountOutcomeKept)
 		}
 	}
