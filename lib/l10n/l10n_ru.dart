@@ -6476,6 +6476,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get trayNotTested => 'Не проверено';
+
+  @override
   String get compositionReviewTitle => 'Review Settings Before First Apply';
 
   @override

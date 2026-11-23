@@ -6479,6 +6479,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get trayNotTested => 'Not tested';
+
+  @override
   String get compositionReviewTitle => 'Review Settings Before First Apply';
 
   @override

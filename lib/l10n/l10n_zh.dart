@@ -5953,6 +5953,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get trayNotTested => '未测速';
+
+  @override
   String get compositionReviewTitle => '首次应用前确认设置';
 
   @override

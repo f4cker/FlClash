@@ -43,6 +43,10 @@ const SUBMENU_MAXIMUM_WIDTH: f64 = 420.0;
 const DETAIL_GAP: f64 = 12.0;
 const ARROW_GAP: f64 = 8.0;
 const DETAIL_MAXIMUM_WIDTH: f64 = 110.0;
+/// A group row's selection up to this wide is never cut, and a longer one is
+/// cut no further: it holds four CJK characters, "DIRECT" or "HK 01" at 13pt.
+const DETAIL_MINIMUM_WIDTH: f64 = 64.0;
+const GROUP_BADGE_MINIMUM_WIDTH: f64 = 60.0;
 const ICON_PNG_MAXIMUM_BYTES: usize = 2_100_000;
 const ICON_MAXIMUM_PIXELS: isize = 4096;
 const PNG_SIGNATURE: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -810,6 +814,15 @@ impl Style {
         }
         measured.min(110.0).max(46.0)
     }
+
+    fn row_badge_width(&self, label: &str, group_row: bool) -> f64 {
+        let width = self.badge_width(label);
+        if group_row {
+            width.max(GROUP_BADGE_MINIMUM_WIDTH)
+        } else {
+            width
+        }
+    }
 }
 
 /// `^\d+\s*ms$`
@@ -945,18 +958,19 @@ define_class!(
 impl ItemView {
     fn preferred_width(content: &ItemContent) -> f64 {
         STYLE.with(|style| {
-            let mut width =
-                style.title_x + text_width(&content.label, &style.font) + style.trailing;
-            if content.detail.is_some() {
-                width += content.detail_width(&style.detail_font) + DETAIL_GAP;
-            }
-            if let Some(badge) = &content.badge {
-                width += style.badge_width(&badge.label) + DETAIL_GAP;
-            }
-            if content.has_submenu {
-                width += style.arrow.size().width + ARROW_GAP;
-            }
-            width.ceil()
+            row_width(
+                style.title_x + style.trailing,
+                text_width(&content.label, &style.font),
+                content
+                    .detail
+                    .is_some()
+                    .then(|| content.detail_width(&style.detail_font)),
+                content
+                    .badge
+                    .as_ref()
+                    .map(|badge| style.row_badge_width(&badge.label, content.has_submenu)),
+                content.has_submenu.then(|| style.arrow.size().width),
+            )
         })
     }
 
@@ -1199,10 +1213,21 @@ impl ItemView {
             );
             trailing_x -= arrow_width + ARROW_GAP;
         }
+        let layout = trailing_layout(
+            trailing_x - style.title_x,
+            text_width(&content.label, &style.font),
+            content
+                .detail
+                .is_some()
+                .then(|| content.detail_width(&style.detail_font)),
+            content
+                .badge
+                .as_ref()
+                .map(|badge| style.row_badge_width(&badge.label, content.has_submenu)),
+            content.has_submenu,
+        );
         if let Some(badge) = &content.badge {
-            let width = style
-                .badge_width(&badge.label)
-                .min((trailing_x - style.title_x).max(46.0));
+            let width = layout.badge;
             let height = (style.badge_font.ascender() - style.badge_font.descender()).ceil() + 4.0;
             let rect = NSRect::new(
                 NSPoint::new(trailing_x - width, (bounds.size.height - height) / 2.0),
@@ -1242,9 +1267,7 @@ impl ItemView {
             } else {
                 NSColor::disabledControlTextColor()
             };
-            let width = content
-                .detail_width(&style.detail_font)
-                .min((trailing_x - style.title_x).max(0.0));
+            let width = layout.detail;
             draw_text(
                 detail,
                 trailing_x - width,
@@ -1268,6 +1291,67 @@ impl ItemView {
             NSLineBreakMode::ByTruncatingTail,
         );
     }
+}
+
+/// Widths along a row's trailing edge, given [room] from the title's start to
+/// the arrow or edge. On a group row the badge and title stay whole and the
+/// selection truncates first, down to [DETAIL_MINIMUM_WIDTH].
+#[derive(Debug, PartialEq)]
+struct TrailingLayout {
+    badge: f64,
+    detail: f64,
+    title: f64,
+}
+
+fn trailing_layout(
+    mut room: f64,
+    title: f64,
+    detail: Option<f64>,
+    badge: Option<f64>,
+    has_submenu: bool,
+) -> TrailingLayout {
+    let badge_width = badge.map_or(0.0, |width| {
+        let width = width.min(room.max(46.0));
+        room -= width + DETAIL_GAP;
+        width
+    });
+    let detail_width = detail.map_or(0.0, |width| {
+        let width = if has_submenu && badge.is_some() {
+            width.min((room - title - DETAIL_GAP).max(DETAIL_MINIMUM_WIDTH))
+        } else {
+            width
+        }
+        .min(room.max(0.0));
+        room -= width + DETAIL_GAP;
+        width
+    });
+    TrailingLayout {
+        badge: badge_width,
+        detail: detail_width,
+        title: room.max(0.0),
+    }
+}
+
+/// A group row always fits its badge, title and selection cut to the minimum.
+fn row_width(
+    edges: f64,
+    title: f64,
+    detail: Option<f64>,
+    badge: Option<f64>,
+    arrow: Option<f64>,
+) -> f64 {
+    let detail_room = detail.map_or(0.0, |width| width + DETAIL_GAP);
+    let trailing = match (badge, arrow) {
+        (Some(badge), Some(_)) => detail_room.max(
+            badge
+                + DETAIL_GAP
+                + detail.map_or(0.0, |width| width.min(DETAIL_MINIMUM_WIDTH) + DETAIL_GAP),
+        ),
+        (Some(badge), None) => detail_room + badge + DETAIL_GAP,
+        (None, _) => detail_room,
+    };
+    let arrow = arrow.map_or(0.0, |width| width + ARROW_GAP);
+    (edges + title + trailing + arrow).ceil()
 }
 
 // ---------------------------------------------------------------------------
@@ -1833,8 +1917,9 @@ fn draw_symbol(image: &NSImage, x: f64, color: &NSColor, max_width: f64, bounds:
 mod tests {
     use super::topology::{grouped, matches, retained_enabled, retained_status, shared_index};
     use super::{
-        is_delay, item_enabled, segment_track, takes_key, text_width, Entry, ItemContent, Kind,
-        DETAIL_MAXIMUM_WIDTH,
+        is_delay, item_enabled, row_width, segment_track, takes_key, text_width, trailing_layout,
+        Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP, DETAIL_GAP,
+        DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH, GROUP_BADGE_MINIMUM_WIDTH,
     };
     use objc2_app_kit::NSEventModifierFlags;
     use objc2_app_kit::NSFont;
@@ -2090,6 +2175,105 @@ mod tests {
         desired[0].enabled = false;
         desired[0].detail = Some("Testing".into());
         assert!(matches(&current, &desired));
+    }
+
+    const EDGES: f64 = 54.0;
+    const TITLE: f64 = 52.0;
+    const ARROW: f64 = 10.0;
+    const BADGE: f64 = 60.0;
+
+    fn menu_width(details: &[f64], badge: Option<f64>) -> f64 {
+        details
+            .iter()
+            .map(|&detail| row_width(EDGES, TITLE, Some(detail), badge, Some(ARROW)))
+            .fold(0.0, f64::max)
+    }
+
+    fn layout_in(width: f64, detail: f64) -> TrailingLayout {
+        let room = width - EDGES - ARROW - ARROW_GAP;
+        trailing_layout(room, TITLE, Some(detail), Some(BADGE), true)
+    }
+
+    #[test]
+    fn short_selections_stay_whole_and_widen_the_menu_by_the_badge() {
+        let details = [38.0, 46.0, 52.0];
+        let before = menu_width(&details, None);
+        let after = menu_width(&details, Some(BADGE));
+        assert_eq!(after - before, BADGE + DETAIL_GAP);
+        for detail in details {
+            let layout = layout_in(after, detail);
+            assert_eq!(layout.detail, detail);
+            assert_eq!(layout.badge, BADGE);
+            assert!(layout.title >= TITLE);
+        }
+    }
+
+    #[test]
+    fn long_selections_are_cut_rather_than_widening_the_menu() {
+        let at_minimum = menu_width(&[DETAIL_MINIMUM_WIDTH], Some(BADGE));
+        let long = menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE));
+        assert_eq!(long, at_minimum);
+        let before = menu_width(&[DETAIL_MAXIMUM_WIDTH], None);
+        assert_eq!(
+            long - before,
+            BADGE + DETAIL_GAP + DETAIL_MINIMUM_WIDTH - DETAIL_MAXIMUM_WIDTH
+        );
+        let layout = layout_in(long, DETAIL_MAXIMUM_WIDTH);
+        assert_eq!(
+            layout,
+            TrailingLayout {
+                badge: BADGE,
+                detail: DETAIL_MINIMUM_WIDTH,
+                title: TITLE
+            }
+        );
+    }
+
+    #[test]
+    fn mixed_selections_keep_short_names_whole_and_badges_aligned() {
+        let width = menu_width(&[38.0, DETAIL_MAXIMUM_WIDTH], Some(BADGE));
+        let short = layout_in(width, 38.0);
+        let long = layout_in(width, DETAIL_MAXIMUM_WIDTH);
+        assert_eq!(short.detail, 38.0);
+        assert_eq!(long.detail, DETAIL_MINIMUM_WIDTH);
+        assert_eq!(short.badge, long.badge);
+        let wider = layout_in(width + 20.0, DETAIL_MAXIMUM_WIDTH);
+        assert_eq!(wider.detail, DETAIL_MINIMUM_WIDTH + 20.0);
+    }
+
+    #[test]
+    fn group_row_badges_share_a_width_and_member_badges_keep_theirs() {
+        let style = Style::current();
+        for label in ["38 ms", "未测速", "超时", "测试中"] {
+            assert_eq!(
+                style.row_badge_width(label, true),
+                GROUP_BADGE_MINIMUM_WIDTH
+            );
+        }
+        assert!(style.row_badge_width("超时", false) < GROUP_BADGE_MINIMUM_WIDTH);
+        assert_eq!(style.row_badge_width("38 ms", false), 60.0);
+    }
+
+    #[test]
+    fn a_row_too_narrow_for_its_badge_gets_no_negative_widths() {
+        for room in [-20.0, 0.0, 30.0] {
+            let layout = trailing_layout(room, TITLE, Some(40.0), Some(BADGE), true);
+            assert!(layout.badge >= 0.0 && layout.detail >= 0.0 && layout.title >= 0.0);
+            assert_eq!(layout.detail, 0.0);
+            assert_eq!(layout.title, 0.0);
+            let plain = trailing_layout(room, TITLE, Some(40.0), None, false);
+            assert!(plain.detail >= 0.0 && plain.title >= 0.0);
+        }
+    }
+
+    #[test]
+    fn rows_without_a_group_badge_keep_the_detail_first() {
+        let layout = trailing_layout(150.0, 200.0, Some(100.0), None, true);
+        assert_eq!(layout.detail, 100.0);
+        assert_eq!(layout.title, 150.0 - 100.0 - DETAIL_GAP);
+        let member = trailing_layout(150.0, 200.0, Some(100.0), Some(60.0), false);
+        assert_eq!(member.badge, 60.0);
+        assert_eq!(member.detail, 150.0 - 60.0 - DETAIL_GAP);
     }
 
     #[test]

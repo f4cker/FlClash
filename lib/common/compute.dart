@@ -62,6 +62,9 @@ const _unprobeableProxyTypes = {
   'Dns',
 };
 
+bool isUnprobeableProxyType(String? type) =>
+    _unprobeableProxyTypes.contains(type);
+
 List<Group> computeHideTimeout({
   required List<Group> groups,
   required List<Group> allGroups,
@@ -112,20 +115,24 @@ SelectedProxyState getRealSelectedProxyState(
   required Map<String, String> selectedMap,
 }) {
   if (state.proxyName.isEmpty) return state;
-  final group = groups.getGroup(state.proxyName);
-  final newState = state.copyWith(group: true);
-  if (group == null) return newState;
-  final currentSelectedName = group.getCurrentSelectedName(
-    selectedMap[newState.proxyName] ?? '',
-  );
-  if (currentSelectedName.isEmpty) {
-    return newState;
+  final visited = <String>{};
+  var current = state;
+  while (true) {
+    final group = groups.getGroup(current.proxyName);
+    final newState = current.copyWith(group: true);
+    // Groups that select each other stop at the first one seen again.
+    if (group == null || !visited.add(group.name)) return newState;
+    final currentSelectedName = group.getCurrentSelectedName(
+      selectedMap[newState.proxyName] ?? '',
+    );
+    if (currentSelectedName.isEmpty) {
+      return newState;
+    }
+    current = newState.copyWith(
+      proxyName: currentSelectedName,
+      testUrl: group.testUrl,
+    );
   }
-  return getRealSelectedProxyState(
-    newState.copyWith(proxyName: currentSelectedName, testUrl: group.testUrl),
-    groups: groups,
-    selectedMap: selectedMap,
-  );
 }
 
 SelectedProxyState computeRealSelectedProxyState(

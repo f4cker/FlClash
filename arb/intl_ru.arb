@@ -2127,6 +2127,7 @@
   "trayTestLatency": "Проверить задержку",
   "trayReject": "Отклонить",
   "trayLatencyBadge": "{value} ms",
+  "trayNotTested": "Не проверено",
   "compositionReviewTitle": "Review Settings Before First Apply",
   "compositionBaselineUnknown": "The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.",
   "compositionCandidateNote": "Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.",

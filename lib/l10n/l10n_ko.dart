@@ -6358,6 +6358,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get trayNotTested => '측정 안 됨';
+
+  @override
   String get compositionReviewTitle => 'Review Settings Before First Apply';
 
   @override

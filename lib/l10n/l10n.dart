@@ -10854,6 +10854,12 @@ abstract class AppLocalizations {
   /// **'{value} ms'**
   String trayLatencyBadge(Object value);
 
+  /// No description provided for @trayNotTested.
+  ///
+  /// In en, this message translates to:
+  /// **'Not tested'**
+  String get trayNotTested;
+
   /// No description provided for @compositionReviewTitle.
   ///
   /// In en, this message translates to:
