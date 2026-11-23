@@ -3,7 +3,6 @@
 //   MITM_CORE_CA_SCREENSHOTS=<dir> flutter test \
 //     test/views/mitm_core_ca_states_test.dart
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/common/restore_mount_plan.dart';
@@ -28,38 +27,9 @@ import '../helpers/test_app.dart';
 
 final _outDir = Platform.environment['MITM_CORE_CA_SCREENSHOTS'];
 final _shoot = _outDir != null && _outDir!.isNotEmpty;
-const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
-
-List<ByteData> _collectionFaces(Uint8List bytes) {
-  final data = ByteData.sublistView(bytes);
-  final faces = <ByteData>[];
-  for (var face = 0; face < data.getUint32(8); face++) {
-    final header = data.getUint32(12 + face * 4);
-    final tables = data.getUint16(header + 4);
-    final out = BytesBuilder()..add(bytes.sublist(header, header + 12));
-    final body = BytesBuilder();
-    var at = 12 + tables * 16;
-    for (var i = 0; i < tables; i++) {
-      final entry = header + 12 + i * 16;
-      final offset = data.getUint32(entry + 8);
-      final length = data.getUint32(entry + 12);
-      final record = ByteData(16)
-        ..setUint32(0, data.getUint32(entry))
-        ..setUint32(4, data.getUint32(entry + 4))
-        ..setUint32(8, at)
-        ..setUint32(12, length);
-      out.add(record.buffer.asUint8List());
-      final padded = (length + 3) & ~3;
-      body
-        ..add(bytes.sublist(offset, offset + length))
-        ..add(Uint8List(padded - length));
-      at += padded;
-    }
-    out.add(body.takeBytes());
-    faces.add(ByteData.sublistView(out.takeBytes()));
-  }
-  return faces;
-}
+// Any other family falls back to Ahem, which draws every glyph as a bar.
+const _loadedFamilies = {null, 'Roboto', 'JetBrainsMono'};
+const _unicodeFont = '/System/Library/Fonts/Supplemental/Arial Unicode.ttf';
 
 class _FixedLease extends MitmCoreCaLease {
   _FixedLease(this.trust);
@@ -155,12 +125,19 @@ void main() {
     if (!_shoot) return;
     WidgetsApp.debugAllowBannerOverride = false;
     final loader = FontLoader('Roboto');
-    for (final face in _collectionFaces(
-      File(_cjkCollection).readAsBytesSync(),
-    )) {
-      loader.addFont(Future.value(face));
-    }
+    loader.addFont(
+      Future.value(ByteData.sublistView(File(_unicodeFont).readAsBytesSync())),
+    );
     await loader.load();
+    final mono = FontLoader('JetBrainsMono')
+      ..addFont(
+        Future.value(
+          ByteData.sublistView(
+            File('assets/fonts/JetBrainsMono-Regular.ttf').readAsBytesSync(),
+          ),
+        ),
+      );
+    await mono.load();
     Directory(_outDir!).createSync(recursive: true);
   });
 
@@ -222,6 +199,19 @@ void main() {
     if (!_shoot) return;
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final families = <String?>{};
+    void visit(RenderObject node) {
+      if (node is RenderParagraph) {
+        node.text.visitChildren((span) {
+          families.add(span.style?.fontFamily);
+          return true;
+        });
+      }
+      node.visitChildren(visit);
+    }
+
+    visit(render);
+    expect(families.difference(_loadedFamilies), isEmpty, reason: name);
     await tester.runAsync(() async {
       final image = await render.toImage(
         pixelRatio: tester.view.devicePixelRatio,
