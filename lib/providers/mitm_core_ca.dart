@@ -118,7 +118,12 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
         ),
       ),
       (previous, next) {
-        if (previous?.ca != null && (!next.enable || next.ca != previous?.ca)) {
+        // The switch leased the new CA before naming it: keep that one.
+        final adopted =
+            _loaded?.connection == _connection &&
+            _sameFingerprint(_loaded?.fingerprint, next.ca);
+        if (previous?.ca != null &&
+            (!next.enable || (next.ca != previous?.ca && !adopted))) {
           unawaited(stopSigning());
         }
         if (next.ca != previous?.ca ||
@@ -367,9 +372,13 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
     }
   }
 
+  /// The migration loaded [fingerprint] in the Core's slot.
+  void loadedNow(String fingerprint) =>
+      _loaded = (connection: _connection, fingerprint: fingerprint);
+
   /// The migration leased [fingerprint] under this connection: no reload.
   void adopt(String fingerprint) {
-    _loaded = (connection: _connection, fingerprint: fingerprint);
+    loadedNow(fingerprint);
     state = MitmCoreCaTrust(MitmCoreCaStatus.leased, leased: fingerprint);
     _hold(true);
     _kick();
@@ -563,6 +572,7 @@ class MitmCaMigration extends Notifier<bool> {
           )) {
         return MitmMigrationOutcome.failed;
       }
+      lease.loadedNow(pending.fingerprint);
       final current = _mitm.coreCa;
       final retired =
           _sameFingerprint(current?.fingerprint, pending.fingerprint)

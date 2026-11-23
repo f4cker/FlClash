@@ -522,6 +522,35 @@ void main() {
     });
 
     test(
+      'a switch from one Core CA to another keeps the new one loaded',
+      () async {
+        passphrases.values[_pendingFp] = 'pending secret';
+        setMitm(
+          coreMitm().copyWith(
+            pendingCaP12: _pendingP12,
+            pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
+          ),
+        );
+        await started();
+        stops = 0;
+        expect(await migration().verify(), MitmMigrationOutcome.switched);
+        await settle();
+        expect(stops, 0);
+        expect(loaded.map((secret) => secret.fingerprint), [
+          _coreFp,
+          _pendingFp,
+        ]);
+        expect(mitm().coreCa?.fingerprint, _pendingFp);
+        expect(mitm().retiredCaCertificate?.fingerprint, _coreFp);
+        expect(
+          container.read(mitmSetupProvider)!['ca-fingerprint'],
+          _pendingFp,
+        );
+        expect(container.read(mitmSetupProvider)!['signer'], 'core');
+      },
+    );
+
+    test(
       'importing the CA in use is refused and keeps its passphrase',
       () async {
         setMitm(coreMitm());
