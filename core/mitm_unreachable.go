@@ -7,16 +7,18 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
 	N "github.com/metacubex/mihomo/common/net"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/tunnel"
 )
 
 // A host a request script or Map Local rule names (Script Hub's script.hub,
 // which does not exist) is still decrypted when its dial or TLS fails: the
 // rules answer what they can, the rest gets a 502, and the failed site is
-// never written to. Every other host fails as before.
+// never written to. Every other host, and any bad certificate, fails as before.
 
 const mitmUnreachableText = "Flash: the site could not be reached and no script answered.\n"
 
@@ -32,18 +34,33 @@ func (c *mitmUnreachableConn) ProviderChains() C.Chain         { return nil }
 func (c *mitmUnreachableConn) AppendToChains(a C.ProxyAdapter) { c.chain = append(c.chain, a.Name()) }
 func (c *mitmUnreachableConn) RemoteDestination() string       { return "" }
 
+var mitmSiteless sync.Map // host by flow, until the tunnel runs its interceptor or asks for a stand-in
+
+func mitmOfferStandIn(metadata *C.Metadata, intercept tunnel.TCPInterceptor, host string) tunnel.TCPInterceptor {
+	if intercept == nil || host == "" {
+		return intercept
+	}
+	mitmSiteless.Store(metadata, host)
+	return func(client *N.BufferedConn, remote C.Conn) {
+		mitmSiteless.Delete(metadata)
+		intercept(client, remote)
+	}
+}
+
 func mitmUnreachableStandIn(metadata *C.Metadata, proxy C.Proxy) C.Conn {
-	host := normalizeMitmHost(metadata.Host)
+	chosen, ok := mitmSiteless.LoadAndDelete(metadata)
+	if !ok {
+		return nil
+	}
+	host := chosen.(string)
 	engine := mitmRewrite.Load()
 	switch {
-	case host == "":
-		return nil
 	case metadata.DstPort == mitmHTTPSPort:
 		if !mitmDecrypts(host) || mitmPausedFor(host) || !engine.answersWithoutSite(host) {
 			return nil
 		}
 	case metadata.DstPort == mitmPlainHTTPPort:
-		if !mitmPlainWanted(metadata) || !mitmPlainAnswersWithoutSite(host) {
+		if !mitmPlainWanted(metadata) || !engine.forcesHTTPEngine(host) || !engine.answersWithoutSite(host) {
 			return nil
 		}
 	default:
@@ -54,6 +71,20 @@ func mitmUnreachableStandIn(metadata *C.Metadata, proxy C.Proxy) C.Conn {
 	_ = near.Close()
 	log.Infoln("[MITM] the site could not be reached; its rules answer instead")
 	return &mitmUnreachableConn{ExtendedConn: N.NewExtendedConn(near), chain: C.Chain{proxy.Name()}}
+}
+
+func mitmCloseUnderTracker(remote net.Conn) {
+	var conn any = remote
+	for range 8 {
+		wrapper, ok := conn.(interface{ Upstream() any })
+		if !ok {
+			break
+		}
+		conn = wrapper.Upstream()
+	}
+	if closer, ok := conn.(io.Closer); ok {
+		_ = closer.Close()
+	}
 }
 
 func mitmUnreachable(remote net.Conn) bool {

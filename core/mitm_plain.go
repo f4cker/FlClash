@@ -44,9 +44,9 @@ func mitmPlainWanted(metadata *C.Metadata) bool {
 	return engine != nil && (engine.plain.mayMatch(host) || engine.forcesHTTPEngine(host) && engine.mayRewrite(host))
 }
 
-func mitmPlainIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
+func mitmPlainChoose(conn *N.BufferedConn, metadata *C.Metadata) (tunnel.TCPInterceptor, string) {
 	if !mitmPlainWanted(metadata) {
-		return nil
+		return nil, ""
 	}
 	host := normalizeMitmHost(metadata.Host)
 	wait := mitmFirstByteWait
@@ -54,11 +54,15 @@ func mitmPlainIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPIn
 		wait -= mitmTunnelPeekWait
 	}
 	if !mitmPlainFirstRequest(conn, host, wait) {
-		return nil
+		return nil, ""
+	}
+	siteless := ""
+	if mitmPlainAnswersWithoutSite(host) {
+		siteless = host
 	}
 	return func(client *N.BufferedConn, remote C.Conn) {
 		serveMitmPlain(client, remote, host)
-	}
+	}, siteless
 }
 
 // Whether the flow's first request is one the session serves. Peeks only.

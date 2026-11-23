@@ -28,6 +28,11 @@ const scriptHubLine = `Script Hub: 前端 = type=http-request,pattern=^https?:\/
 
 const scriptHubSource = `$done({response: {status: 200, headers: {'Content-Type': 'text/html'}, body: 'hub ' + $request.url}})`
 
+// A script that rewrites the request and lets it go on to the site.
+const scriptPassLine = `pass = type=http-request,pattern=^https?:\/\/script\.hub\/pass,script-path=PASS`
+
+const scriptPassSource = `$done({headers: Object.assign($request.headers, {'X-Script': 'pass'})})`
+
 // DIRECT that cannot resolve any name, failing at once as a lookup with no
 // address does, so the tunnel does not retry.
 type mitmNoSuchHost struct{ C.ProxyAdapter }
@@ -40,9 +45,12 @@ func withUnreachableMitm(t *testing.T, setup MitmSetup, scripts ...string) *x509
 	t.Helper()
 	app := newFakeMitmApp(t)
 	withMitmState(t)
-	names := withMitmScripts(t, scriptHubSource)
+	names := withMitmScripts(t, scriptHubSource, scriptPassSource)
 	for i, line := range scripts {
-		setup.Script = append(setup.Script, MitmScriptRule{ID: fmt.Sprint(i), Line: line + names[0]})
+		if strings.HasSuffix(line, "=") {
+			line += names[0]
+		}
+		setup.Script = append(setup.Script, MitmScriptRule{ID: fmt.Sprint(i), Line: strings.Replace(line, "PASS", names[1], 1)})
 	}
 	setup.Enable, setup.DecryptTLS, setup.CAFingerprint = true, true, app.fingerprint()
 	previousRewrite := mitmRewrite.Load()
@@ -123,7 +131,11 @@ func TestMitmUnreachableHostIsAnsweredByItsScript(t *testing.T) {
 	oldSend := sendMitmConnection
 	sendMitmConnection = func(event *MitmConnection) bool { events <- *event; return true }
 	t.Cleanup(func() { sendMitmConnection = oldSend })
-	raw, done := unreachableFlow(t, "script.hub", mitmHTTPSPort)
+	failures := make(chan string, 4)
+	oldNotify := tunnel.DefaultDialFailureNotify
+	tunnel.DefaultDialFailureNotify = func(metadata *C.Metadata, _ C.Rule, _ C.Proxy, _ error) { failures <- metadata.Host }
+	t.Cleanup(func() { tunnel.DefaultDialFailureNotify = oldNotify })
+	raw, done := unreachableFlow(t, "SCRIPT.HUB.", mitmHTTPSPort)
 	client := tls.Client(raw, &tls.Config{ServerName: "script.hub", RootCAs: roots, NextProtos: []string{"h2", "http/1.1"}})
 	if err := client.Handshake(); err != nil {
 		t.Fatalf("the client did not complete TLS: %v", err)
@@ -135,8 +147,11 @@ func TestMitmUnreachableHostIsAnsweredByItsScript(t *testing.T) {
 	if status, body := unreachableGet(t, client, reader, "script.hub", "/"); status != 200 || body != "hub https://script.hub/" {
 		t.Fatalf("script answer %d %q", status, body)
 	}
-	if !trackedHost("script.hub") {
+	if !trackedHost("SCRIPT.HUB.") {
 		t.Fatal("the request list has no connection for the answered host")
+	}
+	if host := <-failures; host != "SCRIPT.HUB." {
+		t.Fatalf("dial failure notified for %q", host)
 	}
 	if status, body := unreachableGet(t, client, reader, "script.hub", "/nothing"); status != http.StatusBadGateway || body != mitmUnreachableText {
 		t.Fatalf("unanswered %d %q", status, body)
@@ -165,7 +180,7 @@ func TestMitmUnreachableHostWithoutRulesStillCloses(t *testing.T) {
 // The dial succeeds but TLS to the site does not: the script still answers,
 // and nothing past the failed handshake is written to the site.
 func TestMitmUnreachableTLSFailureIsAnsweredByItsScript(t *testing.T) {
-	roots := withUnreachableMitm(t, MitmSetup{Hostname: []string{"script.hub"}}, scriptHubLine)
+	roots := withUnreachableMitm(t, MitmSetup{Hostname: []string{"script.hub"}}, scriptHubLine, scriptPassLine)
 	clientRaw, proxyRaw := mitmLoopbackPair(t)
 	defer clientRaw.Close()
 	defer proxyRaw.Close()
@@ -200,10 +215,142 @@ func TestMitmUnreachableTLSFailureIsAnsweredByItsScript(t *testing.T) {
 	if status, body := unreachableGet(t, client, reader, "script.hub", "/edit/x"); status != 200 || body != "hub https://script.hub/edit/x" {
 		t.Fatalf("script answer %d %q", status, body)
 	}
+	if status, body := unreachableGet(t, client, reader, "script.hub", "/pass"); status != http.StatusBadGateway || body != mitmUnreachableText {
+		t.Fatalf("a request the script passed on %d %q", status, body)
+	}
+	// The failed site is let go of while the session goes on.
+	select {
+	case n := <-siteRead:
+		if n != 0 {
+			t.Fatalf("the failed site was sent %d bytes past its ClientHello", n)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("the failed site is still held open")
+	}
 	_ = client.Close()
 	<-served
-	if n := <-siteRead; n != 0 {
-		t.Fatalf("the failed site was sent %d bytes past its ClientHello", n)
+}
+
+func TestMitmUnreachableCertificateFailureStillCloses(t *testing.T) {
+	withUnreachableMitm(t, MitmSetup{Hostname: []string{"script.hub"}}, scriptHubLine)
+	cert, _ := mitmTestIdentity(t)
+	oldRoots := mitmUpstreamRoots
+	mitmUpstreamRoots = x509.NewCertPool()
+	t.Cleanup(func() { mitmUpstreamRoots = oldRoots })
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	go func() {
+		c, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		_ = c.SetDeadline(time.Now().Add(3 * time.Second))
+		_ = tls.Server(c, &tls.Config{Certificates: []tls.Certificate{cert}}).Handshake()
+	}()
+	remote, err := net.DialTimeout("tcp", listener.Addr().String(), 3*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remote.Close()
+	clientRaw, mitmClient := net.Pipe()
+	defer clientRaw.Close()
+	_ = clientRaw.SetDeadline(time.Now().Add(3 * time.Second))
+	outcome := serveMitm(mitmClient, mitmIDConn{remote}, "script.hub", &mitmLeaf{cert: cert}, mitmState.Load())
+	if outcome != mitmOutcomeUpstreamCertificate {
+		t.Fatalf("outcome %q", outcome)
+	}
+	_ = mitmClient.Close()
+	if n, _ := clientRaw.Read(make([]byte, 1)); n != 0 {
+		t.Fatal("the client got TLS from a site whose certificate failed")
+	}
+}
+
+// HTTP/2 alone cannot be answered without the site: the flow fails as before.
+func TestMitmUnreachableHTTP2OnlyClientStillCloses(t *testing.T) {
+	roots := withUnreachableMitm(t, MitmSetup{Hostname: []string{"script.hub"}}, scriptHubLine)
+	raw, done := unreachableFlow(t, "script.hub", mitmHTTPSPort)
+	client := tls.Client(raw, &tls.Config{ServerName: "script.hub", RootCAs: roots, NextProtos: []string{"h2"}})
+	if err := client.Handshake(); err == nil {
+		t.Fatal("an HTTP/2-only client completed TLS without the site")
+	}
+	<-done
+	if trackedHost("script.hub") {
+		t.Fatal("a failed dial left a connection in the request list")
+	}
+}
+
+func TestMitmStandInOnlyForTheChosenDecryption(t *testing.T) {
+	withUnreachableMitm(t, MitmSetup{Hostname: []string{"script.hub"}}, scriptHubLine)
+	proxy := adapter.NewProxy(outbound.NewDirect())
+	offer := func() *C.Metadata {
+		metadata := &C.Metadata{Host: "script.hub", DstPort: mitmHTTPSPort}
+		mitmOfferStandIn(metadata, func(*N.BufferedConn, C.Conn) {}, "script.hub")
+		return metadata
+	}
+	if mitmUnreachableStandIn(&C.Metadata{Host: "script.hub", DstPort: mitmHTTPSPort}, proxy) != nil {
+		t.Fatal("a stand-in for a flow no decrypting interceptor took")
+	}
+	metadata := offer()
+	if mitmUnreachableStandIn(metadata, proxy) == nil || mitmUnreachableStandIn(metadata, proxy) != nil {
+		t.Fatal("a chosen flow gets one stand-in")
+	}
+	mitmPaused.Store(&mitmPause{runtime: mitmState.Load(), until: time.Now().Add(time.Minute), reason: "test"})
+	if mitmUnreachableStandIn(offer(), proxy) != nil {
+		t.Fatal("a stand-in while decryption is paused")
+	}
+	mitmPaused.Store(nil)
+	mitmState.Store(&mitmRuntime{})
+	if mitmUnreachableStandIn(offer(), proxy) != nil {
+		t.Fatal("a stand-in while MITM is off")
+	}
+}
+
+func TestMitmAnsweringRulesNameTheirHost(t *testing.T) {
+	setup := MitmSetup{Hostname: []string{"script.hub"}, Rewrite: []MitmRewriteRule{
+		{ID: "m", Section: mitmSectionMap, Line: `^https:\/\/local\.example\/ data-type=text data="hi"`},
+	}}
+	withUnreachableMitm(t, setup, `any = type=http-request,pattern=^https:\/\/.*\/x,script-path=`)
+	engine := mitmRewrite.Load()
+	if engine.answersWithoutSite("other.example") || engine.answersWithoutSite("script.hub") {
+		t.Fatal("a pattern naming no host answers for every host")
+	}
+	if !engine.answersWithoutSite("local.example") {
+		t.Fatal("Map Local alone does not answer for its host")
+	}
+}
+
+func TestMitmForceHTTPEngineIgnoresEveryHost(t *testing.T) {
+	matcher := compileMitmHTTPEngineHosts([]string{"*", " ", "*:80", "a.example:80"})
+	if matcher.Match("b.example") || !matcher.Match("a.example") {
+		t.Fatal("force-http-engine-hosts took every host")
+	}
+}
+
+func TestMitmLongScriptsShareFewSlots(t *testing.T) {
+	oldWait := mitmScriptSlotWait
+	mitmScriptSlotWait = 50 * time.Millisecond
+	t.Cleanup(func() { mitmScriptSlotWait = oldWait })
+	for range cap(mitmScriptLongSlots) {
+		mitmScriptLongSlots <- struct{}{}
+	}
+	t.Cleanup(func() {
+		for range cap(mitmScriptLongSlots) {
+			<-mitmScriptLongSlots
+		}
+	})
+	source := `$done({response: {body: 'ok'}})`
+	in := &mitmScriptInput{url: "https://a.com/", method: "GET", header: http.Header{}}
+	long := testScript(t, `l = type=http-request,pattern=^https,timeout=30,script-path=FILE`, source)
+	if result := long.run(in); result.skip != mitmSkipScriptBusy {
+		t.Fatalf("a long run past the long slots: %+v", result)
+	}
+	short := testScript(t, `s = type=http-request,pattern=^https,timeout=10,script-path=FILE`, source)
+	if result := short.run(in); result.out == nil || result.out.local == nil {
+		t.Fatalf("a short run while the long slots are taken: %+v", result)
 	}
 }
 
@@ -216,6 +363,17 @@ func TestMitmForceHTTPEngineScriptsPlainHTTPWithoutSite(t *testing.T) {
 	}
 	if status, body := unreachableGet(t, raw, reader, "script.hub", "/nothing"); status != http.StatusBadGateway || body != mitmUnreachableText {
 		t.Fatalf("unanswered %d %q", status, body)
+	}
+	if _, err := io.WriteString(raw, "POST /form HTTP/1.1\r\nHost: script.hub\r\nContent-Length: 5\r\n\r\nhello"); err != nil {
+		t.Fatal(err)
+	}
+	if resp, err := http.ReadResponse(reader, nil); err != nil || resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("POST %v %v", resp, err)
+	} else {
+		_, _ = io.Copy(io.Discard, resp.Body)
+	}
+	if status, _ := unreachableGet(t, raw, reader, "script.hub", "/"); status != 200 {
+		t.Fatalf("after a POST %d", status)
 	}
 	_ = raw.Close()
 	<-done

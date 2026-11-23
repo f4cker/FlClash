@@ -465,17 +465,24 @@ func mitmIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterce
 	if !mitmIndicatorAvailable {
 		return nil
 	}
-	return mitmInterceptEligible(conn, metadata)
+	intercept, siteless := mitmInterceptChoose(conn, metadata)
+	return mitmOfferStandIn(metadata, intercept, siteless)
 }
 
 // Split out only so socket tests can exercise the real selector while the
 // production hook remains hard-gated until the always-visible indicator.
 func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
+	intercept, _ := mitmInterceptChoose(conn, metadata)
+	return intercept
+}
+
+// The interceptor, and the host it may serve without the site, if any.
+func mitmInterceptChoose(conn *N.BufferedConn, metadata *C.Metadata) (tunnel.TCPInterceptor, string) {
 	if metadata.DstPort == mitmPlainHTTPPort {
-		return mitmPlainIntercept(conn, metadata)
+		return mitmPlainChoose(conn, metadata)
 	}
 	if !mitmInterceptWanted(metadata) {
-		return nil
+		return nil, ""
 	}
 	runtime := mitmState.Load()
 	// The first packet is waited for at most mitmFirstByteWait in all; the
@@ -491,7 +498,7 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 		// The host is listed, or (IP-only flow) unknown: in both cases this
 		// is an explicit, indeterminate passthrough, never a silent one. An
 		// IP-only flow to an unlisted site can therefore warn too.
-		return passThroughUnsupported
+		return passThroughUnsupported, ""
 	}
 	if err != nil {
 		// A listed HTTPS host whose client sent nothing within the wait
@@ -499,27 +506,27 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 		var timeout interface{ Timeout() bool }
 		if metadata.Host != "" && conn.Reader().Buffered() == 0 &&
 			errors.As(err, &timeout) && timeout.Timeout() {
-			return passThroughUnsupported
+			return passThroughUnsupported, ""
 		}
-		return nil
+		return nil, ""
 	}
 	if hello.serverName == "" {
 		if metadata.Host == "" {
-			return nil
+			return nil, ""
 		}
-		return mitmPassThroughReporting(mitmOutcomeMissingSNI)
+		return mitmPassThroughReporting(mitmOutcomeMissingSNI), ""
 	}
 	host := normalizeMitmHost(hello.serverName)
 	if !runtime.hosts.Match(host) || (metadata.Host != "" && normalizeMitmHost(metadata.Host) != host) {
-		return nil
+		return nil, ""
 	}
 	if !hello.decryptable(runtime.http2()) {
-		return mitmPassThroughReporting(mitmOutcomeHTTP2Only)
+		return mitmPassThroughReporting(mitmOutcomeHTTP2Only), ""
 	}
 	// A pause is reported only for the host as listed now; the relay is the
 	// same untouched one a nil result gets.
 	if mitmPausedFor(host) {
-		return mitmPausedPassThrough(host)
+		return mitmPausedPassThrough(host), ""
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), mitmConnectionLeafWait)
 	defer cancel()
@@ -527,18 +534,22 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	if err != nil {
 		pauseMitm(runtime, host, err)
 		if mitmState.Load() != runtime {
-			return nil
+			return nil, ""
 		}
-		return mitmPausedPassThrough(host)
+		return mitmPausedPassThrough(host), ""
 	}
 	if mitmState.Load() != runtime || !runtime.hosts.Match(host) {
-		return nil
+		return nil, ""
 	}
 	// Do not mark the tracker as decrypted before TLS commits; this may
 	// still take the untouched precommit passthrough path.
+	siteless := ""
+	if mitmClientProtos(hello.alpn, "") != nil && mitmRewrite.Load().answersWithoutSite(host) {
+		siteless = host
+	}
 	return func(client *N.BufferedConn, remote C.Conn) {
 		mitmServeSelected(client, remote, host, leaf, runtime, hello.alpn)
-	}
+	}, siteless
 }
 
 // No bytes have been sent upstream at registration; rejection is the last
@@ -619,15 +630,14 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	ctx, cancel := context.WithTimeout(context.Background(), mitmHandshakeWait)
 	defer cancel()
 	if err := upstream.HandshakeContext(ctx); err != nil {
-		failed := mitmOutcomeUpstreamFailed
 		var verification *tls.CertificateVerificationError
 		if errors.As(err, &verification) {
 			log.Warnln("[MITM] the site's certificate failed verification")
-			failed = mitmOutcomeUpstreamCertificate
-		} else {
-			log.Warnln("[MITM] TLS to the site failed")
+			return mitmOutcomeUpstreamCertificate
 		}
-		return serveMitmWithoutSite(client, remote, host, leaf, runtime, clientALPN, failed)
+		log.Warnln("[MITM] TLS to the site failed")
+		mitmCloseUnderTracker(remote)
+		return serveMitmWithoutSite(client, remote, host, leaf, runtime, clientALPN, mitmOutcomeUpstreamFailed)
 	}
 	// Once the upstream handshake commits, close its TLS wrapper on exit.
 	defer func() { remoteIdle.closing.Store(true); _ = upstream.Close() }()

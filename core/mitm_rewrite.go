@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 )
 
 // Phase 2b: Surge-compatible rewriting of decrypted traffic.
@@ -348,7 +349,12 @@ func installMitmRewrite(setup *MitmSetup) {
 func compileMitmHTTPEngineHosts(lines []string) *mitmHostMatcher {
 	hosts := make([]string, 0, len(lines))
 	for _, line := range lines {
-		hosts = append(hosts, strings.TrimSuffix(strings.TrimSpace(line), ":80")) // Surge may write the port
+		host := strings.TrimSuffix(strings.TrimSpace(line), ":80") // Surge may write the port
+		if host == "" || host == "*" {
+			log.Warnln("[MITM] force-http-engine-hosts ignores %q: it would take every host", line)
+			continue
+		}
+		hosts = append(hosts, host)
 	}
 	return compileMitmHosts(hosts)
 }
