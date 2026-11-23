@@ -216,9 +216,7 @@ class BackupAction extends _$BackupAction {
 
   Future<void> _promptMitmCaTrust() async {
     final appLocalizations = currentAppLocalizations;
-    final trust = await dialogs.showCommonDialog<bool>(
-      child: const MitmRestoredCaDialog(),
-    );
+    final trust = await mitmRestoredCaPort?.call();
     if (trust != true || !ref.mounted) return;
     await globalState.safeRun(
       () => ref.read(mitmTrustStateProvider.notifier).install(),

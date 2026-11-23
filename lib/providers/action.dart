@@ -1,8 +1,6 @@
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
-import 'package:fl_clash/views/config/mitm_core_ca.dart'
-    show MitmRestoredCaDialog;
 import 'package:fl_clash/views/update_failure.dart';
 import 'package:fl_clash/views/rules/rules_logic.dart' show alignRuleSources;
 import 'dart:async';

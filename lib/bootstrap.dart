@@ -18,6 +18,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/mac_updater.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/config/mitm_core_ca.dart';
 import 'package:fl_clash/views/config/mitm_status.dart';
 import 'package:fl_clash/views/disclaimer.dart';
 import 'package:fl_clash/views/navigation.dart';
@@ -49,6 +50,8 @@ class Bootstrap {
     trayPort = appTray;
     navigationPort = navigation;
     mitmSettingsPort = openMitmSettingsFromTray;
+    mitmRestoredCaPort = () =>
+        dialogs.showCommonDialog<bool>(child: const MitmRestoredCaDialog());
     final dynamicColor = await _initDynamicColor();
     return _initData(version, dynamicColor);
   }
