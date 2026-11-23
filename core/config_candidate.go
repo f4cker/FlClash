@@ -48,7 +48,7 @@ func prepareSetupConfig(params *SetupParams) (*setupCandidate, error) {
 	configs := tailscaleOverridesForSetupLocked(document.Content[0], params.Tailscale)
 	tailscaleMu.Unlock()
 	if err := validateSetupDocument(document, params.Tailscale); err != nil {
-		return nil, err
+		return nil, report.explainSkip(err)
 	}
 	path, err := writeDocumentFile(filepath.Dir(runningConfigPath()), ".config-candidate-*.yaml", document)
 	if err != nil {

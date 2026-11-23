@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -58,7 +59,7 @@ func followMountSelections(selected map[string]string, report *MountReport) map[
 	}
 	owners := map[string]identity{}
 	for _, source := range before.Sources {
-		for _, node := range source.Nodes {
+		for _, node := range slices.Concat(source.Nodes, source.held) {
 			owners[node.Name] = identity{source.ID, node.Original}
 		}
 	}
@@ -91,6 +92,18 @@ func followMountSelections(selected map[string]string, report *MountReport) map[
 	}
 	slices.Sort(mountSelectionLost)
 	return followed
+}
+
+func heldMountNodes(target int64) map[int64][]MountNode {
+	mountStateMu.Lock()
+	defer mountStateMu.Unlock()
+	held := map[int64][]MountNode{}
+	if basis := mountSelectionBasis[target]; basis != nil {
+		for _, source := range basis.Sources {
+			held[source.ID] = slices.Concat(source.Nodes, source.held)
+		}
+	}
+	return held
 }
 
 func setMountState(report *MountReport, blocked, fallback bool) {
@@ -180,7 +193,23 @@ func checkMountedSetup(params *SetupParams) error {
 	if err != nil {
 		return err
 	}
-	return parseDocument(document)
+	return report.explainSkip(parseDocument(document))
+}
+
+// Says why a node an error names is gone, in the words the host reads.
+func (report *MountReport) explainSkip(err error) error {
+	if err == nil || report == nil {
+		return err
+	}
+	message := err.Error()
+	for _, source := range report.Sources {
+		for _, node := range source.held {
+			if strings.Contains(message, "["+node.Name+"]") || strings.Contains(message, strconv.Quote(node.Name)) {
+				return fmt.Errorf("%w; mount source %d is %s", err, source.ID, source.Status)
+			}
+		}
+	}
+	return err
 }
 
 func mountRejected(err error, outcome string) error {
@@ -326,7 +355,7 @@ func handleMountPreflight(params MountPreflightParams) (*MountPreflight, error) 
 	defer configMu.Unlock()
 	document, report, err := mountedDocument(params.Base, configPath, preflightMountSetup(mounts))
 	if err == nil {
-		err = parseDocument(document)
+		err = report.explainSkip(parseDocument(document))
 	}
 	if err != nil {
 		result := &MountPreflight{Error: err.Error(), ErrorCode: asMethodError(err).Code}

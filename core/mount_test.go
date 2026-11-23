@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/component/age"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
@@ -757,6 +758,138 @@ rules:
 	state = apply("hk (B)", "r3")
 	if now() != "base" || !reflect.DeepEqual(state.Lost, []string{"G"}) {
 		t.Fatalf("G = %s, lost %v; want the group's default, never A's hk", now(), state.Lost)
+	}
+}
+
+func TestApplyConfigKeepsASkippedSourcesNamesThroughItsRecovery(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() {
+		setMountState(nil, false, false)
+		mountSelectionBasis = map[int64]*MountReport{}
+	})
+	base := writeMountFile(t, home, "base.yaml", `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1}
+proxy-groups:
+  - {name: G, type: select, proxies: [base], include-all-providers: true}
+  - {name: H, type: select, proxies: [base], include-all-providers: true}
+rules:
+  - MATCH,G
+`)
+	const nodeA = "proxies:\n  - {name: HK 01, type: socks5, server: 192.0.2.1, port: 1}\n"
+	sourceA := writeMountFile(t, home, "1.yaml", nodeA)
+	sourceB := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: HK 01, type: socks5, server: 192.0.2.2, port: 1}\n")
+	apply := func(revision string) MountRuntimeState {
+		t.Helper()
+		err := applyConfig(&SetupParams{
+			Base:        &SetupBase{Path: base, Overlay: "{}"},
+			SelectedMap: map[string]string{"G": "HK 01", "H": "HK 01 (B)"},
+			Mounts: &MountSetup{Target: 5, Revision: revision, Sources: []MountSource{
+				{ID: 1, Label: "A", Path: sourceA},
+				{ID: 2, Label: "B", Path: sourceB},
+			}},
+		})
+		if err != nil {
+			t.Fatalf("applyConfig %s = %v", revision, err)
+		}
+		return handleMountState()
+	}
+	now := func(group string) string {
+		selector, _ := adapterAs[*outboundgroup.Selector](tunnel.Proxies()[group])
+		return selector.Now()
+	}
+	server := func(name string) string {
+		if proxy := lookupProxy(name); proxy != nil {
+			return proxy.Addr()
+		}
+		return ""
+	}
+
+	apply("r1")
+	if now("G") != "HK 01" || now("H") != "HK 01 (B)" {
+		t.Fatalf("G = %s, H = %s; want A's HK 01 and B's HK 01 (B)", now("G"), now("H"))
+	}
+
+	if err := os.Remove(sourceA); err != nil {
+		t.Fatal(err)
+	}
+	state := apply("r2")
+	if got := server("HK 01"); got != "" {
+		t.Errorf("HK 01 is %s while A is skipped; B's node took A's name", got)
+	}
+	if now("G") == "HK 01" || now("H") != "HK 01 (B)" || len(state.Moved) != 0 || len(state.Lost) != 0 {
+		t.Fatalf("G = %s, H = %s, moved %v, lost %v; want B's node unmoved and nothing taken over", now("G"), now("H"), state.Moved, state.Lost)
+	}
+
+	writeMountFile(t, home, "1.yaml", nodeA)
+	state = apply("r3")
+	if now("G") != "HK 01" || server("HK 01") != "192.0.2.1:1" || now("H") != "HK 01 (B)" || len(state.Moved) != 0 || len(state.Lost) != 0 {
+		t.Fatalf("G = %s, H = %s, moved %v, lost %v; want both selections back on their own airport", now("G"), now("H"), state.Moved, state.Lost)
+	}
+}
+
+func TestApplyConfigSaysWhichSkippedSourceAMountedNodeDialsThrough(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() {
+		setMountState(nil, false, false)
+		mountSelectionBasis = map[int64]*MountReport{}
+	})
+	base := writeMountFile(t, home, "base.yaml", `proxy-groups:
+  - {name: G, type: select, include-all-providers: true}
+rules:
+  - MATCH,G
+`)
+	sourceA := writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: HK 01, type: socks5, server: 192.0.2.1, port: 1}\n")
+	sourceB := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: relay, type: socks5, server: 192.0.2.2, port: 1, dialer-proxy: HK 01}\n")
+	params := &SetupParams{
+		Base: &SetupBase{Path: base, Overlay: "{}"},
+		Mounts: &MountSetup{Target: 5, Revision: "r1", Sources: []MountSource{
+			{ID: 1, Label: "A", Path: sourceA},
+			{ID: 2, Label: "B", Path: sourceB},
+		}},
+	}
+	if err := applyConfig(params); err != nil {
+		t.Fatalf("applyConfig = %v", err)
+	}
+	if err := os.Remove(sourceA); err != nil {
+		t.Fatal(err)
+	}
+
+	params.Mounts = &MountSetup{Target: 5, Revision: "r2", Sources: params.Mounts.Sources}
+	err := applyConfig(params)
+
+	if err == nil || !strings.Contains(err.Error(), "mount source 1 is missing") {
+		t.Fatalf("applyConfig = %v, want the dependency error to name the skipped source", err)
+	}
+}
+
+func TestMountReadsAnAgeEncryptedSourceWithItsKey(t *testing.T) {
+	home := withMountHome(t)
+	secretKey, publicKey, err := age.GenX25519KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	encrypted, err := age.EncryptBytes([]byte(mountSourceB), publicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := writeMountFile(t, home, "1.yaml", string(encrypted))
+	const base = `proxy-groups:
+  - {name: G, type: select, include-all-providers: true}
+rules:
+  - MATCH,G
+`
+
+	cfg, report := mountedConfig(t, base, &MountSetup{Sources: []MountSource{{ID: 1, Label: "E", Path: path, AgeSecretKey: secretKey}}, stageInputs: true})
+
+	if report.Sources[0].Status != mountSourceNodes {
+		t.Fatalf("status = %s, want the encrypted source read with its key", report.Sources[0].Status)
+	}
+	if got := memberNames(t, cfg, "G"); !reflect.DeepEqual(got, []string{"shared", "us"}) {
+		t.Errorf("G members = %v", got)
 	}
 }
 
