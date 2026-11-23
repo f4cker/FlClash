@@ -9164,8 +9164,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Dominio de un servicio de Apple';
 
   @override
-  String mitmScriptTimeoutCapped(Object seconds) {
-    return 'Un script se ejecuta como máximo $seconds s; un tiempo de espera mayor se reduce a $seconds s.';
+  String mitmScriptTimeoutCapped(int seconds) {
+    return 'El tiempo de espera del script está limitado a $seconds segundos. Los valores superiores se ajustan a este límite.';
   }
 
   @override

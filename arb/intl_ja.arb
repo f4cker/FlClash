@@ -3791,7 +3791,7 @@
   "mitmHostReasonInvalidFormat": "ホスト名の形式が正しくありません",
   "mitmHostReasonOverBroad": "一致する範囲が広すぎます",
   "mitmHostReasonAppleService": "Apple サービスのドメイン",
-  "mitmScriptTimeoutCapped": "スクリプトのタイムアウトは最大 {seconds} 秒です。{seconds} 秒で実行しています。",
+  "mitmScriptTimeoutCapped": "スクリプトのタイムアウトの上限は {seconds} 秒です。これを超える設定は上限に制限されます。",
   "mitmHostFormatHint": "api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。",
   "mitmClientSourceRisk": "次のクライアントの通信だけを復号します：{addresses}。TUN がオンのとき、この端末のアプリは TUN のアドレスから接続するため、対象外になることがあります。",
   "mitmClientSourceTunTip": "TUN がオンのとき、この端末のアプリの送信元は TUN のアドレスです。リストに含まれていない場合、その通信は復号されません。",

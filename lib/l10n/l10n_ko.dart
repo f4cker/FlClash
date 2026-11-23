@@ -8927,8 +8927,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple 서비스 도메인';
 
   @override
-  String mitmScriptTimeoutCapped(Object seconds) {
-    return '스크립트 시간 제한은 최대 $seconds초이며 $seconds초로 실행합니다.';
+  String mitmScriptTimeoutCapped(int seconds) {
+    return '스크립트 시간 제한의 상한은 $seconds초입니다. 이보다 큰 설정은 상한으로 제한됩니다.';
   }
 
   @override

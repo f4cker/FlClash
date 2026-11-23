@@ -2502,7 +2502,7 @@
   "mitmHostReasonInvalidFormat": "主机名格式无效",
   "mitmHostReasonOverBroad": "匹配范围过宽",
   "mitmHostReasonAppleService": "Apple 服务域名",
-  "mitmScriptTimeoutCapped": "脚本超时上限为 {seconds} 秒，已按 {seconds} 秒执行",
+  "mitmScriptTimeoutCapped": "脚本超时上限为 {seconds} 秒，超过上限的设置将按此上限处理。",
   "mitmHostFormatHint": "请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。",
   "mitmClientSourceRisk": "它只为这些客户端解密：{addresses}。开启 TUN 时，本机应用经 TUN 地址连入 FlClash，可能因此不再解密。",
   "mitmClientSourceTunTip": "开启 TUN 时，本机应用的来源是 TUN 地址；列表不包含它时，本机应用的流量不会被解密。",

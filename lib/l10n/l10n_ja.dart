@@ -8855,8 +8855,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple サービスのドメイン';
 
   @override
-  String mitmScriptTimeoutCapped(Object seconds) {
-    return 'スクリプトのタイムアウトは最大 $seconds 秒です。$seconds 秒で実行しています。';
+  String mitmScriptTimeoutCapped(int seconds) {
+    return 'スクリプトのタイムアウトの上限は $seconds 秒です。これを超える設定は上限に制限されます。';
   }
 
   @override

@@ -14960,8 +14960,8 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptTimeoutCapped.
   ///
   /// In en, this message translates to:
-  /// **'Scripts run for at most {seconds} seconds; longer timeouts run for {seconds} seconds.'**
-  String mitmScriptTimeoutCapped(Object seconds);
+  /// **'Script timeout is limited to {seconds} seconds. Higher values are capped at this limit.'**
+  String mitmScriptTimeoutCapped(int seconds);
 
   /// No description provided for @mitmHostFormatHint.
   ///

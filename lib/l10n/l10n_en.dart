@@ -9098,8 +9098,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple service domain';
 
   @override
-  String mitmScriptTimeoutCapped(Object seconds) {
-    return 'Scripts run for at most $seconds seconds; longer timeouts run for $seconds seconds.';
+  String mitmScriptTimeoutCapped(int seconds) {
+    return 'Script timeout is limited to $seconds seconds. Higher values are capped at this limit.';
   }
 
   @override

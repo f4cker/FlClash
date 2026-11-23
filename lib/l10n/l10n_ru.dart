@@ -9136,8 +9136,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Домен службы Apple';
 
   @override
-  String mitmScriptTimeoutCapped(Object seconds) {
-    return 'Скрипт выполняется не дольше $seconds с; более длинный тайм-аут сокращён до $seconds с.';
+  String mitmScriptTimeoutCapped(int seconds) {
+    return 'Время ожидания скрипта ограничено: $seconds с. Большие значения снижаются до этого предела.';
   }
 
   @override

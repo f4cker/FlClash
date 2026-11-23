@@ -8369,8 +8369,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple 服务域名';
 
   @override
-  String mitmScriptTimeoutCapped(Object seconds) {
-    return '脚本超时上限为 $seconds 秒，已按 $seconds 秒执行';
+  String mitmScriptTimeoutCapped(int seconds) {
+    return '脚本超时上限为 $seconds 秒，超过上限的设置将按此上限处理。';
   }
 
   @override
