@@ -133,6 +133,7 @@ func handleShutdown() {
 	updater.StopGeoUpdater()
 	executor.Shutdown()
 	closeTailscaleUpTo(tailscaleGenerationMark())
+	forgetMountState()
 	currentConfig = nil
 	isInit.Store(false)
 	configMu.Unlock()

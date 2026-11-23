@@ -204,7 +204,7 @@ class MountSkips extends Notifier<Map<int, List<MountSkip>>> {
     if (now.isEmpty) {
       _announced.remove(targetId);
     } else {
-      _announced[targetId] = {...before, ...now};
+      _announced[targetId] = now;
     }
     return now.difference(before).isNotEmpty;
   }

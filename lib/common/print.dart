@@ -28,7 +28,7 @@ final _hostPattern = RegExp(
 final _authorityEnd = RegExp(r'[/?#]');
 
 final _ageSecretKeyPattern = RegExp(
-  r'AGE-SECRET-KEY-1[0-9A-Z]+',
+  r'AGE-SECRET-KEY-[0-9A-Z-]+',
   caseSensitive: false,
 );
 

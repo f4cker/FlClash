@@ -119,6 +119,17 @@ func setMountState(report *MountReport, blocked, fallback bool) {
 	runningConfigDefault = fallback
 }
 
+// What a shut-down Core ran is gone; its inputs stay for the running config.
+func forgetMountState() {
+	mountStateMu.Lock()
+	defer mountStateMu.Unlock()
+	appliedMountReport = nil
+	mountGeneration++
+	runningConfigBlocked, runningConfigDefault = false, false
+	mountSelectionBasis = map[int64]*MountReport{}
+	mountSelectionMoved, mountSelectionLost = nil, nil
+}
+
 func logSkippedMountSources(report *MountReport) {
 	if report == nil {
 		return

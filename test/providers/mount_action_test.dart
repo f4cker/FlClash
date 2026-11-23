@@ -179,7 +179,7 @@ Future<void> waitFor(bool Function() ready) async {
 }
 
 void main() {
-  test('announced skips add up, so a narrower report does not re-announce', () {
+  test('announced skips follow what is still skipped', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final skips = container.read(mountSkipsProvider.notifier);
@@ -187,8 +187,13 @@ void main() {
     const invalid = (sourceId: 3, status: MountSourceStatus.invalid);
 
     expect(skips.announce(1, [missing, invalid]), isTrue);
-    expect(skips.announce(1, [missing]), isFalse);
     expect(skips.announce(1, [missing, invalid]), isFalse);
+    expect(skips.announce(1, [missing]), isFalse);
+    expect(
+      skips.announce(1, [missing, invalid]),
+      isTrue,
+      reason: 'a re-failure after a partial recovery is new',
+    );
     expect(skips.announce(1, const []), isFalse);
     expect(skips.announce(1, [invalid]), isTrue);
   });

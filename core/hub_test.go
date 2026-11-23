@@ -509,11 +509,18 @@ func currentLogPump() *logPump {
 func TestHandleShutdownTearsDownBackgroundWork(t *testing.T) {
 	withCurrentConfig(t, &config.Config{General: &config.General{}, Controller: &config.Controller{}})
 	isInit.Store(true)
+	setMountState(&MountReport{Target: 1}, true, false)
+	followMountSelections(map[string]string{}, &MountReport{Target: 1, Sources: []MountSourceReport{{ID: 2}}})
+	t.Cleanup(func() { setMountState(nil, false, false) })
 
 	handleStartLog()
 	pump := currentLogPump()
 
 	handleShutdown()
+
+	if state := handleMountState(); state.Report != nil || state.Blocked || len(heldMountNodes(1)) != 0 {
+		t.Errorf("mount state survived shutdown: %+v", state)
+	}
 
 	if currentConfig != nil {
 		t.Error("currentConfig survived shutdown, so updateConfig would still patch a dead config")

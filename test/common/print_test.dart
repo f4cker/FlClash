@@ -70,6 +70,10 @@ void main() {
       redactUrls('key=${key.toLowerCase()} via https://h.example/x?t=1'),
       'key=AGE-SECRET-KEY-… via https://h.example/…',
     );
+    expect(
+      redactUrls('pq: AGE-SECRET-KEY-PQ-1QYQSZQGPQYQSZQGPQYQSZQGPQ.'),
+      'pq: AGE-SECRET-KEY-….',
+    );
   });
 
   test('redactUrls leaves file paths in stack traces alone', () {

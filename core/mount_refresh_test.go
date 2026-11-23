@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -425,8 +426,19 @@ func TestFirstInitSweepsDecryptedNodesALostCoreLeft(t *testing.T) {
 	home := withMountHome(t)
 	previousInit := isInit.Load()
 	t.Cleanup(func() { isInit.Store(previousInit) })
-	stale, err := decodeMountSnapshot(mountTimingFixture(2, 10)).providerPath()
+	snapshot := decodeMountSnapshot(mountTimingFixture(2, 10))
+	stale, err := snapshot.providerPath()
 	if err != nil {
+		t.Fatal(err)
+	}
+	running, err := snapshot.providerPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := "proxy-providers:\n" +
+		"  flash-mount-1: {type: file, path: " + strconv.Quote(running) + "}\n" +
+		"  other: {type: file, path: " + strconv.Quote(stale) + "}\n"
+	if err := os.WriteFile(filepath.Join(home, "config.yaml"), []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -442,8 +454,10 @@ func TestFirstInitSweepsDecryptedNodesALostCoreLeft(t *testing.T) {
 	if err := handleInit(&InitParams{HomeDir: home}); err != nil {
 		t.Fatal(err)
 	}
-	entries, err := os.ReadDir(filepath.Join(home, "mount-nodes"))
-	if err != nil || len(entries) != 0 {
-		t.Fatalf("stale decrypted nodes kept: %v %v", entries, err)
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("stale decrypted nodes kept: %v", err)
+	}
+	if _, err := os.Stat(running); err != nil {
+		t.Fatalf("the running config lost its mounted input: %v", err)
 	}
 }
