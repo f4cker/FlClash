@@ -27,11 +27,14 @@ class _MockTrustStore extends Mock implements MitmTrustStore {}
 class _Passphrases implements MitmPassphraseStore {
   final values = <String, String>{};
   Completer<void>? gate;
+  Completer<void>? deleteGate;
   var reads = 0;
 
   @override
-  Future<void> deletePassphrase(String fingerprint) async =>
-      values.remove(fingerprint);
+  Future<void> deletePassphrase(String fingerprint) async {
+    await deleteGate?.future;
+    values.remove(fingerprint);
+  }
 
   @override
   Future<String?> readPassphrase(String fingerprint) async {
@@ -759,6 +762,33 @@ void main() {
         expect(container.read(mitmSetupProvider)!['signer'], 'core');
       },
     );
+
+    test('the trust row reads ready right after a Core to Core switch', () async {
+      passphrases.values[_pendingFp] = 'pending secret';
+      setMitm(
+        coreMitm().copyWith(
+          pendingCaP12: _pendingP12,
+          pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
+        ),
+      );
+      await started();
+      container.listen(mitmTrustStateProvider, (_, _) {});
+      await container.read(mitmTrustStateProvider.future);
+      passphrases.deleteGate = Completer<void>();
+
+      final switched = migration().verify();
+      await settle();
+      final row = container.read(mitmTrustStateProvider);
+      passphrases.deleteGate!.complete();
+
+      expect(await switched, MitmMigrationOutcome.switched);
+      expect(row.hasError, isFalse);
+      await settle();
+      expect(
+        container.read(mitmTrustStateProvider).value?.trust,
+        MitmTrust.ready,
+      );
+    });
 
     test(
       'importing the CA in use is refused and keeps its passphrase',

@@ -440,8 +440,12 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       _loaded = (connection: _connection, fingerprint: fingerprint);
 
   /// The migration leased [fingerprint] under this connection: no reload.
+  /// It was just found trusted: checks while the switch still holds the
+  /// slot answer with that.
   void adopt(String fingerprint) {
     loadedNow(fingerprint);
+    _lastVerdict = MitmTrust.ready;
+    _negatives = 0;
     state = MitmCoreCaTrust(MitmCoreCaStatus.leased, leased: fingerprint);
     _hold(true);
     _kick();
