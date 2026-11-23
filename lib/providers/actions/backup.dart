@@ -216,15 +216,13 @@ class BackupAction extends _$BackupAction {
 
   Future<void> _promptMitmCaTrust() async {
     final appLocalizations = currentAppLocalizations;
-    final trust = await dialogs.showMessage(
-      title: appLocalizations.mitmRestoredCaTitle,
-      message: TextSpan(text: appLocalizations.mitmRestoredCaTip),
-      confirmText: appLocalizations.trustCertificate,
+    final trust = await dialogs.showCommonDialog<bool>(
+      child: const MitmRestoredCaDialog(),
     );
     if (trust != true || !ref.mounted) return;
     await globalState.safeRun(
       () => ref.read(mitmTrustStateProvider.notifier).install(),
-      title: appLocalizations.trustCertificate,
+      title: appLocalizations.mitmInstallAndTrust,
     );
   }
 
@@ -304,6 +302,7 @@ class BackupAction extends _$BackupAction {
     RestorePartialException? partial;
     StackTrace? partialStack;
     var restoredMitmCa = false;
+    var keptMitmCa = false;
     final lanes = ref
         .read(addedRulesActionProvider.notifier)
         .runRestoreInLane(
@@ -387,6 +386,7 @@ class BackupAction extends _$BackupAction {
                         configMap!,
                       );
                       restoredMitmCa = carried;
+                      keptMitmCa = !carried && mitm.coreCa != null;
                       restoredConfig = config.copyWith(
                         davProps:
                             config.davProps ?? ref.read(davSettingProvider),
@@ -512,6 +512,8 @@ class BackupAction extends _$BackupAction {
     }
     if (restoredMitmCa) {
       unawaited((promptMitmCaTrust ?? _promptMitmCaTrust)());
+    } else if (keptMitmCa) {
+      dialogs.showBanner(currentAppLocalizations.mitmRestoreKeptCa);
     }
     // Outside both lanes: settling takes the mount scheduler only.
     List<RestoreMountProfile>? pending;

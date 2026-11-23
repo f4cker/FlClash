@@ -9560,11 +9560,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mitmMigrate => 'Switch to a new certificate';
+  String get mitmUpdateCertificate => 'Update Decryption Certificate';
 
   @override
-  String get mitmMigrateDesc =>
-      'Signs in the proxy, so pages no longer wait on Flash. The current certificate keeps working until the new one is trusted and checked.';
+  String get mitmUpdateCertificateDesc =>
+      'You can keep using your current certificate. Flash won\'t switch until the new certificate is verified.';
+
+  @override
+  String get mitmGenerateNewCertificate => 'Generate New Certificate';
+
+  @override
+  String get mitmImportCertificate => 'Import p12';
+
+  @override
+  String get mitmChooseP12 => 'Choose p12 File';
+
+  @override
+  String get mitmImportPassword => 'p12 Password';
 
   @override
   String mitmPendingCertificate(Object name) {
@@ -9572,89 +9584,75 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mitmInstallAndSwitch => 'Install, trust and switch';
+  String get mitmPendingVerification => 'Pending verification';
+
+  @override
+  String get mitmInstallAndSwitch => 'Install and Trust New Certificate';
 
   @override
   String get mitmInstallAndSwitchDesc =>
-      'macOS asks for your password. Flash checks the new certificate and switches only once it works.';
+      'Follow the system prompts to install and trust the new certificate.';
 
   @override
-  String get mitmCheckAndSwitch => 'Check again and switch';
+  String get mitmVerifying => 'Verifying the new certificate…';
 
   @override
   String get mitmDiscardPending => 'Discard new certificate';
 
   @override
-  String get mitmMigrationSwitched => 'Switched to the new certificate.';
-
-  @override
-  String get mitmMigrationCancelled =>
-      'Not installed. The current certificate is still in use; you can try again.';
-
-  @override
-  String get mitmMigrationUntrusted =>
-      'The new certificate is not trusted yet. The current certificate is still in use; trust it and check again.';
-
-  @override
   String get mitmMigrationFailed =>
-      'The new certificate could not be checked. The current certificate is still in use; you can try again.';
+      'The new certificate hasn\'t been verified. Your current certificate remains in use. You can try again later.';
 
   @override
-  String get mitmMigrationCoreIdentity =>
-      'The proxy did not pass its identity check, so the new certificate was not loaded. Nothing changed.';
+  String get mitmMigrationSwitched =>
+      'The new certificate is active. The old certificate has not been removed.';
 
   @override
-  String get mitmRemoveOldCa => 'Remove old certificate';
-
-  @override
-  String mitmRemoveOldCaTip(Object name) {
-    return 'Remove $name? Only this certificate is deleted; the one in use stays.';
+  String mitmOldCaKept(Object name) {
+    return 'Old certificate still on this Mac: $name';
   }
+
+  @override
+  String get mitmRemoveOldCa => 'Remove Old Certificate';
+
+  @override
+  String get mitmRemoveOldCaTitle => 'Remove the old certificate?';
+
+  @override
+  String get mitmRemoveOldCaTip =>
+      'This removes the old certificate from this Mac. It won\'t remove it from your other devices.';
 
   @override
   String get mitmRemoveOldCaFailed => 'The old certificate was not removed.';
 
   @override
-  String get mitmImportCertificate => 'Import certificate (.p12)';
+  String get mitmImportBadPassphrase => 'Incorrect password.';
 
   @override
-  String get mitmImportPassword => 'Password of the .p12 file';
+  String get mitmImportNotRoot => 'This is not a root certificate.';
 
   @override
-  String get mitmImportBadP12 => 'The file is not a readable .p12.';
-
-  @override
-  String get mitmImportBadPassphrase => 'Wrong password.';
-
-  @override
-  String get mitmImportNotRoot => 'This certificate is not a root CA.';
-
-  @override
-  String get mitmImportKeyMismatch =>
-      'The private key does not belong to the certificate.';
-
-  @override
-  String get mitmImportExpired => 'This certificate has expired.';
-
-  @override
-  String get mitmImportNotYetValid => 'This certificate is not valid yet.';
+  String get mitmImportExpired => 'The certificate has expired.';
 
   @override
   String get mitmImportUnsupportedKey =>
-      'This key type is not supported. Use an ECDSA P-256/P-384 or RSA 2048+ key.';
+      'This certificate\'s key type isn\'t supported.';
 
   @override
   String get mitmImportNameConstraints =>
-      'Certificates with name constraints are not supported.';
+      'This certificate contains unsupported name constraints.';
 
   @override
-  String mitmImportUnusable(Object reason) {
-    return 'This certificate cannot sign website certificates ($reason).';
-  }
+  String get mitmImportFailed =>
+      'Couldn\'t import the certificate. Check the file and try again.';
+
+  @override
+  String get mitmCoreCaUntrustedTitle =>
+      'Decryption Certificate No Longer Trusted';
 
   @override
   String get mitmCoreCaUntrusted =>
-      'The certificate is no longer trusted, so decryption stopped. Trust it again to resume.';
+      'Decryption has stopped. Trust the certificate again in your system settings, then try again.';
 
   @override
   String get mitmCoreCaPassphraseMissing =>
@@ -9669,16 +9667,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'The proxy refused the certificate. Generate or import another one.';
 
   @override
-  String get mitmRestoredCaTitle => 'Decryption certificate restored';
-
-  @override
-  String get mitmRestoredCaTip =>
-      'The backup carried its decryption certificate. Trust it on this Mac to decrypt HTTPS again.';
-
-  @override
   String get includeMitmCa => 'Include Decryption Certificate';
 
   @override
   String get includeMitmCaTip =>
-      'This backup will hold the certificate\'s private key and password. Anyone who gets it and can reach your network (the same Wi-Fi, your router, a proxy node) can impersonate any HTTPS site without your devices warning. Keep it safe; if it may have leaked, generate a new certificate and delete the old one on every device.';
+      'The backup will contain the certificate\'s private key and password. Keep the file safe and avoid sharing it.';
+
+  @override
+  String get mitmRestoredCaTip =>
+      'Certificate restored. Install and trust it on this Mac before using it for decryption.';
+
+  @override
+  String get mitmInstallAndTrust => 'Install and Trust';
+
+  @override
+  String get mitmCaNotNow => 'Not Now';
+
+  @override
+  String get mitmRestoreKeptCa =>
+      'This backup doesn\'t include a decryption certificate. The certificate on this Mac will be kept.';
 }

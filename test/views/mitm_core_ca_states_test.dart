@@ -1,0 +1,344 @@
+// Checks each state of the macOS certificate UI and, when asked, renders it
+// to PNG for review, light and dark, at a narrow window:
+//   MITM_CORE_CA_SCREENSHOTS=<dir> flutter test \
+//     test/views/mitm_core_ca_states_test.dart
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/manager/theme_manager.dart';
+import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/app.dart';
+import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/mitm_core_ca.dart';
+import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/config/mitm_core_ca.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/prism_ui.dart' show Switch, ThemeMode;
+import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
+
+import '../helpers/test_app.dart';
+
+final _outDir = Platform.environment['MITM_CORE_CA_SCREENSHOTS'];
+final _shoot = _outDir != null && _outDir!.isNotEmpty;
+const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
+
+List<ByteData> _collectionFaces(Uint8List bytes) {
+  final data = ByteData.sublistView(bytes);
+  final faces = <ByteData>[];
+  for (var face = 0; face < data.getUint32(8); face++) {
+    final header = data.getUint32(12 + face * 4);
+    final tables = data.getUint16(header + 4);
+    final out = BytesBuilder()..add(bytes.sublist(header, header + 12));
+    final body = BytesBuilder();
+    var at = 12 + tables * 16;
+    for (var i = 0; i < tables; i++) {
+      final entry = header + 12 + i * 16;
+      final offset = data.getUint32(entry + 8);
+      final length = data.getUint32(entry + 12);
+      final record = ByteData(16)
+        ..setUint32(0, data.getUint32(entry))
+        ..setUint32(4, data.getUint32(entry + 4))
+        ..setUint32(8, at)
+        ..setUint32(12, length);
+      out.add(record.buffer.asUint8List());
+      final padded = (length + 3) & ~3;
+      body
+        ..add(bytes.sublist(offset, offset + length))
+        ..add(Uint8List(padded - length));
+      at += padded;
+    }
+    out.add(body.takeBytes());
+    faces.add(ByteData.sublistView(out.takeBytes()));
+  }
+  return faces;
+}
+
+class _FixedLease extends MitmCoreCaLease {
+  _FixedLease(this.trust);
+
+  final MitmCoreCaTrust trust;
+
+  @override
+  MitmCoreCaTrust build() => trust;
+}
+
+class _FixedMigration extends MitmCaMigration {
+  _FixedMigration(this.running);
+
+  final bool running;
+
+  @override
+  bool build() => running;
+}
+
+final _legacy = MitmCertificate(
+  pem: '-----BEGIN CERTIFICATE-----\n',
+  fingerprint: 'AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89',
+  subject: 'FlClash CA 0000ABCD',
+  notBefore: DateTime.utc(2026, 10, 20, 12),
+  notAfter: DateTime.utc(2036, 10, 22, 12),
+);
+
+final _fresh = _legacy.copyWith(
+  fingerprint: '12:34:56:78:9A:BC:DE:F0:12:34:56:78:9A:BC:DE:F0',
+  subject: 'Flash CA 9ABCDEF0',
+);
+
+final _p12 = MitmCaP12('Q0FQMTI=');
+
+typedef _State = ({
+  MitmCertificate shown,
+  Mitm mitm,
+  MitmCoreCaTrust trust,
+  bool running,
+  MitmCertificate? old,
+});
+
+final _states = <String, _State>{
+  'legacy': (
+    shown: _legacy,
+    mitm: const Mitm(),
+    trust: MitmCoreCaTrust.off,
+    running: false,
+    old: null,
+  ),
+  'pending': (
+    shown: _legacy,
+    mitm: Mitm(pendingCaP12: _p12, pendingCaCertificate: _fresh),
+    trust: MitmCoreCaTrust.off,
+    running: false,
+    old: null,
+  ),
+  'verifying': (
+    shown: _legacy,
+    mitm: Mitm(pendingCaP12: _p12, pendingCaCertificate: _fresh),
+    trust: MitmCoreCaTrust.off,
+    running: true,
+    old: null,
+  ),
+  'switched': (
+    shown: _fresh,
+    mitm: Mitm(caP12: _p12, caCertificate: _fresh),
+    trust: MitmCoreCaTrust(MitmCoreCaStatus.leased, leased: _fresh.fingerprint),
+    running: false,
+    old: _legacy,
+  ),
+  'untrusted': (
+    shown: _fresh,
+    mitm: Mitm(caP12: _p12, caCertificate: _fresh),
+    trust: const MitmCoreCaTrust(MitmCoreCaStatus.untrusted),
+    running: false,
+    old: null,
+  ),
+};
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  final boundary = GlobalKey();
+
+  setUpAll(() async {
+    if (!_shoot) return;
+    WidgetsApp.debugAllowBannerOverride = false;
+    final loader = FontLoader('Roboto');
+    for (final face in _collectionFaces(
+      File(_cjkCollection).readAsBytesSync(),
+    )) {
+      loader.addFont(Future.value(face));
+    }
+    await loader.load();
+    Directory(_outDir!).createSync(recursive: true);
+  });
+
+  Future<ProviderContainer> pump(
+    WidgetTester tester, {
+    required Locale locale,
+    required Brightness brightness,
+    required Widget child,
+    Size size = const Size(390, 640),
+    List<Override> overrides = const [],
+    Mitm mitm = const Mitm(),
+  }) async {
+    final container = ProviderContainer(
+      overrides: [safeModeProvider.overrideWithValue(false), ...overrides],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+    container
+        .read(patchClashConfigProvider.notifier)
+        .update((state) => state.copyWith(mitm: mitm));
+    tester.view.physicalSize = size * 2;
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: boundary,
+        child: UncontrolledProviderScope(
+          container: container,
+          child: Consumer(
+            builder: (context, ref, _) => TestApp(
+              locale: locale,
+              theme: watchAppTheme(ref, Brightness.light),
+              darkTheme: watchAppTheme(ref, Brightness.dark),
+              themeMode: brightness == Brightness.dark
+                  ? ThemeMode.dark
+                  : ThemeMode.light,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    return container;
+  }
+
+  Future<void> save(WidgetTester tester, String name) async {
+    if (!_shoot) return;
+    final render =
+        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    await tester.runAsync(() async {
+      final image = await render.toImage(
+        pixelRatio: tester.view.devicePixelRatio,
+      );
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      await File('$_outDir/$name.png').writeAsBytes(data!.buffer.asUint8List());
+    });
+  }
+
+  for (final locale in const [Locale('zh'), Locale('en')]) {
+    final l = lookupAppLocalizations(locale);
+    final tag = locale.languageCode;
+    for (final brightness in Brightness.values) {
+      final mode = brightness.name;
+
+      for (final MapEntry(key: name, value: state) in _states.entries) {
+        testWidgets('section-$name-$tag-$mode', (tester) async {
+          await pump(
+            tester,
+            locale: locale,
+            brightness: brightness,
+            mitm: state.mitm,
+            overrides: [
+              mitmCoreCaProvider.overrideWith(() => _FixedLease(state.trust)),
+              mitmCaMigrationProvider.overrideWith(
+                () => _FixedMigration(state.running),
+              ),
+              mitmOldCaProvider.overrideWith((ref) async => state.old),
+            ],
+            child: SingleChildScrollView(
+              child: MitmCoreCaSection(
+                certificate: state.shown,
+                trustLabel: name == 'untrusted'
+                    ? l.mitmTrustUntrusted
+                    : l.mitmTrustReady,
+                onDetails: () {},
+                onExport: () {},
+                onDelete: () {},
+                onInstall: () {},
+              ),
+            ),
+          );
+          final inUse = state.mitm.coreCa == null
+              ? l.mitmCaInUseLegacy(state.shown.subject)
+              : l.mitmCaInUseCore(state.shown.subject);
+          expect(find.text(inUse), findsOneWidget);
+          switch (name) {
+            case 'legacy':
+              expect(find.text(l.mitmUpdateCertificate), findsOneWidget);
+              expect(find.text(l.mitmUpdateCertificateDesc), findsOneWidget);
+              expect(find.text(l.mitmImportCertificate), findsOneWidget);
+            case 'pending':
+              expect(find.text(l.mitmPendingVerification), findsOneWidget);
+              expect(find.text(l.mitmInstallAndSwitch), findsOneWidget);
+            case 'verifying':
+              expect(find.text(l.mitmVerifying), findsOneWidget);
+              expect(find.text(l.mitmPendingVerification), findsNothing);
+            case 'switched':
+              expect(find.text(l.mitmOldCaKept(_legacy.subject)), findsOne);
+              expect(find.text(l.mitmRemoveOldCa), findsOneWidget);
+            case 'untrusted':
+              expect(find.text(l.mitmCoreCaUntrustedTitle), findsOneWidget);
+              expect(find.text(l.mitmCoreCaUntrusted), findsOneWidget);
+          }
+          await save(tester, 'section-$name-$tag-$mode');
+        });
+      }
+
+      testWidgets('import-error-$tag-$mode', (tester) async {
+        await pump(
+          tester,
+          locale: locale,
+          brightness: brightness,
+          child: Center(
+            child: MitmImportDialog(
+              pick: () async => (name: 'Flash CA.p12', bytes: [1, 2, 3]),
+              submit: (_, _) async => 'badPassphrase',
+            ),
+          ),
+        );
+        await tester.tap(find.text(l.mitmChooseP12));
+        await tester.pump();
+        await tester.enterText(find.byType(EditableText), 'wrong');
+        await tester.pump();
+        await tester.tap(find.text(l.mitmContinue));
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(find.text('Flash CA.p12'), findsOneWidget);
+        expect(find.text(l.mitmImportBadPassphrase), findsOneWidget);
+        await save(tester, 'import-error-$tag-$mode');
+      });
+
+      testWidgets('backup-include-$tag-$mode', (tester) async {
+        await pump(
+          tester,
+          locale: locale,
+          brightness: brightness,
+          child: const Center(child: MitmBackupDialog(include: true)),
+        );
+        expect(find.text(l.includeMitmCa), findsOneWidget);
+        expect(find.text(l.includeMitmCaTip), findsOneWidget);
+        await save(tester, 'backup-include-$tag-$mode');
+      });
+
+      testWidgets('restore-ca-$tag-$mode', (tester) async {
+        await pump(
+          tester,
+          locale: locale,
+          brightness: brightness,
+          child: const Center(child: MitmRestoredCaDialog()),
+        );
+        expect(find.text(l.mitmRestoredCaTip), findsOneWidget);
+        expect(find.text(l.mitmInstallAndTrust), findsOneWidget);
+        expect(find.text(l.mitmCaNotNow), findsOneWidget);
+        await save(tester, 'restore-ca-$tag-$mode');
+      });
+    }
+  }
+
+  testWidgets('the backup warning shows only with the toggle on', (
+    tester,
+  ) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      child: const Center(child: MitmBackupDialog()),
+    );
+    expect(find.text(l.includeMitmCaTip), findsNothing);
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+    expect(find.text(l.includeMitmCaTip), findsOneWidget);
+  });
+}

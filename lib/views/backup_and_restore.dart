@@ -15,6 +15,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
+import 'package:fl_clash/views/config/mitm_core_ca.dart' show MitmBackupDialog;
 import 'package:fl_clash/views/restore_mount.dart';
 import 'package:fl_clash/widgets/config_item.dart';
 import 'package:flutter/services.dart';
@@ -82,13 +83,7 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
   /// CA out, null cancels the backup.
   Future<bool?> _includeMitmCa() async {
     if (ref.read(patchClashConfigProvider).mitm.coreCa == null) return false;
-    final appLocalizations = context.appLocalizations;
-    return dialogs.showMessage(
-      title: appLocalizations.includeMitmCa,
-      message: TextSpan(text: appLocalizations.includeMitmCaTip),
-      confirmText: appLocalizations.includeMitmCa,
-      cancelText: appLocalizations.backup,
-    );
+    return dialogs.showCommonDialog<bool>(child: const MitmBackupDialog());
   }
 
   Future<void> _backup(BackupDelivery deliver) async {

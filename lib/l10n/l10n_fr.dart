@@ -9628,135 +9628,141 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String mitmCaInUseCore(Object name) {
-    return 'Utilisé : $name, signé dans le proxy';
+    return 'In use: $name, signed in the proxy';
   }
 
   @override
   String mitmCaInUseLegacy(Object name) {
-    return 'Utilisé : $name, le certificat d\'origine de votre trousseau';
+    return 'In use: $name, the original certificate in your keychain';
   }
 
   @override
-  String get mitmMigrate => 'Passer à un nouveau certificat';
+  String get mitmUpdateCertificate => 'Update Decryption Certificate';
 
   @override
-  String get mitmMigrateDesc =>
-      'Signe dans le proxy, les pages n\'attendent donc plus Flash. Le certificat actuel continue de fonctionner jusqu\'à ce que le nouveau soit approuvé et vérifié.';
+  String get mitmUpdateCertificateDesc =>
+      'You can keep using your current certificate. Flash won\'t switch until the new certificate is verified.';
+
+  @override
+  String get mitmGenerateNewCertificate => 'Générer';
+
+  @override
+  String get mitmImportCertificate => 'Importer un fichier .p12';
+
+  @override
+  String get mitmChooseP12 => 'Choose p12 File';
+
+  @override
+  String get mitmImportPassword => 'Mot de passe';
 
   @override
   String mitmPendingCertificate(Object name) {
-    return 'Nouveau certificat : $name';
+    return 'Nouveau certificat de déchiffrement: $name';
   }
 
   @override
-  String get mitmInstallAndSwitch => 'Installer, approuver et basculer';
+  String get mitmPendingVerification => 'Pending verification';
+
+  @override
+  String get mitmInstallAndSwitch => 'Install and Trust New Certificate';
 
   @override
   String get mitmInstallAndSwitchDesc =>
-      'macOS demande votre mot de passe. Flash vérifie le nouveau certificat et ne bascule qu\'une fois qu\'il fonctionne.';
+      'Follow the system prompts to install and trust the new certificate.';
 
   @override
-  String get mitmCheckAndSwitch => 'Vérifier à nouveau et basculer';
+  String get mitmVerifying => 'Verifying the new certificate…';
 
   @override
-  String get mitmDiscardPending => 'Abandonner le nouveau certificat';
-
-  @override
-  String get mitmMigrationSwitched => 'Le nouveau certificat est utilisé.';
-
-  @override
-  String get mitmMigrationCancelled =>
-      'Non installé. Le certificat actuel reste utilisé ; vous pouvez réessayer.';
-
-  @override
-  String get mitmMigrationUntrusted =>
-      'Le nouveau certificat n\'est pas encore approuvé. Le certificat actuel reste utilisé ; approuvez-le et vérifiez à nouveau.';
+  String get mitmDiscardPending => 'Discard new certificate';
 
   @override
   String get mitmMigrationFailed =>
-      'Le nouveau certificat n\'a pas pu être vérifié. Le certificat actuel reste utilisé ; vous pouvez réessayer.';
+      'The new certificate hasn\'t been verified. Your current certificate remains in use. You can try again later.';
 
   @override
-  String get mitmMigrationCoreIdentity =>
-      'Le proxy n\'a pas passé sa vérification d\'identité, le nouveau certificat n\'a donc pas été chargé. Rien n\'a changé.';
+  String get mitmMigrationSwitched =>
+      'The new certificate is active. The old certificate has not been removed.';
 
   @override
-  String get mitmRemoveOldCa => 'Supprimer l\'ancien certificat';
-
-  @override
-  String mitmRemoveOldCaTip(Object name) {
-    return 'Supprimer $name ? Seul ce certificat est supprimé ; celui utilisé reste.';
+  String mitmOldCaKept(Object name) {
+    return 'Old certificate still on this Mac: $name';
   }
 
   @override
-  String get mitmRemoveOldCaFailed =>
-      'L\'ancien certificat n\'a pas été supprimé.';
+  String get mitmRemoveOldCa => 'Remove Old Certificate';
 
   @override
-  String get mitmImportCertificate => 'Importer un certificat (.p12)';
+  String get mitmRemoveOldCaTitle => 'Remove the old certificate?';
 
   @override
-  String get mitmImportPassword => 'Mot de passe du fichier .p12';
+  String get mitmRemoveOldCaTip =>
+      'This removes the old certificate from this Mac. It won\'t remove it from your other devices.';
 
   @override
-  String get mitmImportBadP12 => 'Le fichier n\'est pas un .p12 lisible.';
+  String get mitmRemoveOldCaFailed => 'The old certificate was not removed.';
 
   @override
   String get mitmImportBadPassphrase => 'Mot de passe incorrect.';
 
   @override
-  String get mitmImportNotRoot => 'Ce certificat n\'est pas une AC racine.';
+  String get mitmImportNotRoot =>
+      'Le certificat importé n’est pas un certificat racine.';
 
   @override
-  String get mitmImportKeyMismatch =>
-      'La clé privée ne correspond pas au certificat.';
-
-  @override
-  String get mitmImportExpired => 'Ce certificat a expiré.';
-
-  @override
-  String get mitmImportNotYetValid => 'Ce certificat n\'est pas encore valide.';
+  String get mitmImportExpired => 'Le certificat importé a expiré.';
 
   @override
   String get mitmImportUnsupportedKey =>
-      'Ce type de clé n\'est pas pris en charge. Utilisez une clé ECDSA P-256/P-384 ou RSA de 2048 bits ou plus.';
+      'Le type de clé du certificat importé n’est pas pris en charge.';
 
   @override
   String get mitmImportNameConstraints =>
-      'Les certificats avec contraintes de nom ne sont pas pris en charge.';
+      'Le certificat importé comporte des contraintes de nom.';
 
   @override
-  String mitmImportUnusable(Object reason) {
-    return 'Ce certificat ne peut pas signer de certificats de sites web ($reason).';
-  }
+  String get mitmImportFailed =>
+      'Couldn\'t import the certificate. Check the file and try again.';
+
+  @override
+  String get mitmCoreCaUntrustedTitle =>
+      'Decryption Certificate No Longer Trusted';
 
   @override
   String get mitmCoreCaUntrusted =>
-      'Le certificat n\'est plus approuvé, le déchiffrement s\'est donc arrêté. Approuvez-le à nouveau pour reprendre.';
+      'Decryption has stopped. Trust the certificate again in your system settings, then try again.';
 
   @override
   String get mitmCoreCaPassphraseMissing =>
-      'Le mot de passe du certificat manque dans le trousseau. Importez de nouveau le certificat ou générez-en un nouveau.';
+      'The certificate\'s password is missing from the keychain. Import the certificate again or generate a new one.';
 
   @override
   String get mitmCoreCaCoreOutdated =>
-      'Le proxy est trop ancien pour signer avec ce certificat. Mettez Flash à jour.';
+      'The proxy is too old to sign with this certificate. Update Flash.';
 
   @override
   String get mitmCoreCaRefused =>
-      'Le proxy a refusé le certificat. Générez-en ou importez-en un autre.';
+      'The proxy refused the certificate. Generate or import another one.';
 
   @override
-  String get mitmRestoredCaTitle => 'Certificat de déchiffrement restauré';
-
-  @override
-  String get mitmRestoredCaTip =>
-      'La sauvegarde contenait son certificat de déchiffrement. Approuvez-le sur ce Mac pour déchiffrer à nouveau le HTTPS.';
-
-  @override
-  String get includeMitmCa => 'Inclure le certificat de déchiffrement';
+  String get includeMitmCa =>
+      'Inclure le certificat de déchiffrement dans la sauvegarde ou l’exportation';
 
   @override
   String get includeMitmCaTip =>
-      'Cette sauvegarde contiendra la clé privée du certificat et son mot de passe. Quiconque l\'obtient et peut atteindre votre réseau (le même Wi-Fi, votre routeur, un nœud proxy) peut usurper n\'importe quel site HTTPS sans que vos appareils ne l\'avertissent. Conservez-la en lieu sûr ; si elle a pu fuiter, générez un nouveau certificat et supprimez l\'ancien sur tous vos appareils.';
+      'Ce fichier contient la clé privée et le mot de passe. Toute personne disposant du fichier et d’un accès au réseau pourrait se faire passer pour des sites HTTPS sur les appareils qui font confiance à ce certificat. Protégez ce fichier.';
+
+  @override
+  String get mitmRestoredCaTip =>
+      'Certificate restored. Install and trust it on this Mac before using it for decryption.';
+
+  @override
+  String get mitmInstallAndTrust => 'Install and Trust';
+
+  @override
+  String get mitmCaNotNow => 'Not Now';
+
+  @override
+  String get mitmRestoreKeptCa =>
+      'Si la sauvegarde ne contient pas de certificat, le certificat local est conservé.';
 }

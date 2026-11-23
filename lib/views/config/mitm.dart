@@ -18,7 +18,6 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/providers/mitm_core_ca.dart';
 import 'package:fl_clash/views/config/mitm_core_ca.dart';
 import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModulesItem;
 import 'package:fl_clash/widgets/widgets.dart';
@@ -29,11 +28,6 @@ void _updateMitm(WidgetRef ref, Mitm Function(Mitm) update) {
   ref
       .read(patchClashConfigProvider.notifier)
       .update((state) => state.copyWith(mitm: update(state.mitm)));
-}
-
-String? _joinLines(List<String?> lines) {
-  final kept = lines.nonNulls;
-  return kept.isEmpty ? null : kept.join('\n');
 }
 
 ConfigWriter<T> _mitmWriter<T>(Mitm Function(Mitm, T) update) {
@@ -311,6 +305,60 @@ class _MitmViewState extends ConsumerState<MitmView> {
     }
   }
 
+  Widget _coreCaSection(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<MitmCertificate?> state, {
+    required bool canTrust,
+    String? footer,
+  }) {
+    final appLocalizations = context.appLocalizations;
+    final certificate = state.value;
+    final trust = ref.watch(mitmTrustStateProvider);
+    final installable =
+        canTrust &&
+        switch (trust.value) {
+          MitmTrustCheck(
+            trust: MitmTrust.notInstalled || MitmTrust.untrusted,
+          ) =>
+            true,
+          MitmTrustCheck(
+            trust: MitmTrust.ready,
+            systemStore: false,
+            rootAvailable: true,
+          ) =>
+            true,
+          _ => false,
+        };
+    return MitmCoreCaSection(
+      certificate: certificate,
+      trustLabel: certificate == null
+          ? ''
+          : _trustLabel(appLocalizations, trust),
+      installLabel: installable
+          ? (trust.value?.trust == MitmTrust.untrusted
+                ? appLocalizations.trustCertificate
+                : appLocalizations.installCertificate)
+          : null,
+      onInstall: canTrust ? () => _install(context, ref) : null,
+      onDetails: certificate == null
+          ? null
+          : () => _showDetails(context, certificate),
+      onExport: certificate == null
+          ? null
+          : () => _export(context, certificate),
+      onDelete: () => _delete(context, ref),
+      onGenerate: () => _generateCertificate(
+        ref.read(mitmCaProvider.notifier),
+        appLocalizations.mitmGenerateNewCertificate,
+      ),
+      footer: footer ?? _errorText(state.error),
+    );
+  }
+
+  String? _errorText(Object? error) =>
+      error == null ? null : compactError(error);
+
   List<Widget> _certificateItems(
     BuildContext context,
     WidgetRef ref,
@@ -319,7 +367,6 @@ class _MitmViewState extends ConsumerState<MitmView> {
   }) {
     final appLocalizations = context.appLocalizations;
     final certificate = state.value;
-    final signs = ref.watch(mitmSignerProvider) != null;
     if (certificate == null) {
       final error = state.error;
       return [
@@ -331,14 +378,8 @@ class _MitmViewState extends ConsumerState<MitmView> {
             appLocalizations.generateCertificate,
           ),
         ),
-        if (signs && !ref.watch(safeModeProvider))
-          ListItem(
-            title: Text(appLocalizations.mitmImportCertificate),
-            onTap: () => mitmImport(ref),
-          ),
       ];
     }
-    final keepsRoot = signs && ref.watch(safeModeProvider);
     final trust = ref.watch(mitmTrustStateProvider);
     final installable = switch (trust.value) {
       MitmTrustCheck(trust: MitmTrust.notInstalled || MitmTrust.untrusted) =>
@@ -351,14 +392,9 @@ class _MitmViewState extends ConsumerState<MitmView> {
         canTrust,
       _ => false,
     };
-    final mitm = ref.watch(patchClashConfigProvider.select((s) => s.mitm));
     return [
       ListItem(
-        title: Text(
-          signs
-              ? mitmCaInUseText(appLocalizations, mitm, certificate)
-              : certificate.subject,
-        ),
+        title: Text(certificate.subject),
         subtitle: Text(_trustLabel(appLocalizations, trust)),
         onTap: () => _showDetails(context, certificate),
       ),
@@ -375,18 +411,11 @@ class _MitmViewState extends ConsumerState<MitmView> {
         title: Text(appLocalizations.exportCertificate),
         onTap: () => _export(context, certificate),
       ),
-      if (signs) ...mitmCoreCaItems(context, ref, keepsRoot: keepsRoot),
-      if (!keepsRoot && !signs)
-        ListItem(
-          title: Text(appLocalizations.regenerateCertificate),
-          onTap: () =>
-              _regenerate(context, ref, old: certificate, canTrust: canTrust),
-        ),
-      if (signs && !keepsRoot)
-        ListItem(
-          title: Text(appLocalizations.deleteCertificate),
-          onTap: () => _delete(context, ref),
-        ),
+      ListItem(
+        title: Text(appLocalizations.regenerateCertificate),
+        onTap: () =>
+            _regenerate(context, ref, old: certificate, canTrust: canTrust),
+      ),
     ];
   }
 
@@ -476,27 +505,33 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                   )
                                 : pauseLabel,
                           ),
-                          generateSection(
-                            title: appLocalizations.certificate,
-                            items: _certificateItems(
+                          if (ref.watch(mitmSignerProvider) != null)
+                            _coreCaSection(
                               context,
                               ref,
                               certificate,
                               canTrust: canTrust,
-                            ),
-                            footer: _joinLines([
-                              if (ref.watch(mitmSignerProvider) != null)
-                                mitmCoreCaStatusText(
-                                  appLocalizations,
-                                  ref.watch(mitmCoreCaProvider),
-                                ),
-                              _certificateTip(
+                              footer: _certificateTip(
                                 appLocalizations,
                                 canTrust: canTrust,
                                 check: check,
                               ),
-                            ]),
-                          ),
+                            )
+                          else
+                            generateSection(
+                              title: appLocalizations.certificate,
+                              items: _certificateItems(
+                                context,
+                                ref,
+                                certificate,
+                                canTrust: canTrust,
+                              ),
+                              footer: _certificateTip(
+                                appLocalizations,
+                                canTrust: canTrust,
+                                check: check,
+                              ),
+                            ),
                         ],
                       ),
                     ),
