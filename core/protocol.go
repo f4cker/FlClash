@@ -96,6 +96,10 @@ const (
 	mitmUpdateMethod              CoreMethod = "mitm.update"
 	mitmRewriteStatusMethod       CoreMethod = "mitm.rewriteStatus"
 	mitmRewriteParseMethod        CoreMethod = "mitm.rewriteParse"
+	mitmSetCAMethod               CoreMethod = "mitm.setCA"
+	mitmInspectCAMethod           CoreMethod = "mitm.inspectCA"
+	mitmTrustLeaseMethod          CoreMethod = "mitm.trustLease"
+	mitmCAStateMethod             CoreMethod = "mitm.caState"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"

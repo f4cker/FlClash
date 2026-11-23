@@ -131,6 +131,16 @@ func init() {
 type mitmLeaf struct {
 	cert     tls.Certificate
 	notAfter time.Time
+	// The trust lease it was signed under; zero for the app's leaves.
+	leaseEnd time.Time
+}
+
+// No later than the leaf's lease, if it has one.
+func (leaf *mitmLeaf) clamp(till time.Time) time.Time {
+	if !leaf.leaseEnd.IsZero() && till.After(leaf.leaseEnd) {
+		return leaf.leaseEnd
+	}
+	return till
 }
 
 type mitmLeafCall struct {
@@ -209,6 +219,7 @@ func (cache *mitmLeafCache) keep(runtime *mitmRuntime, host string, leaf *mitmLe
 	if limit := now.Add(mitmLeafReuseFor); till.After(limit) {
 		till = limit
 	}
+	till = leaf.clamp(till)
 	if !till.After(now) {
 		return
 	}
@@ -302,13 +313,16 @@ func (cache *mitmLeafCache) issue(key mitmLeafKey, host string, call *mitmLeafCa
 		if cache.quicProof == nil || len(cache.quicProof) >= mitmLeafCacheMax {
 			cache.quicProof = make(map[mitmLeafKey]time.Time)
 		}
-		cache.quicProof[key] = time.Now().Add(mitmLivenessInterval)
+		cache.quicProof[key] = call.leaf.clamp(time.Now().Add(mitmLivenessInterval))
 	}
 	cache.mu.Unlock()
 	close(call.done)
 }
 
 func issueMitmLeaf(ctx context.Context, host string) (*mitmLeaf, error) {
+	if leaf, local, err := issueMitmLeafFor(ctx, host); local {
+		return leaf, err
+	}
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err

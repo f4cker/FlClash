@@ -132,10 +132,17 @@ func replaceMitmRuntimeClearing(runtime *mitmRuntime, clearReady bool) {
 	}
 }
 
-// Desktop control relay closure means the signer can no longer approve leaves.
+// Leaves one signer made are never served under the other.
+func replaceMitmRuntimeFrom(previous, runtime *mitmRuntime) {
+	replaceMitmRuntimeClearing(runtime, previous.coreSigns() != runtime.coreSigns())
+}
+
+// Desktop control relay closure means the signer can no longer approve
+// leaves, and the CA the app handed over is dropped with it.
 func mitmSignerGone() {
 	mitmIntentMu.Lock()
 	mitmIntentSeq = methodCallSeq.Add(1)
+	dropMitmCA(mitmIntentSeq)
 	replaceMitmRuntimeClearing(nil, true)
 	mitmIntentMu.Unlock()
 }

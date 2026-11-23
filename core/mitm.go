@@ -32,6 +32,9 @@ type MitmSetup struct {
 	// Surge's force-http-engine-hosts: plain HTTP to these hosts is
 	// rewritten and scripted as a decrypted request is.
 	ForceHTTPEngine []string `json:"force-http-engine-hosts,omitempty"`
+	// "core" signs leaves with the CA from mitm.setCA (macOS) and never
+	// asks the app; anything else is the app-signs path.
+	Signer string `json:"signer,omitempty"`
 }
 
 // The setup without its rewrite rules, which are installed on their own.
@@ -95,7 +98,7 @@ func applyMitmSetup(params *SetupParams, candidate []byte) {
 	}
 	runtime.ignored.Store(int64(profileMitmHostnames(candidate)))
 	installMitmRewrite(params.Mitm)
-	replaceMitmRuntime(runtime)
+	replaceMitmRuntimeFrom(mitmState.Load(), runtime)
 }
 
 func updateMitmIgnored(candidate []byte) {
@@ -201,7 +204,7 @@ func handleMitmUpdateSeq(params MitmUpdateParams, seq uint64) error {
 	if previous != nil && reflect.DeepEqual(previous.setup, runtime.setup) {
 		return nil
 	}
-	replaceMitmRuntime(runtime)
+	replaceMitmRuntimeFrom(previous, runtime)
 	log.Infoln("[MITM] settings updated: decrypting=%v hosts=%d", runtime.decrypting(), runtime.hosts.Len())
 	return nil
 }

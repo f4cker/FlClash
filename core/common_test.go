@@ -176,18 +176,22 @@ func coreMethodConstants(t *testing.T) []CoreMethod {
 }
 
 const (
-	mitmAppOwned = "the app holds the CA key and signs every certificate itself"
-	mitmLater    = "scripts are phase 2 of MITM"
+	mitmAppOwned  = "the app reads its CA from its own settings"
+	mitmLater     = "scripts are phase 2 of MITM"
+	mitmMacOSOnly = "only the macOS Core, behind the helper's verified relay, is handed a CA"
 )
 
 func TestEveryCoreMethodConstantIsDispatchable(t *testing.T) {
 	notDispatched := map[CoreMethod]string{
-		messageMethod:                 "core-to-host event envelope, never received",
-		coreCrashMethod:               "handled by the dispatcher so it bypasses panic recovery",
-		mitmCertificateMethod:         mitmAppOwned,
-		mitmGenerateCertificateMethod: mitmAppOwned,
-		mitmIssueCertificateMethod:    mitmAppOwned,
-		mitmRunScriptMethod:           mitmLater,
+		messageMethod:         "core-to-host event envelope, never received",
+		coreCrashMethod:       "handled by the dispatcher so it bypasses panic recovery",
+		mitmCertificateMethod: mitmAppOwned,
+		mitmRunScriptMethod:   mitmLater,
+	}
+	if runtime.GOOS != "darwin" {
+		for method := range mitmCAHandlers {
+			notDispatched[method] = mitmMacOSOnly
+		}
 	}
 
 	for _, method := range coreMethodConstants(t) {

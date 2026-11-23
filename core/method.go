@@ -42,6 +42,9 @@ func dispatchMethodCall(call *MethodCall, reply func(data []byte)) {
 	if call.Method == mitmUpdateMethod || call.Method == mitmDisableMethod {
 		markMitmIntent(call.seq)
 	}
+	if call.Method == mitmSetCAMethod {
+		markMitmCAIntent(call.seq)
+	}
 	// A developer-only fatal-path test. It runs outside every recovery so the
 	// core process terminates; on Android that is the whole application.
 	if call.Method == coreCrashMethod {
@@ -79,8 +82,8 @@ func handleMethodCall(call *MethodCall) (data []byte) {
 	if err != nil {
 		return encodeResponse(MethodResponse{ID: call.ID, Error: asMethodError(err)})
 	}
-	if mitmCaptureMethods[call.Method] {
-		// Decrypted traffic stays in memory: never a spilled reply file.
+	if mitmCaptureMethods[call.Method] || mitmCASecretMethods[call.Method] {
+		// Decrypted traffic and the CA stay in memory: never a spilled reply file.
 		return encodeResponse(MethodResponse{ID: call.ID, Result: result})
 	}
 	return spillResponse(call.ID, encodeResponse(MethodResponse{ID: call.ID, Result: result}))
