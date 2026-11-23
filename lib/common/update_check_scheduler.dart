@@ -6,55 +6,85 @@ import 'package:fl_clash/enum/enum.dart';
 typedef PeriodicTimerFactory =
     Timer Function(Duration interval, void Function(Timer timer) onTick);
 
+typedef OneShotTimerFactory =
+    Timer Function(Duration delay, void Function() callback);
+
+enum BackgroundCheckOutcome { skipped, failed, completed }
+
 class UpdateCheckScheduler {
   UpdateCheckScheduler({
-    required Future<void> Function() check,
+    required Future<BackgroundCheckOutcome> Function() check,
     required bool Function() enabled,
     DateTime Function()? now,
     PeriodicTimerFactory? periodicTimer,
+    OneShotTimerFactory? oneShotTimer,
     this.interval = const Duration(hours: 6),
     this.minGap = const Duration(minutes: 30),
+    this.failureBackoff = const Duration(minutes: 3),
   }) : _check = check,
        _enabled = enabled,
        _now = now ?? DateTime.now,
-       _periodicTimer = periodicTimer ?? Timer.periodic;
+       _periodicTimer = periodicTimer ?? Timer.periodic,
+       _oneShotTimer = oneShotTimer ?? Timer.new;
 
-  final Future<void> Function() _check;
+  final Future<BackgroundCheckOutcome> Function() _check;
   final bool Function() _enabled;
   final DateTime Function() _now;
   final PeriodicTimerFactory _periodicTimer;
+  final OneShotTimerFactory _oneShotTimer;
   final Duration interval;
   final Duration minGap;
+  final Duration failureBackoff;
 
   Timer? _timer;
-  DateTime? _lastCheck;
+  Timer? _delayed;
+  DateTime? _lastSuccess;
+  DateTime? _lastFailure;
   bool _checking = false;
   bool _disposed = false;
 
   bool get started => _timer != null;
 
-  void start() {
+  void start({bool checkNow = true}) {
     if (_disposed || _timer != null) return;
     _timer = _periodicTimer(interval, (_) => unawaited(_run('periodic')));
-    unawaited(_run('launch'));
+    if (checkNow) unawaited(_run('launch'));
   }
 
-  void requestCheck(String reason) {
-    if (_timer == null) return;
-    unawaited(_run(reason));
+  /// With a [delay], requests arriving within it collapse into one check.
+  void requestCheck(String reason, {Duration delay = Duration.zero}) {
+    if (_disposed || _timer == null) return;
+    _delayed?.cancel();
+    _delayed = null;
+    if (delay <= Duration.zero) {
+      unawaited(_run(reason));
+      return;
+    }
+    _delayed = _oneShotTimer(delay, () {
+      _delayed = null;
+      unawaited(_run(reason));
+    });
+  }
+
+  static bool _within(DateTime now, DateTime? since, Duration gap) {
+    if (since == null) return false;
+    final elapsed = now.difference(since);
+    return !elapsed.isNegative && elapsed < gap;
   }
 
   Future<void> _run(String reason) async {
     if (_disposed || _checking || !_enabled()) return;
     // A Timer runs on the monotonic clock, which stops while the Mac sleeps;
-    // the gap is measured on the wall clock, which does not.
-    final now = _now();
-    final last = _lastCheck;
-    if (last != null && now.difference(last).abs() < minGap) return;
-    _lastCheck = now;
+    // the gaps are measured on the wall clock, which does not.
+    final started = _now();
+    if (_within(started, _lastSuccess, minGap) ||
+        _within(started, _lastFailure, failureBackoff)) {
+      return;
+    }
     _checking = true;
+    var outcome = BackgroundCheckOutcome.failed;
     try {
-      await _check();
+      outcome = await _check();
     } catch (error) {
       commonPrint.log(
         'Background update check ($reason) failed: $error',
@@ -63,11 +93,22 @@ class UpdateCheckScheduler {
     } finally {
       _checking = false;
     }
+    switch (outcome) {
+      case BackgroundCheckOutcome.completed:
+        _lastSuccess = started;
+        _lastFailure = null;
+      case BackgroundCheckOutcome.failed:
+        _lastFailure = started;
+      case BackgroundCheckOutcome.skipped:
+        break;
+    }
   }
 
   void dispose() {
     _disposed = true;
     _timer?.cancel();
     _timer = null;
+    _delayed?.cancel();
+    _delayed = null;
   }
 }

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/action.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/state.dart';
@@ -14,17 +16,17 @@ import 'package:riverpod/riverpod.dart';
 class _Core extends Mock implements CoreHandlerInterface {}
 
 class _FakeTimer implements Timer {
-  _FakeTimer(this.interval, this.onTick);
+  _FakeTimer(this.duration, this.onFire);
 
-  final Duration interval;
-  final void Function(Timer timer) onTick;
+  final Duration duration;
+  final void Function() onFire;
   bool cancelled = false;
   int ticks = 0;
 
   void fire() {
     if (cancelled) return;
     ticks++;
-    onTick(this);
+    onFire();
   }
 
   @override
@@ -46,24 +48,38 @@ class _Clock {
 }
 
 class _Timers {
-  final created = <_FakeTimer>[];
+  final periodic = <_FakeTimer>[];
+  final oneShot = <_FakeTimer>[];
 
-  Timer create(Duration interval, void Function(Timer timer) onTick) {
-    final timer = _FakeTimer(interval, onTick);
-    created.add(timer);
+  Timer createPeriodic(Duration interval, void Function(Timer timer) onTick) {
+    late final _FakeTimer timer;
+    timer = _FakeTimer(interval, () => onTick(timer));
+    periodic.add(timer);
     return timer;
   }
 
-  _FakeTimer get single => created.single;
+  Timer createOneShot(Duration delay, void Function() callback) {
+    final timer = _FakeTimer(delay, () {
+      callback();
+    });
+    oneShot.add(timer);
+    return timer;
+  }
+
+  _FakeTimer get single => periodic.single;
+
+  Iterable<_FakeTimer> get pendingOneShots =>
+      oneShot.where((timer) => !timer.cancelled && timer.ticks == 0);
 }
 
 class _CountingAction extends CommonAction {
   int checks = 0;
+  UpdateCheck answer = const UpdateUpToDate();
 
   @override
-  Future<UpdateCheck> checkForAppUpdate() async {
+  Future<UpdateCheck> checkForAppUpdate({bool automatic = false}) async {
     checks++;
-    return const UpdateUpToDate();
+    return answer;
   }
 }
 
@@ -73,14 +89,23 @@ void main() {
     late _Timers timers;
     late bool enabled;
     late int checks;
+    late BackgroundCheckOutcome outcome;
     late UpdateCheckScheduler scheduler;
 
-    UpdateCheckScheduler build({Future<void> Function()? check}) {
+    UpdateCheckScheduler build({
+      Future<BackgroundCheckOutcome> Function()? check,
+    }) {
       final scheduler = UpdateCheckScheduler(
-        check: check ?? () async => checks++,
+        check:
+            check ??
+            () async {
+              checks++;
+              return outcome;
+            },
         enabled: () => enabled,
         now: clock.now,
-        periodicTimer: timers.create,
+        periodicTimer: timers.createPeriodic,
+        oneShotTimer: timers.createOneShot,
       );
       addTearDown(scheduler.dispose);
       return scheduler;
@@ -91,6 +116,7 @@ void main() {
       timers = _Timers();
       enabled = true;
       checks = 0;
+      outcome = BackgroundCheckOutcome.completed;
       scheduler = build();
     });
 
@@ -100,8 +126,17 @@ void main() {
         ..start();
       await pumpEventQueue();
       expect(checks, 1);
-      expect(timers.created, hasLength(1));
-      expect(timers.single.interval, const Duration(hours: 6));
+      expect(timers.periodic, hasLength(1));
+      expect(timers.single.duration, const Duration(hours: 6));
+    });
+
+    test('a restart without checkNow only arms the timer', () async {
+      scheduler.start(checkNow: false);
+      await pumpEventQueue();
+      expect(checks, 0);
+      timers.single.fire();
+      await pumpEventQueue();
+      expect(checks, 1);
     });
 
     test('the timer firing checks again', () async {
@@ -131,31 +166,87 @@ void main() {
       expect(checks, 1);
     });
 
-    test(
-      'wake requests within thirty minutes of a check are skipped',
-      () async {
-        scheduler.start();
-        await pumpEventQueue();
-        clock.advance(const Duration(minutes: 29));
-        scheduler.requestCheck('network');
-        await pumpEventQueue();
-        expect(checks, 1);
-        clock.advance(const Duration(minutes: 1));
-        scheduler.requestCheck('network');
-        await pumpEventQueue();
-        expect(checks, 2);
-        clock.advance(const Duration(minutes: 10));
-        timers.single.fire();
-        await pumpEventQueue();
-        expect(checks, 2, reason: 'the timer is throttled too');
-      },
-    );
+    test('requests within thirty minutes of a success are skipped', () async {
+      scheduler.start();
+      await pumpEventQueue();
+      clock.advance(const Duration(minutes: 29));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 1);
+      clock.advance(const Duration(minutes: 1));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 2);
+      clock.advance(const Duration(minutes: 10));
+      timers.single.fire();
+      await pumpEventQueue();
+      expect(checks, 2, reason: 'the timer is throttled too');
+    });
+
+    test('a failure backs off for minutes, not the full gap', () async {
+      outcome = BackgroundCheckOutcome.failed;
+      scheduler.start();
+      await pumpEventQueue();
+      clock.advance(const Duration(minutes: 2));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 1);
+      outcome = BackgroundCheckOutcome.completed;
+      clock.advance(const Duration(minutes: 1));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 2, reason: 'a request after the back-off goes through');
+      clock.advance(const Duration(minutes: 5));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 2, reason: 'the success starts the thirty minutes');
+    });
+
+    test('a thrown check counts as a failure', () async {
+      scheduler = build(
+        check: () async {
+          checks++;
+          throw StateError('offline');
+        },
+      )..start();
+      await pumpEventQueue();
+      clock.advance(const Duration(minutes: 3));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 2);
+    });
+
+    test('a skipped check does not start the gap', () async {
+      outcome = BackgroundCheckOutcome.skipped;
+      scheduler.start();
+      await pumpEventQueue();
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 2);
+    });
+
+    test('delayed requests collapse into one check after the delay', () async {
+      scheduler.start(checkNow: false);
+      for (var i = 0; i < 3; i++) {
+        scheduler.requestCheck('network', delay: const Duration(seconds: 8));
+      }
+      await pumpEventQueue();
+      expect(checks, 0);
+      final pending = timers.pendingOneShots.toList();
+      expect(pending, hasLength(1));
+      expect(pending.single.duration, const Duration(seconds: 8));
+      pending.single.fire();
+      await pumpEventQueue();
+      expect(checks, 1);
+    });
 
     test('a request before start does nothing', () async {
       scheduler.requestCheck('network');
+      scheduler.requestCheck('network', delay: const Duration(seconds: 8));
       await pumpEventQueue();
       expect(checks, 0);
-      expect(timers.created, isEmpty);
+      expect(timers.periodic, isEmpty);
+      expect(timers.oneShot, isEmpty);
     });
 
     test('a check in flight absorbs further requests', () async {
@@ -164,6 +255,7 @@ void main() {
         check: () async {
           checks++;
           await hold.future;
+          return BackgroundCheckOutcome.completed;
         },
       )..start();
       await pumpEventQueue();
@@ -179,25 +271,13 @@ void main() {
       expect(checks, 2);
     });
 
-    test('a failing check stays silent and later checks still run', () async {
-      scheduler = build(
-        check: () async {
-          checks++;
-          throw StateError('offline');
-        },
-      )..start();
-      await pumpEventQueue();
-      clock.advance(const Duration(hours: 6));
-      timers.single.fire();
-      await pumpEventQueue();
-      expect(checks, 2);
-    });
-
-    test('dispose cancels the timer and stops checks', () async {
+    test('dispose cancels the timers and stops checks', () async {
       scheduler.start();
       await pumpEventQueue();
+      scheduler.requestCheck('network', delay: const Duration(seconds: 8));
       scheduler.dispose();
       expect(timers.single.cancelled, isTrue);
+      expect(timers.oneShot.single.cancelled, isTrue);
       clock.advance(const Duration(hours: 6));
       scheduler.requestCheck('network');
       await pumpEventQueue();
@@ -226,12 +306,18 @@ void main() {
       container.read(commonActionProvider.notifier);
     });
 
+    void start() => action.startUpdateChecks(
+      now: clock.now,
+      periodicTimer: timers.createPeriodic,
+      oneShotTimer: timers.createOneShot,
+    );
+
     void setAutoCheck(bool value) => container
         .read(appSettingProvider.notifier)
         .update((state) => state.copyWith(autoCheckUpdate: value));
 
     test('checks at launch, on the timer and after a wake', () async {
-      action.startUpdateChecks(now: clock.now, periodicTimer: timers.create);
+      start();
       await pumpEventQueue();
       expect(action.checks, 1);
       clock.advance(const Duration(hours: 6));
@@ -248,9 +334,22 @@ void main() {
       expect(action.checks, 3);
     });
 
+    test('a failed check lets the next network change through', () async {
+      action.answer = UpdateCheckFailed(StateError('offline'));
+      start();
+      await pumpEventQueue();
+      expect(action.checks, 1);
+      action.answer = const UpdateUpToDate();
+      clock.advance(const Duration(minutes: 4));
+      action.requestUpdateCheck('network', delay: const Duration(seconds: 8));
+      timers.pendingOneShots.single.fire();
+      await pumpEventQueue();
+      expect(action.checks, 2);
+    });
+
     test('turning the setting off stops checks, on resumes them', () async {
       setAutoCheck(false);
-      action.startUpdateChecks(now: clock.now, periodicTimer: timers.create);
+      start();
       await pumpEventQueue();
       clock.advance(const Duration(hours: 6));
       timers.single.fire();
@@ -263,11 +362,42 @@ void main() {
       timers.single.fire();
       await pumpEventQueue();
       expect(action.checks, 2);
-      expect(timers.created, hasLength(1));
+      expect(timers.periodic, hasLength(1));
+    });
+
+    test('pending user or tray work holds automatic checks back', () async {
+      container.listen(loadingProvider(LoadingTag.checkUpdate), (_, _) {});
+      container.listen(updateInstallBusyProvider, (_, _) {});
+      container.read(loadingProvider(LoadingTag.checkUpdate).notifier).value =
+          true;
+      expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.skipped);
+      container.read(loadingProvider(LoadingTag.checkUpdate).notifier).value =
+          false;
+      container.read(updateInstallBusyProvider.notifier).value = true;
+      expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.skipped);
+      container.read(updateInstallBusyProvider.notifier).value = false;
+      expect(action.checks, 0);
+      expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.completed);
+      expect(action.checks, 1);
+    });
+
+    test('a rebuild keeps the timer running without an extra check', () async {
+      start();
+      await pumpEventQueue();
+      container.invalidate(commonActionProvider);
+      container.read(commonActionProvider.notifier);
+      expect(timers.periodic.first.cancelled, isTrue);
+      expect(timers.periodic, hasLength(2));
+      await pumpEventQueue();
+      expect(action.checks, 1);
+      clock.advance(const Duration(hours: 6));
+      timers.periodic.last.fire();
+      await pumpEventQueue();
+      expect(action.checks, 2);
     });
 
     test('disposing the container cancels the timer', () async {
-      action.startUpdateChecks(now: clock.now, periodicTimer: timers.create);
+      start();
       await pumpEventQueue();
       container.dispose();
       expect(timers.single.cancelled, isTrue);

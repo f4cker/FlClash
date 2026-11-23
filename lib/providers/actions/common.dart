@@ -11,7 +11,10 @@ class CommonAction extends _$CommonAction {
   bool _isInstallingUpdate = false;
   bool _trayUpdateReserved = false;
   UpdateCheckScheduler? _updateChecks;
+  UpdateCheckScheduler Function()? _createUpdateChecks;
   int _updateDialogs = 0;
+  int _userUpdateChecks = 0;
+  bool _offerWhenVisible = false;
 
   // Tags stand in for builds off macOS.
   final _offeredUpdates = <Object>{};
@@ -26,6 +29,16 @@ class CommonAction extends _$CommonAction {
         _updateChecks?.requestCheck('setting enabled');
       }
     });
+    ref.listen(appVisibleProvider, (previous, visible) {
+      if (!visible || !_offerWhenVisible) return;
+      _offerWhenVisible = false;
+      final available = ref.read(availableUpdateStateProvider);
+      if (available != null && ref.read(appSettingProvider).autoCheckUpdate) {
+        unawaited(checkUpdateResultHandle(available));
+      }
+    });
+    // The instance outlives a rebuild; onDispose has stopped the old timer.
+    _updateChecks = _createUpdateChecks?.call()?..start(checkNow: false);
     ref.onDispose(() {
       _updateChecks?.dispose();
       _updateChecks = null;
@@ -175,9 +188,19 @@ class CommonAction extends _$CommonAction {
     }
   }
 
-  Future<bool> autoCheckUpdate() async {
-    if (!ref.read(appSettingProvider).autoCheckUpdate) return false;
-    final result = await checkForAppUpdate();
+  bool get _userUpdateCheckPending =>
+      _userUpdateChecks > 0 ||
+      _trayUpdateReserved ||
+      ref.read(updateInstallBusyProvider) ||
+      ref.read(loadingProvider(LoadingTag.checkUpdate));
+
+  /// A newer check would supersede the user's own and leave them no answer.
+  Future<BackgroundCheckOutcome> autoCheckUpdate() async {
+    if (!ref.read(appSettingProvider).autoCheckUpdate ||
+        _userUpdateCheckPending) {
+      return BackgroundCheckOutcome.skipped;
+    }
+    final result = await checkForAppUpdate(automatic: true);
     // Off macOS the request logs its own failure.
     if (result is UpdateCheckFailed && system.isMacOS) {
       commonPrint.log(
@@ -186,23 +209,31 @@ class CommonAction extends _$CommonAction {
       );
     }
     await checkUpdateResultHandle(result);
-    return result is UpdateAvailable;
+    return switch (result) {
+      UpdateCheckFailed() => BackgroundCheckOutcome.failed,
+      UpdateCheckSuperseded() => BackgroundCheckOutcome.skipped,
+      _ => BackgroundCheckOutcome.completed,
+    };
   }
 
   void startUpdateChecks({
     DateTime Function()? now,
     PeriodicTimerFactory? periodicTimer,
+    OneShotTimerFactory? oneShotTimer,
   }) {
-    if (_updateChecks != null) return;
-    _updateChecks = UpdateCheckScheduler(
+    if (_createUpdateChecks != null) return;
+    _createUpdateChecks = () => UpdateCheckScheduler(
       check: autoCheckUpdate,
       enabled: () => ref.read(appSettingProvider).autoCheckUpdate,
       now: now,
       periodicTimer: periodicTimer,
-    )..start();
+      oneShotTimer: oneShotTimer,
+    );
+    _updateChecks = _createUpdateChecks!()..start();
   }
 
-  void requestUpdateCheck(String reason) => _updateChecks?.requestCheck(reason);
+  void requestUpdateCheck(String reason, {Duration delay = Duration.zero}) =>
+      _updateChecks?.requestCheck(reason, delay: delay);
 
   static Object _updateKey(UpdateAvailable result) =>
       result.manifest?.build ?? result.release['tag_name'] as Object;
@@ -226,7 +257,17 @@ class CommonAction extends _$CommonAction {
 
   /// macOS reads the signed manifest and compares build numbers; elsewhere
   /// the latest GitHub release and its version are compared.
-  Future<UpdateCheck> checkForAppUpdate() async {
+  Future<UpdateCheck> checkForAppUpdate({bool automatic = false}) async {
+    if (automatic) return _checkForAppUpdate();
+    _userUpdateChecks++;
+    try {
+      return await _checkForAppUpdate();
+    } finally {
+      _userUpdateChecks--;
+    }
+  }
+
+  Future<UpdateCheck> _checkForAppUpdate() async {
     final revision = ++_updateCheckRevision;
     final allowBeta = _allowBeta;
     final identity = system.isMacOS
@@ -372,10 +413,12 @@ class CommonAction extends _$CommonAction {
     bool isUser = false,
   }) async {
     if (result is UpdateCheckSuperseded) return;
-    if (!isUser &&
-        result is UpdateAvailable &&
-        !_mayOfferAutomatically(result)) {
-      return;
+    if (!isUser && result is UpdateAvailable) {
+      if (!_mayOfferAutomatically(result)) return;
+      if (!ref.read(appVisibleProvider)) {
+        _offerWhenVisible = true;
+        return;
+      }
     }
     if (result case UpdateAvailable(:final MacUpdateManifest manifest)) {
       if (!_manifestAllowed(manifest)) return;
