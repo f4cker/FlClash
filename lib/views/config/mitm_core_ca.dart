@@ -20,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 String mitmImportFailureText(AppLocalizations l, String? reason) =>
     switch (reason) {
       'badPassphrase' => l.mitmImportBadPassphrase,
+      'inUse' => l.mitmImportInUse,
       'notCA' || 'notRoot' => l.mitmImportNotRoot,
       'expired' => l.mitmImportExpired,
       'unsupportedKey' => l.mitmImportUnsupportedKey,

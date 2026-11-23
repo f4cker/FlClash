@@ -2682,5 +2682,6 @@
   "mitmDeleteCurrentCaTitle": "删除当前证书？",
   "mitmDeleteCurrentCaTip": "这会从这台 Mac 移除此证书及其信任。解密会关闭，直到你再次开启。其他设备不受影响。",
   "mitmDeleteCurrentCaConfirm": "删除当前证书",
-  "mitmCaScopeThisMac": "仅影响这台 Mac"
+  "mitmCaScopeThisMac": "仅影响这台 Mac",
+  "mitmImportInUse": "此证书已在使用中。"
 }

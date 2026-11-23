@@ -8957,4 +8957,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmCaScopeThisMac => '仅影响这台 Mac';
+
+  @override
+  String get mitmImportInUse => '此证书已在使用中。';
 }

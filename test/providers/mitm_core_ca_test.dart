@@ -521,6 +521,64 @@ void main() {
       expect(passphrases.values, isNot(contains(_pendingFp)));
     });
 
+    test(
+      'importing the CA in use is refused and keeps its passphrase',
+      () async {
+        setMitm(coreMitm());
+        when(
+          () => core.inspectMitmCa(any(), any()),
+        ).thenAnswer((_) async => _cert(_coreFp, 'Flash core'));
+        await expectLater(
+          migration().import(_p12, 'other'),
+          throwsA(
+            isA<CoreMethodException>().having(
+              (error) => error.details,
+              'details',
+              {'reason': 'inUse'},
+            ),
+          ),
+        );
+        expect(passphrases.values[_coreFp], 'core secret');
+        expect(mitm().pendingCaCertificate, isNull);
+      },
+    );
+
+    test('a pending copy of the CA in use is discarded without its '
+        'passphrase', () async {
+      setMitm(
+        coreMitm().copyWith(
+          pendingCaP12: _p12,
+          pendingCaCertificate: _cert(_coreFp, 'Flash core'),
+        ),
+      );
+      await migration().discard();
+      expect(passphrases.values[_coreFp], 'core secret');
+    });
+
+    test(
+      'switching to a pending copy of the CA in use retires nothing',
+      () async {
+        setMitm(
+          coreMitm().copyWith(
+            pendingCaP12: _p12,
+            pendingCaCertificate: _cert(_coreFp, 'Flash core'),
+          ),
+        );
+        await started();
+        expect(await migration().verify(), MitmMigrationOutcome.switched);
+        expect(passphrases.values[_coreFp], 'core secret');
+        expect(mitm().retiredCaCertificate, isNull);
+      },
+    );
+
+    test('the CA in use is never offered as the old one', () async {
+      legacy = null;
+      setMitm(
+        coreMitm().copyWith(retiredCaCertificate: _cert(_coreFp, 'Flash core')),
+      );
+      expect(await migration().oldCertificate(), isNull);
+    });
+
     test('with no CA at all the first one is in use at once', () async {
       legacy = null;
       setMitm(const Mitm(enable: true, hostname: ['example.com']));

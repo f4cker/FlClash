@@ -449,6 +449,14 @@ class MitmCaMigration extends Notifier<bool> {
     String passphrase,
     MitmCertificate certificate,
   ) async {
+    // Its passphrase in the keychain is the one the stored p12 opens with.
+    if (_sameFingerprint(certificate.fingerprint, _mitm.coreCa?.fingerprint)) {
+      throw const CoreMethodException(
+        code: 'mitm_ca',
+        message: 'This CA is already in use',
+        details: {'reason': 'inUse'},
+      );
+    }
     await ref
         .read(mitmPassphraseStoreProvider)
         ?.writePassphrase(certificate.fingerprint, passphrase);
@@ -555,7 +563,11 @@ class MitmCaMigration extends Notifier<bool> {
           )) {
         return MitmMigrationOutcome.failed;
       }
-      final retired = _mitm.coreCa;
+      final current = _mitm.coreCa;
+      final retired =
+          _sameFingerprint(current?.fingerprint, pending.fingerprint)
+          ? null
+          : current;
       _update(
         (mitm) => mitm.copyWith(
           caP12: p12,
@@ -593,7 +605,10 @@ class MitmCaMigration extends Notifier<bool> {
     _update(
       (mitm) => mitm.copyWith(pendingCaP12: null, pendingCaCertificate: null),
     );
-    if (pending != null) await _forgetPassphrase(pending.fingerprint);
+    if (pending != null &&
+        !_sameFingerprint(pending.fingerprint, _mitm.coreCa?.fingerprint)) {
+      await _forgetPassphrase(pending.fingerprint);
+    }
   });
 
   /// The legacy keychain CA, or a Core CA replaced since.
@@ -605,7 +620,11 @@ class MitmCaMigration extends Notifier<bool> {
         !_sameFingerprint(legacy.fingerprint, mitm.coreCa?.fingerprint)) {
       return legacy;
     }
-    return mitm.retiredCaCertificate;
+    final retired = mitm.retiredCaCertificate;
+    if (_sameFingerprint(retired?.fingerprint, mitm.coreCa?.fingerprint)) {
+      return null;
+    }
+    return retired;
   }
 
   Future<bool> removeOld() => _step(() async {

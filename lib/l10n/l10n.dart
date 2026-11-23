@@ -15951,6 +15951,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Affects this Mac only'**
   String get mitmCaScopeThisMac;
+
+  /// No description provided for @mitmImportInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate is already in use.'**
+  String get mitmImportInUse;
 }
 
 class _AppLocalizationsDelegate

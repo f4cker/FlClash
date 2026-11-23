@@ -9730,4 +9730,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmCaScopeThisMac => 'Affects this Mac only';
+
+  @override
+  String get mitmImportInUse => 'This certificate is already in use.';
 }
