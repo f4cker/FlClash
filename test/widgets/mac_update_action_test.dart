@@ -33,7 +33,7 @@ class _CheckAction extends CommonAction {
   int checks = 0;
 
   @override
-  Future<UpdateCheck> checkForAppUpdate() async {
+  Future<UpdateCheck> checkForAppUpdate({bool automatic = false}) async {
     checks++;
     await checkHold?.future;
     ref.read(availableUpdateStateProvider.notifier).value =
@@ -75,6 +75,31 @@ class _Adapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+class _HeldAdapter extends _Adapter {
+  _HeldAdapter(super.bytes, this.hold);
+  final Completer<void> hold;
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requested.add(options.uri);
+    await hold.future;
+    return ResponseBody.fromBytes(bytes, 200);
+  }
+}
+
+class _IdleTimer implements Timer {
+  bool cancelled = false;
+  @override
+  void cancel() => cancelled = true;
+  @override
+  bool get isActive => !cancelled;
+  @override
+  int get tick => 0;
 }
 
 UpdateAvailable candidate({
@@ -520,6 +545,270 @@ void main() {
       },
     );
 
+    Future<void> dismissDialog(WidgetTester tester) async {
+      Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('automatic check offers a dismissed build once per run', (
+      tester,
+    ) async {
+      await pump(tester);
+      final first = action.checkUpdateResultHandle(action.answer);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+      await dismissDialog(tester);
+      await first;
+      expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+
+      await action.checkUpdateResultHandle(candidate());
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(container.read(availableUpdateStateProvider), isNotNull);
+
+      final newer = action.checkUpdateResultHandle(
+        candidate(build: 2026111903),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('可更新版本：1.0.0 (2026111903)'), findsOneWidget);
+      await dismissDialog(tester);
+      await newer;
+      expect(calls, isEmpty);
+      expect(adapter.requested, isEmpty);
+    });
+
+    testWidgets('manual check shows a build the automatic one offered', (
+      tester,
+    ) async {
+      await pump(tester);
+      final automatic = action.checkUpdateResultHandle(action.answer);
+      await tester.pumpAndSettle();
+      await dismissDialog(tester);
+      await automatic;
+      for (var i = 0; i < 2; i++) {
+        final manual = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        await dismissDialog(tester);
+        await manual;
+      }
+    });
+
+    testWidgets(
+      'automatic check stays quiet over an open dialog or a running download',
+      (tester) async {
+        await pump(tester);
+        final manual = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        await action.checkUpdateResultHandle(candidate(build: 2026111903));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.textContaining('(2026111903)'), findsNothing);
+        await dismissDialog(tester);
+        await manual;
+
+        final download = container.read(updateDownloadStateProvider.notifier);
+        download.value = const UpdateDownloading('v1.0.0');
+        await action.checkUpdateResultHandle(candidate(build: 2026111904));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        download.value = null;
+
+        final offered = action.checkUpdateResultHandle(
+          candidate(build: 2026111904),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('(2026111904)'), findsOneWidget);
+        await dismissDialog(tester);
+        await offered;
+      },
+    );
+
+    testWidgets('automatic check waits for the window to be visible', (
+      tester,
+    ) async {
+      await pump(tester);
+      final visible = container.read(appVisibleProvider.notifier);
+      visible.value = false;
+      await action.checkUpdateResultHandle(action.answer);
+      await action.checkUpdateResultHandle(action.answer);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      visible.value = true;
+      await tester.pumpAndSettle();
+      expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+      await dismissDialog(tester);
+      await action.checkUpdateResultHandle(action.answer);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets(
+      'off macOS a release tag is offered once and can stop reminding',
+      (tester) async {
+        await pump(tester);
+        UpdateAvailable release(String tag) =>
+            UpdateAvailable({'tag_name': tag, 'body': 'Notes for $tag'});
+        final first = action.checkUpdateResultHandle(release('v2.0.0'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Notes for v2.0.0'), findsOneWidget);
+        await dismissDialog(tester);
+        await first;
+        await action.checkUpdateResultHandle(release('v2.0.0'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        final newer = action.checkUpdateResultHandle(release('v2.0.1'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Notes for v2.0.1'), findsOneWidget);
+        await tester.tap(find.widgetWithText(TextButton, '不再提示'));
+        await tester.pumpAndSettle();
+        await newer;
+        expect(container.read(appSettingProvider).autoCheckUpdate, isFalse);
+      },
+    );
+
+    testWidgets(
+      'turning the setting off mid-check drops the automatic prompt',
+      (tester) async {
+        await pump(tester);
+        action.checkHold = Completer<void>();
+        final automatic = action.autoCheckUpdate();
+        await tester.pump();
+        container
+            .read(appSettingProvider.notifier)
+            .update((state) => state.copyWith(autoCheckUpdate: false));
+        action.checkHold!.complete();
+        await tester.pumpAndSettle();
+        expect(await automatic, BackgroundCheckOutcome.completed);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(container.read(availableUpdateStateProvider), isNotNull);
+        final manual = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        await dismissDialog(tester);
+        await manual;
+      },
+    );
+
+    group('silent launch', () {
+      late ValueNotifier<bool> shown;
+      late _IdleTimer timer;
+
+      Future<void> launch(WidgetTester tester) async {
+        await pump(tester);
+        shown = ValueNotifier(false);
+        addTearDown(shown.dispose);
+        timer = _IdleTimer();
+        action.startUpdateChecks(
+          windowShown: shown,
+          periodicTimer: (_, _) => timer,
+        );
+        await tester.pumpAndSettle();
+        expect(action.checks, 1);
+        expect(find.byType(AlertDialog), findsNothing);
+      }
+
+      testWidgets('the launch prompt waits for the window to be shown', (
+        tester,
+      ) async {
+        await launch(tester);
+        shown.value = true;
+        await tester.pumpAndSettle();
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        await dismissDialog(tester);
+        shown.value = false;
+        shown.value = true;
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(timer.cancelled, isFalse);
+      });
+
+      testWidgets('turning the setting off while hidden drops the prompt', (
+        tester,
+      ) async {
+        await launch(tester);
+        container
+            .read(appSettingProvider.notifier)
+            .update((state) => state.copyWith(autoCheckUpdate: false));
+        shown.value = true;
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+    });
+
+    testWidgets('a user check supersedes an automatic one in flight', (
+      tester,
+    ) async {
+      await pump(tester);
+      final real = ProviderContainer();
+      addTearDown(real.dispose);
+      real.listen(lastUpdateCheckStateProvider, (_, _) {});
+      // Made outside runAsync, the hold would complete in the fake zone.
+      final (hold, held) = (await tester.runAsync(() async {
+        final hold = Completer<void>();
+        return (hold, _HeldAdapter(utf8.encode('not a signed manifest'), hold));
+      }))!;
+      request.releaseDio.httpClientAdapter = held;
+      final action = real.read(commonActionProvider.notifier);
+      Future<void> requests(int count) async {
+        for (var i = 0; i < 100 && held.requested.length < count; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(held.requested, hasLength(count));
+      }
+
+      await tester.runAsync(() async {
+        final automatic = action.autoCheckUpdate();
+        await requests(1);
+        final manual = action.checkForAppUpdate();
+        await requests(2);
+        expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.skipped);
+        hold.complete();
+        expect(await automatic, BackgroundCheckOutcome.skipped);
+        expect(await manual, isA<UpdateCheckFailed>());
+        expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.failed);
+      });
+      expect(held.requested, hasLength(3));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('automatic check never supersedes a pending manual check', (
+      tester,
+    ) async {
+      await pump(tester);
+      final real = ProviderContainer();
+      addTearDown(real.dispose);
+      real.listen(lastUpdateCheckStateProvider, (_, _) {});
+      // Made outside runAsync, the hold would complete in the fake zone.
+      final (hold, held) = (await tester.runAsync(() async {
+        final hold = Completer<void>();
+        return (hold, _HeldAdapter(utf8.encode('not a signed manifest'), hold));
+      }))!;
+      request.releaseDio.httpClientAdapter = held;
+      final action = real.read(commonActionProvider.notifier);
+      await tester.runAsync(() async {
+        final manual = action.checkForAppUpdate();
+        for (var i = 0; i < 100 && held.requested.isEmpty; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(held.requested, hasLength(1));
+        expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.skipped);
+        hold.complete();
+        expect(await manual, isA<UpdateCheckFailed>());
+      });
+      expect(held.requested, hasLength(1));
+    });
+
     testWidgets('fetch failure retains known target and never claims latest', (
       tester,
     ) async {
@@ -581,13 +870,13 @@ void main() {
       request.releaseDio.httpClientAdapter = _Adapter(
         utf8.encode('not a signed manifest'),
       );
-      final offered = await tester.runAsync(
+      final outcome = await tester.runAsync(
         real.read(commonActionProvider.notifier).autoCheckUpdate,
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
-      expect(offered, isFalse);
+      expect(outcome, BackgroundCheckOutcome.failed);
       expect(real.read(lastUpdateCheckStateProvider), isA<UpdateCheckFailed>());
       expect(real.read(availableUpdateStateProvider), same(known));
       for (final text in [

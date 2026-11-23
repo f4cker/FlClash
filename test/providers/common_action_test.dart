@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -165,7 +166,7 @@ void main() {
 
       await expectLater(
         container.read(commonActionProvider.notifier).autoCheckUpdate(),
-        completion(isFalse),
+        completion(BackgroundCheckOutcome.skipped),
       );
     });
   });

@@ -129,6 +129,13 @@ class ApplicationState extends ConsumerState<Application> {
       'connectivityChanged wifi: ${state.wifi} vpn: ${state.vpn}',
     );
     unawaited(ref.read(systemActionProvider.notifier).updateLocalIp());
+    // A Mac waking from sleep brings its network back, and the update timer
+    // stood still while it slept. The first events can come before DNS works.
+    if (system.isMacOS) {
+      ref
+          .read(commonActionProvider.notifier)
+          .requestUpdateCheck('network', delay: const Duration(seconds: 8));
+    }
     final hasVpn = state.vpn;
     if (_preHasVpn == hasVpn) {
       ref.read(routeTrackerProvider.notifier).bumpHostEpoch();
