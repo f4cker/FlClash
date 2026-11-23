@@ -57,6 +57,17 @@ class MitmCoreCaTrust {
 bool mitmRetrustNeedsInstall(MitmTrust? trust) =>
     trust == MitmTrust.untrusted || trust == MitmTrust.notInstalled;
 
+/// The user asked to trust the CA again. An install, when one is needed,
+/// checks again and refreshes once it finishes.
+Future<void> mitmRetrust({
+  required Future<MitmTrust?> Function() check,
+  required Future<void> Function() install,
+  required Future<void> Function() refresh,
+}) async {
+  if (mitmRetrustNeedsInstall(await check())) return install();
+  return refresh();
+}
+
 bool _sameFingerprint(String? a, String? b) =>
     a != null && b != null && a.toUpperCase() == b.toUpperCase();
 

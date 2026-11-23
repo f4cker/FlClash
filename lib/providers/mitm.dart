@@ -860,10 +860,14 @@ class MitmTrustState extends _$MitmTrustState {
           outcome == MitmInstallOutcome.untilReboot;
       if (ref.mounted && (done || outcome == null)) {
         // Only a finished install answers "trust again" for the Core CA.
-        if (done && _isCoreCa(ca)) {
-          await ref.read(mitmCoreCaProvider.notifier).retrust();
+        final trust = done && _isCoreCa(ca)
+            ? await ref.read(mitmCoreCaProvider.notifier).retrust()
+            : null;
+        if (trust == null) {
+          await refresh();
+        } else if (ref.mounted) {
+          state = AsyncData(MitmTrustCheck(trust));
         }
-        await refresh();
       }
     }
   }

@@ -458,6 +458,52 @@ void main() {
       expect(mitmRetrustNeedsInstall(null), isFalse);
     });
 
+    test('a retrust checks trust once whatever the verdict', () async {
+      for (final trust in [...MitmTrust.values, null]) {
+        final calls = <String>[];
+        await mitmRetrust(
+          check: () async {
+            calls.add('check');
+            return trust;
+          },
+          install: () async => calls.add('install'),
+          refresh: () async => calls.add('refresh'),
+        );
+        expect(calls, [
+          'check',
+          mitmRetrustNeedsInstall(trust) ? 'install' : 'refresh',
+        ], reason: '$trust');
+      }
+    });
+
+    test('an install after a negative retrust checks trust once', () async {
+      setMitm(coreMitm());
+      await started();
+      final lease = container.read(mitmCoreCaProvider.notifier);
+      final trust = container.read(mitmTrustStateProvider.notifier);
+      verdict = MitmTrust.untrusted;
+      await lease.checkNow();
+      await lease.checkNow();
+      when(() => store.install(any())).thenAnswer((_) async {
+        verdict = MitmTrust.ready;
+        return MitmInstallOutcome.installed;
+      });
+      clearInteractions(store);
+
+      await mitmRetrust(
+        check: lease.retrust,
+        install: () async => trust.install(),
+        refresh: trust.refresh,
+      );
+
+      verify(() => store.install(any())).called(1);
+      verify(() => store.check(any(), any())).called(2);
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.leased,
+      );
+    });
+
     test('a retrust still untrusted stays stopped', () async {
       setMitm(coreMitm());
       await started();
