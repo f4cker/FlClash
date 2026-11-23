@@ -562,18 +562,19 @@ class AppTray implements TrayPort {
     bool pending,
     Proxy proxy,
     ColorScheme scheme, {
-    String untested = '—',
+    String? untested,
   }) {
     final l10n = currentAppLocalizations;
     final value = pending || delay == 0 ? null : delay;
     final label = pending
         ? l10n.trayTesting
         : value == null
-        ? switch (proxy.type.toLowerCase()) {
-            'direct' => l10n.direct,
-            'reject' || 'rejectdrop' => l10n.trayReject,
-            _ => untested,
-          }
+        ? untested ??
+              switch (proxy.type.toLowerCase()) {
+                'direct' => l10n.direct,
+                'reject' || 'rejectdrop' => l10n.trayReject,
+                _ => '—',
+              }
         : value > 0
         ? l10n.trayLatencyBadge(value)
         : value == -1
@@ -658,12 +659,14 @@ class AppTray implements TrayPort {
             groups: rawGroups,
             selectedMap: selectedMap,
           );
-    final latency = node == null
+    final nodeProxy = node == null ? null : _proxyNamed(node, group, rawGroups);
+    // DIRECT is measured like a node; REJECT and PASS have nothing to measure.
+    final latency = nodeProxy == null || _isRejectOrPass(nodeProxy)
         ? null
         : _badge(
             delays[selected],
             pendingNames.contains(selected),
-            _proxyNamed(node, group, rawGroups),
+            nodeProxy,
             scheme,
             untested: l10n.trayNotTested,
           );
@@ -737,6 +740,16 @@ class AppTray implements TrayPort {
       }
     }
     return Proxy(name: name, type: '');
+  }
+
+  bool _isRejectOrPass(Proxy proxy) {
+    final type = proxy.type.isEmpty ? proxy.name : proxy.type;
+    return const {
+      'reject',
+      'rejectdrop',
+      'reject-drop',
+      'pass',
+    }.contains(type.toLowerCase());
   }
 
   String _latencyDescription(

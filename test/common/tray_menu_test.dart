@@ -1680,6 +1680,64 @@ void main() {
       expect(row()['accessibilityLabel'], endsWith(l10n.trayNotTested));
     });
 
+    test('DIRECT picks share one result per test URL', () async {
+      Group pick(String name, {String? testUrl}) => Group(
+        name: name,
+        type: GroupType.Selector,
+        hidden: false,
+        now: 'DIRECT',
+        testUrl: testUrl,
+        all: const [
+          Proxy(name: 'DIRECT', type: 'Direct'),
+          Proxy(name: 'REJECT', type: 'Reject'),
+        ],
+      );
+      final apple = pick('Apple');
+      final china = pick('China');
+      final other = pick('Other', testUrl: 'https://other.test');
+      final rows = [apple, china, other];
+      container.read(groupsProvider.notifier).value = rows;
+      Map? badgeOf(String name) => _item(showCall(), name)['badge'] as Map?;
+
+      await update(_trayState(isStart: true, groups: rows));
+      for (final name in ['Apple', 'China', 'Other']) {
+        expect(_item(showCall(), name)['detail'], 'DIRECT');
+        expect(badgeOf(name)!['label'], l10n.trayNotTested);
+        expectColours(
+          badgeOf(name)!,
+          SurfaceLevel.inset.colorOf(scheme()),
+          scheme().onSurfaceVariant,
+        );
+      }
+
+      delay('DIRECT', 0);
+      await update(_trayState(isStart: true, groups: rows));
+      expect(badgeOf('Apple')!['label'], l10n.trayNotTested);
+
+      delay('DIRECT', 24);
+      await update(_trayState(isStart: true, groups: rows));
+      for (final name in ['Apple', 'China']) {
+        expect(badgeOf(name)!['label'], l10n.trayLatencyBadge(24));
+        expectColours(
+          badgeOf(name)!,
+          scheme().successContainer,
+          scheme().onSuccessContainer,
+        );
+        expect(
+          _item(showCall(), name)['accessibilityLabel'],
+          '$name, ${l10n.trayCurrentSelection('DIRECT')}, '
+          '${l10n.trayLatencyMilliseconds(24)}',
+        );
+      }
+      expect(badgeOf('Other')!['label'], l10n.trayNotTested);
+
+      final rejecting = apple.copyWith(now: 'REJECT');
+      container.read(groupsProvider.notifier).value = [rejecting];
+      await update(_trayState(isStart: true, groups: [rejecting]));
+      expect(_item(showCall(), 'Apple')['detail'], 'REJECT');
+      expect(badgeOf('Apple'), isNull);
+    });
+
     test('a node that did not answer reads as timed out', () async {
       delay('A', -1);
       await show('A');
