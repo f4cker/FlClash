@@ -34,7 +34,8 @@ const (
 	mitmCertBackdate = 5 * time.Minute
 )
 
-// Prints as a mark with any verb; JSON still carries the bytes.
+// Prints as a mark with any verb; JSON still carries the bytes. fmt skips
+// Format on an unexported field, so never hold these in one.
 type mitmCAP12 []byte
 
 func (mitmCAP12) Format(state fmt.State, _ rune) { _, _ = state.Write([]byte(mitmCAMark)) }
@@ -89,6 +90,7 @@ const (
 	mitmCAUnknownCheck    mitmCARefusal = "unknownCheck"
 	mitmCALeaseLapsed     mitmCARefusal = "leaseLapsed"
 	mitmCASuperseded      mitmCARefusal = "superseded"
+	mitmCAWeakSignature   mitmCARefusal = "weakSignature"
 	mitmCAUnsupported     mitmCARefusal = "unsupportedPlatform"
 )
 
@@ -185,7 +187,11 @@ func vetMitmCA(cert *x509.Certificate, key crypto.Signer, now time.Time) error {
 		return mitmCANotCA
 	case cert.KeyUsage&x509.KeyUsageCertSign == 0:
 		return mitmCANoCertSign
-	case !bytes.Equal(cert.RawIssuer, cert.RawSubject) || cert.CheckSignatureFrom(cert) != nil:
+	case !bytes.Equal(cert.RawIssuer, cert.RawSubject):
+		return mitmCANotRoot
+	case mitmWeakSignature(cert.SignatureAlgorithm):
+		return mitmCAWeakSignature
+	case cert.CheckSignatureFrom(cert) != nil:
 		return mitmCANotRoot
 	case now.Before(cert.NotBefore):
 		return mitmCANotYetValid
@@ -199,6 +205,14 @@ func vetMitmCA(cert *x509.Certificate, key crypto.Signer, now time.Time) error {
 		return mitmCACriticalExt
 	}
 	return nil
+}
+
+func mitmWeakSignature(algorithm x509.SignatureAlgorithm) bool {
+	switch algorithm {
+	case x509.MD2WithRSA, x509.MD5WithRSA, x509.SHA1WithRSA, x509.DSAWithSHA1, x509.ECDSAWithSHA1:
+		return true
+	}
+	return false
 }
 
 func mitmEKUAllowsServerAuth(cert *x509.Certificate) bool {
@@ -224,6 +238,7 @@ func mitmHasNameConstraints(cert *x509.Certificate) bool {
 
 func handleMitmInspectCA(params MitmCAParams) (MitmCertificate, error) {
 	_, cert, err := decodeMitmCA(params.P12, params.Passphrase, time.Now())
+	clear(params.P12)
 	if err != nil {
 		return MitmCertificate{}, mitmCAMethodError(err)
 	}

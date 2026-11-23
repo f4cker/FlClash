@@ -192,6 +192,8 @@ func TestMitmGeneratedRootFollowsTheSwiftTemplateUnderADistinctName(t *testing.T
 		t.Errorf("key usage = %v", cert.KeyUsage)
 	case len(cert.ExtKeyUsage) != 1 || cert.ExtKeyUsage[0] != x509.ExtKeyUsageServerAuth:
 		t.Errorf("EKU = %v", cert.ExtKeyUsage)
+	case len(cert.AuthorityKeyId) != 0:
+		t.Error("the root carries an AKI")
 	case !bytes.Equal(cert.SubjectKeyId, keyID[:]):
 		t.Error("SKI is not SHA-1 of the public point")
 	case name == "Flash 本机解密证书（仅此 Mac）" || strings.Contains(name, "仅此 Mac") || !strings.HasPrefix(name, "Flash 解密证书 "+now.UTC().Format("2006-01-02")+" "):
@@ -272,6 +274,12 @@ func TestMitmCoreLeafFollowsTheSwiftTemplate(t *testing.T) {
 	}
 	if critical, _ := extensionCritical(cert, oidKeyUsage); !critical {
 		t.Error("key usage not critical")
+	}
+	if critical, found := extensionCritical(cert, oidExtKeyUsage); !found || critical {
+		t.Error("EKU missing or critical")
+	}
+	if len(cert.SubjectKeyId) != 0 {
+		t.Error("the leaf carries an SKI")
 	}
 }
 
@@ -478,10 +486,14 @@ func TestMitmCoreSignerGates(t *testing.T) {
 		runtime := &mitmRuntime{setup: *coreSignerSetup(mitmFingerprintDisplay(mitmCA.Load().cert.Raw)), hosts: &mitmHostMatcher{entries: []mitmHostEntry{{wildcard: true, base: "example.com"}}}}
 		runtime.setup.Hostname = []string{"*.example.com"}
 		mitmState.Store(runtime)
-		for _, host := range []string{"x.example.com", "*.example.com", "a..example.com"} {
-			_, err := issueMitmLeafLocal(runtime, host)
-			if host == "x.example.com" && err != nil || host != "x.example.com" && err == nil {
-				t.Errorf("%s: %v", host, err)
+		if _, err := issueMitmLeafLocal(runtime, "x.example.com"); err != nil {
+			t.Errorf("x.example.com: %v", err)
+		}
+		// The matcher applies validDNSName itself; the signer's own check
+		// stays as a second gate.
+		for _, host := range []string{"*.example.com", "a..example.com", "a_b.example.com"} {
+			if _, err := issueMitmLeafLocal(runtime, host); !errors.Is(err, errMitmNotListed) {
+				t.Errorf("%s: %v, want not listed", host, err)
 			}
 		}
 	})
@@ -661,5 +673,31 @@ func TestMitmSignerModeChangeDropsKeptLeaves(t *testing.T) {
 	mitmLeaves.mu.Unlock()
 	if kept != 0 {
 		t.Fatal("a leaf the Core signed is kept for the app signer")
+	}
+}
+
+func TestMitmSHA1RootIsAWeakSignatureNotANonRoot(t *testing.T) {
+	withMitmCAState(t)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p12, pass, _ := testCAP12(t, testCAOptions{key: key, edit: func(template *x509.Certificate) {
+		template.SignatureAlgorithm = x509.SHA1WithRSA
+	}})
+	if _, _, err := decodeMitmCA(p12, mitmCAPassphrase(pass), time.Now()); !errors.Is(err, mitmCAWeakSignature) {
+		t.Fatalf("SHA-1 root: %v", err)
+	}
+}
+
+// fmt never calls Format on an unexported field: holding a secret in one
+// would print it. This pins the limitation the types' comment warns of.
+func TestMitmCASecretInAnUnexportedFieldIsNotMasked(t *testing.T) {
+	holder := struct{ passphrase mitmCAPassphrase }{"hunter2"}
+	if !strings.Contains(fmt.Sprintf("%+v", holder), "hunter2") {
+		t.Skip("fmt now masks unexported fields too")
+	}
+	if strings.Contains(fmt.Sprintf("%+v", struct{ Passphrase mitmCAPassphrase }{"hunter2"}), "hunter2") {
+		t.Fatal("an exported field printed the secret")
 	}
 }

@@ -211,5 +211,8 @@ func serve(dialed ipcConn) {
 		}
 
 		dispatchMethodCall(call, send)
+		if mitmCASecretMethods[call.Method] {
+			clear(data)
+		}
 	}
 }
