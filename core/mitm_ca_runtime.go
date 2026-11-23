@@ -123,8 +123,15 @@ func (ca *mitmLoadedCA) lapsedLocked(now time.Time) bool {
 }
 
 // A lease vouches for the decryption it was renewed under: turning that off,
-// away from the Core or to another CA ends it. A new CA's lease is kept.
+// away from the Core or to another CA ends it. A new CA's lease is kept
+// while decryption stays on; with decryption off no lease is kept.
 func endMitmLeaseFor(previous, next *mitmRuntime) {
+	if !next.decrypting() {
+		if ca := mitmCA.Load(); ca != nil {
+			ca.endLease()
+		}
+		return
+	}
 	if !previous.coreSigns() || !previous.decrypting() {
 		return
 	}

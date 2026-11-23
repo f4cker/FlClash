@@ -445,6 +445,31 @@ func TestMitmFreshLeaseLiftsTheTrustPauseOfItsRuntime(t *testing.T) {
 	}
 }
 
+func TestMitmLeaseEndsWheneverDecryptionTurnsOff(t *testing.T) {
+	skipUnlessMitmCAHandled(t)
+	withMitmCAState(t)
+	legacy := strings.Repeat("CD:", 31) + "CD"
+	appSetup := &MitmSetup{Enable: true, Hostname: []string{"example.com"}, DecryptTLS: true, CAFingerprint: legacy}
+	updateSetup(t, appSetup)
+	pending := generatedTestCA(t)
+	loadTestCAGenerated(t, pending)
+	if err := redeem(pending.Fingerprint, issueCheck(t)); err != nil {
+		t.Fatal(err)
+	}
+	updateSetup(t, &MitmSetup{Enable: true, Hostname: []string{"other.example.com"}, DecryptTLS: true, CAFingerprint: legacy})
+	if !leasedNow() {
+		t.Fatal("a pending CA lost its lease while the app kept decrypting")
+	}
+	updateSetup(t, &MitmSetup{Enable: true, Hostname: []string{"example.com"}, CAFingerprint: legacy})
+	if leasedNow() {
+		t.Fatal("the pending CA kept its lease with decryption off")
+	}
+	updateSetup(t, coreSignerSetup(pending.Fingerprint, "example.com"))
+	if _, err := issueMitmLeaf(context.Background(), "example.com"); !isRefusal(mitmTrustUnavailable)(err) {
+		t.Fatalf("switched on without a fresh check: %v", err)
+	}
+}
+
 func TestMitmLapseSeenByACheckDropsKeptLeaves(t *testing.T) {
 	withCoreSigner(t, "example.com")
 	if _, err := issueMitmLeaf(context.Background(), "example.com"); err != nil {
