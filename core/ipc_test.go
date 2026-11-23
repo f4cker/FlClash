@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metacubex/mihomo/common/observable"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/log"
 )
@@ -692,24 +691,6 @@ func TestSafeGoSurvivesAPanic(t *testing.T) {
 		t.Fatal("safeGo never ran the task")
 	}
 	time.Sleep(50 * time.Millisecond)
-}
-
-func drainLogStream(t *testing.T, subscriber observable.Subscription[log.Event], window time.Duration, match func(string) bool) bool {
-	t.Helper()
-	deadline := time.After(window)
-	for {
-		select {
-		case event, ok := <-subscriber:
-			if !ok {
-				return false
-			}
-			if match(event.Payload) {
-				return true
-			}
-		case <-deadline:
-			return false
-		}
-	}
 }
 
 func TestSendFailureIsNotReportedThroughTheLogStream(t *testing.T) {
