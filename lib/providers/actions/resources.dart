@@ -69,7 +69,11 @@ class ResourcesAction extends _$ResourcesAction {
         failures.add(
           UpdatingMessage(
             label: label,
-            message: userFacingErrorMessage(e, appLocalizations),
+            message: logUpdateFailure(
+              label,
+              e,
+              appLocalizations: appLocalizations,
+            ),
           ),
         );
       }
@@ -166,10 +170,7 @@ class ResourcesAction extends _$ResourcesAction {
     try {
       await update();
     } catch (e) {
-      commonPrint.log(
-        'auto update $label: ${compactError(e)}',
-        logLevel: LogLevel.warning,
-      );
+      logUpdateFailure(label, e);
     }
   }
 }

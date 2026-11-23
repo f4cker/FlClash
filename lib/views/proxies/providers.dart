@@ -45,7 +45,11 @@ class _ExternalProvidersSliverState
             messages.add(
               UpdatingMessage(
                 label: provider.name,
-                message: userFacingErrorMessage(error, appLocalizations),
+                message: logUpdateFailure(
+                  provider.name,
+                  error,
+                  appLocalizations: appLocalizations,
+                ),
               ),
             );
           }

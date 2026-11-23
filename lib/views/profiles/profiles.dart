@@ -65,7 +65,11 @@ class _ProfilesViewState extends ConsumerState<ProfilesView> {
           messages.add(
             UpdatingMessage(
               label: profile.realLabel,
-              message: userFacingErrorMessage(e, appLocalizations),
+              message: logUpdateFailure(
+                profile.realLabel,
+                e,
+                appLocalizations: appLocalizations,
+              ),
             ),
           );
         }

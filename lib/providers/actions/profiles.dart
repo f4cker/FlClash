@@ -127,7 +127,7 @@ class ProfilesAction extends _$ProfilesAction {
           );
         } catch (error) {
           if (!automatic) rethrow;
-          commonPrint.log(compactError(error), logLevel: LogLevel.warning);
+          logUpdateFailure(profile.realLabel, error);
         }
       }
     } finally {

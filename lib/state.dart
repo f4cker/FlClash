@@ -85,13 +85,9 @@ class GlobalState {
             try {
               await task(item);
             } catch (e, s) {
-              commonPrint.log(
-                '${label(item)} ===> ${compactError(e)}, $s',
-                logLevel: LogLevel.warning,
-              );
               failures[index] = UpdatingMessage(
                 label: label(item),
-                message: userFacingErrorMessage(e, currentAppLocalizations),
+                message: logUpdateFailure(label(item), e, stackTrace: s),
               );
             }
           }),

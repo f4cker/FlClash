@@ -129,11 +129,18 @@ class Logs extends _$Logs with AutoDisposeNotifierMixin {
     return FixedList(maxLogsLength);
   }
 
+  /// Core and app lines alike: a subscription link must not reach the log
+  /// view or an exported log.
   void add(Log value) {
     if (!ref.mounted) {
       return;
     }
-    this.value = state.append(value);
+    final payload = redactUrls(value.payload);
+    this.value = state.append(
+      identical(payload, value.payload)
+          ? value
+          : value.copyWith(payload: payload),
+    );
   }
 
   Future<bool> exportLogs() async {
