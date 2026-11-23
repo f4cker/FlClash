@@ -149,8 +149,8 @@ type InitParams struct {
 }
 
 type DecryptConfigParams struct {
-	Path         string `json:"path"`
-	AgeSecretKey string `json:"age-secret-key"`
+	Path         string       `json:"path"`
+	AgeSecretKey ageSecretKey `json:"age-secret-key"`
 }
 
 type SetupParams struct {

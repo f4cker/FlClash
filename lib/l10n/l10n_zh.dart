@@ -5071,7 +5071,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileEditMountRejected => '合并已挂载的订阅后，这份配置无法生效：';
+  String get profileEditMountRejected => '合并已挂载的订阅后，这份配置无法生效，无法保存：';
 
   @override
   String get mountApplyBlocked =>

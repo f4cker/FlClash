@@ -9285,7 +9285,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditMountRejected.
   ///
   /// In en, this message translates to:
-  /// **'With its mounted subscriptions merged in, this profile would not apply:'**
+  /// **'After merging the mounted subscriptions, this configuration cannot be applied and cannot be saved:'**
   String get profileEditMountRejected;
 
   /// No description provided for @mountApplyBlocked.

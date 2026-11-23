@@ -7,6 +7,21 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('a mount source never prints its age key', () {
+    const source = MountSource(
+      id: 1,
+      label: 'E',
+      path: '/p',
+      ageSecretKey: 'AGE-SECRET-KEY-1QQQQ',
+    );
+    expect(source.toString(), isNot(contains('AGE-SECRET-KEY')));
+    expect(source.toJson()['age-secret-key'], 'AGE-SECRET-KEY-1QQQQ');
+    expect(
+      const MountSource(id: 1, label: 'E', path: '/p').toString(),
+      'MountSource(id: 1, label: E, path: /p, ageSecretKey: null)',
+    );
+  });
+
   test('the Core mount report reads with its wire names', () {
     final state = MountRuntimeState.fromJson({
       'blocked': false,

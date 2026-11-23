@@ -322,7 +322,7 @@ func TestHandleDecryptConfigReadsAnAgeEncryptedFile(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	got, err := handleDecryptConfig(DecryptConfigParams{Path: path, AgeSecretKey: secretKey})
+	got, err := handleDecryptConfig(DecryptConfigParams{Path: path, AgeSecretKey: ageSecretKey(secretKey)})
 	if err != nil {
 		t.Fatalf("handleDecryptConfig = %v, want no error", err)
 	}
@@ -334,7 +334,7 @@ func TestHandleDecryptConfigReadsAnAgeEncryptedFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate key pair: %v", err)
 	}
-	if _, err := handleDecryptConfig(DecryptConfigParams{Path: path, AgeSecretKey: otherKey}); err == nil {
+	if _, err := handleDecryptConfig(DecryptConfigParams{Path: path, AgeSecretKey: ageSecretKey(otherKey)}); err == nil {
 		t.Error("handleDecryptConfig decrypted with a key the file was not encrypted to")
 	}
 }

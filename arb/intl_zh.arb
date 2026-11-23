@@ -1548,7 +1548,7 @@
   "mountSourceReadErrorReason": "订阅「{name}」的本地副本无法读取。",
   "mountSourceInvalidReason": "订阅「{name}」的本地副本中有无法读取的节点。",
   "mountSourceUnsupportedReason": "订阅「{name}」未提供可挂载的节点列表。",
-  "profileEditMountRejected": "合并已挂载的订阅后，这份配置无法生效：",
+  "profileEditMountRejected": "合并已挂载的订阅后，这份配置无法生效，无法保存：",
   "mountApplyBlocked": "未能应用挂载。Flash 当前会拒绝所有经它转发的连接。请先重新读取状态，确认结果后再解除挂载或重新应用配置。",
   "mountApplyBlockedConfirmed": "已确认挂载未能应用。Flash 当前仍会拒绝所有经它转发的连接。你可以解除挂载或重新应用配置。",
   "mountSourceNoNodeList": "此订阅未提供可挂载的节点列表，请检查订阅格式。",

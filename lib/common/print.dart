@@ -27,16 +27,22 @@ final _hostPattern = RegExp(
 
 final _authorityEnd = RegExp(r'[/?#]');
 
+final _ageSecretKeyPattern = RegExp(
+  r'AGE-SECRET-KEY-1[0-9A-Z]+',
+  caseSensitive: false,
+);
+
 const _hostSchemes = {'http', 'https', 'ws', 'wss'};
 
 /// Cuts every URL in [text] down to scheme and host, so a subscription's
 /// path, query token or login never reaches a log the user may export.
 /// Share links (vmess://, ss:// …) carry their secrets where a host would be,
 /// so anything but a web address keeps only its scheme. `file://` paths in
-/// stack traces stay as they are.
+/// stack traces stay as they are. An age secret key is cut to its prefix.
 String redactUrls(String text) {
-  if (!text.contains('://')) return text;
-  return text.replaceAllMapped(_urlPattern, (match) {
+  final keyless = text.replaceAll(_ageSecretKeyPattern, 'AGE-SECRET-KEY-…');
+  if (!keyless.contains('://')) return keyless;
+  return keyless.replaceAllMapped(_urlPattern, (match) {
     final scheme = match[1]!;
     final rest = match[2]!;
     if (scheme.toLowerCase() == 'file') return match[0]!;

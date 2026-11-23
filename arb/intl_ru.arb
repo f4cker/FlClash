@@ -1749,7 +1749,7 @@
   "mountSourceReadErrorReason": "Не удалось прочитать локальную копию подписки «{name}».",
   "mountSourceInvalidReason": "Локальная копия подписки «{name}» содержит узлы, которые Flash не может прочитать.",
   "mountSourceUnsupportedReason": "Подписка «{name}» не предоставляет список узлов, который можно подключить.",
-  "profileEditMountRejected": "With its mounted subscriptions merged in, this profile would not apply:",
+  "profileEditMountRejected": "После объединения подключённых подписок эту конфигурацию нельзя применить или сохранить:",
   "mountApplyBlocked": "Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.",
   "mountApplyBlockedConfirmed": "Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.",
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",

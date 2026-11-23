@@ -59,6 +59,19 @@ void main() {
     expect(redactUrls('https://u:pa/ss@host.com/x'), 'https://…');
   });
 
+  test('redactUrls cuts an age secret key in any case', () {
+    const key =
+        'AGE-SECRET-KEY-1QYQSZQGPQYQSZQGPQYQSZQGPQYQSZQGPQYQSZQGPQYQSZQGPQYQS7RMN0J';
+    expect(
+      redactUrls('setup {age-secret-key: $key, path: /p}'),
+      'setup {age-secret-key: AGE-SECRET-KEY-…, path: /p}',
+    );
+    expect(
+      redactUrls('key=${key.toLowerCase()} via https://h.example/x?t=1'),
+      'key=AGE-SECRET-KEY-… via https://h.example/…',
+    );
+  });
+
   test('redactUrls leaves file paths in stack traces alone', () {
     const frame = '#0 main (file:///Users/a/app/lib/main.dart:10:3)';
     expect(redactUrls(frame), frame);

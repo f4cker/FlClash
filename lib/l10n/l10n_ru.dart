@@ -5418,7 +5418,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get profileEditMountRejected =>
-      'With its mounted subscriptions merged in, this profile would not apply:';
+      'После объединения подключённых подписок эту конфигурацию нельзя применить или сохранить:';
 
   @override
   String get mountApplyBlocked =>

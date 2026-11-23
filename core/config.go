@@ -93,7 +93,7 @@ func handleDecryptConfig(params DecryptConfigParams) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	buf, err = age.DecryptBytes(buf, params.AgeSecretKey)
+	buf, err = age.DecryptBytes(buf, string(params.AgeSecretKey))
 	if err != nil {
 		return "", err
 	}

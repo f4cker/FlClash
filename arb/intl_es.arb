@@ -1749,7 +1749,7 @@
   "mountSourceReadErrorReason": "No se puede leer la copia local de la suscripción «{name}».",
   "mountSourceInvalidReason": "La copia local de la suscripción «{name}» contiene nodos que Flash no puede leer.",
   "mountSourceUnsupportedReason": "La suscripción «{name}» no proporciona una lista de nodos que se pueda montar.",
-  "profileEditMountRejected": "With its mounted subscriptions merged in, this profile would not apply:",
+  "profileEditMountRejected": "Tras combinar las suscripciones montadas, esta configuración no se puede aplicar ni guardar:",
   "mountApplyBlocked": "Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.",
   "mountApplyBlockedConfirmed": "Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.",
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",

@@ -420,3 +420,30 @@ func TestMountRefreshHandlerSourceReplacementAndInitialReadFailure(t *testing.T)
 		})
 	}
 }
+
+func TestFirstInitSweepsDecryptedNodesALostCoreLeft(t *testing.T) {
+	home := withMountHome(t)
+	previousInit := isInit.Load()
+	t.Cleanup(func() { isInit.Store(previousInit) })
+	stale, err := decodeMountSnapshot(mountTimingFixture(2, 10)).providerPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	isInit.Store(true)
+	if err := handleInit(&InitParams{HomeDir: home}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(stale); err != nil {
+		t.Fatalf("a repeated init removed a live input: %v", err)
+	}
+
+	isInit.Store(false)
+	if err := handleInit(&InitParams{HomeDir: home}); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(filepath.Join(home, "mount-nodes"))
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("stale decrypted nodes kept: %v %v", entries, err)
+	}
+}

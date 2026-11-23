@@ -1749,7 +1749,7 @@
   "mountSourceReadErrorReason": "Impossible de lire la copie locale de l’abonnement « {name} ».",
   "mountSourceInvalidReason": "La copie locale de l’abonnement « {name} » contient des nœuds que Flash ne peut pas lire.",
   "mountSourceUnsupportedReason": "L’abonnement « {name} » ne fournit pas de liste de nœuds pouvant être montée.",
-  "profileEditMountRejected": "With its mounted subscriptions merged in, this profile would not apply:",
+  "profileEditMountRejected": "Après fusion des abonnements montés, cette configuration ne peut pas être appliquée ni enregistrée :",
   "mountApplyBlocked": "Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.",
   "mountApplyBlockedConfirmed": "Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.",
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",
