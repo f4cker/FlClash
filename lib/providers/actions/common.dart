@@ -398,20 +398,6 @@ class CommonAction extends _$CommonAction {
     required bool isUser,
   }) async {
     if (!_manifestAllowed(manifest)) return;
-    final showDetails = await dialogs.showMessage(
-      title: currentAppLocalizations.discoverNewVersion,
-      message: _macUpdateVersions(manifest),
-      confirmText: currentAppLocalizations.viewUpdate,
-      cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
-    );
-    if (showDetails != true) {
-      if (!isUser && showDetails == false) {
-        ref
-            .read(appSettingProvider.notifier)
-            .update((state) => state.copyWith(autoCheckUpdate: false));
-      }
-      return;
-    }
     final context = globalState.navigatorKey.currentContext;
     if (context == null || !context.mounted) return;
     final asset = manifest.assetFor(macUpdateArch(Abi.current()) ?? '')!;
