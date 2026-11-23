@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MountSource {
 
- int get id; String get label; String get path;
+ int get id; String get label; String get path;@JsonKey(name: 'age-secret-key', includeIfNull: false) String? get ageSecretKey;
 /// Create a copy of MountSource
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $MountSourceCopyWith<MountSource> get copyWith => _$MountSourceCopyWithImpl<Moun
 @override
 bool operator ==(Object other) {
   final _this = this as MountSource;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSource&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.label, _this.label) || other.label == _this.label)&&(identical(other.path, _this.path) || other.path == _this.path));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSource&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.label, _this.label) || other.label == _this.label)&&(identical(other.path, _this.path) || other.path == _this.path)&&(identical(other.ageSecretKey, _this.ageSecretKey) || other.ageSecretKey == _this.ageSecretKey));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountSource;
-  return Object.hash(runtimeType,_this.id,_this.label,_this.path);
+  return Object.hash(runtimeType,_this.id,_this.label,_this.path,_this.ageSecretKey);
 }
 
 @override
 String toString() {
   final _this = this as MountSource;
-  return 'MountSource(id: ${_this.id}, label: ${_this.label}, path: ${_this.path})';
+  return 'MountSource(id: ${_this.id}, label: ${_this.label}, path: ${_this.path}, ageSecretKey: ${_this.ageSecretKey})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $MountSourceCopyWith<$Res>  {
   factory $MountSourceCopyWith(MountSource value, $Res Function(MountSource) _then) = _$MountSourceCopyWithImpl;
 @useResult
 $Res call({
- int id, String label, String path
+ int id, String label, String path,@JsonKey(name: 'age-secret-key', includeIfNull: false) String? ageSecretKey
 });
 
 
@@ -71,12 +71,13 @@ class _$MountSourceCopyWithImpl<$Res>
 
 /// Create a copy of MountSource
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? label = null,Object? path = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? label = null,Object? path = null,Object? ageSecretKey = freezed,}) {
   return _then(MountSource(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
-as String,
+as String,ageSecretKey: freezed == ageSecretKey ? _self.ageSecretKey : ageSecretKey // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String label,  String path)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String label,  String path, @JsonKey(name: 'age-secret-key', includeIfNull: false)  String? ageSecretKey)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountSource() when $default != null:
-return $default(_that.id,_that.label,_that.path);case _:
+return $default(_that.id,_that.label,_that.path,_that.ageSecretKey);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.id,_that.label,_that.path);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String label,  String path)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String label,  String path, @JsonKey(name: 'age-secret-key', includeIfNull: false)  String? ageSecretKey)  $default,) {final _that = this;
 switch (_that) {
 case _MountSource():
-return $default(_that.id,_that.label,_that.path);case _:
+return $default(_that.id,_that.label,_that.path,_that.ageSecretKey);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.id,_that.label,_that.path);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String label,  String path)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String label,  String path, @JsonKey(name: 'age-secret-key', includeIfNull: false)  String? ageSecretKey)?  $default,) {final _that = this;
 switch (_that) {
 case _MountSource() when $default != null:
-return $default(_that.id,_that.label,_that.path);case _:
+return $default(_that.id,_that.label,_that.path,_that.ageSecretKey);case _:
   return null;
 
 }
@@ -217,12 +218,13 @@ return $default(_that.id,_that.label,_that.path);case _:
 @JsonSerializable()
 
 class _MountSource implements MountSource {
-  const _MountSource({required this.id, required this.label, required this.path});
+  const _MountSource({required this.id, required this.label, required this.path, @JsonKey(name: 'age-secret-key', includeIfNull: false) this.ageSecretKey});
   factory _MountSource.fromJson(Map<String, dynamic> json) => _$MountSourceFromJson(json);
 
 @override final  int id;
 @override final  String label;
 @override final  String path;
+@override@JsonKey(name: 'age-secret-key', includeIfNull: false) final  String? ageSecretKey;
 
 /// Create a copy of MountSource
 /// with the given fields replaced by the non-null parameter values.
@@ -237,18 +239,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSource&&(identical(other.id, id) || other.id == id)&&(identical(other.label, label) || other.label == label)&&(identical(other.path, path) || other.path == path));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSource&&(identical(other.id, id) || other.id == id)&&(identical(other.label, label) || other.label == label)&&(identical(other.path, path) || other.path == path)&&(identical(other.ageSecretKey, ageSecretKey) || other.ageSecretKey == ageSecretKey));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,label,path);
+    return Object.hash(runtimeType,id,label,path,ageSecretKey);
 }
 
 @override
 String toString() {
-    return 'MountSource(id: $id, label: $label, path: $path)';
+    return 'MountSource(id: $id, label: $label, path: $path, ageSecretKey: $ageSecretKey)';
 }
 
 
@@ -259,7 +261,7 @@ abstract mixin class _$MountSourceCopyWith<$Res> implements $MountSourceCopyWith
   factory _$MountSourceCopyWith(_MountSource value, $Res Function(_MountSource) _then) = __$MountSourceCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String label, String path
+ int id, String label, String path,@JsonKey(name: 'age-secret-key', includeIfNull: false) String? ageSecretKey
 });
 
 
@@ -276,12 +278,13 @@ class __$MountSourceCopyWithImpl<$Res>
 
 /// Create a copy of MountSource
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? label = null,Object? path = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? label = null,Object? path = null,Object? ageSecretKey = freezed,}) {
   return _then(_MountSource(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
-as String,
+as String,ageSecretKey: freezed == ageSecretKey ? _self.ageSecretKey : ageSecretKey // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

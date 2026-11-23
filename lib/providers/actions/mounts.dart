@@ -2,6 +2,12 @@ part of '../action.dart';
 
 typedef _MountRelay = ({List<String> names, List<String> managed});
 
+typedef MountEditIssue = ({
+  String reason,
+  bool blocking,
+  List<MountSkip> skips,
+});
+
 /// Mount operations run one at a time. Each save writes the relation with a
 /// pending record first, and only a readback, or a target that is not
 /// running, clears it; an unknown outcome keeps the target locked.
@@ -604,7 +610,10 @@ class MountAction extends _$MountAction {
         });
       }
       final setup = ref.read(setupActionProvider.notifier);
-      final applied = await setup.applyProfile(silence: true);
+      final applied = await setup.applyProfile(
+        silence: true,
+        announceMountSkips: true,
+      );
       return await _scheduler.run(() async {
         final outcome = await _confirm(saved, applied: applied);
         if (outcome != MountSaveOutcome.unknown) await _settle(saved);
@@ -690,6 +699,66 @@ class MountAction extends _$MountAction {
     CoreMethodException(:final message) => message,
     _ => null,
   };
+
+  /// A subscription's own problem does not hold the edit: the apply skips it.
+  Future<MountEditIssue?> preflightEdit(int targetId, List<int> data) async {
+    final target = await database.mountsDao.target(targetId);
+    if (target == null || target.sourceIds.isEmpty) return null;
+    final mounts = mountSetupOf(
+      target,
+      ref.read(profilesProvider),
+      await appPath.profilesPath,
+    );
+    if (mounts.sources.isEmpty) return null;
+    final edited = File(await appPath.tempFilePath);
+    final MountPreflight preflight;
+    try {
+      await edited.safeWriteAsBytes(data);
+      preflight = await _inspectionPool.run(() async {
+        final input = await ref
+            .read(setupActionProvider.notifier)
+            .mountTargetInput(targetId, profilePath: edited.path);
+        return _core.preflightMounts(
+          base: input.base,
+          config: input.config,
+          mounts: mounts,
+        );
+      });
+    } finally {
+      await edited.safeDelete();
+    }
+    String? sourceName(int id) =>
+        mounts.sources.where((source) => source.id == id).firstOrNull?.label;
+    if (preflight.error case final error?) {
+      commonPrint.log(
+        'edited profile rejected with its mounts: $error',
+        logLevel: LogLevel.warning,
+      );
+      return (
+        reason: mountRejectedReason(
+          error,
+          currentAppLocalizations,
+          sourceName: sourceName,
+        ),
+        blocking: true,
+        skips: const <MountSkip>[],
+      );
+    }
+    final skips = switch (preflight.report) {
+      final report? => mountSkipsOf(report),
+      null => const <MountSkip>[],
+    };
+    if (skips.isEmpty) return null;
+    return (
+      reason: mountSkipReasons(
+        skips,
+        sourceName,
+        currentAppLocalizations,
+      ).join('\n'),
+      blocking: false,
+      skips: skips,
+    );
+  }
 
   /// Downloads are deliberately outside the mutation scheduler so a later
   /// refresh/removal owns its source immediately, even during a slow download.

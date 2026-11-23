@@ -60,8 +60,11 @@ class AddedRulesAction extends _$AddedRulesAction {
   }
 
   @visibleForTesting
-  Future<bool> applyAddedRulesProfile() =>
-      ref.read(setupActionProvider.notifier).applyProfile(silence: true);
+  Future<bool> applyAddedRulesProfile({
+    void Function(String reason)? onMountRejected,
+  }) => ref
+      .read(setupActionProvider.notifier)
+      .applyProfileReporting(onMountRejected: onMountRejected ?? (_) {});
 
   Future<AddedRulesState> load(Profile profile) async {
     final rules = profile.type == ProfileType.custom
@@ -825,15 +828,20 @@ class AddedRulesAction extends _$AddedRulesAction {
     final deadline = DateTime.now().add(saveTimeout);
     final bool applied;
     Future<bool>? applying;
+    String? rejection;
+    String reloadFailed() =>
+        [appLocalizations.addedRulesReloadFailed, ?rejection].join('\n');
     try {
-      applying = applyAddedRulesProfile();
+      applying = applyAddedRulesProfile(
+        onMountRejected: (reason) => rejection = reason,
+      );
       applied = await applying.timeout(saveTimeout);
     } on TimeoutException {
       return (appLocalizations.addedRulesReloadTimeout, applying);
     } catch (_) {
-      return (appLocalizations.addedRulesReloadFailed, null);
+      return (reloadFailed(), null);
     }
-    if (!applied) return (appLocalizations.addedRulesReloadFailed, null);
+    if (!applied) return (reloadFailed(), null);
     if (set == null) return (null, null);
     while (true) {
       final RuleSetView? view;

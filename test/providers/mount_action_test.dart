@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -24,6 +25,7 @@ class _MockCore extends Mock implements CoreHandlerInterface {}
 class _FakeSetupAction extends SetupAction {
   static bool result = true;
   static int applied = 0;
+  static bool announced = false;
   static int revisionTick = 0;
   static int queued = 0;
 
@@ -37,12 +39,14 @@ class _FakeSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
   }) async {
     applied++;
+    announced = announceMountSkips;
     revisionTick++;
     return result;
   }
@@ -54,9 +58,16 @@ class _FakeSetupAction extends SetupAction {
 
   @override
   Future<({SetupBase? base, String? config})> mountTargetInput(
-    int profileId,
-  ) async {
+    int profileId, {
+    String? profilePath,
+  }) async {
     targetInputs.add(profileId);
+    if (profilePath != null) {
+      return (
+        base: null,
+        config: 'built:${File(profilePath).readAsStringSync()}',
+      );
+    }
     return (base: null, config: config);
   }
 }
@@ -201,6 +212,7 @@ void main() {
     _FakeSetupAction.result = true;
     _FakeSetupAction.revisionTick = 0;
     _FakeSetupAction.applied = 0;
+    _FakeSetupAction.announced = false;
     _FakeSetupAction.queued = 0;
     _FakeProfilesAction.downloads = 0;
     _FakeProfilesAction.beforeDownload = null;
@@ -299,6 +311,94 @@ void main() {
       );
     });
   }
+
+  test('an edit is preflighted with its mounts only when it has some, and '
+      'a skipped subscription is named without holding it', () async {
+    final container = build();
+    final edited = Uint8List.fromList(utf8.encode('proxy-groups: []\n'));
+    expect(await action(container).preflightEdit(1, edited), isNull);
+    verifyNever(
+      () => core.preflightMounts(
+        base: any(named: 'base'),
+        config: any(named: 'config'),
+        mounts: any(named: 'mounts'),
+      ),
+    );
+
+    await testDatabase.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+    await testDatabase.mountsDao.settle(1, 1);
+    expect(await action(container).preflightEdit(1, edited), isNull);
+
+    final calls = <Map<Symbol, Object?>>[];
+    when(
+      () => core.preflightMounts(
+        base: any(named: 'base'),
+        config: any(named: 'config'),
+        mounts: any(named: 'mounts'),
+      ),
+    ).thenAnswer((invocation) async {
+      calls.add(invocation.namedArguments);
+      return const MountPreflight(
+        report: MountReport(
+          sources: [
+            MountSourceReport(
+              id: 2,
+              provider: 'flash-mount-2',
+              status: MountSourceStatus.invalid,
+            ),
+          ],
+        ),
+      );
+    });
+    final issue = await action(container).preflightEdit(1, edited);
+    expect(
+      issue?.reason,
+      currentAppLocalizations.mountSourceInvalidReason('Air'),
+    );
+    expect(issue?.blocking, isFalse);
+    expect(issue?.skips, [(sourceId: 2, status: MountSourceStatus.invalid)]);
+    final call = calls.single;
+    expect(call[#base], isNull);
+    expect(call[#config], 'built:proxy-groups: []\n');
+    expect((call[#mounts] as MountSetup).sources.map((source) => source.id), [
+      2,
+    ]);
+  });
+
+  test('an edit the merged config refuses is held', () async {
+    final container = build();
+    await testDatabase.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+    await testDatabase.mountsDao.settle(1, 1);
+    when(
+      () => core.preflightMounts(
+        base: any(named: 'base'),
+        config: any(named: 'config'),
+        mounts: any(named: 'mounts'),
+      ),
+    ).thenAnswer(
+      (_) async => const MountPreflight(error: 'proxy group G: missing X'),
+    );
+    final issue = await action(
+      container,
+    ).preflightEdit(1, Uint8List.fromList(utf8.encode('rules: []')));
+    expect(issue, (
+      reason: 'proxy group G: missing X',
+      blocking: true,
+      skips: const <MountSkip>[],
+    ));
+  });
 
   test('delayed refresh never resurrects a deleted profile', () async {
     final container = build();
@@ -1011,6 +1111,7 @@ void main() {
       expect(result.outcome, MountSaveOutcome.applied);
       expect(result.lostSelections, isEmpty);
       expect(_FakeSetupAction.applied, 1);
+      expect(_FakeSetupAction.announced, isTrue);
       expect((await testDatabase.mountsDao.target(1))!.pending, isNull);
     });
 

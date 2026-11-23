@@ -176,6 +176,7 @@ class TestSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,
@@ -2926,6 +2927,234 @@ void main() {
       expect(await setupAction.applyProfile(), isFalse);
       expect(globalState.lastConfigCounts, (groups: 0, proxies: 0, rules: 0));
       expect(groupReads, greaterThan(reads));
+    });
+
+    test('a kept mounted apply shows and logs the Core reason, naming the '
+        'subscription and without its URL', () async {
+      final profile = Profile.normal(label: 'p');
+      final core = _MockCoreHandlerInterface();
+      final mounts = MountSetup(
+        target: profile.id,
+        revision: 'r1',
+        sources: const [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
+      );
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      when(() => core.getExternalProviders()).thenAnswer((_) async => []);
+      when(
+        () => core.getProxies(),
+      ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
+      var message = '';
+      final codes = <String>[];
+      when(() => core.setupConfig(any())).thenAnswer((_) async {
+        if (message.isEmpty) return;
+        throw CoreMethodException(
+          code: codes.isEmpty ? 'mount_rejected' : codes.removeAt(0),
+          message: message,
+          details: const {'outcome': 'kept'},
+        );
+      });
+      var revision = 'r1';
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: mounts.copyWith(revision: revision),
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      addTearDown(() => globalState.lastConfigCounts = null);
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+      final setupAction = scoped.read(setupActionProvider.notifier);
+      final appLocalizations = currentAppLocalizations;
+      expect(await setupAction.applyProfile(force: true), isTrue);
+
+      Future<String> keptBanner(String reason) async {
+        message = reason;
+        revision = '$revision+';
+        scoped.invalidate(setupStateProvider);
+        printed.clear();
+        expect(await setupAction.applyProfile(), isFalse);
+        return printed
+            .singleWhere((line) => line.startsWith('[APP] banner: '))
+            .substring('[APP] banner: '.length);
+      }
+
+      expect(
+        await keptBanner('mount source 2 is missing'),
+        '${appLocalizations.mountApplyKept}\n'
+        '${appLocalizations.mountSourceMissingReason('Air')}',
+      );
+      final heard = <String>[];
+      final other = <String>[];
+      codes.add('config_rejected');
+      final first = setupAction.applyProfileReporting(
+        onMountRejected: other.add,
+      );
+      final second = setupAction.applyProfileReporting(
+        onMountRejected: heard.add,
+      );
+      expect(await (first, second).wait, (false, false));
+      expect(other, isEmpty);
+      expect(heard, [appLocalizations.mountSourceMissingReason('Air')]);
+
+      const leaky =
+          'proxy-groups: G: fetch https://sub.example.com/api?token=s3cret '
+          'failed';
+      final banner = await keptBanner(leaky);
+      expect(banner, startsWith('${appLocalizations.mountApplyKept}\n'));
+      expect(banner, contains('https://sub.example.com/…'));
+      expect(printed.join('\n'), isNot(contains('s3cret')));
+      expect(
+        printed,
+        contains(contains('mounted profile rejected: proxy-groups: G: fetch')),
+      );
+    });
+
+    test('an apply that skips a subscription records it, and warns once '
+        'for each new skip, background applies included', () async {
+      final profile = Profile.normal(label: 'p');
+      final core = _MockCoreHandlerInterface();
+      const sources = [
+        MountSource(id: 2, label: 'Air', path: '/p/2.yaml'),
+        MountSource(id: 3, label: 'Sea', path: '/p/3.yaml'),
+      ];
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      when(() => core.getExternalProviders()).thenAnswer((_) async => []);
+      when(
+        () => core.getProxies(),
+      ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
+      var kept = false;
+      when(() => core.setupConfig(any())).thenAnswer((_) async {
+        if (!kept) return;
+        throw const CoreMethodException(
+          code: 'mount_rejected',
+          message: 'proxy group G: missing X',
+          details: {'outcome': 'kept'},
+        );
+      });
+      var revision = 'r1';
+      var skipped = <int>{2};
+      when(() => core.getMountState()).thenAnswer(
+        (_) async => MountRuntimeState(
+          report: MountReport(
+            target: profile.id,
+            revision: revision,
+            sources: [
+              for (final source in sources)
+                MountSourceReport(
+                  id: source.id,
+                  provider: 'flash-mount-${source.id}',
+                  status: skipped.contains(source.id)
+                      ? MountSourceStatus.missing
+                      : MountSourceStatus.nodes,
+                ),
+            ],
+          ),
+        ),
+      );
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: MountSetup(
+                target: profile.id,
+                revision: revision,
+                sources: sources,
+              ),
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      addTearDown(() => globalState.lastConfigCounts = null);
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+      final setupAction = scoped.read(setupActionProvider.notifier);
+      final appLocalizations = currentAppLocalizations;
+      List<String> banners() => [
+        for (final line in printed)
+          if (line.startsWith('[APP] banner: '))
+            line.substring('[APP] banner: '.length),
+      ];
+      Future<void> apply({required bool silence, bool announce = false}) {
+        revision = '$revision+';
+        scoped.invalidate(setupStateProvider);
+        printed.clear();
+        return setupAction.applyProfile(
+          silence: silence,
+          announceMountSkips: announce,
+        );
+      }
+
+      await apply(silence: true);
+      expect(scoped.read(mountSkipsProvider)[profile.id], [
+        (sourceId: 2, status: MountSourceStatus.missing),
+      ]);
+      expect(banners().single.split('\n'), [
+        appLocalizations.mountSkipAppliedLead,
+        appLocalizations.mountSourceMissingReason('Air'),
+      ]);
+
+      await apply(silence: false);
+      expect(banners(), isEmpty, reason: 'a repeat stays on the card');
+      await apply(silence: true);
+      expect(banners(), isEmpty);
+
+      skipped = {2, 3};
+      await apply(silence: true, announce: true);
+      expect(banners().single.split('\n'), [
+        appLocalizations.mountSkipAppliedLead,
+        appLocalizations.mountSourceMissingReason('Air'),
+        appLocalizations.mountSourceMissingReason('Sea'),
+      ]);
+
+      kept = true;
+      await apply(silence: false);
+      expect(banners().single, startsWith(appLocalizations.mountApplyKept));
+      expect(
+        banners().single,
+        isNot(contains(appLocalizations.mountSkipAppliedLead)),
+      );
+      expect(scoped.read(mountSkipsProvider)[profile.id], hasLength(2));
+
+      kept = false;
+      skipped = {};
+      await apply(silence: false);
+      expect(scoped.read(mountSkipsProvider), isEmpty);
+      expect(banners(), isEmpty);
+
+      skipped = {3};
+      await apply(silence: true);
+      expect(banners().single.split('\n'), [
+        appLocalizations.mountSkipAppliedLead,
+        appLocalizations.mountSourceMissingReason('Sea'),
+      ], reason: 'a skip after its recovery is new again');
+
+      final status = scoped.read(coreStatusProvider.notifier);
+      status.value = CoreStatus.connected;
+      status.value = CoreStatus.disconnected;
+      expect(scoped.read(mountSkipsProvider), isEmpty);
     });
 
     test('an apply keeps the profile on the names the Core followed its '

@@ -5400,6 +5400,30 @@ class AppLocalizationsEn extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return 'The local copy of subscription “$name” is missing.';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return 'The local copy of subscription “$name” cannot be read.';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return 'The local copy of subscription “$name” contains nodes Flash cannot read.';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return 'Subscription “$name” does not provide a node list that can be mounted.';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 
@@ -5472,6 +5496,36 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mountSkipAppliedLead =>
+      'Problem subscriptions were skipped; the rest of the configuration is active:';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Problem subscriptions will be skipped. You can still save the configuration:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '1 subscription skipped: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '$count subscriptions skipped · View details';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'local copy missing';
+
+  @override
+  String get mountSkipShortReadError => 'local copy unreadable';
+
+  @override
+  String get mountSkipShortInvalid => 'contains nodes Flash cannot read';
+
+  @override
+  String get mountSkipShortUnsupported => 'no mountable node list';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

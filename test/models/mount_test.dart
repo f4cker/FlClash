@@ -316,6 +316,22 @@ void main() {
       );
     });
 
+    test('a skipped source is reported, not required to have loaded', () {
+      const skipped = MountSourceReport(
+        id: 5,
+        provider: 'flash-mount-5',
+        status: MountSourceStatus.missing,
+      );
+      final withSkip = consistent.copyWith(
+        report: report.copyWith(sources: [...report.sources, skipped]),
+      );
+      expect(confirmMounts(withSkip, 'r2'), MountSaveOutcome.applied);
+      expect(mountSkipsOf(withSkip.report!), [
+        (sourceId: 5, status: MountSourceStatus.missing),
+      ]);
+      expect(mountSkipsOf(report), isEmpty);
+    });
+
     test('a source item names what its cache holds', () {
       const profile = Profile(id: 2, autoUpdateDuration: Duration.zero);
       MountSourceState stateOf(MountSourceInspection? inspection) =>

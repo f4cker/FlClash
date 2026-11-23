@@ -5444,6 +5444,30 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return 'Falta la copia local de la suscripción «$name».';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return 'No se puede leer la copia local de la suscripción «$name».';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return 'La copia local de la suscripción «$name» contiene nodos que Flash no puede leer.';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return 'La suscripción «$name» no proporciona una lista de nodos que se pueda montar.';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 
@@ -5516,6 +5540,37 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mountSkipAppliedLead =>
+      'Se omitieron las suscripciones con problemas; el resto de la configuración está activo:';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Se omitirán las suscripciones con problemas. Aún puedes guardar la configuración:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '1 suscripción omitida: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '$count suscripciones omitidas · Ver detalles';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'falta la copia local';
+
+  @override
+  String get mountSkipShortReadError => 'no se puede leer la copia local';
+
+  @override
+  String get mountSkipShortInvalid => 'contiene nodos que Flash no puede leer';
+
+  @override
+  String get mountSkipShortUnsupported =>
+      'no ofrece una lista de nodos que se pueda montar';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

@@ -31,6 +31,7 @@ export 'log_payload.dart';
 export 'lock.dart';
 export 'mac_update.dart';
 export 'mixin.dart';
+export 'mount_reason.dart';
 export 'network.dart';
 export 'network_error.dart';
 export 'num.dart';

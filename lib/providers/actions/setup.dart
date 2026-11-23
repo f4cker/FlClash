@@ -91,6 +91,9 @@ class SetupAction extends _$SetupAction {
   var _pendingForceApply = false;
   List<String> _lostMountSelections = const [];
 
+  /// The applies of a launch are not the user's, so they tell no skip.
+  bool _launching = false;
+
   /// Groups whose mounted selection the last apply dropped.
   List<String> get lostMountSelections => _lostMountSelections;
 
@@ -224,14 +227,19 @@ class SetupAction extends _$SetupAction {
     }
     // Visibility observers must not publish a resumed start during review.
     _deferRunningPublication = true;
-    _startTime = await serviceStartTime();
-    if (_isRunning) {
-      globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
-      await _run(true, initialize: true, resume: true);
-    } else if (ref.read(appSettingProvider).autoRun) {
-      await setRunning(true, initialize: true);
-    } else {
-      await globalState.safeRun(() => applyAutomatic(force: true));
+    _launching = true;
+    try {
+      _startTime = await serviceStartTime();
+      if (_isRunning) {
+        globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
+        await _run(true, initialize: true, resume: true);
+      } else if (ref.read(appSettingProvider).autoRun) {
+        await setRunning(true, initialize: true);
+      } else {
+        await globalState.safeRun(() => applyAutomatic(force: true));
+      }
+    } finally {
+      _launching = false;
     }
   }
 
@@ -985,9 +993,11 @@ class SetupAction extends _$SetupAction {
       _setupScheduler.run(task);
 
   // Failed builds and cancelled reviews never reach the Core setup step.
+  /// [announceMountSkips] warns of skipped subscriptions told before too.
   Future<bool> applyProfile({
     bool silence = false,
     bool force = false,
+    bool announceMountSkips = false,
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
   }) async {
@@ -995,7 +1005,19 @@ class SetupAction extends _$SetupAction {
       force: force,
       owns: owns,
       silence: silence,
+      announceMountSkips: announceMountSkips,
       preloadInvoke: preloadInvoke,
+    );
+    return result != _SetupTaskResult.failed;
+  }
+
+  /// [onMountRejected] hears this apply's mount refusal, and no other's.
+  Future<bool> applyProfileReporting({
+    required void Function(String reason) onMountRejected,
+  }) async {
+    final result = await _runSetup(
+      silence: true,
+      onMountRejected: onMountRejected,
     );
     return result != _SetupTaskResult.failed;
   }
@@ -1014,8 +1036,10 @@ class SetupAction extends _$SetupAction {
     bool automatic = false,
     bool silence = false,
     bool force = false,
+    bool announceMountSkips = false,
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
+    void Function(String reason)? onMountRejected,
   }) async {
     final result = await _setupScheduler.run(() async {
       if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
@@ -1031,7 +1055,9 @@ class SetupAction extends _$SetupAction {
           automatic: automatic,
           force: force,
           silence: silence,
+          announceMountSkips: announceMountSkips,
           preloadInvoke: preloadInvoke,
+          onMountRejected: onMountRejected,
           onUpdated: () async {
             if (ref.exists(tailscaleNodesProvider)) {
               ref.invalidate(tailscaleNodesProvider);
@@ -1079,6 +1105,13 @@ class SetupAction extends _$SetupAction {
   Future<BuiltProfile> getProfile({
     required SetupState setupState,
     required PatchClashConfig patchConfig,
+  }) => _buildProfile(setupState: setupState, patchConfig: patchConfig);
+
+  /// [profilePath] stands in for the profile's file, as an unsaved edit.
+  Future<BuiltProfile> _buildProfile({
+    required SetupState setupState,
+    required PatchClashConfig patchConfig,
+    String? profilePath,
   }) async {
     final profileId = setupState.profileId;
     if (profileId == null) {
@@ -1114,7 +1147,7 @@ class SetupAction extends _$SetupAction {
     final scriptContent = isCustom ? null : await setupState.script?.content;
     final hasScript = scriptContent?.isNotEmpty == true;
     final profileBase = !isCustom && !hasScript
-        ? await _core.getProfileBase(profileId)
+        ? await _core.getProfileBase(profileId, path: profilePath)
         : null;
     Map<String, dynamic> rawConfig = isCustom
         ? {
@@ -1124,7 +1157,8 @@ class SetupAction extends _$SetupAction {
               groups: setupState.proxyGroups,
             ),
           }
-        : profileBase?.base.config ?? await _core.readConfig(profileId);
+        : profileBase?.base.config ??
+              await _core.readConfig(profileId, path: profilePath);
     final proxyGroups = isCustom ? setupState.proxyGroups : <ProxyGroup>[];
     final rules = isCustom ? setupState.rules : <Rule>[];
     var profileRuleSources = const <RuleSource>[];
@@ -1138,7 +1172,8 @@ class SetupAction extends _$SetupAction {
         script: setupState.script?.label ?? '',
       );
     }
-    if (profileId == ref.read(currentProfileIdProvider)) {
+    if (profilePath == null &&
+        profileId == ref.read(currentProfileIdProvider)) {
       ref.read(profileSettingsProvider.notifier).value = Map.of(rawConfig);
     }
     if (!patchConfig.usesPage(
@@ -1186,7 +1221,11 @@ class SetupAction extends _$SetupAction {
         matchTarget: setupState.matchTarget,
         exitTargets: setupState.exitTargets,
         outboundNames: profileBase != null && hasCustomExit
-            ? await _outboundNamesOf(profileId, profileBase.base.digest)
+            ? await _outboundNamesOf(
+                profileId,
+                profileBase.base.digest,
+                path: profilePath,
+              )
             : null,
         defaultExitTarget: profileBase == null
             ? null
@@ -1224,12 +1263,16 @@ class SetupAction extends _$SetupAction {
     );
   }
 
-  Future<Set<String>> _outboundNamesOf(int profileId, String digest) async {
+  Future<Set<String>> _outboundNamesOf(
+    int profileId,
+    String digest, {
+    String? path,
+  }) async {
     final cached = _outboundNames;
     if (cached != null && cached.digest == digest) {
       return cached.names;
     }
-    final outbounds = await _core.getProfileOutbounds(profileId);
+    final outbounds = await _core.getProfileOutbounds(profileId, path: path);
     final names = outboundNamesOf(outbounds);
     _outboundNames = (digest: digest, names: names);
     return names;
@@ -1364,21 +1407,58 @@ class SetupAction extends _$SetupAction {
     );
   }
 
-  /// Keeps the profile on the names the Core followed, unless changed since.
-  Future<void> _followMountSelections(
-    int targetId,
-    Map<String, String> sent,
-  ) async {
+  /// A skip is told once, by any apply, until it recovers; [force] tells it
+  /// again and [quiet] only notes it.
+  Future<void> _afterMountedApply(
+    MountSetup mounts,
+    Map<String, String> sent, {
+    required bool force,
+    required bool quiet,
+  }) async {
     final MountRuntimeState state;
     try {
       state = await _core.getMountState();
     } catch (error) {
       commonPrint.log(
-        'mount selections unread: ${compactError(error)}',
+        'mount state after apply unread: ${compactError(error)}',
         logLevel: coreFailureLogLevel(error),
       );
       return;
     }
+    final report = state.report;
+    if (report != null &&
+        report.target == mounts.target &&
+        report.revision == mounts.revision) {
+      final skips = mountSkipsOf(report);
+      final notifier = ref.read(mountSkipsProvider.notifier)
+        ..record(mounts.target, skips);
+      final fresh = notifier.announce(mounts.target, skips);
+      if (skips.isNotEmpty && (force || fresh && !quiet)) {
+        dialogs.showBanner(
+          [
+            currentAppLocalizations.mountSkipAppliedLead,
+            ...mountSkipReasons(
+              skips,
+              (id) => mounts.sources
+                  .where((source) => source.id == id)
+                  .firstOrNull
+                  ?.label,
+              currentAppLocalizations,
+            ),
+          ].join('\n'),
+          level: BannerLevel.warning,
+        );
+      }
+    }
+    await _followMountSelections(mounts.target, sent, state);
+  }
+
+  /// Keeps the profile on the names the Core followed, unless changed since.
+  Future<void> _followMountSelections(
+    int targetId,
+    Map<String, String> sent,
+    MountRuntimeState state,
+  ) async {
     final profile = ref.read(profilesProvider).getProfile(targetId);
     if (profile == null ||
         state.report?.target != targetId ||
@@ -1444,17 +1524,38 @@ class SetupAction extends _$SetupAction {
 
   /// The complete candidate used by mount preflight, never a display projection.
   Future<({SetupBase? base, String? config})> mountTargetInput(
-    int profileId,
-  ) async {
+    int profileId, {
+    String? profilePath,
+  }) async {
     final setupState = await ref.read(setupStateProvider(profileId).future);
-    final built = await getProfile(
-      setupState: setupState,
-      patchConfig: _effectivePatchConfig(ref.read(patchClashConfigProvider)),
+    final patchConfig = _effectivePatchConfig(
+      ref.read(patchClashConfigProvider),
     );
+    final built = profilePath == null
+        ? await getProfile(setupState: setupState, patchConfig: patchConfig)
+        : await _buildProfile(
+            setupState: setupState,
+            patchConfig: patchConfig,
+            profilePath: profilePath,
+          );
     return switch (built.base) {
       final base? => (base: base, config: null),
       null => (base: null, config: built.yaml),
     };
+  }
+
+  String _mountRejection(String reason, MountSetup? mounts) {
+    commonPrint.log(
+      'mounted profile rejected: $reason',
+      logLevel: LogLevel.error,
+    );
+    final shown = mountRejectedReason(
+      reason,
+      currentAppLocalizations,
+      sourceName: (id) =>
+          mounts?.sources.where((source) => source.id == id).firstOrNull?.label,
+    );
+    return shown;
   }
 
   PatchClashConfig _effectivePatchConfig(
@@ -1755,8 +1856,10 @@ class SetupAction extends _$SetupAction {
     bool force = false,
     bool Function()? owns,
     bool silence = false,
+    bool announceMountSkips = false,
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
+    void Function(String reason)? onMountRejected,
   }) async {
     if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     final adoptionPending = await _compositionPending;
@@ -1972,9 +2075,15 @@ class SetupAction extends _$SetupAction {
             definitelyKept = configOutcome == 'kept';
             defaultRuntime = configOutcome == 'default';
             final outcome = mountRejectedOutcome(error);
+            final reason = outcome == null
+                ? null
+                : _mountRejection(error.message, setupParams.mounts);
+            if (reason != null) onMountRejected?.call(reason);
             if (outcome == MountRejectedOutcome.kept) {
               definitelyKept = true;
-              throw MessageException(currentAppLocalizations.mountApplyKept);
+              throw MessageException(
+                '${currentAppLocalizations.mountApplyKept}\n$reason',
+              );
             }
             if (error.code != 'config_rejected' && outcome == null) {
               rethrow;
@@ -1986,7 +2095,7 @@ class SetupAction extends _$SetupAction {
             }
             throw MessageException(
               outcome == MountRejectedOutcome.blocked
-                  ? currentAppLocalizations.mountApplyBlocked
+                  ? '${currentAppLocalizations.mountApplyBlocked}\n$reason'
                   : error.message,
             );
           }
@@ -2051,7 +2160,14 @@ class SetupAction extends _$SetupAction {
           }
         }
         if (setupParams.mounts case final mounts?) {
-          await _followMountSelections(mounts.target, setupParams.selectedMap);
+          await _afterMountedApply(
+            mounts,
+            setupParams.selectedMap,
+            force: announceMountSkips,
+            quiet: _launching,
+          );
+        } else if (profile != null) {
+          ref.read(mountSkipsProvider.notifier).record(profile.id, const []);
         }
         await onUpdated?.call();
       },

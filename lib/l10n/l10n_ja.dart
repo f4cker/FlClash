@@ -5208,6 +5208,30 @@ class AppLocalizationsJa extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return 'サブスクリプション「$name」のローカルコピーが見つかりません。';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return 'サブスクリプション「$name」のローカルコピーを読み取れません。';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return 'サブスクリプション「$name」のローカルコピーに、Flash が読み取れないノードがあります。';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return 'サブスクリプション「$name」には、マウントできるノード一覧がありません。';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 
@@ -5280,6 +5304,34 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mountSkipAppliedLead => '問題のあるサブスクリプションをスキップし、それ以外の設定を適用しました：';
+
+  @override
+  String get profileEditMountSkipLead => '問題のあるサブスクリプションはスキップされます。設定は保存できます：';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '今回スキップしたサブスクリプション：$name（$reason）';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '今回 $count 件をスキップ · 詳細を見る';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'ローカルコピーが見つかりません';
+
+  @override
+  String get mountSkipShortReadError => 'ローカルコピーを読み取れません';
+
+  @override
+  String get mountSkipShortInvalid => 'Flash が読み取れないノードを含みます';
+
+  @override
+  String get mountSkipShortUnsupported => 'マウントできるノード一覧がありません';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

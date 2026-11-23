@@ -9258,6 +9258,36 @@ abstract class AppLocalizations {
   /// **'Mounts could not be applied. The last confirmed running profile is still in use.'**
   String get mountApplyKept;
 
+  /// No description provided for @mountSourceMissingReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The local copy of subscription “{name}” is missing.'**
+  String mountSourceMissingReason(Object name);
+
+  /// No description provided for @mountSourceReadErrorReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The local copy of subscription “{name}” cannot be read.'**
+  String mountSourceReadErrorReason(Object name);
+
+  /// No description provided for @mountSourceInvalidReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The local copy of subscription “{name}” contains nodes Flash cannot read.'**
+  String mountSourceInvalidReason(Object name);
+
+  /// No description provided for @mountSourceUnsupportedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription “{name}” does not provide a node list that can be mounted.'**
+  String mountSourceUnsupportedReason(Object name);
+
+  /// No description provided for @profileEditMountRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'With its mounted subscriptions merged in, this profile would not apply:'**
+  String get profileEditMountRejected;
+
   /// No description provided for @mountApplyBlocked.
   ///
   /// In en, this message translates to:
@@ -9347,6 +9377,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}'**
   String mountCardFailed(num count);
+
+  /// No description provided for @mountSkipAppliedLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem subscriptions were skipped; the rest of the configuration is active:'**
+  String get mountSkipAppliedLead;
+
+  /// No description provided for @profileEditMountSkipLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem subscriptions will be skipped. You can still save the configuration:'**
+  String get profileEditMountSkipLead;
+
+  /// No description provided for @mountCardSkippedOne.
+  ///
+  /// In en, this message translates to:
+  /// **'1 subscription skipped: {name} ({reason})'**
+  String mountCardSkippedOne(Object name, Object reason);
+
+  /// No description provided for @mountCardSkippedMany.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} subscriptions skipped · View details'**
+  String mountCardSkippedMany(int count);
+
+  /// No description provided for @mountSkipShortMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'local copy missing'**
+  String get mountSkipShortMissing;
+
+  /// No description provided for @mountSkipShortReadError.
+  ///
+  /// In en, this message translates to:
+  /// **'local copy unreadable'**
+  String get mountSkipShortReadError;
+
+  /// No description provided for @mountSkipShortInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'contains nodes Flash cannot read'**
+  String get mountSkipShortInvalid;
+
+  /// No description provided for @mountSkipShortUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'no mountable node list'**
+  String get mountSkipShortUnsupported;
 
   /// No description provided for @mountCardUnreadable.
   ///

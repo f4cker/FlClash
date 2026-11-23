@@ -92,6 +92,7 @@ class _RecordingSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,

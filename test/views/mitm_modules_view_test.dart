@@ -62,6 +62,7 @@ class _ScriptedSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool announceMountSkips = false,
     bool Function()? owns,
     bool silence = false,
     bool force = false,

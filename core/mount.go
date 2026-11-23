@@ -16,9 +16,10 @@ const mountProviderPrefix = "flash-mount-"
 
 // A file Flash's own updater keeps; mihomo never sees a subscription URL.
 type MountSource struct {
-	ID    int64  `json:"id"`
-	Label string `json:"label"`
-	Path  string `json:"path"`
+	ID           int64  `json:"id"`
+	Label        string `json:"label"`
+	Path         string `json:"path"`
+	AgeSecretKey string `json:"age-secret-key,omitempty"`
 }
 
 // Groups collect mounted nodes by their own declarations and filters.
@@ -277,6 +278,8 @@ type MountSourceReport struct {
 	RelayExcluded       int         `json:"relay-excluded"`
 	UnsupportedExcluded int         `json:"unsupported-excluded"`
 	Nodes               []MountNode `json:"nodes"`
+	// A skipped source's names from before, still holding their place.
+	held []MountNode
 }
 
 // Original is a group that also holds base proxies, left with mihomo's
@@ -342,6 +345,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	}
 	managed := managedBases(setup.reserved)
 	reserved := func(name string) bool { return managedNameFamily(name, managed) }
+	held := heldMountNodes(setup.Target)
 
 	providers := resolveAlias(mappingValue(root, "proxy-providers"))
 	if providers == nil || isNull(providers) {
@@ -370,10 +374,20 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		if mappingValue(providers, name) != nil {
 			return nil, fmt.Errorf("proxy provider %s already exists", name)
 		}
-		snapshot := readMountSnapshot(source.Path, "")
+		snapshot := readMountSnapshot(source.Path, source.AgeSecretKey)
 		inspection := snapshot.admit(relay)
+		// A source whose copy cannot be read mounts as an empty provider, so
+		// one broken subscription does not hold back the rest and a group
+		// left with nothing falls back as for an empty list. Its last names
+		// stay taken, so no other source's node takes one of them.
 		if inspection.Status != mountSourceNodes {
-			return nil, fmt.Errorf("mount source %d is %s", source.ID, inspection.Status)
+			for _, node := range held[source.ID] {
+				taken[node.Name] = struct{}{}
+			}
+			report.Sources = append(report.Sources, MountSourceReport{ID: source.ID, Provider: name, Status: inspection.Status, Nodes: []MountNode{}, held: held[source.ID]})
+			setMappingValue(providers, name, skippedMountProviderNode())
+			names = append(names, name)
+			continue
 		}
 		path := source.Path
 		if setup.stageInputs {
@@ -443,7 +457,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	}
 	report.Groups = groups
 	if err := checkMountBaseDependencies(base, mounted, dependencies); err != nil {
-		return nil, err
+		return nil, report.explainSkip(err)
 	}
 	complete = true
 	return report, nil
@@ -500,6 +514,17 @@ func mountNodeNames(source MountSource, originals []string, taken map[string]str
 		taken[node.Name] = struct{}{}
 	}
 	return nodes, renames
+}
+
+func skippedMountProviderNode() *yaml.Node {
+	return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: []*yaml.Node{
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "type"},
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "inline"},
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "flash-allow-empty"},
+		{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"},
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "payload"},
+		{Kind: yaml.SequenceNode, Tag: "!!seq", Style: yaml.FlowStyle},
+	}}
 }
 
 // The provider drops what the inspection counts out, by the same reading.

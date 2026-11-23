@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/metacubex/mihomo/component/age"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
 	"go.yaml.in/yaml/v3"
 )
@@ -57,7 +59,7 @@ func followMountSelections(selected map[string]string, report *MountReport) map[
 	}
 	owners := map[string]identity{}
 	for _, source := range before.Sources {
-		for _, node := range source.Nodes {
+		for _, node := range slices.Concat(source.Nodes, source.held) {
 			owners[node.Name] = identity{source.ID, node.Original}
 		}
 	}
@@ -92,6 +94,18 @@ func followMountSelections(selected map[string]string, report *MountReport) map[
 	return followed
 }
 
+func heldMountNodes(target int64) map[int64][]MountNode {
+	mountStateMu.Lock()
+	defer mountStateMu.Unlock()
+	held := map[int64][]MountNode{}
+	if basis := mountSelectionBasis[target]; basis != nil {
+		for _, source := range basis.Sources {
+			held[source.ID] = slices.Concat(source.Nodes, source.held)
+		}
+	}
+	return held
+}
+
 func setMountState(report *MountReport, blocked, fallback bool) {
 	mountStateMu.Lock()
 	defer mountStateMu.Unlock()
@@ -103,6 +117,17 @@ func setMountState(report *MountReport, blocked, fallback bool) {
 	mountGeneration++
 	runningConfigBlocked = blocked
 	runningConfigDefault = fallback
+}
+
+func logSkippedMountSources(report *MountReport) {
+	if report == nil {
+		return
+	}
+	for _, source := range report.Sources {
+		if source.Status != mountSourceNodes {
+			log.Warnln("mount source %d is %s, skipped; the rest of the profile runs", source.ID, source.Status)
+		}
+	}
 }
 
 func runningConfigKeepable() bool {
@@ -168,7 +193,23 @@ func checkMountedSetup(params *SetupParams) error {
 	if err != nil {
 		return err
 	}
-	return parseDocument(document)
+	return report.explainSkip(parseDocument(document))
+}
+
+// Says why a node an error names is gone, in the words the host reads.
+func (report *MountReport) explainSkip(err error) error {
+	if err == nil || report == nil {
+		return err
+	}
+	message := err.Error()
+	for _, source := range report.Sources {
+		for _, node := range source.held {
+			if strings.Contains(message, "["+node.Name+"]") || strings.Contains(message, strconv.Quote(node.Name)) {
+				return fmt.Errorf("%w; mount source %d is %s", err, source.ID, source.Status)
+			}
+		}
+	}
+	return err
 }
 
 func mountRejected(err error, outcome string) error {
@@ -314,7 +355,7 @@ func handleMountPreflight(params MountPreflightParams) (*MountPreflight, error) 
 	defer configMu.Unlock()
 	document, report, err := mountedDocument(params.Base, configPath, preflightMountSetup(mounts))
 	if err == nil {
-		err = parseDocument(document)
+		err = report.explainSkip(parseDocument(document))
 	}
 	if err != nil {
 		result := &MountPreflight{Error: err.Error(), ErrorCode: asMethodError(err).Code}

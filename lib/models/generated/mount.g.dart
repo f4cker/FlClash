@@ -10,6 +10,7 @@ _MountSource _$MountSourceFromJson(Map<String, dynamic> json) => _MountSource(
   id: (json['id'] as num).toInt(),
   label: json['label'] as String,
   path: json['path'] as String,
+  ageSecretKey: json['age-secret-key'] as String?,
 );
 
 Map<String, dynamic> _$MountSourceToJson(_MountSource instance) =>
@@ -17,6 +18,7 @@ Map<String, dynamic> _$MountSourceToJson(_MountSource instance) =>
       'id': instance.id,
       'label': instance.label,
       'path': instance.path,
+      'age-secret-key': ?instance.ageSecretKey,
     };
 
 _MountSetup _$MountSetupFromJson(Map<String, dynamic> json) => _MountSetup(

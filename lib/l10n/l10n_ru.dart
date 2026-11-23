@@ -5397,6 +5397,30 @@ class AppLocalizationsRu extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return 'Локальная копия подписки «$name» отсутствует.';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return 'Не удалось прочитать локальную копию подписки «$name».';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return 'Локальная копия подписки «$name» содержит узлы, которые Flash не может прочитать.';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return 'Подписка «$name» не предоставляет список узлов, который можно подключить.';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 
@@ -5469,6 +5493,45 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mountSkipAppliedLead =>
+      'Подписки с проблемами пропущены; остальные настройки применены:';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Подписки с проблемами будут пропущены. Конфигурацию всё равно можно сохранить:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return 'Пропущена 1 подписка: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Пропущено $count подписки',
+      many: 'Пропущено $count подписок',
+      few: 'Пропущены $count подписки',
+      one: 'Пропущена $count подписка',
+    );
+    return '$_temp0 · Подробнее';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'локальная копия отсутствует';
+
+  @override
+  String get mountSkipShortReadError => 'не удалось прочитать локальную копию';
+
+  @override
+  String get mountSkipShortInvalid =>
+      'содержит узлы, которые Flash не может прочитать';
+
+  @override
+  String get mountSkipShortUnsupported => 'нет списка узлов для подключения';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

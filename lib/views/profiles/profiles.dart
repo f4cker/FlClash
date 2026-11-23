@@ -33,6 +33,9 @@ double get _profileItemHeight {
       2 * listRowVerticalPadding;
 }
 
+double get _skipLineExtent =>
+    _infoGap + globalState.measure.textHeight(AppTextStyle.footnote);
+
 class ProfilesView extends ConsumerStatefulWidget {
   const ProfilesView({super.key, this.picker = false});
 
@@ -240,8 +243,23 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
     return item - rowPadding - trailingRest - mountPillMaxWidth(context) < 96;
   }
 
+  /// Only the card of the profile the Core runs says what its config
+  /// skipped; the extra row goes once every source is back.
+  bool _skipLine = false;
+
+  bool _watchSkipLine() {
+    final skips = ref.watch(mountSkipsProvider);
+    return widget.profiles.any(
+      (profile) =>
+          profile.type != ProfileType.custom &&
+          (skips[profile.id]?.isNotEmpty ?? false),
+    );
+  }
+
   double _extentFor(double width) =>
-      _profileItemHeight + (_pillBelowFor(width) ? mountPillBelowExtent : 0);
+      _profileItemHeight +
+      (_pillBelowFor(width) ? mountPillBelowExtent : 0) +
+      (_skipLine ? _skipLineExtent : 0);
 
   double? _revealOffset({
     required double width,
@@ -305,6 +323,7 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
   @override
   Widget build(BuildContext context) {
     final profiles = widget.profiles;
+    _skipLine = _watchSkipLine();
     final grid = WidthBuilder(
       builder: (_, width) {
         final pillBelow = _pillBelowFor(width);
@@ -316,8 +335,7 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
             crossAxisCount: _columnsFor(width),
             mainAxisSpacing: widget.spacing,
             crossAxisSpacing: widget.spacing,
-            mainAxisExtent:
-                _profileItemHeight + (pillBelow ? mountPillBelowExtent : 0),
+            mainAxisExtent: _extentFor(width),
           ),
           itemCount: profiles.length,
           itemBuilder: (context, index) {
@@ -738,8 +756,16 @@ class ProfileItem extends ConsumerWidget {
     final summary = unreadable ? null : mountSummary?.value;
     final showPill =
         !isCustom && (isSelected || unreadable || (summary?.mounted ?? 0) > 0);
+    final skips = isCustom
+        ? const <MountSkip>[]
+        : ref.watch(mountSkipsProvider)[profile.id] ?? const <MountSkip>[];
     final pill = showPill
-        ? MountPill(profile: profile, summary: summary, unreadable: unreadable)
+        ? MountPill(
+            profile: profile,
+            summary: summary,
+            unreadable: unreadable,
+            skipped: skips.isNotEmpty,
+          )
         : null;
     final appLocalizations = context.appLocalizations;
     final subtitleWarning = unreadable
@@ -779,6 +805,9 @@ class ProfileItem extends ConsumerWidget {
             expire: subscriptionInfo?.expireDate,
             subtitle: _subtitle(context),
             subtitleWarning: subtitleWarning,
+            skipLine: skips.isEmpty
+                ? null
+                : MountSkipLine(profile: profile, skips: skips),
             below: pillBelow ? pill : null,
           ),
         ),
@@ -793,6 +822,7 @@ class _ProfileCardTitle extends StatelessWidget {
     required this.expire,
     required this.subtitle,
     this.subtitleWarning,
+    this.skipLine,
     this.below,
   });
 
@@ -802,6 +832,8 @@ class _ProfileCardTitle extends StatelessWidget {
 
   /// Appended to [subtitle] in the warning colour.
   final String? subtitleWarning;
+
+  final Widget? skipLine;
 
   /// Under the subtitle, left-aligned with the title.
   final Widget? below;
@@ -833,6 +865,14 @@ class _ProfileCardTitle extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        if (skipLine case final skipLine?)
+          Padding(
+            padding: const EdgeInsets.only(top: _infoGap),
+            child: SizedBox(
+              height: globalState.measure.textHeight(AppTextStyle.footnote),
+              child: Align(alignment: Alignment.centerLeft, child: skipLine),
+            ),
+          ),
         if (below case final below?) ...[const SizedBox(height: 8), below],
       ],
     );

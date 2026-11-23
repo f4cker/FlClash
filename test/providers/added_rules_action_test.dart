@@ -47,8 +47,17 @@ class FakeAddedRulesAction extends AddedRulesAction {
   @override
   Duration get saveTimeout => const Duration(milliseconds: 30);
 
+  /// Told to the next apply's own listener, as the Core's mount refusal.
+  String? rejection;
+
   @override
-  Future<bool> applyAddedRulesProfile() => reload();
+  Future<bool> applyAddedRulesProfile({
+    void Function(String reason)? onMountRejected,
+  }) async {
+    final applied = await reload();
+    if (!applied && rejection != null) onMountRejected?.call(rejection!);
+    return applied;
+  }
 }
 
 void main() {
@@ -605,6 +614,40 @@ void main() {
       contains('restoring the running configuration failed'),
     );
     expect(await target(), 'DIRECT');
+  });
+
+  test('a refused reload tells why the Core kept the running config', () async {
+    var calls = 0;
+    final fake = FakeAddedRulesAction(() async {
+      calls++;
+      return false;
+    })..rejection = 'source Air is missing';
+    container = ProviderContainer(
+      overrides: [
+        currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        addedRulesActionProvider.overrideWith(() => fake),
+      ],
+    );
+    final appLocalizations = currentAppLocalizations;
+    final result = await container
+        .read(addedRulesActionProvider.notifier)
+        .putRule(
+          profile,
+          original.copyWith(ruleTarget: 'REJECT'),
+          previous: original,
+        );
+    expect(calls, 2);
+    expect(
+      result.error,
+      startsWith(
+        '${appLocalizations.addedRulesReloadFailed}\nsource Air is missing',
+      ),
+    );
+    expect(
+      result.error,
+      contains(appLocalizations.addedRulesRollbackReloadFailed),
+    );
   });
 
   test('late compensating reload failure is reported after timeout', () async {

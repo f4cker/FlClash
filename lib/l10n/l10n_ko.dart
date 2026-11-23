@@ -5279,6 +5279,30 @@ class AppLocalizationsKo extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return '구독 ‘$name’의 로컬 사본이 없습니다.';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return '구독 ‘$name’의 로컬 사본을 읽을 수 없습니다.';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return '구독 ‘$name’의 로컬 사본에 Flash가 읽을 수 없는 노드가 있습니다.';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return '구독 ‘$name’에는 마운트할 수 있는 노드 목록이 없습니다.';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 
@@ -5351,6 +5375,34 @@ class AppLocalizationsKo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mountSkipAppliedLead => '문제가 있는 구독은 건너뛰고 나머지 설정을 적용했습니다:';
+
+  @override
+  String get profileEditMountSkipLead => '문제가 있는 구독은 건너뜁니다. 설정은 저장할 수 있습니다:';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '이번에 건너뛴 구독 1개: $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '이번에 $count개 건너뜀 · 자세히 보기';
+  }
+
+  @override
+  String get mountSkipShortMissing => '로컬 사본 없음';
+
+  @override
+  String get mountSkipShortReadError => '로컬 사본을 읽을 수 없음';
+
+  @override
+  String get mountSkipShortInvalid => 'Flash가 읽을 수 없는 노드 포함';
+
+  @override
+  String get mountSkipShortUnsupported => '마운트할 수 있는 노드 목록 없음';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

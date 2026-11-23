@@ -18,6 +18,68 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum _ProfileField { label, url, autoUpdateInterval }
 
+/// Takes [data] unless its mounts would refuse it; a subscription's own
+/// problem, or a preflight that cannot run, does not hold the edit.
+@visibleForTesting
+Future<void> saveProfileEdit(
+  BuildContext context,
+  WidgetRef ref,
+  int profileId,
+  Uint8List data,
+) async {
+  final issue = await globalState.safeRun(
+    () =>
+        ref.read(profilesActionProvider.notifier).validateConfigWithData(data),
+    silence: false,
+  );
+  if (issue != null) {
+    unawaited(
+      dialogs.showAlert(
+        title: currentAppLocalizations.tip,
+        message: TextSpan(text: issue),
+      ),
+    );
+    return;
+  }
+  MountEditIssue? mountIssue;
+  try {
+    mountIssue = await ref
+        .read(mountActionProvider.notifier)
+        .preflightEdit(profileId, data);
+  } catch (error) {
+    commonPrint.log(
+      'mount preflight of the edit failed: ${compactError(error)}',
+      logLevel: LogLevel.warning,
+    );
+  }
+  final message = switch (mountIssue) {
+    null => null,
+    (:final reason, blocking: true, skips: _) =>
+      '${currentAppLocalizations.profileEditMountRejected}\n$reason',
+    (:final reason, blocking: false, skips: _) =>
+      '${currentAppLocalizations.profileEditMountSkipLead}\n$reason',
+  };
+  if (message != null && mountIssue!.blocking) {
+    unawaited(
+      dialogs.showAlert(
+        title: currentAppLocalizations.tip,
+        message: TextSpan(text: message),
+      ),
+    );
+    return;
+  }
+  if (context.mounted) {
+    Navigator.of(context).pop(data);
+  }
+  if (message != null) {
+    // Told here, so the apply on leaving the editor does not tell it again.
+    ref
+        .read(mountSkipsProvider.notifier)
+        .announce(profileId, mountIssue!.skips);
+    dialogs.showBanner(message, level: BannerLevel.warning);
+  }
+}
+
 class EditProfileView extends ConsumerStatefulWidget {
   final Profile profile;
 
@@ -185,26 +247,8 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
     });
   }
 
-  Future<void> _handleSaveEdit(BuildContext context, Uint8List data) async {
-    final issue = await globalState.safeRun(
-      () => ref
-          .read(profilesActionProvider.notifier)
-          .validateConfigWithData(data),
-      silence: false,
-    );
-    if (issue != null) {
-      unawaited(
-        dialogs.showAlert(
-          title: currentAppLocalizations.tip,
-          message: TextSpan(text: issue),
-        ),
-      );
-      return;
-    }
-    if (context.mounted) {
-      Navigator.of(context).pop(data);
-    }
-  }
+  Future<void> _handleSaveEdit(BuildContext context, Uint8List data) =>
+      saveProfileEdit(context, ref, widget.profile.id, data);
 
   Future<void> _editProfileFile() async {
     final title = widget.profile.label.takeFirstValid([

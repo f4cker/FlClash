@@ -5451,6 +5451,30 @@ class AppLocalizationsFr extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return 'La copie locale de l’abonnement « $name » est introuvable.';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return 'Impossible de lire la copie locale de l’abonnement « $name ».';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return 'La copie locale de l’abonnement « $name » contient des nœuds que Flash ne peut pas lire.';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return 'L’abonnement « $name » ne fournit pas de liste de nœuds pouvant être montée.';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 
@@ -5523,6 +5547,38 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mountSkipAppliedLead =>
+      'Les abonnements présentant un problème ont été ignorés ; le reste de la configuration est actif :';
+
+  @override
+  String get profileEditMountSkipLead =>
+      'Les abonnements présentant un problème seront ignorés. Vous pouvez tout de même enregistrer la configuration :';
+
+  @override
+  String mountCardSkippedOne(Object name, Object reason) {
+    return '1 abonnement ignoré : $name ($reason)';
+  }
+
+  @override
+  String mountCardSkippedMany(int count) {
+    return '$count abonnements ignorés · Voir les détails';
+  }
+
+  @override
+  String get mountSkipShortMissing => 'copie locale introuvable';
+
+  @override
+  String get mountSkipShortReadError => 'copie locale illisible';
+
+  @override
+  String get mountSkipShortInvalid =>
+      'contient des nœuds que Flash ne peut pas lire';
+
+  @override
+  String get mountSkipShortUnsupported =>
+      'aucune liste de nœuds pouvant être montée';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';
