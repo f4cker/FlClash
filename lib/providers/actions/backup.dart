@@ -175,18 +175,19 @@ class BackupAction extends _$BackupAction {
     return configMap;
   }
 
-  /// Keeps this Mac's CA unless the backup carries one, untrusted here.
-  Future<(Mitm, bool)> _restoredMitm(
+  /// Keeps this Mac's CA unless the backup carries another, untrusted here.
+  (Mitm, _MitmKeychainChange?) _restoredMitm(
     Mitm restored,
     Map<String, Object?> configMap,
-  ) async {
+  ) {
     final local = ref.read(patchClashConfigProvider).mitm;
     final passphrase = configMap[mitmCaPassphraseKey];
     final carried = restored.coreCa;
-    if (carried != null && passphrase is String && passphrase.isNotEmpty) {
-      await ref
-          .read(mitmPassphraseStoreProvider)
-          ?.writePassphrase(carried.fingerprint, passphrase);
+    if (carried != null &&
+        passphrase is String &&
+        passphrase.isNotEmpty &&
+        carried.fingerprint != local.coreCa?.fingerprint) {
+      final dropped = local.pendingCaCertificate?.fingerprint;
       return (
         restored.copyWith(
           trustedFingerprint: null,
@@ -198,7 +199,11 @@ class BackupAction extends _$BackupAction {
               ? local.coreCa
               : local.retiredCaCertificate,
         ),
-        true,
+        (
+          fingerprint: carried.fingerprint,
+          passphrase: passphrase,
+          forget: dropped == carried.fingerprint ? null : dropped,
+        ),
       );
     }
     return (
@@ -210,8 +215,23 @@ class BackupAction extends _$BackupAction {
         retiredCaCertificate: local.retiredCaCertificate,
         trustedFingerprint: local.trustedFingerprint,
       ),
-      false,
+      null,
     );
+  }
+
+  Future<void> _storeRestoredMitm(_MitmKeychainChange change) async {
+    final store = ref.read(mitmPassphraseStoreProvider);
+    await store?.writePassphrase(change.fingerprint, change.passphrase);
+    if (change.forget case final fingerprint?) {
+      try {
+        await store?.deletePassphrase(fingerprint);
+      } catch (error) {
+        commonPrint.log(
+          'Deleting a MITM CA passphrase failed: ${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
+      }
+    }
   }
 
   Future<void> _promptMitmCaTrust() async {
@@ -301,6 +321,7 @@ class BackupAction extends _$BackupAction {
     StackTrace? partialStack;
     var restoredMitmCa = false;
     var keptMitmCa = false;
+    _MitmKeychainChange? mitmKeychain;
     final lanes = ref
         .read(addedRulesActionProvider.notifier)
         .runRestoreInLane(
@@ -379,12 +400,16 @@ class BackupAction extends _$BackupAction {
                           config.vpnProps.accessControlProps.hasPackages
                           ? config.vpnProps.accessControlProps
                           : ref.read(vpnSettingProvider).accessControlProps;
-                      final (mitm, carried) = await _restoredMitm(
+                      final (mitm, change) = _restoredMitm(
                         config.patchClashConfig.mitm,
                         configMap!,
                       );
-                      restoredMitmCa = carried;
-                      keptMitmCa = !carried && mitm.coreCa != null;
+                      mitmKeychain = change;
+                      restoredMitmCa = change != null;
+                      keptMitmCa =
+                          change == null &&
+                          mitm.coreCa != null &&
+                          config.patchClashConfig.mitm.coreCa == null;
                       restoredConfig = config.copyWith(
                         davProps:
                             config.davProps ?? ref.read(davSettingProvider),
@@ -477,6 +502,9 @@ class BackupAction extends _$BackupAction {
                 );
                 await _checkpoint(RestoreCheckpoint.committed);
                 await afterRestoreCommit?.call();
+                if (mitmKeychain case final change?) {
+                  await _storeRestoredMitm(change);
+                }
                 await _afterCommit(
                   journal,
                   restoredConfig: restoredConfig,
@@ -738,3 +766,9 @@ class BackupAction extends _$BackupAction {
     }
   }
 }
+
+typedef _MitmKeychainChange = ({
+  String fingerprint,
+  String passphrase,
+  String? forget,
+});

@@ -1559,6 +1559,69 @@ void main() {
       },
     );
 
+    test('a restore rolled back writes no passphrase', () async {
+      final configMap = await actionOf(
+        withCa('AA:AA'),
+      ).backupConfigMap(includeMitmCa: true);
+      final target = withCa('BB:BB', p12: 'BBBB');
+      actionOf(target)
+        ..promptMitmCaTrust = () async {}
+        ..onRestoreCheckpoint = (point) async {
+          if (point == RestoreCheckpoint.prepared) throw StateError('stop');
+        };
+
+      await expectLater(
+        actionOf(
+          target,
+        ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all),
+        throwsA(anything),
+      );
+
+      expect(passphrases.values, {'BB:BB': 'secret BB:BB'});
+    });
+
+    test('a restored CA drops the pending one with its passphrase', () async {
+      final configMap = await actionOf(
+        withCa('AA:AA'),
+      ).backupConfigMap(includeMitmCa: true);
+      final target = withCa('BB:BB', p12: 'BBBB');
+      passphrases.values['PE:ND'] = 'pending';
+      actionOf(target).promptMitmCaTrust = () async {};
+
+      await actionOf(
+        target,
+      ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all);
+
+      final mitm = target.read(patchClashConfigProvider).mitm;
+      expect(mitm.coreCa?.fingerprint, 'AA:AA');
+      expect(mitm.pendingCaCertificate, isNull);
+      expect(mitm.retiredCaCertificate?.fingerprint, 'BB:BB');
+      expect(passphrases.values, {
+        'AA:AA': 'secret AA:AA',
+        'BB:BB': 'secret BB:BB',
+      });
+    });
+
+    test('a backup of the same CA keeps the p12 and passphrase here', () async {
+      final configMap = await actionOf(
+        withCa('AA:AA', p12: 'ZZZZ'),
+      ).backupConfigMap(includeMitmCa: true);
+      configMap[mitmCaPassphraseKey] = 'another secret';
+      final target = withCa('AA:AA');
+      var prompted = 0;
+      actionOf(target).promptMitmCaTrust = () async => prompted++;
+
+      await actionOf(
+        target,
+      ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all);
+
+      expect(prompted, 0);
+      final mitm = target.read(patchClashConfigProvider).mitm;
+      expect(mitm.caP12, MitmCaP12('AAAA'));
+      expect(mitm.trustedFingerprint, 'AA:AA');
+      expect(passphrases.values['AA:AA'], 'secret AA:AA');
+    });
+
     test('a backup without a CA keeps the CA of this Mac', () async {
       final configMap = await actionOf(withCa('AA:AA')).backupConfigMap();
       final target = withCa('BB:BB', p12: 'BBBB');
