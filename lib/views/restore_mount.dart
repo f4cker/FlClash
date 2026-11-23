@@ -395,7 +395,6 @@ class _SheetFrame extends StatelessWidget {
             ),
           ),
           if (paged)
-            // A short window still leaves the details room to scroll.
             ConstrainedBox(
               constraints: BoxConstraints(maxHeight: height * 0.6),
               child: SingleChildScrollView(child: foot),
@@ -707,7 +706,6 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
   bool _acknowledged = false;
   bool _submitted = false;
 
-  /// Holds Cancel, which takes the focus first: Enter never restores.
   final _cancelHost = FocusNode(skipTraversal: true, canRequestFocus: false);
 
   @override
@@ -1427,7 +1425,6 @@ class _RestoreResultViewState extends State<RestoreResultView> {
   }
 }
 
-/// A colon-separated fingerprint that wraps only between its bytes.
 String breakAtBytes(String fingerprint) =>
     fingerprint.replaceAll(':', ':\u200B');
 
