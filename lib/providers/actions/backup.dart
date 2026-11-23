@@ -50,9 +50,14 @@ class BackupAction extends _$BackupAction {
   @visibleForTesting
   Future<void> Function()? beforeRestorePublish;
 
-  Future<bool> backup(BackupDelivery deliver) {
+  @visibleForTesting
+  Future<void> Function()? promptMitmCaTrust;
+
+  Future<bool> backup(BackupDelivery deliver, {bool includeMitmCa = false}) {
     return _withWorkDir((workDir) async {
-      return deliver(await _createArchive(workDir));
+      return deliver(
+        await _createArchive(workDir, includeMitmCa: includeMitmCa),
+      );
     });
   }
 
@@ -114,14 +119,17 @@ class BackupAction extends _$BackupAction {
     await Directory(join(homeDirPath, 'restore')).safeDelete(recursive: true);
   }
 
-  Future<String> _createArchive(String workDir) async {
+  Future<String> _createArchive(
+    String workDir, {
+    bool includeMitmCa = false,
+  }) async {
     final databaseSnapshotPath = join(workDir, backupDatabaseName);
     await database.customStatement('VACUUM INTO ?', [databaseSnapshotPath]);
     await _dropRestoreCommits(databaseSnapshotPath);
     final entries = await BackupEntries.ofDatabaseSnapshot(
       databaseSnapshotPath,
     );
-    final configMap = ref.read(configProvider).toJson();
+    final configMap = await backupConfigMap(includeMitmCa: includeMitmCa);
     configMap['version'] = await preferences.getVersion();
     final archivePath = join(workDir, 'backup.zip');
     await backupTask((
@@ -132,6 +140,92 @@ class BackupAction extends _$BackupAction {
       entries: entries,
     ));
     return archivePath;
+  }
+
+  /// A pending or replaced CA never; the one in use only if [includeMitmCa].
+  @visibleForTesting
+  Future<Map<String, Object?>> backupConfigMap({
+    bool includeMitmCa = false,
+  }) async {
+    final config = ref.read(configProvider);
+    final mitm = config.patchClashConfig.mitm;
+    final ca = mitm.coreCa;
+    final passphrase = includeMitmCa && ca != null
+        ? await ref
+              .read(mitmPassphraseStoreProvider)
+              ?.readPassphrase(ca.fingerprint)
+        : null;
+    final kept = passphrase != null;
+    final configMap =
+        json.decode(
+              json.encode(
+                config.copyWith.patchClashConfig(
+                  mitm: mitm.copyWith(
+                    caP12: kept ? mitm.caP12 : null,
+                    caCertificate: kept ? mitm.caCertificate : null,
+                    pendingCaP12: null,
+                    pendingCaCertificate: null,
+                    retiredCaCertificate: null,
+                  ),
+                ),
+              ),
+            )
+            as Map<String, Object?>;
+    if (passphrase != null) configMap[mitmCaPassphraseKey] = passphrase;
+    return configMap;
+  }
+
+  /// Keeps this Mac's CA unless the backup carries one, untrusted here.
+  Future<(Mitm, bool)> _restoredMitm(
+    Mitm restored,
+    Map<String, Object?> configMap,
+  ) async {
+    final local = ref.read(patchClashConfigProvider).mitm;
+    final passphrase = configMap[mitmCaPassphraseKey];
+    final carried = restored.coreCa;
+    if (carried != null && passphrase is String && passphrase.isNotEmpty) {
+      await ref
+          .read(mitmPassphraseStoreProvider)
+          ?.writePassphrase(carried.fingerprint, passphrase);
+      return (
+        restored.copyWith(
+          trustedFingerprint: null,
+          pendingCaP12: null,
+          pendingCaCertificate: null,
+          retiredCaCertificate:
+              local.coreCa != null &&
+                  local.coreCa!.fingerprint != carried.fingerprint
+              ? local.coreCa
+              : local.retiredCaCertificate,
+        ),
+        true,
+      );
+    }
+    return (
+      restored.copyWith(
+        caP12: local.caP12,
+        caCertificate: local.caCertificate,
+        pendingCaP12: local.pendingCaP12,
+        pendingCaCertificate: local.pendingCaCertificate,
+        retiredCaCertificate: local.retiredCaCertificate,
+        trustedFingerprint: local.trustedFingerprint,
+      ),
+      false,
+    );
+  }
+
+  Future<void> _promptMitmCaTrust() async {
+    final appLocalizations = currentAppLocalizations;
+    final trust = await dialogs.showMessage(
+      title: appLocalizations.mitmRestoredCaTitle,
+      message: TextSpan(text: appLocalizations.mitmRestoredCaTip),
+      confirmText: appLocalizations.trustCertificate,
+    );
+    if (trust != true || !ref.mounted) return;
+    await globalState.safeRun(
+      () => ref.read(mitmTrustStateProvider.notifier).install(),
+      title: appLocalizations.trustCertificate,
+    );
   }
 
   /// Called at each [RestoreCheckpoint]; a test throws [RestoreCrash] here
@@ -209,6 +303,7 @@ class BackupAction extends _$BackupAction {
     var plan = preview;
     RestorePartialException? partial;
     StackTrace? partialStack;
+    var restoredMitmCa = false;
     final lanes = ref
         .read(addedRulesActionProvider.notifier)
         .runRestoreInLane(
@@ -287,11 +382,19 @@ class BackupAction extends _$BackupAction {
                           config.vpnProps.accessControlProps.hasPackages
                           ? config.vpnProps.accessControlProps
                           : ref.read(vpnSettingProvider).accessControlProps;
+                      final (mitm, carried) = await _restoredMitm(
+                        config.patchClashConfig.mitm,
+                        configMap!,
+                      );
+                      restoredMitmCa = carried;
                       restoredConfig = config.copyWith(
                         davProps:
                             config.davProps ?? ref.read(davSettingProvider),
                         vpnProps: config.vpnProps.copyWith(
                           accessControlProps: accessControlProps,
+                        ),
+                        patchClashConfig: config.patchClashConfig.copyWith(
+                          mitm: mitm,
                         ),
                       );
                     }
@@ -406,6 +509,9 @@ class BackupAction extends _$BackupAction {
     } on RestorePartialException catch (error, stack) {
       partial = error;
       partialStack = stack;
+    }
+    if (restoredMitmCa) {
+      unawaited((promptMitmCaTrust ?? _promptMitmCaTrust)());
     }
     // Outside both lanes: settling takes the mount scheduler only.
     List<RestoreMountProfile>? pending;

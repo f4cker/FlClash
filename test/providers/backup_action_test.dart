@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/database/database.dart';
@@ -13,6 +14,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart' show initProvider;
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/mitm_core_ca.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +41,30 @@ Matcher _pendingRefusal([List<int>? profileIds]) => throwsA(
         'profileIds',
         profileIds ?? isA<List<int>>(),
       ),
+);
+
+class _Passphrases implements MitmPassphraseStore {
+  final values = <String, String>{};
+
+  @override
+  Future<void> deletePassphrase(String fingerprint) async =>
+      values.remove(fingerprint);
+
+  @override
+  Future<String?> readPassphrase(String fingerprint) async =>
+      values[fingerprint];
+
+  @override
+  Future<void> writePassphrase(String fingerprint, String passphrase) async =>
+      values[fingerprint] = passphrase;
+}
+
+MitmCertificate _ca(String fingerprint) => MitmCertificate(
+  pem: 'PEM $fingerprint',
+  fingerprint: fingerprint,
+  subject: 'Flash $fingerprint',
+  notBefore: DateTime.utc(2026),
+  notAfter: DateTime.utc(2027),
 );
 
 void main() {
@@ -1451,6 +1477,105 @@ void main() {
 
       expect(container.read(currentProfileIdProvider), before);
       expect(await testDatabase.profilesDao.query().get(), hasLength(1));
+    });
+  });
+
+  group('the decryption CA in a backup', () {
+    late _Passphrases passphrases;
+
+    ProviderContainer withCa(String? fingerprint, {String? p12}) {
+      passphrases = _Passphrases();
+      final container = ProviderContainer(
+        overrides: [mitmPassphraseStoreProvider.overrideWithValue(passphrases)],
+      )..listen(configProvider, (_, _) {});
+      addTearDown(container.dispose);
+      if (fingerprint != null) {
+        passphrases.values[fingerprint] = 'secret $fingerprint';
+        container
+            .read(patchClashConfigProvider.notifier)
+            .update(
+              (state) => state.copyWith(
+                mitm: state.mitm.copyWith(
+                  caP12: MitmCaP12(p12 ?? 'AAAA'),
+                  caCertificate: _ca(fingerprint),
+                  trustedFingerprint: fingerprint,
+                  pendingCaP12: MitmCaP12('CCCC'),
+                  pendingCaCertificate: _ca('PE:ND'),
+                ),
+              ),
+            );
+      }
+      return container;
+    }
+
+    Map<String, Object?> mitmOf(Map<String, Object?> configMap) =>
+        (configMap['patchClashConfig']! as Map<String, Object?>)['mitm']!
+            as Map<String, Object?>;
+
+    test('leaves the CA out unless asked, and never a pending one', () async {
+      final container = withCa('AA:AA');
+      final configMap = await actionOf(container).backupConfigMap();
+      final mitm = mitmOf(configMap);
+
+      expect(mitm['ca-p12'], isNull);
+      expect(mitm['ca-certificate'], isNull);
+      expect(mitm['pending-ca-p12'], isNull);
+      expect(configMap[mitmCaPassphraseKey], isNull);
+      expect(jsonEncode(configMap), isNot(contains('secret AA:AA')));
+    });
+
+    test('carries the CA in use and its passphrase when asked', () async {
+      final container = withCa('AA:AA');
+      final configMap = await actionOf(
+        container,
+      ).backupConfigMap(includeMitmCa: true);
+      final mitm = mitmOf(configMap);
+
+      expect(mitm['ca-p12'], 'AAAA');
+      expect(configMap[mitmCaPassphraseKey], 'secret AA:AA');
+      expect(mitm['pending-ca-p12'], isNull);
+    });
+
+    test(
+      'a restored CA brings its passphrase and is not yet trusted',
+      () async {
+        final configMap = await actionOf(
+          withCa('AA:AA'),
+        ).backupConfigMap(includeMitmCa: true);
+        final target = withCa(null);
+        var prompted = 0;
+        actionOf(target).promptMitmCaTrust = () async => prompted++;
+
+        await actionOf(
+          target,
+        ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all);
+
+        expect(prompted, 1);
+
+        final mitm = target.read(patchClashConfigProvider).mitm;
+        expect(mitm.coreCa?.fingerprint, 'AA:AA');
+        expect(mitm.trustedFingerprint, isNull);
+        expect(passphrases.values['AA:AA'], 'secret AA:AA');
+      },
+    );
+
+    test('a backup without a CA keeps the CA of this Mac', () async {
+      final configMap = await actionOf(withCa('AA:AA')).backupConfigMap();
+      final target = withCa('BB:BB', p12: 'BBBB');
+      var prompted = 0;
+      actionOf(target).promptMitmCaTrust = () async => prompted++;
+
+      await actionOf(
+        target,
+      ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all);
+
+      expect(prompted, 0);
+
+      final mitm = target.read(patchClashConfigProvider).mitm;
+      expect(mitm.coreCa?.fingerprint, 'BB:BB');
+      expect(mitm.caP12, MitmCaP12('BBBB'));
+      expect(mitm.trustedFingerprint, 'BB:BB');
+      expect(passphrases.values['BB:BB'], 'secret BB:BB');
     });
   });
 

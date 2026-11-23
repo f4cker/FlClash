@@ -78,12 +78,29 @@ class _BackupAndRestoreState extends ConsumerState<BackupAndRestore>
     );
   }
 
-  Future<void> _backup(BackupDelivery deliver) {
+  /// Asked for each backup while the Core's CA is in use; false leaves the
+  /// CA out, null cancels the backup.
+  Future<bool?> _includeMitmCa() async {
+    if (ref.read(patchClashConfigProvider).mitm.coreCa == null) return false;
     final appLocalizations = context.appLocalizations;
+    return dialogs.showMessage(
+      title: appLocalizations.includeMitmCa,
+      message: TextSpan(text: appLocalizations.includeMitmCaTip),
+      confirmText: appLocalizations.includeMitmCa,
+      cancelText: appLocalizations.backup,
+    );
+  }
+
+  Future<void> _backup(BackupDelivery deliver) async {
+    final appLocalizations = context.appLocalizations;
+    final includeMitmCa = await _includeMitmCa();
+    if (includeMitmCa == null || !mounted) return;
     return _run(
       title: appLocalizations.backup,
       successMessage: appLocalizations.backupSuccess,
-      task: () => ref.read(backupActionProvider.notifier).backup(deliver),
+      task: () => ref
+          .read(backupActionProvider.notifier)
+          .backup(deliver, includeMitmCa: includeMitmCa),
     );
   }
 
