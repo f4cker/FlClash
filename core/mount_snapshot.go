@@ -272,17 +272,11 @@ func mountNodesDir() string {
 // A setup without base or mounts reloads config.yaml, so its inputs stay.
 func clearMountNodes() {
 	dir := mountNodesDir()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return
-	}
 	kept := runningMountInputs()
-	for _, entry := range entries {
-		path := filepath.Join(dir, entry.Name())
-		if !kept[path] {
-			_ = os.RemoveAll(path)
-		}
-	}
+	sweepOwnFiles(dir, func(name string) bool {
+		return strings.HasPrefix(name, "source-") && strings.HasSuffix(name, ".yaml") &&
+			!kept[filepath.Join(dir, name)]
+	})
 }
 
 func runningMountInputs() map[string]bool {

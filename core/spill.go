@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/metacubex/mihomo/constant"
 )
@@ -75,11 +76,25 @@ func writeSpilledResponse(data []byte) (path string, err error) {
 }
 
 func clearSpilledResponses() {
-	entries, err := os.ReadDir(spilledResponseDir())
+	sweepOwnFiles(spilledResponseDir(), func(name string) bool {
+		return strings.HasSuffix(name, ".json")
+	})
+}
+
+// An elevated Core sweeps a directory the user can replace: a symlink, a
+// subdirectory or a name it never writes is left alone.
+func sweepOwnFiles(dir string, sweep func(name string) bool) {
+	info, err := os.Lstat(dir)
+	if err != nil || !info.IsDir() {
+		return
+	}
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
 	}
 	for _, entry := range entries {
-		_ = os.Remove(filepath.Join(spilledResponseDir(), entry.Name()))
+		if entry.Type().IsRegular() && sweep(entry.Name()) {
+			_ = os.Remove(filepath.Join(dir, entry.Name()))
+		}
 	}
 }
