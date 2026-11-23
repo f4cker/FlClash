@@ -568,6 +568,45 @@ void main() {
       identityGate!.complete();
     });
 
+    test('a load abandoned after its budget never takes the slot', () async {
+      MitmCoreCaLease.checkBudget = const Duration(milliseconds: 20);
+      passphrases.gate = Completer<void>();
+      setMitm(coreMitm());
+      final lease = container.read(mitmCoreCaProvider.notifier);
+      expect(await lease.checkNow(), isNull);
+
+      final loadedInside = await lease.exclusive(() async {
+        passphrases.gate!.complete();
+        await settle();
+        return loaded.length;
+      });
+
+      expect(loadedInside, 0);
+    });
+
+    test('a CA set after its budget is not taken as loaded', () async {
+      MitmCoreCaLease.checkBudget = const Duration(milliseconds: 20);
+      final slow = Completer<void>();
+      when(() => core.setMitmCa(any())).thenAnswer((call) async {
+        await slow.future;
+        loaded.add(call.positionalArguments.single as MitmCaSecret);
+        return state(_coreFp);
+      });
+      setMitm(coreMitm());
+      final lease = container.read(mitmCoreCaProvider.notifier);
+      expect(await lease.checkNow(), isNull);
+
+      final stopsInside = await lease.exclusive(() async {
+        slow.complete();
+        await settle();
+        return stops;
+      });
+      await settle();
+
+      expect(stopsInside, 0);
+      expect(loaded, hasLength(2));
+    });
+
     test('a legacy user stays on the app signer', () async {
       setMitm(
         const Mitm(

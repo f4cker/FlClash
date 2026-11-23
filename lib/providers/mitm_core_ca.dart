@@ -107,6 +107,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
 
   /// Bumped by every stop; a check begun before one goes no further.
   int _epoch = 0;
+
+  /// Bumped when a load is given up on or the slot is taken: the load,
+  /// still running, then sends the Core nothing.
+  int _loadGeneration = 0;
   bool _closed = false;
   DateTime? _passphraseRetryAt;
 
@@ -202,6 +206,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   /// Runs [body] with the Core's one CA slot to itself.
   Future<T> exclusive<T>(Future<T> Function() body) async {
     _suspended++;
+    _loadGeneration++;
     try {
       await _running;
       return await body();
@@ -283,6 +288,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       _hold(true);
       return MitmTrust.ready;
     } catch (error) {
+      if (error is TimeoutException) _loadGeneration++;
       if (!ref.mounted) return null;
       switch (_refusal(error)) {
         // Cleared or reloaded since: load it again on the next round.
@@ -318,6 +324,8 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   ) async {
     final core = ref.read(coreHandlerProvider);
     final key = (connection: _connection, fingerprint: ca.fingerprint);
+    final generation = _loadGeneration;
+    bool abandoned() => generation != _loadGeneration;
     if (_loaded != key) {
       final retryAt = _passphraseRetryAt;
       if (retryAt != null && DateTime.now().isBefore(retryAt)) return null;
@@ -325,7 +333,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       final passphrase = await ref
           .read(mitmPassphraseStoreProvider)
           ?.readPassphrase(ca.fingerprint);
-      if (stale()) return null;
+      if (stale() || abandoned()) return null;
       if (passphrase == null) {
         _failed(MitmCoreCaFailure.passphraseMissing);
         return null;
@@ -338,8 +346,11 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
           fingerprint: ca.fingerprint,
         ),
       );
-      if (stale()) {
-        await stopSigning();
+      if (stale() || abandoned()) {
+        // The slot may hold this CA now instead of the one meant for it;
+        // a switch holding the slot gives it back itself.
+        _loaded = null;
+        if (stale() && _suspended == 0) await stopSigning();
         return null;
       }
       if (!loaded.loaded ||
