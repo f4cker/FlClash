@@ -8927,6 +8927,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple 서비스 도메인';
 
   @override
+  String mitmScriptTimeoutCapped(Object seconds) {
+    return '스크립트 시간 제한은 최대 $seconds초이며 $seconds초로 실행합니다.';
+  }
+
+  @override
   String get mitmHostFormatHint =>
       'api.example.com 또는 *.example.com과 같은 도메인을 사용하세요. 포트는 443만 지원하며, IP 주소와 이름 중간의 *는 지원하지 않습니다.';
 

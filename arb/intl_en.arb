@@ -3822,6 +3822,7 @@
   "mitmHostReasonInvalidFormat": "Invalid hostname format",
   "mitmHostReasonOverBroad": "Match is too broad",
   "mitmHostReasonAppleService": "Apple service domain",
+  "mitmScriptTimeoutCapped": "Scripts run for at most {seconds} seconds; longer timeouts run for {seconds} seconds.",
   "mitmHostFormatHint": "Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.",
   "mitmClientSourceRisk": "It decrypts only for these clients: {addresses}. With TUN on, this device's apps reach FlClash from the TUN's address, so they may be left out.",
   "mitmClientSourceTunTip": "With TUN on, this device's apps come from the TUN's address; a list that leaves it out leaves their traffic undecrypted.",

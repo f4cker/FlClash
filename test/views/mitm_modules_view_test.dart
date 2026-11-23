@@ -31,7 +31,7 @@ bad line
 [General]
 skip-proxy = example.com
 [Script]
-Ads = type=http-response,pattern=^https://example\.com/b,script-path=https://example.com/ads.js
+Ads = type=http-response,pattern=^https://example\.com/b,timeout=300,script-path=https://example.com/ads.js
 cron "0 8 * * *" script-path=https://example.com/daily.js, tag=Daily
 ''';
 
@@ -238,6 +238,17 @@ void main() {
       find.text(currentAppLocalizations.mitmSkipSetting),
       findsNWidgets(2),
     );
+  });
+
+  testWidgets('a script timeout over the cap is noted', (tester) async {
+    await pump(tester, MitmModuleView(id: _remote.id));
+    final note = currentAppLocalizations.mitmScriptTimeoutCapped(120);
+    expect(find.text(note), findsOneWidget);
+
+    await tester.tap(find.text(MitmList.script.label));
+    await tester.pumpAndSettle();
+    expect(find.text(note), findsOneWidget);
+    expect(find.textContaining('Ads = '), findsOneWidget);
   });
 
   testWidgets('unsupported cron scripts cannot be run from the menu', (

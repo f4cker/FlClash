@@ -8855,6 +8855,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple サービスのドメイン';
 
   @override
+  String mitmScriptTimeoutCapped(Object seconds) {
+    return 'スクリプトのタイムアウトは最大 $seconds 秒です。$seconds 秒で実行しています。';
+  }
+
+  @override
   String get mitmHostFormatHint =>
       'api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
 

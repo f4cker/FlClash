@@ -34,6 +34,13 @@ Map<MitmList, Map<String, String>> flashMitmIssues(
   },
 };
 
+/// The script lines the Core runs for [mitmScriptMaxTimeout] seconds rather
+/// than the longer timeout they declare.
+Set<String> flashMitmCappedScripts(MitmModuleContent content) => {
+  for (final line in content.script)
+    if (parseMitmScriptInfo(line)?.timeoutCapped ?? false) line,
+};
+
 List<MitmModuleSkip> flashMitmSkipped(MitmModuleContent content) => [
   ...content.skipped,
   for (final change in content.network.changes)

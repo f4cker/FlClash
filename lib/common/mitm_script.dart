@@ -43,6 +43,9 @@ class MitmScriptInfo {
     return seconds <= 0 ? 10 : math.min(mitmScriptMaxTimeout, seconds.ceil());
   }
 
+  bool get timeoutCapped =>
+      (double.tryParse(params['timeout'] ?? '') ?? 0) > mitmScriptMaxTimeout;
+
   String? get host => mitmPatternHost(pattern);
 
   /// Keeps only the keys the Core reads.

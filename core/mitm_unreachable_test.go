@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -273,5 +274,28 @@ func TestMitmScriptTimeoutIsCappedNotRefused(t *testing.T) {
 	}
 	if mitmScriptMaxTimeout != 120*time.Second || !strings.Contains(scriptHubLine, "timeout=300") {
 		t.Fatal("lib/common/mitm_script.dart mitmScriptMaxTimeout mirrors this cap")
+	}
+}
+
+// FLASH_SCRIPT_HUB_JS names a copy of Script Hub's script-hub.js.
+func TestMitmScriptHubFrontPage(t *testing.T) {
+	source, err := os.ReadFile(os.Getenv("FLASH_SCRIPT_HUB_JS"))
+	if err != nil {
+		t.Skip("FLASH_SCRIPT_HUB_JS is not a readable script-hub.js")
+	}
+	s := testScript(t, scriptHubLine+"FILE", string(source))
+	for _, url := range []string{"https://script.hub/", "https://script.hub/edit/_start_/x/_end_/a.sgmodule"} {
+		result := s.run(&mitmScriptInput{url: url, method: "GET", header: http.Header{"Host": {"script.hub"}}})
+		for _, line := range result.logs {
+			t.Logf("%s: %s", line.Level, line.Text)
+		}
+		local := result.out
+		if local != nil {
+			local = local.local
+		}
+		if local == nil || local.status != 200 || !strings.Contains(string(local.body), "Script Hub") ||
+			!strings.Contains(local.header.Get("Content-Type"), "text/html") {
+			t.Fatalf("%s: skip %q err %q out %+v", url, result.skip, result.err, result.out)
+		}
 	}
 }

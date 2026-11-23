@@ -9098,6 +9098,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Apple service domain';
 
   @override
+  String mitmScriptTimeoutCapped(Object seconds) {
+    return 'Scripts run for at most $seconds seconds; longer timeouts run for $seconds seconds.';
+  }
+
+  @override
   String get mitmHostFormatHint =>
       'Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
 

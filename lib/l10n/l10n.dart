@@ -14957,6 +14957,12 @@ abstract class AppLocalizations {
   /// **'Apple service domain'**
   String get mitmHostReasonAppleService;
 
+  /// No description provided for @mitmScriptTimeoutCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts run for at most {seconds} seconds; longer timeouts run for {seconds} seconds.'**
+  String mitmScriptTimeoutCapped(Object seconds);
+
   /// No description provided for @mitmHostFormatHint.
   ///
   /// In en, this message translates to:

@@ -8,6 +8,20 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('scripts asking for more than the timeout cap are named', () {
+    final content = parseMitmModule(
+      r'''
+[Script]
+Hub = type=http-request,pattern=^https?:\/\/script\.hub\/,timeout=300,script-path=hub.js
+Max = type=http-request,pattern=^https:\/\/a\.com\/,timeout=120,script-path=a.js
+Plain = type=http-request,pattern=^https:\/\/b\.com\/,script-path=b.js
+''',
+      resources: const {'hub.js': 'hub.js', 'a.js': 'a.js', 'b.js': 'b.js'},
+    );
+    expect(flashMitmCappedScripts(content), hasLength(1));
+    expect(flashMitmCappedScripts(content).single, startsWith('Hub = '));
+  });
+
   test('unsupported capabilities never enter the Go setup', () {
     final content = parseMitmModule(
       r'''
