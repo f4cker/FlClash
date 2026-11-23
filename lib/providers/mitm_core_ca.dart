@@ -84,8 +84,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   @visibleForTesting
   static Duration checkBudget = const Duration(seconds: 4);
 
-  /// After a keychain read that failed or found nothing, how long until the
-  /// rounds try again; a prompt the user dismissed is not shown every round.
+  /// Keeps a dismissed keychain prompt from coming back every round.
   @visibleForTesting
   static Duration passphraseBackoff = const Duration(minutes: 1);
   static const _stopBudget = Duration(seconds: 2);
