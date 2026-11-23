@@ -5,7 +5,7 @@ import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const _recordTableMinWidth = 720.0;
+const recordTableMinWidth = 720.0;
 const recordWideTableWidth = 1000.0;
 const _recordTableMargin = 8.0;
 const _recordCellInset = 8.0;
@@ -201,7 +201,7 @@ class _RecordTableFrameState<T> extends ConsumerState<RecordTableFrame<T>>
   String get tableId => widget.tableId;
 
   RecordTable<T>? _tableOf(BuildContext context, double width) {
-    if (width < _recordTableMinWidth) {
+    if (width < recordTableMinWidth) {
       return null;
     }
     final rowHeight =

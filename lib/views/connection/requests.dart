@@ -392,18 +392,27 @@ class RequestsSearchScopeNote extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  // Not a live region: the count moves with every request
-                  // while following, and would be read out each time.
-                  child: Text(
-                    context.appLocalizations.requestsSearchScopeHint(
-                      count,
-                      limit,
+                WidthBuilder(
+                  // In line with the cards' edge, or the table's text.
+                  builder: (context, width) => Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: width < recordTableMinWidth
+                          ? context.listInsets.margin
+                          : 16,
                     ),
-                    style: AppTextStyle.caption1
-                        .of(context)
-                        .copyWith(color: context.colorScheme.onSurfaceVariant),
+                    // Not a live region: the count moves with every request
+                    // while following, and would be read out each time.
+                    child: Text(
+                      context.appLocalizations.requestsSearchScopeHint(
+                        count,
+                        limit,
+                      ),
+                      style: AppTextStyle.caption1
+                          .of(context)
+                          .copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                    ),
                   ),
                 ),
                 Expanded(child: child),
