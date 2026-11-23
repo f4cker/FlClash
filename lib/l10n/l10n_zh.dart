@@ -5051,6 +5051,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mountApplyKept => '未能应用挂载，仍使用上次确认的运行配置。';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return '订阅「$name」的本地副本缺失。';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return '订阅「$name」的本地副本无法读取。';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return '订阅「$name」的本地副本中有无法读取的节点。';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return '订阅「$name」未提供可挂载的节点列表。';
+  }
+
+  @override
+  String get profileEditMountRejected => '合并已挂载的订阅后，这份配置无法生效：';
+
+  @override
   String get mountApplyBlocked =>
       '未能应用挂载。Flash 当前会拒绝所有经它转发的连接。请先重新读取状态，确认结果后再解除挂载或重新应用配置。';
 

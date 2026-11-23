@@ -1457,6 +1457,21 @@ class SetupAction extends _$SetupAction {
     };
   }
 
+  String _mountRejection(String reason, MountSetup? mounts) {
+    commonPrint.log(
+      'mounted profile rejected: $reason',
+      logLevel: LogLevel.error,
+    );
+    final shown = mountRejectedReason(
+      reason,
+      currentAppLocalizations,
+      sourceName: (id) =>
+          mounts?.sources.where((source) => source.id == id).firstOrNull?.label,
+    );
+    globalState.lastMountRejection = shown;
+    return shown;
+  }
+
   PatchClashConfig _effectivePatchConfig(
     PatchClashConfig patchConfig, {
     bool preserveRequestedTun = false,
@@ -1972,9 +1987,14 @@ class SetupAction extends _$SetupAction {
             definitelyKept = configOutcome == 'kept';
             defaultRuntime = configOutcome == 'default';
             final outcome = mountRejectedOutcome(error);
+            final reason = outcome == null
+                ? null
+                : _mountRejection(error.message, setupParams.mounts);
             if (outcome == MountRejectedOutcome.kept) {
               definitelyKept = true;
-              throw MessageException(currentAppLocalizations.mountApplyKept);
+              throw MessageException(
+                '${currentAppLocalizations.mountApplyKept}\n$reason',
+              );
             }
             if (error.code != 'config_rejected' && outcome == null) {
               rethrow;
@@ -1986,7 +2006,7 @@ class SetupAction extends _$SetupAction {
             }
             throw MessageException(
               outcome == MountRejectedOutcome.blocked
-                  ? currentAppLocalizations.mountApplyBlocked
+                  ? '${currentAppLocalizations.mountApplyBlocked}\n$reason'
                   : error.message,
             );
           }

@@ -18,6 +18,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum _ProfileField { label, url, autoUpdateInterval }
 
+/// A preflight that cannot run leaves the edit to the apply, as before.
+@visibleForTesting
+Future<String?> mountEditIssue(Future<String?> Function() preflight) async {
+  final String? reason;
+  try {
+    reason = await preflight();
+  } catch (error) {
+    commonPrint.log(
+      'mount preflight of the edit failed: ${compactError(error)}',
+      logLevel: LogLevel.warning,
+    );
+    return null;
+  }
+  if (reason == null) return null;
+  return '${currentAppLocalizations.profileEditMountRejected}\n$reason';
+}
+
 class EditProfileView extends ConsumerStatefulWidget {
   final Profile profile;
 
@@ -197,6 +214,20 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
         dialogs.showAlert(
           title: currentAppLocalizations.tip,
           message: TextSpan(text: issue),
+        ),
+      );
+      return;
+    }
+    final mountIssue = await mountEditIssue(
+      () => ref
+          .read(mountActionProvider.notifier)
+          .preflightEdit(widget.profile.id, data),
+    );
+    if (mountIssue != null) {
+      unawaited(
+        dialogs.showAlert(
+          title: currentAppLocalizations.tip,
+          message: TextSpan(text: mountIssue),
         ),
       );
       return;

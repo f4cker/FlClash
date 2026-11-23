@@ -9258,6 +9258,36 @@ abstract class AppLocalizations {
   /// **'Mounts could not be applied. The last confirmed running profile is still in use.'**
   String get mountApplyKept;
 
+  /// No description provided for @mountSourceMissingReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The local copy of subscription “{name}” is missing.'**
+  String mountSourceMissingReason(Object name);
+
+  /// No description provided for @mountSourceReadErrorReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The local copy of subscription “{name}” cannot be read.'**
+  String mountSourceReadErrorReason(Object name);
+
+  /// No description provided for @mountSourceInvalidReason.
+  ///
+  /// In en, this message translates to:
+  /// **'The local copy of subscription “{name}” has nodes Flash cannot read.'**
+  String mountSourceInvalidReason(Object name);
+
+  /// No description provided for @mountSourceUnsupportedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription “{name}” does not provide a mountable node list.'**
+  String mountSourceUnsupportedReason(Object name);
+
+  /// No description provided for @profileEditMountRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'With its mounted subscriptions merged in, this profile would not apply:'**
+  String get profileEditMountRejected;
+
   /// No description provided for @mountApplyBlocked.
   ///
   /// In en, this message translates to:

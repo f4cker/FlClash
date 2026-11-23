@@ -5444,6 +5444,30 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mounts could not be applied. The last confirmed running profile is still in use.';
 
   @override
+  String mountSourceMissingReason(Object name) {
+    return 'The local copy of subscription “$name” is missing.';
+  }
+
+  @override
+  String mountSourceReadErrorReason(Object name) {
+    return 'The local copy of subscription “$name” cannot be read.';
+  }
+
+  @override
+  String mountSourceInvalidReason(Object name) {
+    return 'The local copy of subscription “$name” has nodes Flash cannot read.';
+  }
+
+  @override
+  String mountSourceUnsupportedReason(Object name) {
+    return 'Subscription “$name” does not provide a mountable node list.';
+  }
+
+  @override
+  String get profileEditMountRejected =>
+      'With its mounted subscriptions merged in, this profile would not apply:';
+
+  @override
   String get mountApplyBlocked =>
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
 

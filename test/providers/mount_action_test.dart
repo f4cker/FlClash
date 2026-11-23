@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -299,6 +300,52 @@ void main() {
       );
     });
   }
+
+  test('an edit is preflighted with its mounts only when it has some, and '
+      'a refusal names the subscription', () async {
+    final container = build();
+    final edited = Uint8List.fromList(utf8.encode('proxy-groups: []\n'));
+    expect(await action(container).preflightEdit(1, edited), isNull);
+    verifyNever(
+      () => core.preflightMounts(
+        base: any(named: 'base'),
+        config: any(named: 'config'),
+        mounts: any(named: 'mounts'),
+      ),
+    );
+
+    await testDatabase.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+    await testDatabase.mountsDao.settle(1, 1);
+    expect(await action(container).preflightEdit(1, edited), isNull);
+
+    final calls = <Map<Symbol, Object?>>[];
+    when(
+      () => core.preflightMounts(
+        base: any(named: 'base'),
+        config: any(named: 'config'),
+        mounts: any(named: 'mounts'),
+      ),
+    ).thenAnswer((invocation) async {
+      calls.add(invocation.namedArguments);
+      return const MountPreflight(error: 'mount source 2 is invalid');
+    });
+    expect(
+      await action(container).preflightEdit(1, edited),
+      currentAppLocalizations.mountSourceInvalidReason('Air'),
+    );
+    final call = calls.single;
+    expect(call[#base], isNull);
+    expect(call[#config], 'proxy-groups: []\n');
+    expect((call[#mounts] as MountSetup).sources.map((source) => source.id), [
+      2,
+    ]);
+  });
 
   test('delayed refresh never resurrects a deleted profile', () async {
     final container = build();

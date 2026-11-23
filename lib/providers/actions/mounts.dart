@@ -691,6 +691,36 @@ class MountAction extends _$MountAction {
     _ => null,
   };
 
+  /// Why [data] as [targetId]'s file would be refused with its mounts.
+  Future<String?> preflightEdit(int targetId, List<int> data) async {
+    final target = await database.mountsDao.target(targetId);
+    if (target == null || target.sourceIds.isEmpty) return null;
+    final mounts = mountSetupOf(
+      target,
+      ref.read(profilesProvider),
+      await appPath.profilesPath,
+    );
+    if (mounts.sources.isEmpty) return null;
+    final preflight = await _inspectionPool.run(
+      () => _core.preflightMounts(
+        config: utf8.decode(data, allowMalformed: true),
+        mounts: mounts,
+      ),
+    );
+    final error = preflight.error;
+    if (error == null) return null;
+    commonPrint.log(
+      'edited profile rejected with its mounts: $error',
+      logLevel: LogLevel.warning,
+    );
+    return mountRejectedReason(
+      error,
+      currentAppLocalizations,
+      sourceName: (id) =>
+          mounts.sources.where((source) => source.id == id).firstOrNull?.label,
+    );
+  }
+
   /// Downloads are deliberately outside the mutation scheduler so a later
   /// refresh/removal owns its source immediately, even during a slow download.
   Future<MountSourceRefresh> refreshSource(

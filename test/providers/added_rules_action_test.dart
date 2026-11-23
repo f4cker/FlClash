@@ -9,6 +9,7 @@ import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -605,6 +606,45 @@ void main() {
       contains('restoring the running configuration failed'),
     );
     expect(await target(), 'DIRECT');
+  });
+
+  test('a refused reload tells why the Core kept the running config', () async {
+    addTearDown(() => globalState.lastMountRejection = null);
+    globalState.lastMountRejection = 'stale reason';
+    var calls = 0;
+    container = ProviderContainer(
+      overrides: [
+        currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        addedRulesActionProvider.overrideWith(
+          () => FakeAddedRulesAction(() async {
+            calls++;
+            globalState.lastMountRejection = 'source Air is missing';
+            return false;
+          }),
+        ),
+      ],
+    );
+    final appLocalizations = currentAppLocalizations;
+    final result = await container
+        .read(addedRulesActionProvider.notifier)
+        .putRule(
+          profile,
+          original.copyWith(ruleTarget: 'REJECT'),
+          previous: original,
+        );
+    expect(calls, 2);
+    expect(
+      result.error,
+      startsWith(
+        '${appLocalizations.addedRulesReloadFailed}\nsource Air is missing',
+      ),
+    );
+    expect(
+      result.error,
+      contains(appLocalizations.addedRulesRollbackReloadFailed),
+    );
+    expect(result.error, isNot(contains('stale reason')));
   });
 
   test('late compensating reload failure is reported after timeout', () async {

@@ -825,15 +825,20 @@ class AddedRulesAction extends _$AddedRulesAction {
     final deadline = DateTime.now().add(saveTimeout);
     final bool applied;
     Future<bool>? applying;
+    String reloadFailed() => [
+      appLocalizations.addedRulesReloadFailed,
+      ?globalState.lastMountRejection,
+    ].join('\n');
+    globalState.lastMountRejection = null;
     try {
       applying = applyAddedRulesProfile();
       applied = await applying.timeout(saveTimeout);
     } on TimeoutException {
       return (appLocalizations.addedRulesReloadTimeout, applying);
     } catch (_) {
-      return (appLocalizations.addedRulesReloadFailed, null);
+      return (reloadFailed(), null);
     }
-    if (!applied) return (appLocalizations.addedRulesReloadFailed, null);
+    if (!applied) return (reloadFailed(), null);
     if (set == null) return (null, null);
     while (true) {
       final RuleSetView? view;
