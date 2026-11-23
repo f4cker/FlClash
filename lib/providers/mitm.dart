@@ -855,12 +855,12 @@ class MitmTrustState extends _$MitmTrustState {
       if (store is AndroidMitmTrustStore && ref.mounted) {
         ref.invalidate(rootAccessProvider);
       }
-      if (ref.mounted &&
-          (outcome == null ||
-              outcome == MitmInstallOutcome.installed ||
-              outcome == MitmInstallOutcome.untilReboot)) {
-        // Installing is the user's answer to "trust again" for the Core CA.
-        if (_isCoreCa(ca)) {
+      final done =
+          outcome == MitmInstallOutcome.installed ||
+          outcome == MitmInstallOutcome.untilReboot;
+      if (ref.mounted && (done || outcome == null)) {
+        // Only a finished install answers "trust again" for the Core CA.
+        if (done && _isCoreCa(ca)) {
           await ref.read(mitmCoreCaProvider.notifier).retrust();
         }
         await refresh();

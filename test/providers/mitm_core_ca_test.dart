@@ -401,6 +401,34 @@ void main() {
       expect(container.read(mitmSetupProvider)!['decrypt-tls'], isTrue);
     });
 
+    test('a cancelled install resumes nothing', () async {
+      setMitm(coreMitm());
+      await started();
+      container.listen(mitmTrustStateProvider, (_, _) {});
+      final lease = container.read(mitmCoreCaProvider.notifier);
+      verdict = MitmTrust.untrusted;
+      await lease.checkNow();
+      await lease.checkNow();
+      final leased = leases.length;
+      verdict = MitmTrust.ready;
+      when(
+        () => store.install(any()),
+      ).thenThrow(const ProcessException('security', [], 'canceled', 1));
+
+      await expectLater(
+        container.read(mitmTrustStateProvider.notifier).install(),
+        throwsA(isA<ProcessException>()),
+      );
+      await settle();
+
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.untrusted,
+      );
+      expect(leases, hasLength(leased));
+      expect(container.read(mitmSetupProvider)!['decrypt-tls'], isFalse);
+    });
+
     test('a check that could not tell breaks a run of negatives', () async {
       setMitm(coreMitm());
       await started();
