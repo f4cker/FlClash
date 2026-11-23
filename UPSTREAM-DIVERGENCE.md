@@ -4,6 +4,9 @@ Places where Flash intentionally keeps code that upstream (chen08209/FlClash)
 removed or changed. Check every entry by hand on each upstream sync; do not
 let a merge silently take upstream's side.
 
+Standing rule: 上游同步只跟踪 chen08209/FlClash 的 dev 分支，不再审计或合并上游
+main（白小飞 2026-11-23）。
+
 ## 1. Resources status card in the live status deck
 
 - Files: `lib/views/dashboard/widgets/live_status.dart` (`ResourcesStatus`,
@@ -47,9 +50,11 @@ let a merge silently take upstream's side.
   new navigation order and the MITM request marks are not taken; their
   strings are not added to `arb/`. In the Core, `tunnel.DefaultDialFailureNotify`
   stays unset (Flash reads every `RequestMessage` as an open connection) and
-  `rule.list` / `mitm.query` are not registered. The Core-side files upstream
-  added (`dial_failure*.go`, `rule_index.go`, `dns_link.go`) are kept so later
-  syncs merge cleanly. `RecordFilterController` gains upstream's `keywords` and
+  `mitm.query` is not registered. `rule.list` is registered, but to Flash's
+  own `handleListRules` (`core/rule_list.go`, the rules page's list,
+  `lib/views/rules/rules.dart`), not to upstream's `handleGetRules`. The
+  Core-side files upstream added (`dial_failure*.go`, `rule_index.go`,
+  `dns_link.go`) are kept so later syncs merge cleanly. `RecordFilterController` gains upstream's `keywords` and
   `optionMenuItems()` so upstream's logs page (`0db670d4`, `ef7dc6ed`) runs on
   Flash's controller.
 - On sync: re-check these files by hand; if upstream's page is to be adopted,
