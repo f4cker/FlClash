@@ -9136,6 +9136,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmHostReasonAppleService => 'Домен службы Apple';
 
   @override
+  String mitmScriptTimeoutCapped(int seconds) {
+    return 'Время ожидания скрипта ограничено: $seconds с. Большие значения снижаются до этого предела.';
+  }
+
+  @override
   String get mitmHostFormatHint =>
       'Используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
 

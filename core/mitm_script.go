@@ -31,9 +31,12 @@ type mitmScript struct {
 	program      *goja.Program
 }
 
+// The cap keeps a stuck script from holding its request for good, yet lets
+// Script Hub's converters, which fetch remote files, run as their modules ask
+// (timeout=300). lib/common/mitm_script.dart mitmScriptMaxTimeout mirrors it.
 const (
 	mitmScriptDefaultTimeout = 10 * time.Second
-	mitmScriptMaxTimeout     = 10 * time.Second
+	mitmScriptMaxTimeout     = 120 * time.Second
 	mitmScriptFileLimit      = 8 << 20
 	mitmScriptBodyCap        = 8 << 20
 )

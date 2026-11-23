@@ -3,6 +3,10 @@ import 'dart:math' as math;
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:path/path.dart' as p;
 
+/// The longest a script may run, in seconds: mitmScriptMaxTimeout in
+/// core/mitm_script.go.
+const mitmScriptMaxTimeout = 120;
+
 /// The Core runs these two script types; any other is not supported yet.
 enum MitmScriptKind {
   request('http-request'),
@@ -36,8 +40,11 @@ class MitmScriptInfo {
   /// The run's limit in seconds, as the Core clamps it.
   int get timeout {
     final seconds = double.tryParse(params['timeout'] ?? '') ?? 10;
-    return seconds <= 0 ? 10 : math.min(10, seconds.ceil());
+    return seconds <= 0 ? 10 : math.min(mitmScriptMaxTimeout, seconds.ceil());
   }
+
+  bool get timeoutCapped =>
+      (double.tryParse(params['timeout'] ?? '') ?? 0) > mitmScriptMaxTimeout;
 
   String? get host => mitmPatternHost(pattern);
 

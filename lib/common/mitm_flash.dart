@@ -34,6 +34,13 @@ Map<MitmList, Map<String, String>> flashMitmIssues(
   },
 };
 
+/// The script lines the Core runs for [mitmScriptMaxTimeout] seconds rather
+/// than the longer timeout they declare.
+Set<String> flashMitmCappedScripts(MitmModuleContent content) => {
+  for (final line in content.script)
+    if (parseMitmScriptInfo(line)?.timeoutCapped ?? false) line,
+};
+
 List<MitmModuleSkip> flashMitmSkipped(MitmModuleContent content) => [
   ...content.skipped,
   for (final change in content.network.changes)
@@ -215,6 +222,13 @@ MitmRules flashMitmRules(MitmModuleContent content) {
     h2: content.h2,
   );
 }
+
+/// The hosts whose plain HTTP the Core rewrites and scripts in full; none
+/// where [flashMitmRules] takes nothing from the module.
+List<String> flashForceHttpEngineHosts(MitmModuleContent content) =>
+    content.clientSourceAddress.isNotEmpty || content.requirementMet == false
+    ? const []
+    : content.forceHttpEngineHosts;
 
 List<String> flashModuleRules(
   MitmModuleContent content, {

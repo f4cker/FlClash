@@ -523,6 +523,7 @@ class MitmModuleView extends ConsumerWidget {
     String title,
     List<String> lines, {
     Map<String, String> issues = const {},
+    Map<String, String> notes = const {},
     String? issuesHeader,
     List<PopupMenuItem> Function(String line)? menuItemsOf,
   }) {
@@ -541,6 +542,7 @@ class MitmModuleView extends ConsumerWidget {
             title: title,
             header: invalid == 0 ? null : issuesHeader,
             lines: [for (final line in lines) (line, issues[line])],
+            lineNotes: notes,
             menuItemsOf: menuItemsOf,
           ),
         );
@@ -715,6 +717,12 @@ class MitmModuleView extends ConsumerWidget {
     final details = ref.watch(mitmModuleDetailsProvider(id));
     final content = details.value?.content;
     final issues = details.value?.issues ?? const {};
+    final capped = content == null
+        ? const <String>{}
+        : flashMitmCappedScripts(content);
+    final cappedNote = appLocalizations.mitmScriptTimeoutCapped(
+      mitmScriptMaxTimeout,
+    );
     return Scaffold(
       title: module?.name ?? appLocalizations.mitmModule,
       body: NullStatusSwitcher(
@@ -768,6 +776,12 @@ class MitmModuleView extends ConsumerWidget {
                               list.label,
                               lines,
                               issues: issues[list] ?? const {},
+                              notes: list == MitmList.script
+                                  ? {
+                                      for (final line in capped)
+                                        line: cappedNote,
+                                    }
+                                  : const {},
                               // Said once; each line keeps its own reason.
                               issuesHeader: list == MitmList.hostname
                                   ? appLocalizations.mitmHostFormatHint
@@ -798,6 +812,7 @@ class MitmModuleView extends ConsumerWidget {
                             ),
                           ),
                       ],
+                      footer: capped.isEmpty ? null : cappedNote,
                     ),
                   if (content != null && content.rules.isNotEmpty)
                     _MitmRoutingSection(module: module, rules: content.rules),
@@ -900,6 +915,7 @@ class _MitmModuleLinesView extends StatelessWidget {
     required this.lines,
     this.header,
     this.notes = false,
+    this.lineNotes = const {},
     this.noteColor,
     this.menuItemsOf,
   });
@@ -913,6 +929,9 @@ class _MitmModuleLinesView extends StatelessWidget {
   /// Above the lines, for what they have in common.
   final String? header;
   final bool notes;
+
+  /// Of lines that load, what the Core does differently from what they ask.
+  final Map<String, String> lineNotes;
   final Color? noteColor;
   final List<PopupMenuItem> Function(String line)? menuItemsOf;
 
@@ -946,9 +965,16 @@ class _MitmModuleLinesView extends StatelessWidget {
                 menuItems: menuItemsOf?.call(line),
                 child: DecorationListItem(
                   title: Text(line),
-                  subtitle: issue == null
+                  subtitle: issue != null
+                      ? Text(issue, style: noteStyle)
+                      : lineNotes[line] == null
                       ? null
-                      : Text(issue, style: noteStyle),
+                      : Text(
+                          lineNotes[line]!,
+                          style: context.listCaptionStyle.copyWith(
+                            color: mitmAmberColor(context),
+                          ),
+                        ),
                   trailing: running ? const ActivityIndicator(size: 24) : null,
                 ),
               ),

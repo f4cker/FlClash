@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 )
 
 // Phase 2b: Surge-compatible rewriting of decrypted traffic.
@@ -43,7 +44,7 @@ import (
 //     against the request's final URL.
 //
 // Only URL Rewrite's reject/302/307 also run on plain HTTP (port 80); all
-// of it runs only while the MITM switch is on.
+// of it runs only while the MITM switch is on. force-http-engine-hosts get it all on port 80.
 
 const (
 	mitmSectionURL    = "url-rewrite"
@@ -313,6 +314,7 @@ type mitmRewriteEngine struct {
 	requestScript  mitmRuleIndex
 	responseScript mitmRuleIndex
 	bodyLimit      int64
+	httpEngine     *mitmHostMatcher
 }
 
 // The default most a rewritten body may be; larger ones pass unchanged.
@@ -338,8 +340,38 @@ func installMitmRewrite(setup *MitmSetup) {
 	engine := compileMitmRewrite(setup.Rewrite, setup.Script, limit, mitmRewrite.Load())
 	if engine.empty() && len(engine.issues) == 0 {
 		engine = nil
+	} else {
+		engine.httpEngine = compileMitmHTTPEngineHosts(setup.ForceHTTPEngine)
 	}
 	mitmRewrite.Store(engine)
+}
+
+func compileMitmHTTPEngineHosts(lines []string) *mitmHostMatcher {
+	hosts := make([]string, 0, len(lines))
+	for _, line := range lines {
+		host := strings.TrimSuffix(strings.TrimSpace(line), ":80") // Surge may write the port
+		if host == "" || host == "*" {
+			log.Warnln("[MITM] force-http-engine-hosts ignores %q: it would take every host", line)
+			continue
+		}
+		hosts = append(hosts, host)
+	}
+	return compileMitmHosts(hosts)
+}
+
+func (e *mitmRewriteEngine) forcesHTTPEngine(host string) bool {
+	return e != nil && e.httpEngine.Match(host)
+}
+
+func (e *mitmRewriteEngine) mayRewrite(host string) bool {
+	return e.url.mayMatch(host) || e.requestHeader.mayMatch(host) ||
+		e.responseHeader.mayMatch(host) || e.requestBody.mayMatch(host) ||
+		e.responseBody.mayMatch(host) || e.mapLocal.mayMatch(host) ||
+		e.requestScript.mayMatch(host) || e.responseScript.mayMatch(host)
+}
+
+func (e *mitmRewriteEngine) answersWithoutSite(host string) bool {
+	return e != nil && (len(e.requestScript.byHost[host]) > 0 || len(e.mapLocal.byHost[host]) > 0) // not generic patterns: they match every host
 }
 
 func compileMitmRewrite(rules []MitmRewriteRule, scripts []MitmScriptRule, bodyLimit int64, previous *mitmRewriteEngine) *mitmRewriteEngine {

@@ -3791,6 +3791,7 @@
   "mitmHostReasonInvalidFormat": "Formato de nombre de host no válido",
   "mitmHostReasonOverBroad": "El alcance de coincidencia es demasiado amplio",
   "mitmHostReasonAppleService": "Dominio de un servicio de Apple",
+  "mitmScriptTimeoutCapped": "El tiempo de espera del script está limitado a {seconds} segundos. Los valores superiores se ajustan a este límite.",
   "mitmHostFormatHint": "Usa un dominio como api.example.com o *.example.com. Solo se admite el puerto 443; no se admiten direcciones IP ni * en medio de un nombre.",
   "mitmClientSourceRisk": "Solo descifra el tráfico de estos clientes: {addresses}. Con TUN activado, las apps de este dispositivo llegan desde la dirección de TUN, así que pueden quedar fuera.",
   "mitmClientSourceTunTip": "Con TUN activado, las apps de este dispositivo llegan desde la dirección de TUN; si la lista no la incluye, su tráfico no se descifra.",

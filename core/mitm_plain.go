@@ -19,7 +19,8 @@ import (
 // Upgrade, Host the flow's own); anything else is relayed untouched, every
 // byte unread. A taken flow forwards each request it does not answer as it
 // came: nothing else is rewritten, and capture records only the requests
-// a rule answered.
+// a rule answered. A force-http-engine-hosts host is the exception: every
+// rule runs on it and capture records it as a decrypted one.
 
 // A variable only so loopback tests can stand a server in for it.
 var mitmPlainHTTPPort uint16 = 80
@@ -39,12 +40,13 @@ func mitmPlainWanted(metadata *C.Metadata) bool {
 		return false
 	}
 	engine := mitmRewrite.Load()
-	return engine != nil && engine.plain.mayMatch(normalizeMitmHost(metadata.Host))
+	host := normalizeMitmHost(metadata.Host)
+	return engine != nil && (engine.plain.mayMatch(host) || engine.forcesHTTPEngine(host) && engine.mayRewrite(host))
 }
 
-func mitmPlainIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
+func mitmPlainChoose(conn *N.BufferedConn, metadata *C.Metadata) (tunnel.TCPInterceptor, string) {
 	if !mitmPlainWanted(metadata) {
-		return nil
+		return nil, ""
 	}
 	host := normalizeMitmHost(metadata.Host)
 	wait := mitmFirstByteWait
@@ -52,11 +54,15 @@ func mitmPlainIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPIn
 		wait -= mitmTunnelPeekWait
 	}
 	if !mitmPlainFirstRequest(conn, host, wait) {
-		return nil
+		return nil, ""
+	}
+	siteless := ""
+	if mitmPlainAnswersWithoutSite(host) {
+		siteless = host
 	}
 	return func(client *N.BufferedConn, remote C.Conn) {
 		serveMitmPlain(client, remote, host)
-	}
+	}, siteless
 }
 
 // Whether the flow's first request is one the session serves. Peeks only.
@@ -94,6 +100,10 @@ func mitmPlainFirstRequest(conn *N.BufferedConn, host string, firstByteWait time
 // Serves a taken plain flow until either side ends it or the switch goes
 // off; the tunnel closes both connections afterwards.
 func serveMitmPlain(client net.Conn, remote net.Conn, host string) {
+	unreachable := mitmUnreachable(remote)
+	if unreachable && !mitmPlainAnswersWithoutSite(host) {
+		return
+	}
 	connection := mitmTrackerID(remote)
 	mitmCaptures.openConnection(connection)
 	defer mitmCaptures.closeConnection(connection)
@@ -104,5 +114,14 @@ func serveMitmPlain(client net.Conn, remote net.Conn, host string) {
 		return runtime != nil && runtime.setup.Enable
 	}
 	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection, port: mitmPlainHTTPPort, plain: true}
+	if unreachable {
+		_ = mitmHTTP1WithoutSite(clientIdle, host, allowed, control)
+		return
+	}
 	_ = mitmHTTP1Duplex(clientIdle, remoteIdle, host, allowed, control)
+}
+
+func mitmPlainAnswersWithoutSite(host string) bool {
+	engine := mitmRewrite.Load()
+	return engine.forcesHTTPEngine(host) && engine.answersWithoutSite(host)
 }

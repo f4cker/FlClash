@@ -77,8 +77,9 @@ type mitmScriptResult struct {
 }
 
 var (
-	mitmScriptSlots    = make(chan struct{}, 16)
-	mitmScriptSlotWait = time.Second
+	mitmScriptSlots     = make(chan struct{}, 16)
+	mitmScriptSlotWait  = time.Second
+	mitmScriptLongSlots = make(chan struct{}, 4) // also held by runs allowed past the default timeout
 	// Heap growth during a run past which it is stopped; shared by the
 	// runs in flight, so it is approximate.
 	mitmScriptMemoryLimit = func() *atomic.Uint64 { v := &atomic.Uint64{}; v.Store(192 << 20); return v }()
@@ -103,15 +104,31 @@ const (
 func (s *mitmScript) run(in *mitmScriptInput) mitmScriptResult {
 	start := time.Now()
 	wait := time.NewTimer(mitmScriptSlotWait)
+	defer wait.Stop()
+	long := s.timeout > mitmScriptDefaultTimeout
+	if long {
+		select {
+		case mitmScriptLongSlots <- struct{}{}:
+		case <-wait.C:
+			return mitmScriptResult{skip: mitmSkipScriptBusy}
+		}
+	}
 	select {
 	case mitmScriptSlots <- struct{}{}:
-		wait.Stop()
 	case <-wait.C:
+		if long {
+			<-mitmScriptLongSlots
+		}
 		return mitmScriptResult{skip: mitmSkipScriptBusy}
 	}
 	results := make(chan mitmScriptResult, 1)
 	go func() {
-		defer func() { <-mitmScriptSlots }()
+		defer func() {
+			<-mitmScriptSlots
+			if long {
+				<-mitmScriptLongSlots
+			}
+		}()
 		r := newMitmScriptRun(s, in)
 		defer r.cancel()
 		results <- r.execute()
