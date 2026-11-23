@@ -15871,7 +15871,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRunActive.
   ///
   /// In en, this message translates to:
-  /// **'Decryption is running with this certificate'**
+  /// **'Decryption is using this certificate'**
   String get mitmRunActive;
 
   /// No description provided for @mitmRunStopped.
@@ -15907,7 +15907,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmCurrentCaActions.
   ///
   /// In en, this message translates to:
-  /// **'Certificate in Use'**
+  /// **'Configured Certificate'**
   String get mitmCurrentCaActions;
 
   /// No description provided for @mitmOldCaSection.
@@ -15925,25 +15925,25 @@ abstract class AppLocalizations {
   /// No description provided for @mitmDeleteCurrentCa.
   ///
   /// In en, this message translates to:
-  /// **'Delete Current Certificate…'**
+  /// **'Delete Configured Certificate…'**
   String get mitmDeleteCurrentCa;
 
   /// No description provided for @mitmDeleteCurrentCaTitle.
   ///
   /// In en, this message translates to:
-  /// **'Delete the current certificate?'**
+  /// **'Delete the configured certificate?'**
   String get mitmDeleteCurrentCaTitle;
 
   /// No description provided for @mitmDeleteCurrentCaTip.
   ///
   /// In en, this message translates to:
-  /// **'This removes the certificate and its trust from this Mac. Decryption turns off until you turn it on again. Other devices are not affected.'**
+  /// **'This removes the certificate and its trust from this Mac and turns off decryption. Other devices are not affected.'**
   String get mitmDeleteCurrentCaTip;
 
   /// No description provided for @mitmDeleteCurrentCaConfirm.
   ///
   /// In en, this message translates to:
-  /// **'Delete Current Certificate'**
+  /// **'Delete Configured Certificate'**
   String get mitmDeleteCurrentCaConfirm;
 
   /// No description provided for @mitmCaScopeThisMac.
@@ -15955,7 +15955,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmImportInUse.
   ///
   /// In en, this message translates to:
-  /// **'This certificate is already in use.'**
+  /// **'This certificate is already configured.'**
   String get mitmImportInUse;
 
   /// No description provided for @mitmCaAvailable.
@@ -15973,25 +15973,25 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRestoreCaLocal.
   ///
   /// In en, this message translates to:
-  /// **'On this Mac now'**
+  /// **'Current certificate on this Mac'**
   String get mitmRestoreCaLocal;
 
   /// No description provided for @mitmRestoreCaFromBackup.
   ///
   /// In en, this message translates to:
-  /// **'The backup will restore'**
+  /// **'Certificate in the backup'**
   String get mitmRestoreCaFromBackup;
 
   /// No description provided for @mitmRestoreCaLocalKept.
   ///
   /// In en, this message translates to:
-  /// **'Kept on this Mac as the old certificate. You can remove it later.'**
+  /// **'It will be kept on this Mac as the old certificate. You can remove it later.'**
   String get mitmRestoreCaLocalKept;
 
   /// No description provided for @mitmRestoreCaPending.
   ///
   /// In en, this message translates to:
-  /// **'Becomes the configured certificate. Decryption uses it only after it is trusted on this Mac.'**
+  /// **'It will become the configured certificate. It can be used for decryption only after it is trusted on this Mac.'**
   String get mitmRestoreCaPending;
 
   /// No description provided for @mitmRestoreCaKept.
@@ -16003,19 +16003,19 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRestoreCaTrustNote.
   ///
   /// In en, this message translates to:
-  /// **'Restoring doesn\'t trust a certificate on this Mac. You\'ll be asked about that afterwards.'**
+  /// **'Restoring doesn\'t automatically trust the certificate. You can trust it separately on this Mac when needed.'**
   String get mitmRestoreCaTrustNote;
 
   /// No description provided for @mitmRestoreCaSame.
   ///
   /// In en, this message translates to:
-  /// **'The backup has the certificate this Mac already uses. It stays as it is.'**
+  /// **'The backup contains the same certificate configured on this Mac. The existing certificate will be kept.'**
   String get mitmRestoreCaSame;
 
   /// No description provided for @mitmRestoreCaDamaged.
   ///
   /// In en, this message translates to:
-  /// **'The decryption certificate in this backup can\'t be read, so it isn\'t restored. The certificate on this Mac stays as it is.'**
+  /// **'The decryption certificate in this backup can\'t be read and won\'t be restored. The certificate on this Mac stays as it is.'**
   String get mitmRestoreCaDamaged;
 
   /// No description provided for @mitmBackupWithKey.
@@ -16027,7 +16027,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmBackupRiskDetails.
   ///
   /// In en, this message translates to:
-  /// **'If the file is shared by mistake'**
+  /// **'If the file may have been exposed'**
   String get mitmBackupRiskDetails;
 
   /// No description provided for @mitmBackupRiskImpact.
@@ -16039,8 +16039,20 @@ abstract class AppLocalizations {
   /// No description provided for @mitmBackupRiskRevoke.
   ///
   /// In en, this message translates to:
-  /// **'Replace the certificate, then remove the old one on every device that trusted it: on a Mac in Keychain Access; on iPhone or iPad under Settings > General > VPN & Device Management, and turn it off in Certificate Trust Settings; on Android under Settings > Security > Encryption & credentials > User credentials.'**
+  /// **'Replace the certificate, then remove or revoke trust in the old certificate on every device that trusted it. Steps vary by device.'**
   String get mitmBackupRiskRevoke;
+
+  /// No description provided for @mitmRestoreCaLocalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'This Mac has no decryption certificate.'**
+  String get mitmRestoreCaLocalNone;
+
+  /// No description provided for @mitmRestoreCaDamagedNone.
+  ///
+  /// In en, this message translates to:
+  /// **'The decryption certificate in this backup can\'t be read and won\'t be restored.'**
+  String get mitmRestoreCaDamagedNone;
 }
 
 class _AppLocalizationsDelegate

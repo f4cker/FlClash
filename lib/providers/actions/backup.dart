@@ -612,7 +612,9 @@ class BackupAction extends _$BackupAction {
       unawaited((promptMitmCaTrust ?? _promptMitmCaTrust)());
     } else if (mitmCa?.change == RestoreMitmCaChange.damaged) {
       dialogs.showBanner(
-        currentAppLocalizations.mitmRestoreCaDamaged,
+        mitmCa?.local == null
+            ? currentAppLocalizations.mitmRestoreCaDamagedNone
+            : currentAppLocalizations.mitmRestoreCaDamaged,
         level: BannerLevel.warning,
       );
     } else if (keptMitmCa) {

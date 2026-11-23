@@ -1621,6 +1621,22 @@ void main() {
         final mitm = target.read(patchClashConfigProvider).mitm;
         expect(mitm.coreCa?.fingerprint, 'BB:BB');
         expect(mitm.caP12, MitmCaP12('BBBB'));
+        expect(passphrases.values, isNot(contains('AA:AA')));
+      });
+
+      test('a CA without its certificate restores nothing of it', () async {
+        final configMap = await actionOf(
+          withCa('AA:AA'),
+        ).backupConfigMap(includeMitmCa: true);
+        mitmOf(configMap).remove('ca-certificate');
+        final target = withCa(null);
+        final asked = await askedFor(configMap, target);
+        expect(asked?.change, RestoreMitmCaChange.damaged);
+        expect(asked?.local, isNull);
+        final mitm = target.read(patchClashConfigProvider).mitm;
+        expect(mitm.coreCa, isNull);
+        expect(mitm.caP12, isNull);
+        expect(passphrases.values, isEmpty);
       });
     });
 

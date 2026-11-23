@@ -650,12 +650,24 @@ void main() {
       setMitm(legacyMitm());
       await migration().generate();
       await migration().installAndSwitch();
-      await container.read(mitmCaProvider.notifier).delete();
+      expect(await container.read(mitmCaProvider.notifier).delete(), isTrue);
       await settle();
       expect(mitm().coreCa, isNull);
       expect(mitm().enable, isFalse);
       expect(container.read(mitmSetupProvider)?['decrypt-tls'], isNot(true));
       expect(passphrases.values, isNot(contains(_pendingFp)));
+    });
+
+    test('a delete whose trust removal failed says so', () async {
+      setMitm(legacyMitm());
+      await migration().generate();
+      await migration().installAndSwitch();
+      when(
+        () => store.remove(any()),
+      ).thenThrow(const ProcessException('security', [], 'denied', 1));
+      expect(await container.read(mitmCaProvider.notifier).delete(), isFalse);
+      expect(mitm().coreCa, isNull);
+      expect(mitm().enable, isFalse);
     });
 
     test('removing the old certificate names the legacy one only', () async {

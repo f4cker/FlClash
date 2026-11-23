@@ -8934,7 +8934,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmRetrust => '重新信任…';
 
   @override
-  String get mitmCurrentCaActions => '当前证书';
+  String get mitmCurrentCaActions => '当前配置的证书';
 
   @override
   String get mitmOldCaSection => '仍保留在这台 Mac 的旧证书';
@@ -8943,23 +8943,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmExportCertificateContent => '只保存公钥证书（.crt），不含私钥。';
 
   @override
-  String get mitmDeleteCurrentCa => '删除当前证书…';
+  String get mitmDeleteCurrentCa => '删除当前配置的证书…';
 
   @override
-  String get mitmDeleteCurrentCaTitle => '删除当前证书？';
+  String get mitmDeleteCurrentCaTitle => '删除当前配置的证书？';
 
   @override
-  String get mitmDeleteCurrentCaTip =>
-      '这会从这台 Mac 移除此证书及其信任。解密会关闭，直到你再次开启。其他设备不受影响。';
+  String get mitmDeleteCurrentCaTip => '这会从这台 Mac 移除此证书及其信任，并关闭解密。其他设备不受影响。';
 
   @override
-  String get mitmDeleteCurrentCaConfirm => '删除当前证书';
+  String get mitmDeleteCurrentCaConfirm => '删除当前配置的证书';
 
   @override
   String get mitmCaScopeThisMac => '仅影响这台 Mac';
 
   @override
-  String get mitmImportInUse => '此证书已在使用中。';
+  String get mitmImportInUse => '此证书已是当前配置的证书。';
 
   @override
   String mitmCaAvailable(Object name) {
@@ -8970,10 +8969,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmRestoreCaSection => '解密证书';
 
   @override
-  String get mitmRestoreCaLocal => '本机当前';
+  String get mitmRestoreCaLocal => '这台 Mac 当前的证书';
 
   @override
-  String get mitmRestoreCaFromBackup => '备份将恢复';
+  String get mitmRestoreCaFromBackup => '备份中的证书';
 
   @override
   String get mitmRestoreCaLocalKept => '将作为旧证书保留在这台 Mac，可稍后移除。';
@@ -8985,10 +8984,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmRestoreCaKept => '此备份不含解密证书，本机证书保持不变。';
 
   @override
-  String get mitmRestoreCaTrustNote => '恢复不会让这台 Mac 信任证书，之后会另外询问。';
+  String get mitmRestoreCaTrustNote => '恢复不会自动信任证书；需要时可在这台 Mac 上单独信任。';
 
   @override
-  String get mitmRestoreCaSame => '备份中的证书与本机正在使用的相同，保持不变。';
+  String get mitmRestoreCaSame => '备份中的证书与本机当前配置的证书相同，将保留现有证书。';
 
   @override
   String get mitmRestoreCaDamaged => '此备份中的解密证书无法读取，不会恢复。本机证书保持不变。';
@@ -8997,7 +8996,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmBackupWithKey => '备份（含私钥）';
 
   @override
-  String get mitmBackupRiskDetails => '如果误分享了文件';
+  String get mitmBackupRiskDetails => '如果文件可能泄露';
 
   @override
   String get mitmBackupRiskImpact =>
@@ -9005,5 +9004,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmBackupRiskRevoke =>
-      '请更换证书，并在每台信任过旧证书的设备上移除它：Mac 在“钥匙串访问”中删除；iPhone 或 iPad 在“设置 > 通用 > VPN 与设备管理”中移除，并在“证书信任设置”中关闭；Android 在“设置 > 安全 > 加密与凭据 > 用户凭据”中移除。';
+      '请更换证书，并在每台信任过旧证书的设备上取消对旧证书的信任或将其移除。各设备的操作位置可能不同。';
+
+  @override
+  String get mitmRestoreCaLocalNone => '这台 Mac 没有解密证书。';
+
+  @override
+  String get mitmRestoreCaDamagedNone => '此备份中的解密证书无法读取，不会恢复。';
 }

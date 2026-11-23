@@ -1438,7 +1438,9 @@ class RestoreMitmCaNote extends StatelessWidget {
           RestoreMitmCaChange.kept => Text(l10n.mitmRestoreCaKept),
           RestoreMitmCaChange.same => Text(l10n.mitmRestoreCaSame),
           RestoreMitmCaChange.damaged => _Callout(
-            lead: l10n.mitmRestoreCaDamaged,
+            lead: local == null
+                ? l10n.mitmRestoreCaDamagedNone
+                : l10n.mitmRestoreCaDamaged,
           ),
           RestoreMitmCaChange.replaced => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1448,6 +1450,20 @@ class RestoreMitmCaNote extends StatelessWidget {
                   l10n.mitmRestoreCaLocal,
                   local,
                   l10n.mitmRestoreCaLocalKept,
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.mitmRestoreCaLocal, style: _group(context, p)),
+                      Text(
+                        l10n.mitmRestoreCaLocalNone,
+                        style: _aux(context, p),
+                      ),
+                    ],
+                  ),
                 ),
               if (backup != null)
                 certificate(

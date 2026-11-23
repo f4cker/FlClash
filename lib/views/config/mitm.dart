@@ -458,11 +458,17 @@ class _MitmViewState extends ConsumerState<MitmView> {
     if (res != true || !context.mounted) {
       return;
     }
-    await globalState.loadingRun<void>(
+    final untrusted = await globalState.loadingRun<bool>(
       ref.read(mitmCaProvider.notifier).delete,
       tag: LoadingTag.mitm,
       title: appLocalizations.deleteCertificate,
     );
+    if (untrusted == false) {
+      dialogs.showBanner(
+        appLocalizations.mitmSystemStoreRemoveFailed,
+        level: BannerLevel.warning,
+      );
+    }
   }
 
   @override

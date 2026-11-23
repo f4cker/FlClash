@@ -492,6 +492,34 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a restore with no CA here and a damaged one says so', (
+    tester,
+  ) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      size: const Size(390, 1000),
+      child: Column(
+        children: [
+          RestoreMitmCaNote(
+            RestoreMitmCa(RestoreMitmCaChange.replaced, backup: _fresh),
+          ),
+          const RestoreMitmCaNote(RestoreMitmCa(RestoreMitmCaChange.damaged)),
+          RestoreMitmCaNote(
+            RestoreMitmCa(RestoreMitmCaChange.damaged, local: _legacy),
+          ),
+        ],
+      ),
+    );
+    expect(find.text(l.mitmRestoreCaLocalNone), findsOneWidget);
+    expect(find.text(l.mitmRestoreCaPending), findsOneWidget);
+    expect(find.text(l.mitmRestoreCaLocalKept), findsNothing);
+    expect(find.text(l.mitmRestoreCaDamagedNone), findsOneWidget);
+    expect(find.text(l.mitmRestoreCaDamaged), findsOneWidget);
+  });
+
   const reviewSizes = [
     (tag: 'zh-390', locale: Locale('zh'), width: 390.0, scale: 1.0),
     (tag: 'en-360-2x', locale: Locale('en'), width: 360.0, scale: 2.0),
@@ -596,6 +624,18 @@ void main() {
       expect(find.text(_legacy.fingerprint), findsOneWidget);
       expect(find.text(_fresh.fingerprint), findsOneWidget);
       expect(find.text(l.mitmRestoreCaLocalKept), findsOneWidget);
+    });
+
+    testWidgets('review-restore-first-${size.tag}', (tester) async {
+      await shoot(
+        tester,
+        'restore-first',
+        RestoreMountConfirmSheet(
+          plan: RestoreMountPlan.empty,
+          mitmCa: RestoreMitmCa(RestoreMitmCaChange.replaced, backup: _fresh),
+        ),
+      );
+      expect(find.text(l.mitmRestoreCaLocalNone), findsOneWidget);
     });
 
     testWidgets('review-backup-include-${size.tag}', (tester) async {

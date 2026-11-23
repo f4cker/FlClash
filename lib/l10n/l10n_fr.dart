@@ -9767,7 +9767,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get mitmRunActive => 'Decryption is running with this certificate';
+  String get mitmRunActive => 'Decryption is using this certificate';
 
   @override
   String get mitmRunStopped => 'Decryption has stopped';
@@ -9785,7 +9785,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mitmRetrust => 'Trust Again…';
 
   @override
-  String get mitmCurrentCaActions => 'Certificate in Use';
+  String get mitmCurrentCaActions => 'Configured Certificate';
 
   @override
   String get mitmOldCaSection => 'Old Certificate Still on This Mac';
@@ -9795,23 +9795,23 @@ class AppLocalizationsFr extends AppLocalizations {
       'Saves the public certificate only (.crt). The private key is not included.';
 
   @override
-  String get mitmDeleteCurrentCa => 'Delete Current Certificate…';
+  String get mitmDeleteCurrentCa => 'Delete Configured Certificate…';
 
   @override
-  String get mitmDeleteCurrentCaTitle => 'Delete the current certificate?';
+  String get mitmDeleteCurrentCaTitle => 'Delete the configured certificate?';
 
   @override
   String get mitmDeleteCurrentCaTip =>
-      'This removes the certificate and its trust from this Mac. Decryption turns off until you turn it on again. Other devices are not affected.';
+      'This removes the certificate and its trust from this Mac and turns off decryption. Other devices are not affected.';
 
   @override
-  String get mitmDeleteCurrentCaConfirm => 'Delete Current Certificate';
+  String get mitmDeleteCurrentCaConfirm => 'Delete Configured Certificate';
 
   @override
   String get mitmCaScopeThisMac => 'Affects this Mac only';
 
   @override
-  String get mitmImportInUse => 'This certificate is already in use.';
+  String get mitmImportInUse => 'This certificate is already configured.';
 
   @override
   String mitmCaAvailable(Object name) {
@@ -9822,18 +9822,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mitmRestoreCaSection => 'Decryption Certificate';
 
   @override
-  String get mitmRestoreCaLocal => 'On this Mac now';
+  String get mitmRestoreCaLocal => 'Current certificate on this Mac';
 
   @override
-  String get mitmRestoreCaFromBackup => 'The backup will restore';
+  String get mitmRestoreCaFromBackup => 'Certificate in the backup';
 
   @override
   String get mitmRestoreCaLocalKept =>
-      'Kept on this Mac as the old certificate. You can remove it later.';
+      'It will be kept on this Mac as the old certificate. You can remove it later.';
 
   @override
   String get mitmRestoreCaPending =>
-      'Becomes the configured certificate. Decryption uses it only after it is trusted on this Mac.';
+      'It will become the configured certificate. It can be used for decryption only after it is trusted on this Mac.';
 
   @override
   String get mitmRestoreCaKept =>
@@ -9841,21 +9841,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmRestoreCaTrustNote =>
-      'Restoring doesn\'t trust a certificate on this Mac. You\'ll be asked about that afterwards.';
+      'Restoring doesn\'t automatically trust the certificate. You can trust it separately on this Mac when needed.';
 
   @override
   String get mitmRestoreCaSame =>
-      'The backup has the certificate this Mac already uses. It stays as it is.';
+      'The backup contains the same certificate configured on this Mac. The existing certificate will be kept.';
 
   @override
   String get mitmRestoreCaDamaged =>
-      'The decryption certificate in this backup can\'t be read, so it isn\'t restored. The certificate on this Mac stays as it is.';
+      'The decryption certificate in this backup can\'t be read and won\'t be restored. The certificate on this Mac stays as it is.';
 
   @override
   String get mitmBackupWithKey => 'Back Up (Includes Private Key)';
 
   @override
-  String get mitmBackupRiskDetails => 'If the file is shared by mistake';
+  String get mitmBackupRiskDetails => 'If the file may have been exposed';
 
   @override
   String get mitmBackupRiskImpact =>
@@ -9863,5 +9863,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmBackupRiskRevoke =>
-      'Replace the certificate, then remove the old one on every device that trusted it: on a Mac in Keychain Access; on iPhone or iPad under Settings > General > VPN & Device Management, and turn it off in Certificate Trust Settings; on Android under Settings > Security > Encryption & credentials > User credentials.';
+      'Replace the certificate, then remove or revoke trust in the old certificate on every device that trusted it. Steps vary by device.';
+
+  @override
+  String get mitmRestoreCaLocalNone =>
+      'This Mac has no decryption certificate.';
+
+  @override
+  String get mitmRestoreCaDamagedNone =>
+      'The decryption certificate in this backup can\'t be read and won\'t be restored.';
 }

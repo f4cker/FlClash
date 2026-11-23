@@ -78,7 +78,8 @@ class MitmCa extends _$MitmCa {
     state = AsyncData(certificate);
   }
 
-  Future<void> delete() async {
+  /// False when the Core CA left this config but its trust stayed.
+  Future<bool> delete() async {
     final signer = ref.read(mitmSignerProvider);
     _checkSafeMode(signer);
     final ca = ref.read(patchClashConfigProvider).mitm.coreCa;
@@ -97,9 +98,11 @@ class MitmCa extends _$MitmCa {
               ),
             ),
           );
+      var untrusted = true;
       try {
         await ref.read(mitmTrustStoreProvider)?.remove(ca);
       } on ProcessException catch (error) {
+        untrusted = false;
         commonPrint.log(
           'Removing the MITM CA from the keychain failed: '
           '${compactError(error)}',
@@ -110,12 +113,13 @@ class MitmCa extends _$MitmCa {
           .read(mitmPassphraseStoreProvider)
           ?.deletePassphrase(ca.fingerprint);
       ref.invalidateSelf();
-      return;
+      return untrusted;
     }
     await signer?.delete();
     if (ref.mounted) {
       state = const AsyncData(null);
     }
+    return true;
   }
 }
 
