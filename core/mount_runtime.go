@@ -14,6 +14,7 @@ import (
 	"github.com/metacubex/mihomo/component/age"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
 	"go.yaml.in/yaml/v3"
 )
@@ -103,6 +104,17 @@ func setMountState(report *MountReport, blocked, fallback bool) {
 	mountGeneration++
 	runningConfigBlocked = blocked
 	runningConfigDefault = fallback
+}
+
+func logSkippedMountSources(report *MountReport) {
+	if report == nil {
+		return
+	}
+	for _, source := range report.Sources {
+		if source.Status != mountSourceNodes {
+			log.Warnln("mount source %d is %s, skipped; the rest of the profile runs", source.ID, source.Status)
+		}
+	}
 }
 
 func runningConfigKeepable() bool {

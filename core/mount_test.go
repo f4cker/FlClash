@@ -403,6 +403,80 @@ rules:
 	}
 }
 
+func TestMountSkipsASourceItCannotReadAndMountsTheRest(t *testing.T) {
+	home := withMountHome(t)
+	const base = `proxy-groups:
+  - {name: G, type: select, include-all-providers: true}
+rules:
+  - MATCH,G
+`
+	setup := &MountSetup{Sources: []MountSource{
+		{ID: 1, Label: "Gone", Path: filepath.Join(home, "absent.yaml")},
+		{ID: 2, Label: "B", Path: writeMountFile(t, home, "2.yaml", mountSourceB)},
+		{ID: 3, Label: "Odd", Path: writeMountFile(t, home, "3.yaml", "proxies: {not: a list}\n")},
+	}}
+
+	cfg, report := mountedConfig(t, base, setup)
+
+	if got := memberNames(t, cfg, "G"); !reflect.DeepEqual(got, []string{"shared", "us"}) {
+		t.Errorf("G members = %v, want the readable source's nodes", got)
+	}
+	statuses := map[int64]string{}
+	for _, source := range report.Sources {
+		statuses[source.ID] = source.Status
+		if source.Status != mountSourceNodes && len(source.Nodes) != 0 {
+			t.Errorf("skipped source %d has nodes %v", source.ID, source.Nodes)
+		}
+	}
+	want := map[int64]string{1: mountSourceMissing, 2: mountSourceNodes, 3: mountSourceUnsupported}
+	if !reflect.DeepEqual(statuses, want) {
+		t.Errorf("statuses = %v, want %v", statuses, want)
+	}
+	if pd := cfg.Providers["flash-mount-1"]; pd == nil || len(pd.Proxies()) != 0 {
+		t.Error("a skipped source is not an empty provider")
+	}
+}
+
+func TestApplyConfigRunsTheBaseWhenEveryMountedSourceIsSkipped(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() { setMountState(nil, false, false) })
+	base := writeMountFile(t, home, "base.yaml", `proxies:
+  - {name: own, type: socks5, server: 192.0.2.9, port: 1080}
+proxy-groups:
+  - {name: Own, type: select, proxies: [own]}
+  - {name: Mounted, type: select, include-all-providers: true}
+rules:
+  - MATCH,Own
+`)
+	subscriber := log.Subscribe()
+	defer log.UnSubscribe(subscriber)
+
+	err := applyConfig(&SetupParams{
+		Base:   &SetupBase{Path: base, Overlay: "{}"},
+		Mounts: &MountSetup{Revision: "r1", Sources: []MountSource{{ID: 7, Label: "Gone", Path: filepath.Join(home, "absent.yaml")}}},
+	})
+
+	if err != nil {
+		t.Fatalf("applyConfig = %v, want the base applied without the source", err)
+	}
+	state := handleMountState()
+	if state.Blocked || state.Report == nil || state.Report.Revision != "r1" ||
+		len(state.Report.Sources) != 1 || state.Report.Sources[0].Status != mountSourceMissing {
+		t.Fatalf("state = %+v, want r1 running with source 7 reported missing", state)
+	}
+	if got := memberNames(t, currentConfig, "Mounted"); !reflect.DeepEqual(got, []string{"REJECT"}) {
+		t.Errorf("Mounted members = %v, want the REJECT fallback", got)
+	}
+	logged := drainLogStream(t, subscriber, time.Second, func(payload string) bool {
+		return strings.Contains(payload, "mount source 7 is missing, skipped")
+	})
+	if !logged {
+		t.Error("the skipped source was not logged")
+	}
+}
+
 // A host that still sends the groups it once chose has them ignored: every
 // allowed group takes the mounts, the chosen ones and the rest alike.
 func TestMountIgnoresTheGroupsAnOlderHostChose(t *testing.T) {

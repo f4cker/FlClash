@@ -372,8 +372,14 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		}
 		snapshot := readMountSnapshot(source.Path, "")
 		inspection := snapshot.admit(relay)
+		// A source whose copy cannot be read mounts as an empty provider, so
+		// one broken subscription does not hold back the rest and a group
+		// left with nothing falls back as for an empty list.
 		if inspection.Status != mountSourceNodes {
-			return nil, fmt.Errorf("mount source %d is %s", source.ID, inspection.Status)
+			report.Sources = append(report.Sources, MountSourceReport{ID: source.ID, Provider: name, Status: inspection.Status, Nodes: []MountNode{}})
+			setMappingValue(providers, name, skippedMountProviderNode())
+			names = append(names, name)
+			continue
 		}
 		path := source.Path
 		if setup.stageInputs {
@@ -500,6 +506,17 @@ func mountNodeNames(source MountSource, originals []string, taken map[string]str
 		taken[node.Name] = struct{}{}
 	}
 	return nodes, renames
+}
+
+func skippedMountProviderNode() *yaml.Node {
+	return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: []*yaml.Node{
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "type"},
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "inline"},
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "flash-allow-empty"},
+		{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"},
+		{Kind: yaml.ScalarNode, Tag: "!!str", Value: "payload"},
+		{Kind: yaml.SequenceNode, Tag: "!!seq", Style: yaml.FlowStyle},
+	}}
 }
 
 // The provider drops what the inspection counts out, by the same reading.

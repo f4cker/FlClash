@@ -201,11 +201,15 @@ rules: ["MATCH,G"]
 	} {
 		t.Run(name, func(t *testing.T) {
 			source := writeMountFile(t, home, name+".yaml", content)
-			document, _, err := mountedConfigDocument([]byte(profile), &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}})
+			document, report, err := mountedConfigDocument([]byte(profile), &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}})
 			if err == nil {
 				err = parseDocument(document)
 			}
-			if name == "valid-filtered" {
+			if name == "malformed" {
+				if err != nil || report.Sources[0].Status == mountSourceNodes {
+					t.Fatalf("malformed source = %v, %+v; want it skipped", err, report.Sources)
+				}
+			} else if name == "valid-filtered" {
 				if err != nil {
 					t.Fatal(err)
 				}

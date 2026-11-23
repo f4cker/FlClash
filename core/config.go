@@ -276,6 +276,9 @@ func applyConfig(params *SetupParams) error {
 	// Published once the config runs and its runtime check is settled, so a
 	// readback never names a revision that is not live or is about to block.
 	setMountState(report, blocked, err != nil && !blocked)
+	if err == nil {
+		logSkippedMountSources(report)
+	}
 	publishTailscaleManaged()
 	startTailscaleManaged()
 	currentRuleTable.observe()
