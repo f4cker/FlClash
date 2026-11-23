@@ -376,7 +376,7 @@ final class MitmTrustStateProvider
   MitmTrustState create() => MitmTrustState();
 }
 
-String _$mitmTrustStateHash() => r'b818546f08f14f50a2b1cf2aaa2c357b4f12c44d';
+String _$mitmTrustStateHash() => r'd76cc99ccdcc3a8055bab3d5e2ce7d323c51d211';
 
 /// Whether this device trusts the CA. A check records the CA it found
 /// trusted, which is the one the Core decrypts HTTPS with.
