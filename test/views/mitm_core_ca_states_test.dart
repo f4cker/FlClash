@@ -262,12 +262,11 @@ void main() {
             ),
           );
           final inUse = switch (name) {
-            'untrusted' => l.mitmCaConfigured(state.shown.subject),
             'available' => l.mitmCaAvailable(state.shown.subject),
             _ when state.mitm.coreCa == null => l.mitmCaInUseLegacy(
               state.shown.subject,
             ),
-            _ => l.mitmCaInUseCore(state.shown.subject),
+            _ => l.mitmCaConfigured(state.shown.subject),
           };
           expect(find.text(inUse), findsOneWidget);
           switch (name) {
@@ -295,13 +294,12 @@ void main() {
               expect(find.text(l.mitmCoreCaUntrustedTitle), findsOneWidget);
               expect(find.text(l.mitmCoreCaUntrusted), findsOneWidget);
               expect(find.text(l.mitmRetrust), findsOneWidget);
+              expect(find.text(l.mitmRunStopped), findsOneWidget);
+              expect(find.textContaining(l.mitmTrustUntrusted), findsNothing);
+            case 'available':
               expect(
-                find.text('${l.mitmTrustUntrusted}\n${l.mitmRunStopped}'),
+                find.text('${l.mitmTrustReady}\n${l.mitmRunOff}'),
                 findsOneWidget,
-              );
-              expect(
-                find.text(l.mitmCaInUseCore(_fresh.subject)),
-                findsNothing,
               );
           }
           await save(tester, 'section-$name-$tag-$mode');

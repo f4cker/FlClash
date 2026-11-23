@@ -46,7 +46,7 @@ String mitmCaInUseText(
   Mitm mitm,
   MitmCertificate certificate,
 ) => switch (mitm.coreCa?.fingerprint == certificate.fingerprint) {
-  true => l.mitmCaInUseCore(certificate.subject),
+  true => l.mitmCaConfigured(certificate.subject),
   false when !mitm.enable => l.mitmCaAvailable(certificate.subject),
   false => l.mitmCaInUseLegacy(certificate.subject),
 };
@@ -369,15 +369,11 @@ class MitmCoreCaSection extends ConsumerWidget {
     }
     final core = mitm.coreCa?.fingerprint == certificate.fingerprint;
     final untrusted = core && trust.status == MitmCoreCaStatus.untrusted;
-    final run = core ? mitmRunText(l, mitm, trust) : null;
+    final run = core || !mitm.enable ? mitmRunText(l, mitm, trust) : null;
     return [
       ListItem(
-        title: Text(
-          untrusted
-              ? l.mitmCaConfigured(certificate.subject)
-              : mitmCaInUseText(l, mitm, certificate),
-        ),
-        subtitle: Text([trustLabel, ?run].join('\n')),
+        title: Text(mitmCaInUseText(l, mitm, certificate)),
+        subtitle: Text(untrusted ? run! : [trustLabel, ?run].join('\n')),
         onTap: onDetails,
       ),
       if (untrusted) ...[
