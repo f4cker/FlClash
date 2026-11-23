@@ -216,6 +216,13 @@ MitmRules flashMitmRules(MitmModuleContent content) {
   );
 }
 
+/// The hosts whose plain HTTP the Core rewrites and scripts in full; none
+/// where [flashMitmRules] takes nothing from the module.
+List<String> flashForceHttpEngineHosts(MitmModuleContent content) =>
+    content.clientSourceAddress.isNotEmpty || content.requirementMet == false
+    ? const []
+    : content.forceHttpEngineHosts;
+
 List<String> flashModuleRules(
   MitmModuleContent content, {
   required Set<String> policies,

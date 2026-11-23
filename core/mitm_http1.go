@@ -421,7 +421,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				req.URL, req.RequestURI = target, decision.requestURI
 			}
 		}
-		if !control.isPlain() {
+		if !control.isPlain() || rw != nil && !rw.plain {
 			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
 			control.noteRewrite(entry, rw)
 			mitmCaptures.originalHeader(entry, false, requestBefore, req.Header)
@@ -487,6 +487,8 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 			mitmCaptures.originalHeader(entry, false, requestBefore, req.Header)
 			mitmCaptures.scriptedRequest(entry, scheme, req)
 			control.noteRewrite(entry, rw)
+			// A script may outlast the idle period the site's answer waits.
+			control.exchangeStarted()
 			if res.local != nil {
 				keep, err := mitmAnswerHTTP1(client, req, res.local, entry)
 				if err != nil || !keep {

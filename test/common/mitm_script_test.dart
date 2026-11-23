@@ -20,7 +20,7 @@ void main() {
       expect(info.pattern, r'^https://api\.a\.com/v1');
       expect(info.path, 'https://x.com/fix.js');
       expect(info.requiresBody, isTrue);
-      expect(info.timeout, 10);
+      expect(info.timeout, 30);
       expect(info.host, 'api.a.com');
     });
 
@@ -171,8 +171,10 @@ hostname = %APPEND% a.com, b.com
         script: [
           {'id': 'm9.0', 'line': 'M = y'},
         ],
+        forceHttpEngine: ['m.com'],
       ),
     );
+    expect(setup['force-http-engine-hosts'], ['m.com']);
     expect(setup['hostname'], ['a.com', 'm.com']);
     expect((setup['rewrite']! as List).map((item) => (item as Map)['id']), [
       '1',
@@ -190,5 +192,6 @@ hostname = %APPEND% a.com, b.com
     );
     expect(bare.containsKey('script'), isFalse);
     expect(bare.containsKey('rewrite'), isFalse);
+    expect(bare.containsKey('force-http-engine-hosts'), isFalse);
   });
 }

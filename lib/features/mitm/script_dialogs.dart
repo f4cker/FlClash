@@ -963,9 +963,10 @@ class _ScriptEditDialogState extends State<_ScriptEditDialog> {
           l.mitmScriptTimeout,
           SegmentedControl<int>(
             segments: [
-              for (final s in const [1, 3, 5, 10]) (s, '$s s'),
+              for (final s in {1, 3, 5, 10, _info.timeout}.toList()..sort())
+                (s, '$s s'),
             ],
-            value: const [1, 3, 5, 10].contains(_timeout) ? _timeout : 10,
+            value: _timeout,
             onChanged: (value) => setState(() => _timeout = value),
           ),
         ),

@@ -92,6 +92,7 @@ class MitmModuleContent {
     this.requestBodyMock = const [],
     this.clientSourceAddress = const [],
     this.skipVerifyHostname = const [],
+    this.forceHttpEngineHosts = const [],
     this.script = const [],
     this.declaredScriptLines = const [],
     this.rules = const [],
@@ -124,6 +125,10 @@ class MitmModuleContent {
   final List<String> clientSourceAddress;
 
   final List<String> skipVerifyHostname;
+
+  /// Surge's `force-http-engine-hosts`: plain HTTP to these is rewritten and
+  /// scripted too. They are decrypted hostnames as well.
+  final List<String> forceHttpEngineHosts;
   final List<String> script;
 
   /// The scripts it declares that FlClash runs, whatever its arguments leave
@@ -1100,6 +1105,7 @@ class _ModuleParser {
   final _requestBodyMock = <String>[];
   final _clientSourceAddress = <String>[];
   (String, String)? _skipVerify;
+  final _forceHttpEngineHosts = <String>[];
   final _script = <String>[];
   final _declaredScriptLines = <String>[];
   final _rules = <String>[];
@@ -1189,6 +1195,7 @@ class _ModuleParser {
       requestBodyMock: _requestBodyMock,
       clientSourceAddress: _clientSourceAddress,
       skipVerifyHostname: skipVerifyHostname,
+      forceHttpEngineHosts: _forceHttpEngineHosts,
       script: _script,
       declaredScriptLines: _declaredScriptLines,
       rules: _rules,
@@ -1805,6 +1812,7 @@ class _ModuleParser {
         _editList(MitmNetworkKey.fakeIpFilter.path, mark, items);
       case 'force-http-engine-hosts':
         _hostname.addAll(items);
+        _forceHttpEngineHosts.addAll(items);
       default:
         _skip(section, line, MitmModuleSkipReason.setting);
     }

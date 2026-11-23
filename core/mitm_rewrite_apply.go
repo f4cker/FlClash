@@ -45,14 +45,14 @@ func mitmRewriteBegin(scheme, host string, port uint16, requestURI string, plain
 	if engine.empty() || requestURI == "" || requestURI[0] != '/' {
 		return nil
 	}
+	if plain && engine.forcesHTTPEngine(host) {
+		plain = false
+	}
 	if plain {
 		if runtime := mitmState.Load(); runtime == nil || !runtime.setup.Enable || !engine.plain.mayMatch(host) {
 			return nil
 		}
-	} else if !engine.url.mayMatch(host) && !engine.requestHeader.mayMatch(host) &&
-		!engine.responseHeader.mayMatch(host) && !engine.requestBody.mayMatch(host) &&
-		!engine.responseBody.mayMatch(host) && !engine.mapLocal.mayMatch(host) &&
-		!engine.requestScript.mayMatch(host) && !engine.responseScript.mayMatch(host) {
+	} else if !engine.mayRewrite(host) {
 		return nil
 	}
 	authority := host

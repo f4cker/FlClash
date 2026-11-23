@@ -122,6 +122,7 @@ func init() {
 	if mitmIndicatorAvailable {
 		tunnel.TCPInterceptWanted = mitmInterceptWanted
 		tunnel.TCPIntercept = mitmIntercept
+		tunnel.TCPInterceptUnreachable = mitmUnreachableStandIn
 		tunnel.UDPDrop = mitmDropsUDP
 	}
 }
@@ -595,6 +596,7 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 // The site is verified in full before the client sees a certificate. The
 // site is offered what the client offered and decryption serves (see
 // mitmUpstreamProtos); the client is then offered the site's choice alone.
+// A failed site is never written to again (see mitm_unreachable.go).
 func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mitmRuntime, clientALPN []string) MitmOutcome {
 	remove, ok := mitmActive.add(runtime, host, client, remote)
 	if !ok {
@@ -604,6 +606,9 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	livenessCtx, stopLiveness := context.WithCancel(context.Background())
 	defer stopLiveness()
 	go monitorMitmLiveness(livenessCtx, runtime, host, mitmLivenessInterval, mitmLeaves.fresh)
+	if mitmUnreachable(remote) {
+		return serveMitmWithoutSite(client, remote, host, leaf, runtime, clientALPN, mitmOutcomeUpstreamFailed)
+	}
 	remoteIdle := &mitmIdleConn{Conn: remote, timeout: mitmIdleTimeout}
 	upstream := tls.Client(mitmStrictTLSConn{remoteIdle}, &tls.Config{
 		ServerName: host,
@@ -614,13 +619,15 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	ctx, cancel := context.WithTimeout(context.Background(), mitmHandshakeWait)
 	defer cancel()
 	if err := upstream.HandshakeContext(ctx); err != nil {
+		failed := mitmOutcomeUpstreamFailed
 		var verification *tls.CertificateVerificationError
 		if errors.As(err, &verification) {
 			log.Warnln("[MITM] the site's certificate failed verification")
-			return mitmOutcomeUpstreamCertificate
+			failed = mitmOutcomeUpstreamCertificate
+		} else {
+			log.Warnln("[MITM] TLS to the site failed")
 		}
-		log.Warnln("[MITM] TLS to the site failed")
-		return mitmOutcomeUpstreamFailed
+		return serveMitmWithoutSite(client, remote, host, leaf, runtime, clientALPN, failed)
 	}
 	// Once the upstream handshake commits, close its TLS wrapper on exit.
 	defer func() { remoteIdle.closing.Store(true); _ = upstream.Close() }()
@@ -631,20 +638,9 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 		log.Warnln("[MITM] the client speaks only HTTP/2 and the site does not")
 		return mitmOutcomeUpstreamFailed
 	}
-	clientIdle := &mitmIdleConn{Conn: client, timeout: mitmIdleTimeout}
-	server := tls.Server(clientIdle, &tls.Config{
-		Certificates: []tls.Certificate{leaf.cert},
-		NextProtos:   clientProtos,
-		MinVersion:   tls.VersionTLS12,
-	})
-	if err := server.HandshakeContext(ctx); err != nil {
-		var alert *net.OpError
-		if errors.As(err, &alert) && alert.Op == "remote error" {
-			log.Infoln("[MITM] the client refused the decryption certificate")
-			return mitmOutcomeRefused
-		}
-		log.Debugln("[MITM] TLS from the client failed")
-		return mitmOutcomeClientFailed
+	server, clientIdle, outcome := mitmClientHandshake(ctx, client, leaf, clientProtos)
+	if server == nil {
+		return outcome
 	}
 	// Closing the wrapper emits close_notify before the tunnel closes raw TCP.
 	// The idle wrapper caps the alert write so a stalled peer cannot hang exit.
@@ -676,6 +672,25 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 		return mitmOutcomeHTTP1Failed
 	}
 	return ""
+}
+
+func mitmClientHandshake(ctx context.Context, client net.Conn, leaf *mitmLeaf, protos []string) (*tls.Conn, *mitmIdleConn, MitmOutcome) {
+	clientIdle := &mitmIdleConn{Conn: client, timeout: mitmIdleTimeout}
+	server := tls.Server(clientIdle, &tls.Config{
+		Certificates: []tls.Certificate{leaf.cert},
+		NextProtos:   protos,
+		MinVersion:   tls.VersionTLS12,
+	})
+	if err := server.HandshakeContext(ctx); err != nil {
+		var alert *net.OpError
+		if errors.As(err, &alert) && alert.Op == "remote error" {
+			log.Infoln("[MITM] the client refused the decryption certificate")
+			return nil, nil, mitmOutcomeRefused
+		}
+		log.Debugln("[MITM] TLS from the client failed")
+		return nil, nil, mitmOutcomeClientFailed
+	}
+	return server, clientIdle, ""
 }
 
 var mitmQuicProbe = make(chan struct{}, 1)

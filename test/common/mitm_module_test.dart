@@ -613,6 +613,7 @@ alias.test = target.test
 bad host = 1.1.1.1
 ''');
       final network = content.network;
+      expect(content.forceHttpEngineHosts, ['api.test:8080']);
       expect(
         network.nameserver,
         const MitmListEdit(after: ['https://dns.a.test/dns-query#h3=true']),

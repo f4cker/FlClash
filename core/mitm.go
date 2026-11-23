@@ -29,11 +29,14 @@ type MitmSetup struct {
 	Rewrite []MitmRewriteRule `json:"rewrite,omitempty"`
 	// Phase 2c scripts, installed with the rewrite rules.
 	Script []MitmScriptRule `json:"script,omitempty"`
+	// Surge's force-http-engine-hosts: plain HTTP to these hosts is
+	// rewritten and scripted as a decrypted request is.
+	ForceHTTPEngine []string `json:"force-http-engine-hosts,omitempty"`
 }
 
 // The setup without its rewrite rules, which are installed on their own.
 func (setup MitmSetup) withoutRewrite() MitmSetup {
-	setup.Rewrite, setup.Script = nil, nil
+	setup.Rewrite, setup.Script, setup.ForceHTTPEngine = nil, nil, nil
 	return setup
 }
 

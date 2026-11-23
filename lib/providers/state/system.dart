@@ -89,6 +89,7 @@ class MitmModuleRules {
     this.hostname = const [],
     this.rewrite = const [],
     this.script = const [],
+    this.forceHttpEngine = const [],
   });
 
   static const empty = MitmModuleRules();
@@ -96,18 +97,23 @@ class MitmModuleRules {
   final List<String> hostname;
   final List<Map<String, Object?>> rewrite;
   final List<Map<String, Object?>> script;
+  final List<String> forceHttpEngine;
 
   @override
   bool operator ==(Object other) =>
       other is MitmModuleRules &&
       const DeepCollectionEquality().equals(
-        [hostname, rewrite, script],
-        [other.hostname, other.rewrite, other.script],
+        [hostname, rewrite, script, forceHttpEngine],
+        [other.hostname, other.rewrite, other.script, other.forceHttpEngine],
       );
 
   @override
-  int get hashCode =>
-      const DeepCollectionEquality().hash([hostname, rewrite, script]);
+  int get hashCode => const DeepCollectionEquality().hash([
+    hostname,
+    rewrite,
+    script,
+    forceHttpEngine,
+  ]);
 }
 
 MitmModuleRules _moduleRules(
@@ -124,6 +130,7 @@ MitmModuleRules _moduleRules(
   final hostname = <String>[];
   final rewrite = <Map<String, Object?>>[];
   final script = <Map<String, Object?>>[];
+  final forceHttpEngine = <String>[];
   for (final module in modules) {
     final content = parseMitmModule(
       module.text,
@@ -132,6 +139,7 @@ MitmModuleRules _moduleRules(
     );
     final rules = flashMitmRules(content);
     hostname.addAll(rules.hostname);
+    forceHttpEngine.addAll(flashForceHttpEngineHosts(content));
     for (final list in mitmRewriteLists) {
       for (final (index, line) in rules.linesOf(list).indexed) {
         rewrite.add({
@@ -145,7 +153,12 @@ MitmModuleRules _moduleRules(
       script.add({'id': 'm${module.id}.$index', 'line': line});
     }
   }
-  return MitmModuleRules(hostname: hostname, rewrite: rewrite, script: script);
+  return MitmModuleRules(
+    hostname: hostname,
+    rewrite: rewrite,
+    script: script,
+    forceHttpEngine: forceHttpEngine,
+  );
 }
 
 /// Read from the enabled modules' files; empty while modules are off.
@@ -224,6 +237,8 @@ Map<String, Object?> composeMitmSetup(
     'hostname': mitmEffectiveHostnames(mitm, modules),
     if (rewrite.isNotEmpty) 'rewrite': rewrite,
     if (script.isNotEmpty) 'script': script,
+    if (modules.forceHttpEngine.isNotEmpty)
+      'force-http-engine-hosts': modules.forceHttpEngine,
   };
 }
 

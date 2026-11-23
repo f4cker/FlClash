@@ -93,7 +93,7 @@ func TestMitmScriptParsesSurgeLines(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := rule.script
-	if !rule.response || !s.requiresBody || s.timeout != mitmScriptMaxTimeout || s.argument != "a=1,b=2" || s.file != "abc.js" || s.maxSize != mitmDefaultRewriteBodyLimit || rule.host != "a.com" {
+	if !rule.response || !s.requiresBody || s.timeout != 30*time.Second || s.argument != "a=1,b=2" || s.file != "abc.js" || s.maxSize != mitmDefaultRewriteBodyLimit || rule.host != "a.com" {
 		t.Fatalf("parsed %+v %+v", rule, s)
 	}
 	rule, err = parseMitmScriptLine(`x = type=http-request,pattern=^http,script-path=b.js,argument-json={"k":[1]},binary-body-mode=true,max-size=100`)
