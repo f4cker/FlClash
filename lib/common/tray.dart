@@ -390,12 +390,17 @@ class AppTray implements TrayPort {
         mountProviderName(profile.id): profile.realLabel,
     };
     final icons = await _readMenuIcons(groups);
+    final proxyTypes = {
+      for (final group in [...rawGroups, ...groups])
+        for (final proxy in group.all) proxy.name: proxy.type,
+    };
     return [
       for (final group in groups)
         _buildGroupSubmenu(
           group,
           rawGroup: readFailed ? group : rawGroups.getGroup(group.name),
           rawGroups: rawGroups,
+          proxyTypes: proxyTypes,
           selectedMap: selectedMap,
           menuState: menuStates[group.name],
           configuredName: trayState.selectedMap[group.name],
@@ -599,6 +604,7 @@ class AppTray implements TrayPort {
     Group group, {
     required Group? rawGroup,
     required List<Group> rawGroups,
+    required Map<String, String> proxyTypes,
     required Map<String, String> selectedMap,
     required TrayGroupMenuState? menuState,
     required String? configuredName,
@@ -626,12 +632,11 @@ class AppTray implements TrayPort {
         ? configuredName
         : (rawGroup ?? group).now;
     final selected = members.contains(candidate) ? candidate : null;
-    String displayName(String name) {
-      for (final proxy in group.all) {
-        if (proxy.name == name) return _memberLabel(proxy, sourceLabels);
-      }
-      return name;
-    }
+    final membersByName = {for (final proxy in group.all) proxy.name: proxy};
+    String displayName(String name) => switch (membersByName[name]) {
+      final proxy? => _memberLabel(proxy, sourceLabels),
+      null => name,
+    };
 
     final selection = group.type == GroupType.LoadBalance
         ? l10n.trayMultipleNodes
@@ -659,14 +664,14 @@ class AppTray implements TrayPort {
             groups: rawGroups,
             selectedMap: selectedMap,
           );
-    final nodeProxy = node == null ? null : _proxyNamed(node, group, rawGroups);
-    // DIRECT is measured like a node; REJECT and PASS have nothing to measure.
-    final latency = nodeProxy == null || _isRejectOrPass(nodeProxy)
+    final nodeType = node == null ? null : proxyTypes[node] ?? '';
+    // DIRECT is measured like a node; REJECT, COMPATIBLE and the like never are.
+    final latency = nodeType == null || isUnprobeableProxyType(nodeType)
         ? null
         : _badge(
             delays[selected],
             pendingNames.contains(selected),
-            nodeProxy,
+            Proxy(name: node!, type: nodeType),
             scheme,
             untested: l10n.trayNotTested,
           );
@@ -731,25 +736,6 @@ class AppTray implements TrayPort {
           ),
       ],
     );
-  }
-
-  Proxy _proxyNamed(String name, Group group, List<Group> groups) {
-    for (final candidate in [group, ...groups]) {
-      for (final proxy in candidate.all) {
-        if (proxy.name == name) return proxy;
-      }
-    }
-    return Proxy(name: name, type: '');
-  }
-
-  bool _isRejectOrPass(Proxy proxy) {
-    final type = proxy.type.isEmpty ? proxy.name : proxy.type;
-    return const {
-      'reject',
-      'rejectdrop',
-      'reject-drop',
-      'pass',
-    }.contains(type.toLowerCase());
   }
 
   String _latencyDescription(

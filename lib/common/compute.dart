@@ -62,6 +62,9 @@ const _unprobeableProxyTypes = {
   'Dns',
 };
 
+bool isUnprobeableProxyType(String? type) =>
+    _unprobeableProxyTypes.contains(type);
+
 List<Group> computeHideTimeout({
   required List<Group> groups,
   required List<Group> allGroups,

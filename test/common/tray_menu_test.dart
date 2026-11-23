@@ -1738,6 +1738,42 @@ void main() {
       expect(badgeOf('Apple'), isNull);
     });
 
+    test('picks that can never be measured have no badge', () async {
+      for (final (name, type) in [
+        ('COMPATIBLE', 'Compatible'),
+        ('REJECT-DROP', 'RejectDrop'),
+        ('PASS', 'Pass'),
+        ('DNS', 'Dns'),
+      ]) {
+        final empty = Group(
+          name: 'Empty',
+          type: GroupType.Selector,
+          now: name,
+          all: [Proxy(name: name, type: type)],
+        );
+        final outer = proxy.copyWith(
+          all: const [Proxy(name: 'Empty', type: 'Selector')],
+        );
+        delay(name, 30);
+        container.read(groupsProvider.notifier).value = [
+          outer.copyWith(now: 'Empty'),
+          empty,
+        ];
+        await update(_trayState(isStart: true, groups: [outer]));
+        expect(row()['detail'], 'Empty');
+        expect(badge(), isNull, reason: type);
+      }
+      final direct = proxy.copyWith(
+        all: const [Proxy(name: 'DIRECT', type: 'Direct')],
+      );
+      delay('DIRECT', 30);
+      container.read(groupsProvider.notifier).value = [
+        direct.copyWith(now: 'DIRECT'),
+      ];
+      await update(_trayState(isStart: true, groups: [direct]));
+      expect(badge()!['label'], l10n.trayLatencyBadge(30));
+    });
+
     test('a node that did not answer reads as timed out', () async {
       delay('A', -1);
       await show('A');
