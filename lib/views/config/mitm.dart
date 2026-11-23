@@ -233,7 +233,7 @@ class _MitmViewState extends ConsumerState<MitmView> {
       tag: LoadingTag.mitm,
       title: appLocalizations.mitmRetrust,
     );
-    if (await check() != MitmTrust.ready && context.mounted) {
+    if (mitmRetrustNeedsInstall(await check()) && context.mounted) {
       await _install(context, ref);
       await check();
     }

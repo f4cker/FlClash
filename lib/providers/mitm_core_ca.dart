@@ -52,6 +52,11 @@ class MitmCoreCaTrust {
   int get hashCode => Object.hash(status, leased, failure);
 }
 
+/// Only a verdict that the CA is not trusted asks for an install; a check
+/// that could not tell (identity, Core, passphrase) would prompt for nothing.
+bool mitmRetrustNeedsInstall(MitmTrust? trust) =>
+    trust == MitmTrust.untrusted || trust == MitmTrust.notInstalled;
+
 bool _sameFingerprint(String? a, String? b) =>
     a != null && b != null && a.toUpperCase() == b.toUpperCase();
 
@@ -248,12 +253,12 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       final identity = await signer.coreIdentity().timeout(checkBudget);
       if (identity != MitmCoreIdentity.verified) {
         _failed(MitmCoreCaFailure.coreIdentity);
-        return null;
+        return _inconclusive();
       }
       if (stale()) return _restart();
       final leaf = await _load(ca, p12, stale).timeout(checkBudget);
       if (stale()) return _restart();
-      if (leaf == null) return null;
+      if (leaf == null) return _inconclusive();
       final verdict = await store
           .check(ca, () async => leaf.pem)
           .timeout(checkBudget);
@@ -289,6 +294,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       return MitmTrust.ready;
     } catch (error) {
       if (error is TimeoutException) _loadGeneration++;
+      _negatives = 0;
       if (!ref.mounted) return null;
       switch (_refusal(error)) {
         // Cleared or reloaded since: load it again on the next round.
@@ -310,6 +316,12 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       }
       return null;
     }
+  }
+
+  /// Untrusted means two negative verdicts in a row, with nothing between.
+  MitmTrust? _inconclusive() {
+    _negatives = 0;
+    return null;
   }
 
   MitmTrust? _restart() {
