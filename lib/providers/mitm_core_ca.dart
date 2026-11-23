@@ -552,10 +552,13 @@ class MitmCaMigration extends Notifier<bool> {
     final previous = mitm.pendingCaCertificate;
     if (mitm.coreCa == null && legacy == null) {
       _update(
+        // A pending CA left by a delete has nothing to replace any more.
         (mitm) => mitm.copyWith(
           caP12: p12,
           caCertificate: certificate,
           trustedFingerprint: null,
+          pendingCaP12: null,
+          pendingCaCertificate: null,
         ),
       );
     } else {

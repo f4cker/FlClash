@@ -924,6 +924,32 @@ void main() {
       );
     });
 
+    test('a first CA after a delete drops the pending one', () async {
+      legacy = null;
+      passphrases.values[_pendingFp] = 'pending secret';
+      setMitm(
+        coreMitm().copyWith(
+          pendingCaP12: _pendingP12,
+          pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
+        ),
+      );
+      expect(await container.read(mitmCaProvider.notifier).delete(), isTrue);
+      when(() => core.generateMitmCa()).thenAnswer(
+        (_) async => MitmGeneratedCa(
+          p12: MitmCaP12('DDDD'),
+          passphrase: 'new secret',
+          certificate: _cert('DD:DD', 'Flash new'),
+        ),
+      );
+
+      await migration().generate();
+
+      expect(mitm().coreCa?.fingerprint, 'DD:DD');
+      expect(mitm().pendingCaCertificate, isNull);
+      expect(mitm().pendingCaP12, isNull);
+      expect(passphrases.values, isNot(contains(_pendingFp)));
+    });
+
     test('with no CA at all the first one is in use at once', () async {
       legacy = null;
       setMitm(const Mitm(enable: true, hostname: ['example.com']));
