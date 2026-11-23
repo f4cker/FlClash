@@ -212,16 +212,34 @@ class MacOSMitmTrustStore implements MitmTrustStore {
     return MitmInstallOutcome.installed;
   }
 
+  /// A CA never installed, or already deleted by hand, counts as removed.
   @override
   Future<MitmRemoveOutcome> remove(MitmCertificate ca) async {
-    await _runChecked(run, _security, [
-      'delete-certificate',
+    try {
+      await _runChecked(run, _security, [
+        'delete-certificate',
+        '-Z',
+        mitmSha256Hex(ca),
+        '-t',
+        _keychain,
+      ]);
+    } on ProcessException {
+      if (!await _absent(ca)) rethrow;
+    }
+    return MitmRemoveOutcome.removed;
+  }
+
+  Future<bool> _absent(MitmCertificate ca) async {
+    final found = await run(_security, [
+      'find-certificate',
+      '-a',
       '-Z',
-      mitmSha256Hex(ca),
-      '-t',
+      '-c',
+      ca.subject,
       _keychain,
     ]);
-    return MitmRemoveOutcome.removed;
+    return found.exitCode == 0 &&
+        !'${found.stdout}'.contains('SHA-256 hash: ${mitmSha256Hex(ca)}');
   }
 }
 

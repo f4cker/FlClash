@@ -335,6 +335,41 @@ void main() {
         '/Users/someone/Library/Keychains/login.keychain-db',
       ]);
     });
+
+    test('removing a CA already gone from the keychain succeeds', () async {
+      processes
+        ..stub('/usr/bin/security delete-certificate', exitCode: 1)
+        ..stub('/usr/bin/security find-certificate');
+
+      expect(await store().remove(_ca), MitmRemoveOutcome.removed);
+      expect(processes.argumentsOf('/usr/bin/security').last, [
+        'find-certificate',
+        '-a',
+        '-Z',
+        '-c',
+        _ca.subject,
+        '/Users/someone/Library/Keychains/login.keychain-db',
+      ]);
+    });
+
+    test('a removal that failed with the CA still there throws', () async {
+      processes
+        ..stub('/usr/bin/security delete-certificate', exitCode: 1)
+        ..stub(
+          '/usr/bin/security find-certificate',
+          stdout: 'SHA-256 hash: $_sha256\n',
+        );
+
+      await expectLater(store().remove(_ca), throwsA(isA<ProcessException>()));
+    });
+
+    test('a removal whose search also failed throws', () async {
+      processes
+        ..stub('/usr/bin/security delete-certificate', exitCode: 1)
+        ..stub('/usr/bin/security find-certificate', exitCode: 1);
+
+      await expectLater(store().remove(_ca), throwsA(isA<ProcessException>()));
+    });
   });
 
   group('Windows', () {
