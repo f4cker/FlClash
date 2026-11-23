@@ -9812,4 +9812,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmImportInUse => 'This certificate is already in use.';
+
+  @override
+  String mitmCaAvailable(Object name) {
+    return 'Available certificate: $name';
+  }
 }

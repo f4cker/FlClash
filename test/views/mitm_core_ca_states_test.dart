@@ -103,23 +103,30 @@ typedef _State = ({
 final _states = <String, _State>{
   'legacy': (
     shown: _legacy,
-    mitm: const Mitm(),
+    mitm: const Mitm(enable: true),
     trust: MitmCoreCaTrust.off,
     running: false,
     old: null,
   ),
   'pending': (
     shown: _legacy,
-    mitm: Mitm(pendingCaP12: _p12, pendingCaCertificate: _fresh),
+    mitm: Mitm(enable: true, pendingCaP12: _p12, pendingCaCertificate: _fresh),
     trust: MitmCoreCaTrust.off,
     running: false,
     old: null,
   ),
   'verifying': (
     shown: _legacy,
-    mitm: Mitm(pendingCaP12: _p12, pendingCaCertificate: _fresh),
+    mitm: Mitm(enable: true, pendingCaP12: _p12, pendingCaCertificate: _fresh),
     trust: MitmCoreCaTrust.off,
     running: true,
+    old: null,
+  ),
+  'available': (
+    shown: _legacy,
+    mitm: const Mitm(),
+    trust: MitmCoreCaTrust.off,
+    running: false,
     old: null,
   ),
   'switched': (
@@ -251,6 +258,7 @@ void main() {
           );
           final inUse = switch (name) {
             'untrusted' => l.mitmCaConfigured(state.shown.subject),
+            'available' => l.mitmCaAvailable(state.shown.subject),
             _ when state.mitm.coreCa == null => l.mitmCaInUseLegacy(
               state.shown.subject,
             ),

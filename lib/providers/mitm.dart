@@ -83,12 +83,14 @@ class MitmCa extends _$MitmCa {
     _checkSafeMode(signer);
     final ca = ref.read(patchClashConfigProvider).mitm.coreCa;
     if (signer != null && ca != null) {
+      // Off, so a legacy CA still in the keychain is offered, not used.
       await ref.read(mitmCoreCaProvider.notifier).stopSigning();
       ref
           .read(patchClashConfigProvider.notifier)
           .update(
             (state) => state.copyWith(
               mitm: state.mitm.copyWith(
+                enable: false,
                 caP12: null,
                 caCertificate: null,
                 trustedFingerprint: null,

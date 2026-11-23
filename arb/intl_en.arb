@@ -4098,5 +4098,6 @@
   "mitmDeleteCurrentCaTip": "This removes the certificate and its trust from this Mac. Decryption turns off until you turn it on again. Other devices are not affected.",
   "mitmDeleteCurrentCaConfirm": "Delete Current Certificate",
   "mitmCaScopeThisMac": "Affects this Mac only",
-  "mitmImportInUse": "This certificate is already in use."
+  "mitmImportInUse": "This certificate is already in use.",
+  "mitmCaAvailable": "Available certificate: {name}"
 }

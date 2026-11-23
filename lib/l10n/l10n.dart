@@ -15957,6 +15957,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This certificate is already in use.'**
   String get mitmImportInUse;
+
+  /// No description provided for @mitmCaAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available certificate: {name}'**
+  String mitmCaAvailable(Object name);
 }
 
 class _AppLocalizationsDelegate

@@ -645,6 +645,19 @@ void main() {
       expect(mitm().coreCa, isNull);
     });
 
+    test('deleting the Core CA turns decryption off and leaves the legacy '
+        'one unused', () async {
+      setMitm(legacyMitm());
+      await migration().generate();
+      await migration().installAndSwitch();
+      await container.read(mitmCaProvider.notifier).delete();
+      await settle();
+      expect(mitm().coreCa, isNull);
+      expect(mitm().enable, isFalse);
+      expect(container.read(mitmSetupProvider)?['decrypt-tls'], isNot(true));
+      expect(passphrases.values, isNot(contains(_pendingFp)));
+    });
+
     test('removing the old certificate names the legacy one only', () async {
       setMitm(legacyMitm());
       await migration().generate();

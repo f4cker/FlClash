@@ -8960,4 +8960,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmImportInUse => '此证书已在使用中。';
+
+  @override
+  String mitmCaAvailable(Object name) {
+    return '可用的证书：$name';
+  }
 }

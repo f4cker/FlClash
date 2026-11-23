@@ -45,9 +45,11 @@ String mitmCaInUseText(
   AppLocalizations l,
   Mitm mitm,
   MitmCertificate certificate,
-) => mitm.coreCa?.fingerprint == certificate.fingerprint
-    ? l.mitmCaInUseCore(certificate.subject)
-    : l.mitmCaInUseLegacy(certificate.subject);
+) => switch (mitm.coreCa?.fingerprint == certificate.fingerprint) {
+  true => l.mitmCaInUseCore(certificate.subject),
+  false when !mitm.enable => l.mitmCaAvailable(certificate.subject),
+  false => l.mitmCaInUseLegacy(certificate.subject),
+};
 
 void _announce(MitmMigrationOutcome? outcome) {
   if (outcome == null) return;
