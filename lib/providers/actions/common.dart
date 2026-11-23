@@ -11,7 +11,7 @@ class CommonAction extends _$CommonAction {
   bool _isInstallingUpdate = false;
   bool _trayUpdateReserved = false;
   UpdateCheckScheduler? _updateChecks;
-  UpdateCheckScheduler Function()? _createUpdateChecks;
+  ValueListenable<bool>? _windowShown;
   int _updateDialogs = 0;
   int _userUpdateChecks = 0;
   bool _offerWhenVisible = false;
@@ -29,19 +29,12 @@ class CommonAction extends _$CommonAction {
         _updateChecks?.requestCheck('setting enabled');
       }
     });
-    ref.listen(appVisibleProvider, (previous, visible) {
-      if (!visible || !_offerWhenVisible) return;
-      _offerWhenVisible = false;
-      final available = ref.read(availableUpdateStateProvider);
-      if (available != null && ref.read(appSettingProvider).autoCheckUpdate) {
-        unawaited(checkUpdateResultHandle(available));
-      }
-    });
-    // The instance outlives a rebuild; onDispose has stopped the old timer.
-    _updateChecks = _createUpdateChecks?.call()?..start(checkNow: false);
+    ref.listen(appVisibleProvider, (_, _) => _offerDeferredUpdate());
+    _updateChecks?.start(checkNow: false);
+    _windowShown?.addListener(_offerDeferredUpdate);
     ref.onDispose(() {
-      _updateChecks?.dispose();
-      _updateChecks = null;
+      _updateChecks?.stop();
+      _windowShown?.removeListener(_offerDeferredUpdate);
     });
     ref.listen(appSettingProvider.select((s) => s.receiveBetaUpdates), (
       previous,
@@ -216,20 +209,34 @@ class CommonAction extends _$CommonAction {
     };
   }
 
+  /// A silent launch never shows [windowShown] yet the app counts as visible.
   void startUpdateChecks({
+    ValueListenable<bool>? windowShown,
     DateTime Function()? now,
     PeriodicTimerFactory? periodicTimer,
     OneShotTimerFactory? oneShotTimer,
   }) {
-    if (_createUpdateChecks != null) return;
-    _createUpdateChecks = () => UpdateCheckScheduler(
+    if (_updateChecks != null) return;
+    _windowShown = windowShown?..addListener(_offerDeferredUpdate);
+    _updateChecks = UpdateCheckScheduler(
       check: autoCheckUpdate,
       enabled: () => ref.read(appSettingProvider).autoCheckUpdate,
       now: now,
       periodicTimer: periodicTimer,
       oneShotTimer: oneShotTimer,
-    );
-    _updateChecks = _createUpdateChecks!()..start();
+    )..start();
+  }
+
+  bool get _promptVisible =>
+      ref.read(appVisibleProvider) && (_windowShown?.value ?? true);
+
+  void _offerDeferredUpdate() {
+    if (!_offerWhenVisible || !_promptVisible) return;
+    _offerWhenVisible = false;
+    final available = ref.read(availableUpdateStateProvider);
+    if (available != null && ref.read(appSettingProvider).autoCheckUpdate) {
+      unawaited(checkUpdateResultHandle(available));
+    }
   }
 
   void requestUpdateCheck(String reason, {Duration delay = Duration.zero}) =>
@@ -415,7 +422,7 @@ class CommonAction extends _$CommonAction {
     if (result is UpdateCheckSuperseded) return;
     if (!isUser && result is UpdateAvailable) {
       if (!_mayOfferAutomatically(result)) return;
-      if (!ref.read(appVisibleProvider)) {
+      if (!_promptVisible) {
         _offerWhenVisible = true;
         return;
       }

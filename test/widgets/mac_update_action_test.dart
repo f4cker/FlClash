@@ -92,6 +92,16 @@ class _HeldAdapter extends _Adapter {
   }
 }
 
+class _IdleTimer implements Timer {
+  bool cancelled = false;
+  @override
+  void cancel() => cancelled = true;
+  @override
+  bool get isActive => !cancelled;
+  @override
+  int get tick => 0;
+}
+
 UpdateAvailable candidate({
   int build = 2026111902,
   ReleaseChannel channel = ReleaseChannel.stable,
@@ -663,6 +673,89 @@ void main() {
       },
     );
 
+    group('silent launch', () {
+      late ValueNotifier<bool> shown;
+      late _IdleTimer timer;
+
+      Future<void> launch(WidgetTester tester) async {
+        await pump(tester);
+        shown = ValueNotifier(false);
+        addTearDown(shown.dispose);
+        timer = _IdleTimer();
+        action.startUpdateChecks(
+          windowShown: shown,
+          periodicTimer: (_, _) => timer,
+        );
+        await tester.pumpAndSettle();
+        expect(action.checks, 1);
+        expect(find.byType(AlertDialog), findsNothing);
+      }
+
+      testWidgets('the launch prompt waits for the window to be shown', (
+        tester,
+      ) async {
+        await launch(tester);
+        shown.value = true;
+        await tester.pumpAndSettle();
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        await dismissDialog(tester);
+        shown.value = false;
+        shown.value = true;
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(timer.cancelled, isFalse);
+      });
+
+      testWidgets('turning the setting off while hidden drops the prompt', (
+        tester,
+      ) async {
+        await launch(tester);
+        container
+            .read(appSettingProvider.notifier)
+            .update((state) => state.copyWith(autoCheckUpdate: false));
+        shown.value = true;
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+    });
+
+    testWidgets('a user check supersedes an automatic one in flight', (
+      tester,
+    ) async {
+      await pump(tester);
+      final real = ProviderContainer();
+      addTearDown(real.dispose);
+      real.listen(lastUpdateCheckStateProvider, (_, _) {});
+      // Made outside runAsync, the hold would complete in the fake zone.
+      final (hold, held) = (await tester.runAsync(() async {
+        final hold = Completer<void>();
+        return (hold, _HeldAdapter(utf8.encode('not a signed manifest'), hold));
+      }))!;
+      request.releaseDio.httpClientAdapter = held;
+      final action = real.read(commonActionProvider.notifier);
+      Future<void> requests(int count) async {
+        for (var i = 0; i < 100 && held.requested.length < count; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        expect(held.requested, hasLength(count));
+      }
+
+      await tester.runAsync(() async {
+        final automatic = action.autoCheckUpdate();
+        await requests(1);
+        final manual = action.checkForAppUpdate();
+        await requests(2);
+        expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.skipped);
+        hold.complete();
+        expect(await automatic, BackgroundCheckOutcome.skipped);
+        expect(await manual, isA<UpdateCheckFailed>());
+        expect(await action.autoCheckUpdate(), BackgroundCheckOutcome.failed);
+      });
+      expect(held.requested, hasLength(3));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
     testWidgets('automatic check never supersedes a pending manual check', (
       tester,
     ) async {
@@ -670,8 +763,11 @@ void main() {
       final real = ProviderContainer();
       addTearDown(real.dispose);
       real.listen(lastUpdateCheckStateProvider, (_, _) {});
-      final hold = Completer<void>();
-      final held = _HeldAdapter(utf8.encode('not a signed manifest'), hold);
+      // Made outside runAsync, the hold would complete in the fake zone.
+      final (hold, held) = (await tester.runAsync(() async {
+        final hold = Completer<void>();
+        return (hold, _HeldAdapter(utf8.encode('not a signed manifest'), hold));
+      }))!;
       request.releaseDio.httpClientAdapter = held;
       final action = real.read(commonActionProvider.notifier);
       await tester.runAsync(() async {

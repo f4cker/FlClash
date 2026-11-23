@@ -240,6 +240,45 @@ void main() {
       expect(checks, 1);
     });
 
+    test('a storm of requests never pushes the pending check back', () async {
+      scheduler.start(checkNow: false);
+      scheduler.requestCheck('network', delay: const Duration(seconds: 8));
+      final first = timers.oneShot.single;
+      for (var i = 0; i < 50; i++) {
+        clock.advance(const Duration(seconds: 1));
+        scheduler.requestCheck('network', delay: const Duration(seconds: 8));
+      }
+      expect(timers.oneShot, [same(first)]);
+      expect(first.cancelled, isFalse);
+      first.fire();
+      await pumpEventQueue();
+      expect(checks, 1);
+      clock.advance(const Duration(hours: 1));
+      scheduler.requestCheck('network', delay: const Duration(seconds: 8));
+      expect(timers.pendingOneShots, hasLength(1));
+      expect(timers.oneShot, hasLength(2));
+    });
+
+    test('stop keeps the history and start arms the timer again', () async {
+      scheduler.start();
+      await pumpEventQueue();
+      scheduler.stop();
+      expect(timers.single.cancelled, isTrue);
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 1);
+      scheduler.start(checkNow: false);
+      expect(timers.periodic, hasLength(2));
+      clock.advance(const Duration(minutes: 10));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 1, reason: 'the success before stop still counts');
+      clock.advance(const Duration(minutes: 20));
+      timers.periodic.last.fire();
+      await pumpEventQueue();
+      expect(checks, 2);
+    });
+
     test('a request before start does nothing', () async {
       scheduler.requestCheck('network');
       scheduler.requestCheck('network', delay: const Duration(seconds: 8));
@@ -390,6 +429,10 @@ void main() {
       expect(timers.periodic, hasLength(2));
       await pumpEventQueue();
       expect(action.checks, 1);
+      clock.advance(const Duration(minutes: 10));
+      action.requestUpdateCheck('network');
+      await pumpEventQueue();
+      expect(action.checks, 1, reason: 'the throttle survives the rebuild');
       clock.advance(const Duration(hours: 6));
       timers.periodic.last.fire();
       await pumpEventQueue();

@@ -252,7 +252,9 @@ class Bootstrap {
     );
     unawaited(clearUpdateDownloads());
     unawaited(macUpdater?.cleanup());
-    _container.read(commonActionProvider.notifier).startUpdateChecks();
+    _container
+        .read(commonActionProvider.notifier)
+        .startUpdateChecks(windowShown: window?.shown);
     if (system.isMacOS) {
       unawaited(
         globalState.safeRun(() async {

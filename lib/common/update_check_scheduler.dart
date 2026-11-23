@@ -51,15 +51,15 @@ class UpdateCheckScheduler {
     if (checkNow) unawaited(_run('launch'));
   }
 
-  /// With a [delay], requests arriving within it collapse into one check.
+  /// Delayed requests join one already pending instead of pushing it back,
+  /// so a stream of them still checks [delay] after the first.
   void requestCheck(String reason, {Duration delay = Duration.zero}) {
     if (_disposed || _timer == null) return;
-    _delayed?.cancel();
-    _delayed = null;
     if (delay <= Duration.zero) {
       unawaited(_run(reason));
       return;
     }
+    if (_delayed != null) return;
     _delayed = _oneShotTimer(delay, () {
       _delayed = null;
       unawaited(_run(reason));
@@ -104,11 +104,16 @@ class UpdateCheckScheduler {
     }
   }
 
-  void dispose() {
-    _disposed = true;
+  /// Cancels the timers but keeps the history; [start] arms them again.
+  void stop() {
     _timer?.cancel();
     _timer = null;
     _delayed?.cancel();
     _delayed = null;
+  }
+
+  void dispose() {
+    _disposed = true;
+    stop();
   }
 }
