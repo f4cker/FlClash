@@ -51,7 +51,7 @@ class RecordListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final level = context.raisedSurfaceLevel;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: context.listInsets.margin),
       child: PressSurface(
         fill: level.colorOf(context.colorScheme),
         shape: AppShape.xl,

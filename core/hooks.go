@@ -21,13 +21,18 @@ func init() {
 	statistic.DefaultRequestNotify = func(c statistic.Tracker) {
 		notifyProbeRoute(c)
 		if hasEventListener() {
-			sendMessage(RequestMessage, c)
+			sendMessage(RequestMessage, newRequestInfo(c))
 			watchRequestTraffic(c)
 		}
 	}
+	// tunnel.DefaultDialFailureNotify stays unset: Flash's request list reads
+	// every RequestMessage as an open connection and has no row for a failed
+	// dial (UPSTREAM-DIVERGENCE.md, requests page).
 	dns.DefaultQueryNotify = func(record dns.QueryRecord) {
 		if hasEventListener() {
-			sendMessage(DnsMessage, newDnsQuery(record))
+			query := newDnsQuery(record)
+			query.Id = currentDnsTrail.note(record)
+			sendMessage(DnsMessage, query)
 		}
 	}
 	executor.DefaultProviderLoadedHook = func(providerName string) {

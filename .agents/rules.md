@@ -483,6 +483,11 @@ the singleton calls `CoreController.resetInstance()` in `tearDown`. It also only
 when nothing has read it yet: that is a top-level `final`, bound to whichever instance existed at the first read, which
 in a shared isolate is another file's.
 
+MITM sources, tests and fixtures name only reserved hosts (`a.test`, `example.com`) and neutral samples written for the
+test, never a published third-party module or a real app's ad or tracking endpoint. Upstream enforces this with
+`test/lint/mitm_fixtures_test.dart`; Flash does not carry that lint yet because its older MITM tests still use real hosts
+(UPSTREAM-DIVERGENCE.md), so new Flash fixtures follow the rule by hand.
+
 ### Shared Test Isolate
 
 `tool/test.dart` imports many test files into one entrypoint, so process-wide state outlives the file that set it, and

@@ -186,6 +186,8 @@ class _ProfilesGrid extends ConsumerStatefulWidget {
 }
 
 class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
+  // Fixed rather than the list margin: the cards' trailing controls and the
+  // mount pill are measured against it (UPSTREAM-DIVERGENCE.md).
   static const _horizontalPadding = 16.0;
 
   ScrollController? _controller;
@@ -754,6 +756,8 @@ class ProfileItem extends ConsumerWidget {
           key: Key(profile.id.toString()),
           minTileHeight: _profileItemHeight,
           minVerticalPadding: listRowVerticalPadding,
+          // Fixed, not the list insets: _pillBelowFor measures the row by it.
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
@@ -884,7 +888,9 @@ class _ReorderableProfilesSheetState
       child: ItemPositionProvider(
         position: position,
         child: DecorationListItem(
-          contentPadding: const EdgeInsets.only(left: 16),
+          contentPadding: EdgeInsetsDirectional.only(
+            start: context.listInsets.leading,
+          ),
           trailing: SortHandle(index: index),
           title: Text(profile.realLabel),
         ),
@@ -913,7 +919,7 @@ class _ReorderableProfilesSheetState
         tooltip: context.appLocalizations.save,
       ),
       body: PrismReorderableListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+        padding: context.listInsets.page(
           top: context.contentTopPadding,
           bottom: 32 + context.bottomInset,
         ),

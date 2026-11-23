@@ -52,14 +52,7 @@ void main(List<String> args) {
           ),
         );
       } catch (e, s) {
-        runApp(
-          InitErrorApp(
-            error: e,
-            stack: s,
-            onClearData: clearAppData,
-            onExit: _exitAfterInitFailure,
-          ),
-        );
+        runApp(initFailureApp(e, s));
         unawaited(window?.showInitFailure(onExit: _exitAfterInitFailure));
       }
     },
@@ -68,6 +61,17 @@ void main(List<String> args) {
         FlutterErrorDetails(exception: error, stack: stack),
       );
     },
+  );
+}
+
+@visibleForTesting
+Widget initFailureApp(Object error, StackTrace stack) {
+  commonPrint.log('Startup failed: $error\n$stack', logLevel: LogLevel.error);
+  return InitErrorApp(
+    error: error,
+    stack: stack,
+    onClearData: clearAppData,
+    onExit: _exitAfterInitFailure,
   );
 }
 

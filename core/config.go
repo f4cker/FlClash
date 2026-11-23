@@ -277,6 +277,7 @@ func applyConfig(params *SetupParams) error {
 	setMountState(report, blocked, err != nil && !blocked)
 	publishTailscaleManaged()
 	startTailscaleManaged()
+	currentRuleTable.observe()
 	patchSelectGroup(followMountSelections(params.SelectedMap, report))
 	followTailscaleExitSelections(params.SelectedMap)
 	if blocked {

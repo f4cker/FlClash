@@ -80,6 +80,9 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
   ValueListenable<List<ScaffoldKeyword>> keywordsOf({required bool pinned}) =>
       pinned ? _pinnedKeywords : _keywords;
 
+  /// The filters in use, each a removable chip.
+  ValueListenable<List<ScaffoldKeyword>> get keywords => _keywords;
+
   void _setFilters(List<RecordFilter> filters) {
     value = RecordFilterState(filters: filters, grouping: value.grouping);
     _updateKeywords();
@@ -185,19 +188,7 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
         PopupMenuItem(
           glyph: AppGlyphs.filter,
           label: appLocalizations.filter,
-          subItems: [
-            for (final facet in facets)
-              for (final (index, option) in (options[facet.kind] ?? []).indexed)
-                PopupMenuItem(
-                  label: facet.label(option),
-                  checked: filters.contains(RecordFilter(facet.kind, option)),
-                  keepsOpen: true,
-                  section: index == 0
-                      ? PopupMenuSection(title: facet.kind.title)
-                      : null,
-                  onPressed: () => toggle(RecordFilter(facet.kind, option)),
-                ),
-          ],
+          subItems: optionMenuItems(),
         ),
       if (groupers.isNotEmpty)
         PopupMenuItem(
@@ -217,6 +208,24 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
               ),
           ],
         ),
+    ];
+  }
+
+  /// Every offered value as a toggle, each facet its own section.
+  List<PopupMenuItem> optionMenuItems() {
+    final options = this.options.value;
+    return [
+      for (final facet in facets)
+        for (final (index, option) in (options[facet.kind] ?? []).indexed)
+          PopupMenuItem(
+            label: facet.label(option),
+            checked: filters.contains(RecordFilter(facet.kind, option)),
+            keepsOpen: true,
+            section: index == 0
+                ? PopupMenuSection(title: facet.kind.title)
+                : null,
+            onPressed: () => toggle(RecordFilter(facet.kind, option)),
+          ),
     ];
   }
 

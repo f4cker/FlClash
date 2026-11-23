@@ -360,10 +360,12 @@ class MitmModulesView extends ConsumerWidget {
           ),
         ),
         child: PrismReorderableListView(
-          padding: const EdgeInsets.all(16).copyWith(
-            top: context.contentTopPadding,
-            bottom: 16 + context.bottomInset,
-          ),
+          padding: context.listInsets
+              .page(top: 16, bottom: 16)
+              .copyWith(
+                top: context.contentTopPadding,
+                bottom: 16 + context.bottomInset,
+              ),
           itemCount: modules.length,
           itemBuilder: (_, index) => _MitmModuleRow(
             key: ValueKey(modules[index].id),
@@ -448,7 +450,12 @@ class _MitmModuleRow extends ConsumerWidget {
         child: ItemPositionProvider(
           position: ItemPosition.get(index, total),
           child: DecorationListItem(
-            contentPadding: const EdgeInsets.only(left: 16),
+            contentPadding: EdgeInsetsDirectional.only(
+              start: context.listInsets.leading,
+              end: isUpdating
+                  ? context.listInsets.trailing
+                  : context.listInsets.trailing - Switch.edgeInset,
+            ),
             title: Text(
               module.name,
               maxLines: 1,
@@ -456,41 +463,33 @@ class _MitmModuleRow extends ConsumerWidget {
               style: AppTextStyle.subheadline.of(context, emphasized: true),
             ),
             subtitle: _MitmModuleSummary(module: module),
-            trailing: Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 12,
-                children: [
-                  if (!isUpdating && module.hasPending)
-                    MitmLinkButton(
-                      label: appLocalizations.mitmViewUpdate,
-                      onPressed: () => _viewModuleUpdate(context, ref, module),
-                    )
-                  else if (!isUpdating &&
-                      module.error != null &&
-                      module.isRemote)
-                    MitmLinkButton(
-                      label: appLocalizations.retry,
-                      onPressed: () => _updateModule(context, ref, module),
-                    ),
-                  if (isUpdating)
-                    const Padding(
-                      padding: EdgeInsetsDirectional.only(end: 8),
-                      child: ActivityIndicator(size: 24),
-                    )
-                  else if (module.unloadable)
-                    const Opacity(
-                      opacity: 0.4,
-                      child: Switch(value: false, onChanged: null),
-                    )
-                  else
-                    Switch(
-                      value: module.enabled,
-                      onChanged: (value) => _setEnabled(ref, module, value),
-                    ),
-                ],
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 12,
+              children: [
+                if (!isUpdating && module.hasPending)
+                  MitmLinkButton(
+                    label: appLocalizations.mitmViewUpdate,
+                    onPressed: () => _viewModuleUpdate(context, ref, module),
+                  )
+                else if (!isUpdating && module.error != null && module.isRemote)
+                  MitmLinkButton(
+                    label: appLocalizations.retry,
+                    onPressed: () => _updateModule(context, ref, module),
+                  ),
+                if (isUpdating)
+                  const ActivityIndicator(size: 24)
+                else if (module.unloadable)
+                  const Opacity(
+                    opacity: 0.4,
+                    child: Switch(value: false, onChanged: null),
+                  )
+                else
+                  Switch(
+                    value: module.enabled,
+                    onChanged: (value) => _setEnabled(ref, module, value),
+                  ),
+              ],
             ),
             onPressed: () =>
                 BaseNavigator.push(context, MitmModuleView(id: module.id)),
@@ -723,7 +722,7 @@ class MitmModuleView extends ConsumerWidget {
         child: module == null
             ? const SizedBox()
             : ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                padding: context.listInsets.page().copyWith(
                   top: context.sectionsTopPadding,
                   bottom: 16 + context.bottomInset,
                 ),
@@ -747,6 +746,7 @@ class MitmModuleView extends ConsumerWidget {
                       title: appLocalizations.mitmAttachments,
                       items: _attachmentItems(context, ref, module),
                       footer: appLocalizations.mitmAttachmentsDesc,
+                      last: content == null,
                     ),
                   if (content != null && content.arguments.isNotEmpty)
                     generateSection(
@@ -924,7 +924,7 @@ class _MitmModuleLinesView extends StatelessWidget {
     return Scaffold(
       title: title,
       body: PrismListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+        padding: context.listInsets.page().copyWith(
           top: context.contentTopPadding,
           bottom: 16 + context.bottomInset,
         ),

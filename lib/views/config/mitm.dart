@@ -435,7 +435,7 @@ class _MitmViewState extends ConsumerState<MitmView> {
           child: CustomScrollView(
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                padding: context.listInsets.page().copyWith(
                   top: context.contentTopPadding,
                   bottom: 16 + context.bottomInset,
                 ),
@@ -623,7 +623,7 @@ class MitmCaptureView extends ConsumerWidget {
     return Scaffold(
       title: appLocalizations.httpCapture,
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+        padding: context.listInsets.page().copyWith(
           top: context.sectionsTopPadding,
           bottom: 16 + context.bottomInset,
         ),

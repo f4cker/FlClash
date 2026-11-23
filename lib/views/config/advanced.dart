@@ -83,7 +83,7 @@ class AdvancedConfigView extends ConsumerWidget {
       title: appLocalizations.advancedConfig,
       isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+        padding: context.listInsets.page().copyWith(
           top: context.sectionsTopPadding,
           bottom: 16 + context.bottomInset,
         ),
