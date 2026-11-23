@@ -2,7 +2,11 @@ part of '../action.dart';
 
 typedef _MountRelay = ({List<String> names, List<String> managed});
 
-typedef MountEditIssue = ({String reason, bool blocking});
+typedef MountEditIssue = ({
+  String reason,
+  bool blocking,
+  List<MountSkip> skips,
+});
 
 /// Mount operations run one at a time. Each save writes the relation with a
 /// pending record first, and only a readback, or a target that is not
@@ -737,6 +741,7 @@ class MountAction extends _$MountAction {
           sourceName: sourceName,
         ),
         blocking: true,
+        skips: const <MountSkip>[],
       );
     }
     final skips = switch (preflight.report) {
@@ -751,6 +756,7 @@ class MountAction extends _$MountAction {
         currentAppLocalizations,
       ).join('\n'),
       blocking: false,
+      skips: skips,
     );
   }
 

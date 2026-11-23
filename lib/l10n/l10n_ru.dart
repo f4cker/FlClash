@@ -5521,16 +5521,17 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get mountSkipShortMissing => 'local copy missing';
+  String get mountSkipShortMissing => 'локальная копия отсутствует';
 
   @override
-  String get mountSkipShortReadError => 'local copy unreadable';
+  String get mountSkipShortReadError => 'не удалось прочитать локальную копию';
 
   @override
-  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+  String get mountSkipShortInvalid =>
+      'содержит узлы, которые Flash не может прочитать';
 
   @override
-  String get mountSkipShortUnsupported => 'no mountable node list';
+  String get mountSkipShortUnsupported => 'нет списка узлов для подключения';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

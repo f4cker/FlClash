@@ -5522,7 +5522,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mountSkipShortReadError => 'local copy unreadable';
 
   @override
-  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+  String get mountSkipShortInvalid => 'contains nodes Flash cannot read';
 
   @override
   String get mountSkipShortUnsupported => 'no mountable node list';

@@ -6,6 +6,7 @@ import 'package:fl_clash/common/restore_journal.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/banner.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -174,18 +175,38 @@ Future<MountCardSummary?> mountCardSummary(Ref ref, int targetId) async {
   return mountCardSummaryOf(target, records);
 }
 
-/// By target, the sources its last running apply skipped; a later apply
-/// that runs replaces them, and one that fails leaves them as the Core does.
+/// What the running config skipped, by target; a stopped Core clears it.
 final mountSkipsProvider =
     NotifierProvider<MountSkips, Map<int, List<MountSkip>>>(MountSkips.new);
 
 class MountSkips extends Notifier<Map<int, List<MountSkip>>> {
+  final _announced = <int, Set<MountSkip>>{};
+
   @override
-  Map<int, List<MountSkip>> build() => const {};
+  Map<int, List<MountSkip>> build() {
+    ref.listen(coreStatusProvider, (_, status) {
+      if (status == CoreStatus.disconnected) state = const {};
+    });
+    return const {};
+  }
 
   void record(int targetId, List<MountSkip> skips) {
-    if (const DeepCollectionEquality().equals(state[targetId], skips)) return;
-    state = {...state, targetId: skips};
+    final next = skips.isEmpty
+        ? const <int, List<MountSkip>>{}
+        : {targetId: skips};
+    if (const DeepCollectionEquality().equals(state, next)) return;
+    state = next;
+  }
+
+  bool announce(int targetId, List<MountSkip> skips) {
+    final before = _announced[targetId] ?? const <MountSkip>{};
+    final now = skips.toSet();
+    if (now.isEmpty) {
+      _announced.remove(targetId);
+    } else {
+      _announced[targetId] = now;
+    }
+    return now.difference(before).isNotEmpty;
   }
 }
 

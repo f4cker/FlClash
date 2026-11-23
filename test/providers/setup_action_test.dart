@@ -3022,8 +3022,8 @@ void main() {
       );
     });
 
-    test('an apply that skips a subscription records it, and warns only '
-        'when the user asked for the apply', () async {
+    test('an apply that skips a subscription records it, and warns once '
+        'for each new skip, background applies included', () async {
       final profile = Profile.normal(label: 'p');
       final core = _MockCoreHandlerInterface();
       const sources = [
@@ -3111,13 +3111,15 @@ void main() {
       expect(scoped.read(mountSkipsProvider)[profile.id], [
         (sourceId: 2, status: MountSourceStatus.missing),
       ]);
-      expect(banners(), isEmpty);
-
-      await apply(silence: false);
       expect(banners().single.split('\n'), [
         appLocalizations.mountSkipAppliedLead,
         appLocalizations.mountSourceMissingReason('Air'),
       ]);
+
+      await apply(silence: false);
+      expect(banners(), isEmpty, reason: 'a repeat stays on the card');
+      await apply(silence: true);
+      expect(banners(), isEmpty);
 
       skipped = {2, 3};
       await apply(silence: true, announce: true);
@@ -3139,8 +3141,20 @@ void main() {
       kept = false;
       skipped = {};
       await apply(silence: false);
-      expect(scoped.read(mountSkipsProvider)[profile.id], isEmpty);
+      expect(scoped.read(mountSkipsProvider), isEmpty);
       expect(banners(), isEmpty);
+
+      skipped = {3};
+      await apply(silence: true);
+      expect(banners().single.split('\n'), [
+        appLocalizations.mountSkipAppliedLead,
+        appLocalizations.mountSourceMissingReason('Sea'),
+      ], reason: 'a skip after its recovery is new again');
+
+      final status = scoped.read(coreStatusProvider.notifier);
+      status.value = CoreStatus.connected;
+      status.value = CoreStatus.disconnected;
+      expect(scoped.read(mountSkipsProvider), isEmpty);
     });
 
     test('an apply keeps the profile on the names the Core followed its '

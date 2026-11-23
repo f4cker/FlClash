@@ -356,10 +356,13 @@ void main() {
         ),
       );
     });
-    expect(await action(container).preflightEdit(1, edited), (
-      reason: currentAppLocalizations.mountSourceInvalidReason('Air'),
-      blocking: false,
-    ));
+    final issue = await action(container).preflightEdit(1, edited);
+    expect(
+      issue?.reason,
+      currentAppLocalizations.mountSourceInvalidReason('Air'),
+    );
+    expect(issue?.blocking, isFalse);
+    expect(issue?.skips, [(sourceId: 2, status: MountSourceStatus.invalid)]);
     final call = calls.single;
     expect(call[#base], isNull);
     expect(call[#config], 'built:proxy-groups: []\n');
@@ -390,7 +393,11 @@ void main() {
     final issue = await action(
       container,
     ).preflightEdit(1, Uint8List.fromList(utf8.encode('rules: []')));
-    expect(issue, (reason: 'proxy group G: missing X', blocking: true));
+    expect(issue, (
+      reason: 'proxy group G: missing X',
+      blocking: true,
+      skips: const <MountSkip>[],
+    ));
   });
 
   test('delayed refresh never resurrects a deleted profile', () async {

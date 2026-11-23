@@ -1910,8 +1910,9 @@ class MountPill extends StatelessWidget {
   }
 }
 
-/// Under the card of the running profile: the subscriptions its config left
-/// out, by name and reason for one, as a count opening the list for more.
+/// Under the card of the profile the Core runs: the subscriptions its config
+/// left out, by name and reason for one, as a count for more; either opens
+/// the full names and reasons.
 class MountSkipLine extends ConsumerWidget {
   const MountSkipLine({super.key, required this.profile, required this.skips});
 
@@ -1926,19 +1927,12 @@ class MountSkipLine extends ConsumerWidget {
     final style = AppTextStyle.footnote
         .of(context)
         .copyWith(color: context.colorScheme.warning);
-    if (skips.length == 1) {
-      final skip = skips.single;
-      return Text(
-        appLocalizations.mountCardSkippedOne(
-          nameOf(skip.sourceId),
-          mountSourceShortReason(skip.status, appLocalizations),
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: style,
-      );
-    }
-    final label = appLocalizations.mountCardSkippedMany(skips.length);
+    final label = skips.length == 1
+        ? appLocalizations.mountCardSkippedOne(
+            nameOf(skips.single.sourceId),
+            mountSourceShortReason(skips.single.status, appLocalizations),
+          )
+        : appLocalizations.mountCardSkippedMany(skips.length);
     void showDetails() => dialogs.showAlert(
       title: profile.realLabel,
       message: TextSpan(

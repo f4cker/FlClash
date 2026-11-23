@@ -54,9 +54,9 @@ Future<void> saveProfileEdit(
   }
   final message = switch (mountIssue) {
     null => null,
-    (:final reason, blocking: true) =>
+    (:final reason, blocking: true, skips: _) =>
       '${currentAppLocalizations.profileEditMountRejected}\n$reason',
-    (:final reason, blocking: false) =>
+    (:final reason, blocking: false, skips: _) =>
       '${currentAppLocalizations.profileEditMountSkipLead}\n$reason',
   };
   if (message != null && mountIssue!.blocking) {
@@ -72,6 +72,10 @@ Future<void> saveProfileEdit(
     Navigator.of(context).pop(data);
   }
   if (message != null) {
+    // Told here, so the apply on leaving the editor does not tell it again.
+    ref
+        .read(mountSkipsProvider.notifier)
+        .announce(profileId, mountIssue!.skips);
     dialogs.showBanner(message, level: BannerLevel.warning);
   }
 }

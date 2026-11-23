@@ -5560,16 +5560,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mountSkipShortMissing => 'local copy missing';
+  String get mountSkipShortMissing => 'falta la copia local';
 
   @override
-  String get mountSkipShortReadError => 'local copy unreadable';
+  String get mountSkipShortReadError => 'no se puede leer la copia local';
 
   @override
-  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+  String get mountSkipShortInvalid => 'contiene nodos que Flash no puede leer';
 
   @override
-  String get mountSkipShortUnsupported => 'no mountable node list';
+  String get mountSkipShortUnsupported =>
+      'no ofrece una lista de nodos que se pueda montar';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

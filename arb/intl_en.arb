@@ -1833,7 +1833,7 @@
   "mountCardSkippedMany": "{count} subscriptions skipped · View details",
   "mountSkipShortMissing": "local copy missing",
   "mountSkipShortReadError": "local copy unreadable",
-  "mountSkipShortInvalid": "has nodes Flash cannot read",
+  "mountSkipShortInvalid": "contains nodes Flash cannot read",
   "mountSkipShortUnsupported": "no mountable node list",
   "@mountCardSkippedMany": {
     "placeholders": {

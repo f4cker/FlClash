@@ -243,15 +243,17 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
     return item - rowPadding - trailingRest - mountPillMaxWidth(context) < 96;
   }
 
-  /// Only the running profile's card says what its config skipped.
+  /// Only the card of the profile the Core runs says what its config
+  /// skipped; the extra row goes once every source is back.
   bool _skipLine = false;
 
   bool _watchSkipLine() {
-    final id = widget.currentProfileId;
-    final profile = widget.profiles.where((it) => it.id == id).firstOrNull;
-    return profile != null &&
-        profile.type != ProfileType.custom &&
-        (ref.watch(mountSkipsProvider)[id]?.isNotEmpty ?? false);
+    final skips = ref.watch(mountSkipsProvider);
+    return widget.profiles.any(
+      (profile) =>
+          profile.type != ProfileType.custom &&
+          (skips[profile.id]?.isNotEmpty ?? false),
+    );
   }
 
   double _extentFor(double width) =>
@@ -754,7 +756,7 @@ class ProfileItem extends ConsumerWidget {
     final summary = unreadable ? null : mountSummary?.value;
     final showPill =
         !isCustom && (isSelected || unreadable || (summary?.mounted ?? 0) > 0);
-    final skips = isCustom || !isSelected
+    final skips = isCustom
         ? const <MountSkip>[]
         : ref.watch(mountSkipsProvider)[profile.id] ?? const <MountSkip>[];
     final pill = showPill

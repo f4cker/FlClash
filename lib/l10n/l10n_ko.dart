@@ -5393,16 +5393,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mountSkipShortMissing => 'local copy missing';
+  String get mountSkipShortMissing => '로컬 사본 없음';
 
   @override
-  String get mountSkipShortReadError => 'local copy unreadable';
+  String get mountSkipShortReadError => '로컬 사본을 읽을 수 없음';
 
   @override
-  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+  String get mountSkipShortInvalid => 'Flash가 읽을 수 없는 노드 포함';
 
   @override
-  String get mountSkipShortUnsupported => 'no mountable node list';
+  String get mountSkipShortUnsupported => '마운트할 수 있는 노드 목록 없음';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

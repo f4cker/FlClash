@@ -22,6 +22,7 @@ abstract class MountSource with _$MountSource {
     required int id,
     required String label,
     required String path,
+    @JsonKey(name: 'age-secret-key', includeIfNull: false) String? ageSecretKey,
   }) = _MountSource;
 
   factory MountSource.fromJson(Map<String, Object?> json) =>
@@ -65,6 +66,7 @@ MountSetup mountSetupOf(
           source.id,
           source.realLabel,
           source.lastUpdateDate?.millisecondsSinceEpoch,
+          if (source.ageSecretKey.isNotEmpty) source.ageSecretKey.toMd5(),
         ],
     ],
   });
@@ -77,6 +79,9 @@ MountSetup mountSetupOf(
           id: source.id,
           label: source.realLabel,
           path: join(profilesPath, '${source.id}.yaml'),
+          ageSecretKey: source.ageSecretKey.isEmpty
+              ? null
+              : source.ageSecretKey,
         ),
     ],
   );

@@ -704,8 +704,9 @@ void main() {
 
     Future<ProviderContainer> pumpSkips(
       WidgetTester tester,
-      List<MountSkip> skips,
-    ) async {
+      List<MountSkip> skips, {
+      Profile? running,
+    }) async {
       final container = await pumpProfiles(
         tester,
         profiles: [target, other, air, sea],
@@ -715,35 +716,42 @@ void main() {
           other.id: () async => const MountCardSummary(mounted: 1, failed: 0),
         },
       );
-      container.read(mountSkipsProvider.notifier)
-        ..record(target.id, skips)
-        ..record(other.id, [
-          (sourceId: sea.id, status: MountSourceStatus.invalid),
-        ]);
+      container
+          .read(mountSkipsProvider.notifier)
+          .record((running ?? target).id, skips);
       await tester.pumpAndSettle();
       return container;
     }
 
-    testWidgets('names one skipped subscription with a short reason, on the '
-        'running profile only', (tester) async {
+    testWidgets('names one skipped subscription with a short reason, and '
+        'opens its full reason when tapped', (tester) async {
       final l10n = currentAppLocalizations;
       await pumpSkips(tester, [
         (sourceId: air.id, status: MountSourceStatus.missing),
       ]);
 
-      expect(
-        find.text(l10n.mountCardSkippedOne('Air', l10n.mountSkipShortMissing)),
-        findsOneWidget,
+      final line = find.text(
+        l10n.mountCardSkippedOne('Air', l10n.mountSkipShortMissing),
       );
+      expect(line, findsOneWidget);
       expect(find.byType(MountSkipLine), findsOneWidget);
       expect(tester.widget<MountPill>(pillOf('target')).skipped, isTrue);
       expect(tester.widget<MountPill>(pillOf('other')).skipped, isFalse);
       expect(tester.takeException(), isNull);
+
+      await tester.tap(line);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          l10n.mountSourceMissingReason('Air'),
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('counts several and lists each with its reason when tapped', (
-      tester,
-    ) async {
+    testWidgets('counts several and lists each with its reason, wrapped and '
+        'scrolling, when tapped', (tester) async {
       final l10n = currentAppLocalizations;
       await pumpSkips(tester, [
         (sourceId: air.id, status: MountSourceStatus.missing),
@@ -753,24 +761,54 @@ void main() {
       await tester.tap(find.text(l10n.mountCardSkippedMany(2)));
       await tester.pumpAndSettle();
 
+      final details = find.textContaining(
+        '${l10n.mountSourceMissingReason('Air')}\n'
+        '${l10n.mountSourceUnsupportedReason('Sea')}',
+        findRichText: true,
+      );
+      expect(details, findsOneWidget);
       expect(
-        find.textContaining(
-          '${l10n.mountSourceMissingReason('Air')}\n'
-          '${l10n.mountSourceUnsupportedReason('Sea')}',
-          findRichText: true,
+        find.ancestor(
+          of: details,
+          matching: find.byType(SingleChildScrollView),
         ),
         findsOneWidget,
       );
     });
 
-    testWidgets('goes once an apply runs with every subscription', (
-      tester,
-    ) async {
+    testWidgets('sits on the card of the profile the Core runs, not the '
+        'selected one', (tester) async {
+      await pumpSkips(tester, [
+        (sourceId: sea.id, status: MountSourceStatus.invalid),
+      ], running: other);
+
+      expect(find.byType(MountSkipLine), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('other'),
+            matching: find.byType(ProfileItem),
+          ),
+          matching: find.byType(MountSkipLine),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<MountPill>(pillOf('target')).skipped, isFalse);
+      expect(tester.widget<MountPill>(pillOf('other')).skipped, isTrue);
+    });
+
+    testWidgets('goes, with its row, once an apply runs with every '
+        'subscription', (tester) async {
       final l10n = currentAppLocalizations;
       final container = await pumpSkips(tester, [
         (sourceId: air.id, status: MountSourceStatus.readError),
       ]);
       expect(find.byType(MountSkipLine), findsOneWidget);
+      final card = find.ancestor(
+        of: find.text('target'),
+        matching: find.byType(ProfileItem),
+      );
+      final withLine = tester.getSize(card).height;
 
       container.read(mountSkipsProvider.notifier).record(target.id, const []);
       await tester.pumpAndSettle();
@@ -783,6 +821,7 @@ void main() {
         findsNothing,
       );
       expect(tester.widget<MountPill>(pillOf('target')).skipped, isFalse);
+      expect(tester.getSize(card).height, lessThan(withLine));
     });
   });
 }

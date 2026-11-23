@@ -5567,16 +5567,18 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get mountSkipShortMissing => 'local copy missing';
+  String get mountSkipShortMissing => 'copie locale introuvable';
 
   @override
-  String get mountSkipShortReadError => 'local copy unreadable';
+  String get mountSkipShortReadError => 'copie locale illisible';
 
   @override
-  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+  String get mountSkipShortInvalid =>
+      'contient des nœuds que Flash ne peut pas lire';
 
   @override
-  String get mountSkipShortUnsupported => 'no mountable node list';
+  String get mountSkipShortUnsupported =>
+      'aucune liste de nœuds pouvant être montée';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

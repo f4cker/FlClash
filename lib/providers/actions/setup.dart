@@ -91,7 +91,7 @@ class SetupAction extends _$SetupAction {
   var _pendingForceApply = false;
   List<String> _lostMountSelections = const [];
 
-  /// The applies of a launch are not the user's, so warn of no skip.
+  /// The applies of a launch are not the user's, so they tell no skip.
   bool _launching = false;
 
   /// Groups whose mounted selection the last apply dropped.
@@ -993,7 +993,7 @@ class SetupAction extends _$SetupAction {
       _setupScheduler.run(task);
 
   // Failed builds and cancelled reviews never reach the Core setup step.
-  /// [announceMountSkips] warns of skipped subscriptions even when silent.
+  /// [announceMountSkips] warns of skipped subscriptions told before too.
   Future<bool> applyProfile({
     bool silence = false,
     bool force = false,
@@ -1407,10 +1407,13 @@ class SetupAction extends _$SetupAction {
     );
   }
 
+  /// A skip is told once, by any apply, until it recovers; [force] tells it
+  /// again and [quiet] only notes it.
   Future<void> _afterMountedApply(
     MountSetup mounts,
     Map<String, String> sent, {
-    required bool announce,
+    required bool force,
+    required bool quiet,
   }) async {
     final MountRuntimeState state;
     try {
@@ -1427,8 +1430,10 @@ class SetupAction extends _$SetupAction {
         report.target == mounts.target &&
         report.revision == mounts.revision) {
       final skips = mountSkipsOf(report);
-      ref.read(mountSkipsProvider.notifier).record(mounts.target, skips);
-      if (announce && skips.isNotEmpty) {
+      final notifier = ref.read(mountSkipsProvider.notifier)
+        ..record(mounts.target, skips);
+      final fresh = notifier.announce(mounts.target, skips);
+      if (skips.isNotEmpty && (force || fresh && !quiet)) {
         dialogs.showBanner(
           [
             currentAppLocalizations.mountSkipAppliedLead,
@@ -2158,7 +2163,8 @@ class SetupAction extends _$SetupAction {
           await _afterMountedApply(
             mounts,
             setupParams.selectedMap,
-            announce: announceMountSkips || !silence && !_launching,
+            force: announceMountSkips,
+            quiet: _launching,
           );
         } else if (profile != null) {
           ref.read(mountSkipsProvider.notifier).record(profile.id, const []);

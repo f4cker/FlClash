@@ -9417,7 +9417,7 @@ abstract class AppLocalizations {
   /// No description provided for @mountSkipShortInvalid.
   ///
   /// In en, this message translates to:
-  /// **'has nodes Flash cannot read'**
+  /// **'contains nodes Flash cannot read'**
   String get mountSkipShortInvalid;
 
   /// No description provided for @mountSkipShortUnsupported.

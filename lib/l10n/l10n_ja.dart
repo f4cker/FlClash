@@ -5322,16 +5322,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get mountSkipShortMissing => 'local copy missing';
+  String get mountSkipShortMissing => 'ローカルコピーが見つかりません';
 
   @override
-  String get mountSkipShortReadError => 'local copy unreadable';
+  String get mountSkipShortReadError => 'ローカルコピーを読み取れません';
 
   @override
-  String get mountSkipShortInvalid => 'has nodes Flash cannot read';
+  String get mountSkipShortInvalid => 'Flash が読み取れないノードを含みます';
 
   @override
-  String get mountSkipShortUnsupported => 'no mountable node list';
+  String get mountSkipShortUnsupported => 'マウントできるノード一覧がありません';
 
   @override
   String get mountCardUnreadable => 'Could not read mount status';

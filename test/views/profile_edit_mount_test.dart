@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/profiles/edit.dart';
@@ -30,10 +31,10 @@ class _Preflight extends MountAction {
 void main() {
   final data = Uint8List.fromList('proxy-groups: []'.codeUnits);
 
-  Future<({List<Uint8List?> popped, List<String> printed})> save(
-    WidgetTester tester,
-    Object? issue,
-  ) async {
+  Future<
+    ({List<Uint8List?> popped, List<String> printed, ProviderContainer scope})
+  >
+  save(WidgetTester tester, Object? issue) async {
     final popped = <Uint8List?>[];
     final printed = <String>[];
     final original = debugPrint;
@@ -78,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('save'));
     await tester.pumpAndSettle();
-    return (popped: popped, printed: printed);
+    return (popped: popped, printed: printed, scope: container);
   }
 
   String? banner(List<String> printed) => printed
@@ -92,6 +93,7 @@ void main() {
     final result = await save(tester, (
       reason: 'proxy group G: missing X',
       blocking: true,
+      skips: const <MountSkip>[],
     ));
     expect(result.popped, isEmpty);
     expect(find.text('save'), findsOneWidget);
@@ -105,16 +107,26 @@ void main() {
     expect(banner(result.printed), isNull);
   });
 
-  testWidgets('a subscription problem saves the edit and warns', (
+  testWidgets('a subscription problem saves the edit and warns once', (
     tester,
   ) async {
     final reason = currentAppLocalizations.mountSourceMissingReason('Air');
-    final result = await save(tester, (reason: reason, blocking: false));
+    const skips = [(sourceId: 2, status: MountSourceStatus.missing)];
+    final result = await save(tester, (
+      reason: reason,
+      blocking: false,
+      skips: skips,
+    ));
     expect(result.popped, [data]);
     expect(find.text('save'), findsNothing);
     expect(
       banner(result.printed),
       '${currentAppLocalizations.profileEditMountSkipLead}\n$reason',
+    );
+    expect(
+      result.scope.read(mountSkipsProvider.notifier).announce(1, skips),
+      isFalse,
+      reason: 'the apply on leaving the editor must not tell it again',
     );
   });
 
