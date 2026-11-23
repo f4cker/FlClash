@@ -673,6 +673,32 @@ void main() {
       },
     );
 
+    testWidgets(
+      'turning the setting off mid-check drops the automatic prompt',
+      (tester) async {
+        await pump(tester);
+        action.checkHold = Completer<void>();
+        final automatic = action.autoCheckUpdate();
+        await tester.pump();
+        container
+            .read(appSettingProvider.notifier)
+            .update((state) => state.copyWith(autoCheckUpdate: false));
+        action.checkHold!.complete();
+        await tester.pumpAndSettle();
+        expect(await automatic, BackgroundCheckOutcome.completed);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(container.read(availableUpdateStateProvider), isNotNull);
+        final manual = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        await dismissDialog(tester);
+        await manual;
+      },
+    );
+
     group('silent launch', () {
       late ValueNotifier<bool> shown;
       late _IdleTimer timer;

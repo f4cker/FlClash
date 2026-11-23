@@ -202,6 +202,30 @@ void main() {
       expect(checks, 2, reason: 'the success starts the thirty minutes');
     });
 
+    test('a request dropped by the back-off retries when it ends', () async {
+      outcome = BackgroundCheckOutcome.failed;
+      scheduler.start();
+      await pumpEventQueue();
+      outcome = BackgroundCheckOutcome.completed;
+      clock.advance(const Duration(minutes: 1));
+      scheduler.requestCheck('network');
+      await pumpEventQueue();
+      expect(checks, 1);
+      final retry = timers.pendingOneShots.single;
+      expect(retry.duration, const Duration(minutes: 2));
+      clock.advance(const Duration(seconds: 30));
+      scheduler.requestCheck('network');
+      scheduler.requestCheck('network', delay: const Duration(seconds: 8));
+      timers.single.fire();
+      await pumpEventQueue();
+      expect(timers.oneShot, [same(retry)], reason: 'no second retry');
+      clock.advance(const Duration(seconds: 90));
+      retry.fire();
+      await pumpEventQueue();
+      expect(checks, 2);
+      expect(timers.pendingOneShots, isEmpty);
+    });
+
     test('a thrown check counts as a failure', () async {
       scheduler = build(
         check: () async {

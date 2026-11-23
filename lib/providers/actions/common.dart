@@ -421,7 +421,10 @@ class CommonAction extends _$CommonAction {
   }) async {
     if (result is UpdateCheckSuperseded) return;
     if (!isUser && result is UpdateAvailable) {
-      if (!_mayOfferAutomatically(result)) return;
+      if (!ref.read(appSettingProvider).autoCheckUpdate ||
+          !_mayOfferAutomatically(result)) {
+        return;
+      }
       if (!_promptVisible) {
         _offerWhenVisible = true;
         return;

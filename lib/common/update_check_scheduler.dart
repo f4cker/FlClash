@@ -59,7 +59,11 @@ class UpdateCheckScheduler {
       unawaited(_run(reason));
       return;
     }
-    if (_delayed != null) return;
+    _arm(reason, delay);
+  }
+
+  void _arm(String reason, Duration delay) {
+    if (_disposed || _timer == null || _delayed != null) return;
     _delayed = _oneShotTimer(delay, () {
       _delayed = null;
       unawaited(_run(reason));
@@ -77,8 +81,10 @@ class UpdateCheckScheduler {
     // A Timer runs on the monotonic clock, which stops while the Mac sleeps;
     // the gaps are measured on the wall clock, which does not.
     final started = _now();
-    if (_within(started, _lastSuccess, minGap) ||
-        _within(started, _lastFailure, failureBackoff)) {
+    if (_within(started, _lastSuccess, minGap)) return;
+    final failed = _lastFailure;
+    if (failed != null && _within(started, failed, failureBackoff)) {
+      _arm(reason, failed.add(failureBackoff).difference(started));
       return;
     }
     _checking = true;
