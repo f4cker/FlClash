@@ -269,15 +269,40 @@ func mountNodesDir() string {
 	return filepath.Join(constant.Path.HomeDir(), "mount-nodes")
 }
 
-// Decrypted nodes a killed Core left behind; no provider of a fresh process
-// watches any of them yet.
+// A setup without base or mounts reloads config.yaml, so its inputs stay.
 func clearMountNodes() {
 	dir := mountNodesDir()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
 	}
+	kept := runningMountInputs()
 	for _, entry := range entries {
-		_ = os.RemoveAll(filepath.Join(dir, entry.Name()))
+		path := filepath.Join(dir, entry.Name())
+		if !kept[path] {
+			_ = os.RemoveAll(path)
+		}
 	}
+}
+
+func runningMountInputs() map[string]bool {
+	buf, err := os.ReadFile(runningConfigPath())
+	if err == nil {
+		buf, err = age.DecryptBytes(buf)
+	}
+	var running struct {
+		Providers map[string]struct {
+			Path string `yaml:"path"`
+		} `yaml:"proxy-providers"`
+	}
+	if err != nil || yaml.Unmarshal(buf, &running) != nil {
+		return nil
+	}
+	kept := map[string]bool{}
+	for name, provider := range running.Providers {
+		if strings.HasPrefix(name, mountProviderPrefix) && provider.Path != "" {
+			kept[filepath.Clean(constant.Path.Resolve(provider.Path))] = true
+		}
+	}
+	return kept
 }
