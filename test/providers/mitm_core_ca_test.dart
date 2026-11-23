@@ -662,8 +662,11 @@ void main() {
       setMitm(legacyMitm());
       await migration().generate();
       await migration().installAndSwitch();
-      expect((await migration().oldCertificate())?.fingerprint, _legacyFp);
-      expect(await migration().removeOld(), isTrue);
+      expect(
+        (await migration().oldCertificates()).map((ca) => ca.fingerprint),
+        [_legacyFp],
+      );
+      expect(await migration().removeOld(_legacyFp), isTrue);
       final deletes = calls.where((call) => call.method == 'deleteLegacy');
       expect(deletes.single.arguments, {'fingerprint': _legacyFp});
     });
@@ -704,7 +707,9 @@ void main() {
           _pendingFp,
         ]);
         expect(mitm().coreCa?.fingerprint, _pendingFp);
-        expect(mitm().retiredCaCertificate?.fingerprint, _coreFp);
+        expect(mitm().retiredCaCertificates.map((ca) => ca.fingerprint), [
+          _coreFp,
+        ]);
         expect(
           container.read(mitmSetupProvider)!['ca-fingerprint'],
           _pendingFp,
@@ -759,16 +764,53 @@ void main() {
         await started();
         expect(await migration().verify(), MitmMigrationOutcome.switched);
         expect(passphrases.values[_coreFp], 'core secret');
-        expect(mitm().retiredCaCertificate, isNull);
+        expect(mitm().retiredCaCertificates, isEmpty);
       },
     );
 
     test('the CA in use is never offered as the old one', () async {
       legacy = null;
       setMitm(
-        coreMitm().copyWith(retiredCaCertificate: _cert(_coreFp, 'Flash core')),
+        coreMitm().copyWith(
+          retiredCaCertificates: [_cert(_coreFp, 'Flash core')],
+        ),
       );
-      expect(await migration().oldCertificate(), isNull);
+      expect(await migration().oldCertificates(), isEmpty);
+    });
+
+    test('a second switch keeps the CA retired before it listed', () async {
+      legacy = null;
+      passphrases.values[_pendingFp] = 'pending secret';
+      setMitm(
+        coreMitm().copyWith(
+          pendingCaP12: _pendingP12,
+          pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
+          retiredCaCertificates: [_cert('EA:RL:IE:R0', 'Flash earlier')],
+        ),
+      );
+      await started();
+      expect(await migration().verify(), MitmMigrationOutcome.switched);
+      expect(
+        (await migration().oldCertificates()).map((ca) => ca.fingerprint),
+        ['EA:RL:IE:R0', _coreFp],
+      );
+      expect(await migration().removeOld('EA:RL:IE:R0'), isTrue);
+      expect(mitm().retiredCaCertificates.map((ca) => ca.fingerprint), [
+        _coreFp,
+      ]);
+      expect(await migration().removeOld('NO:NE'), isFalse);
+    });
+
+    test('the legacy CA and a retired Core CA are both listed', () async {
+      setMitm(
+        coreMitm().copyWith(
+          retiredCaCertificates: [_cert('EA:RL:IE:R0', 'Flash earlier')],
+        ),
+      );
+      expect(
+        (await migration().oldCertificates()).map((ca) => ca.fingerprint),
+        [_legacyFp, 'EA:RL:IE:R0'],
+      );
     });
 
     test('with no CA at all the first one is in use at once', () async {

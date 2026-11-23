@@ -62,6 +62,11 @@ final _fresh = _legacy.copyWith(
   subject: 'Flash CA 9ABCDEF0',
 );
 
+final _earlier = _legacy.copyWith(
+  fingerprint: '0F:1E:2D:3C:4B:5A:69:78:87:96:A5:B4:C3:D2:E1:F0',
+  subject: 'Flash CA 87654321',
+);
+
 final _p12 = MitmCaP12('Q0FQMTI=');
 
 typedef _State = ({
@@ -69,7 +74,7 @@ typedef _State = ({
   Mitm mitm,
   MitmCoreCaTrust trust,
   bool running,
-  MitmCertificate? old,
+  List<MitmCertificate> old,
 });
 
 final _states = <String, _State>{
@@ -78,42 +83,42 @@ final _states = <String, _State>{
     mitm: const Mitm(enable: true),
     trust: MitmCoreCaTrust.off,
     running: false,
-    old: null,
+    old: const [],
   ),
   'pending': (
     shown: _legacy,
     mitm: Mitm(enable: true, pendingCaP12: _p12, pendingCaCertificate: _fresh),
     trust: MitmCoreCaTrust.off,
     running: false,
-    old: null,
+    old: const [],
   ),
   'verifying': (
     shown: _legacy,
     mitm: Mitm(enable: true, pendingCaP12: _p12, pendingCaCertificate: _fresh),
     trust: MitmCoreCaTrust.off,
     running: true,
-    old: null,
+    old: const [],
   ),
   'available': (
     shown: _legacy,
     mitm: const Mitm(),
     trust: MitmCoreCaTrust.off,
     running: false,
-    old: null,
+    old: const [],
   ),
   'switched': (
     shown: _fresh,
     mitm: Mitm(enable: true, caP12: _p12, caCertificate: _fresh),
     trust: MitmCoreCaTrust(MitmCoreCaStatus.leased, leased: _fresh.fingerprint),
     running: false,
-    old: _legacy,
+    old: [_legacy, _earlier],
   ),
   'untrusted': (
     shown: _fresh,
     mitm: Mitm(enable: true, caP12: _p12, caCertificate: _fresh),
     trust: const MitmCoreCaTrust(MitmCoreCaStatus.untrusted),
     running: false,
-    old: null,
+    old: const [],
   ),
 };
 
@@ -279,7 +284,8 @@ void main() {
             case 'switched':
               expect(find.text(l.mitmOldCaSection), findsOneWidget);
               expect(find.text(_legacy.subject), findsOneWidget);
-              expect(find.text(l.mitmRemoveOldCa), findsOneWidget);
+              expect(find.text(_earlier.subject), findsOneWidget);
+              expect(find.text(l.mitmRemoveOldCa), findsNWidgets(2));
               expect(find.text(l.mitmDeleteCurrentCa), findsOneWidget);
               expect(
                 find.text('${l.mitmTrustReady}\n${l.mitmRunActive}'),
@@ -367,7 +373,7 @@ void main() {
       overrides: [
         mitmCoreCaProvider.overrideWith(() => _FixedLease(state.trust)),
         mitmCaMigrationProvider.overrideWith(() => _FixedMigration(true)),
-        mitmOldCaProvider.overrideWith((ref) async => null),
+        mitmOldCaProvider.overrideWith((ref) async => const []),
       ],
       child: SingleChildScrollView(
         child: MitmCoreCaSection(
@@ -557,7 +563,7 @@ void main() {
         ),
         state: state,
       );
-      expect(find.text(l.mitmRemoveOldCa), findsOneWidget);
+      expect(find.text(l.mitmRemoveOldCa), findsNWidgets(2));
     });
 
     testWidgets('review-delete-confirm-${size.tag}', (tester) async {

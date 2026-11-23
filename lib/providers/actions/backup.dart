@@ -166,7 +166,7 @@ class BackupAction extends _$BackupAction {
                     caCertificate: kept ? mitm.caCertificate : null,
                     pendingCaP12: null,
                     pendingCaCertificate: null,
-                    retiredCaCertificate: null,
+                    retiredCaCertificates: const [],
                   ),
                 ),
               ),
@@ -251,17 +251,14 @@ class BackupAction extends _$BackupAction {
         passphrase.isNotEmpty &&
         carried.fingerprint != local.coreCa?.fingerprint) {
       final dropped = local.pendingCaCertificate?.fingerprint;
+      final next = restored.copyWith(
+        trustedFingerprint: null,
+        pendingCaP12: null,
+        pendingCaCertificate: null,
+        retiredCaCertificates: local.retiredCaCertificates,
+      );
       return (
-        restored.copyWith(
-          trustedFingerprint: null,
-          pendingCaP12: null,
-          pendingCaCertificate: null,
-          retiredCaCertificate:
-              local.coreCa != null &&
-                  local.coreCa!.fingerprint != carried.fingerprint
-              ? local.coreCa
-              : local.retiredCaCertificate,
-        ),
+        next.copyWith(retiredCaCertificates: next.retiring(local.coreCa)),
         (
           fingerprint: carried.fingerprint,
           passphrase: passphrase,
@@ -275,7 +272,7 @@ class BackupAction extends _$BackupAction {
         caCertificate: local.caCertificate,
         pendingCaP12: local.pendingCaP12,
         pendingCaCertificate: local.pendingCaCertificate,
-        retiredCaCertificate: local.retiredCaCertificate,
+        retiredCaCertificates: local.retiredCaCertificates,
         trustedFingerprint: local.trustedFingerprint,
       ),
       null,

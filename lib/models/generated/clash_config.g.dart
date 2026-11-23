@@ -1090,11 +1090,11 @@ _Mitm _$MitmFromJson(Map<String, dynamic> json) => _Mitm(
       : MitmCertificate.fromJson(
           json['pending-ca-certificate'] as Map<String, dynamic>,
         ),
-  retiredCaCertificate: json['retired-ca-certificate'] == null
-      ? null
-      : MitmCertificate.fromJson(
-          json['retired-ca-certificate'] as Map<String, dynamic>,
-        ),
+  retiredCaCertificates:
+      (_readRetiredCas(json, 'retired-ca-certificates') as List<dynamic>?)
+          ?.map((e) => MitmCertificate.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$MitmToJson(_Mitm instance) => <String, dynamic>{
@@ -1110,5 +1110,5 @@ Map<String, dynamic> _$MitmToJson(_Mitm instance) => <String, dynamic>{
   'ca-certificate': ?instance.caCertificate,
   'pending-ca-p12': ?MitmCaP12.toJsonValue(instance.pendingCaP12),
   'pending-ca-certificate': ?instance.pendingCaCertificate,
-  'retired-ca-certificate': ?instance.retiredCaCertificate,
+  'retired-ca-certificates': ?_retiredCasToJson(instance.retiredCaCertificates),
 };

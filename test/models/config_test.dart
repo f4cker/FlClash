@@ -617,6 +617,27 @@ void main() {
         expect(const Mitm(h2: false).coreJson['h2'], isFalse);
       });
 
+      test('a single retired CA saved before the list reads as one', () {
+        final ca = MitmCertificate(
+          pem: 'PEM',
+          fingerprint: 'AA:AA',
+          subject: 'Flash CA',
+          notBefore: DateTime.utc(2026),
+          notAfter: DateTime.utc(2027),
+        );
+        final json = jsonDecode(jsonEncode(ca)) as Map<String, Object?>;
+        final mitm = Mitm.fromJson({'retired-ca-certificate': json});
+
+        expect(mitm.retiredCaCertificates.single.fingerprint, 'AA:AA');
+        expect(
+          Mitm.fromJson(
+            jsonDecode(jsonEncode(mitm)) as Map<String, Object?>,
+          ).retiredCaCertificates.single.fingerprint,
+          'AA:AA',
+        );
+        expect(Mitm.fromJson(const {}).retiredCaCertificates, isEmpty);
+      });
+
       test('a legacy h2: false, never a user choice, is not read back', () {
         final mitm = Mitm.fromJson({'enable': true, 'h2': false});
 

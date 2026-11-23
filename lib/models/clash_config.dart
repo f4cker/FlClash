@@ -73,6 +73,17 @@ const privateRouteAddress = [
   'ff00::/8',
 ];
 
+// Configs before the list kept a single retired CA.
+Object? _readRetiredCas(Map<dynamic, dynamic> json, String key) =>
+    json[key] ??
+    switch (json['retired-ca-certificate']) {
+      final Object single => [single],
+      null => null,
+    };
+
+List<MitmCertificate>? _retiredCasToJson(List<MitmCertificate> cas) =>
+    cas.isEmpty ? null : cas;
+
 Object? _readIncludeAll(Map<dynamic, dynamic> json, String key) {
   return json['include-all'] == true ? true : json[key];
 }
@@ -2276,8 +2287,14 @@ abstract class Mitm with _$Mitm {
     MitmCaP12? pendingCaP12,
     @JsonKey(name: 'pending-ca-certificate', includeIfNull: false)
     MitmCertificate? pendingCaCertificate,
-    @JsonKey(name: 'retired-ca-certificate', includeIfNull: false)
-    MitmCertificate? retiredCaCertificate,
+    @JsonKey(
+      name: 'retired-ca-certificates',
+      readValue: _readRetiredCas,
+      includeIfNull: false,
+      toJson: _retiredCasToJson,
+    )
+    @Default([])
+    List<MitmCertificate> retiredCaCertificates,
   }) = _Mitm;
 
   factory Mitm.fromJson(Map<String, Object?> json) => _$MitmFromJson(json);
@@ -2346,6 +2363,14 @@ extension MitmExt on Mitm {
 
   /// Null until a CA is stored here; the keychain CA signs until then.
   MitmCertificate? get coreCa => caP12 == null ? null : caCertificate;
+
+  List<MitmCertificate> retiring(MitmCertificate? ca) {
+    final seen = <String>{?coreCa?.fingerprint.toUpperCase()};
+    return [
+      for (final old in [...retiredCaCertificates, ?ca])
+        if (seen.add(old.fingerprint.toUpperCase())) old,
+    ];
+  }
 
   Mitm get withoutCaSecrets => copyWith(caP12: null, pendingCaP12: null);
 

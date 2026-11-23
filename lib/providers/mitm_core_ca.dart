@@ -648,16 +648,16 @@ class MitmCaMigration extends Notifier<bool> {
           _sameFingerprint(current?.fingerprint, pending.fingerprint)
           ? null
           : current;
-      _update(
-        (mitm) => mitm.copyWith(
+      _update((mitm) {
+        final next = mitm.copyWith(
           caP12: p12,
           caCertificate: pending,
           pendingCaP12: null,
           pendingCaCertificate: null,
           trustedFingerprint: pending.fingerprint,
-          retiredCaCertificate: retired ?? mitm.retiredCaCertificate,
-        ),
-      );
+        );
+        return next.copyWith(retiredCaCertificates: next.retiring(retired));
+      });
       lease.adopt(pending.fingerprint);
       if (retired != null) await _forgetPassphrase(retired.fingerprint);
       return MitmMigrationOutcome.switched;
@@ -691,24 +691,23 @@ class MitmCaMigration extends Notifier<bool> {
     }
   });
 
-  /// The legacy keychain CA, or a Core CA replaced since.
-  Future<MitmCertificate?> oldCertificate() async {
+  /// The legacy keychain CA and the Core CAs replaced since, each once.
+  Future<List<MitmCertificate>> oldCertificates() async {
     final mitm = _mitm;
-    if (mitm.coreCa == null) return null;
+    if (mitm.coreCa == null) return const [];
     final legacy = await ref.read(mitmLegacyCaProvider.future);
-    if (legacy != null &&
-        !_sameFingerprint(legacy.fingerprint, mitm.coreCa?.fingerprint)) {
-      return legacy;
-    }
-    final retired = mitm.retiredCaCertificate;
-    if (_sameFingerprint(retired?.fingerprint, mitm.coreCa?.fingerprint)) {
-      return null;
-    }
-    return retired;
+    return mitm
+        .copyWith(
+          retiredCaCertificates: [?legacy, ...mitm.retiredCaCertificates],
+        )
+        .retiring(null);
   }
 
-  Future<bool> removeOld() => _step(() async {
-    final old = await oldCertificate();
+  Future<bool> removeOld(String fingerprint) => _step(() async {
+    MitmCertificate? old;
+    for (final each in await oldCertificates()) {
+      if (_sameFingerprint(each.fingerprint, fingerprint)) old = each;
+    }
     if (old == null) return false;
     final legacy = await ref.read(mitmLegacyCaProvider.future);
     if (legacy != null &&
@@ -728,7 +727,14 @@ class MitmCaMigration extends Notifier<bool> {
       );
       return false;
     }
-    _update((mitm) => mitm.copyWith(retiredCaCertificate: null));
+    _update(
+      (mitm) => mitm.copyWith(
+        retiredCaCertificates: [
+          for (final each in mitm.retiredCaCertificates)
+            if (!_sameFingerprint(each.fingerprint, fingerprint)) each,
+        ],
+      ),
+    );
     return true;
   });
 }

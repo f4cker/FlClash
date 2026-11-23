@@ -1521,6 +1521,7 @@ void main() {
       expect(mitm['ca-p12'], isNull);
       expect(mitm['ca-certificate'], isNull);
       expect(mitm['pending-ca-p12'], isNull);
+      expect(mitm['retired-ca-certificates'], isNull);
       expect(configMap[mitmCaPassphraseKey], isNull);
       expect(jsonEncode(configMap), isNot(contains('secret AA:AA')));
     });
@@ -1659,11 +1660,39 @@ void main() {
       final mitm = target.read(patchClashConfigProvider).mitm;
       expect(mitm.coreCa?.fingerprint, 'AA:AA');
       expect(mitm.pendingCaCertificate, isNull);
-      expect(mitm.retiredCaCertificate?.fingerprint, 'BB:BB');
+      expect(mitm.retiredCaCertificates.map((ca) => ca.fingerprint), ['BB:BB']);
       expect(passphrases.values, {
         'AA:AA': 'secret AA:AA',
         'BB:BB': 'secret BB:BB',
       });
+    });
+
+    test('a restored CA keeps a CA retired here before', () async {
+      final configMap = await actionOf(
+        withCa('AA:AA'),
+      ).backupConfigMap(includeMitmCa: true);
+      final target = withCa('BB:BB', p12: 'BBBB');
+      target
+          .read(patchClashConfigProvider.notifier)
+          .update(
+            (state) => state.copyWith(
+              mitm: state.mitm.copyWith(
+                retiredCaCertificates: [_ca('OL:DD'), _ca('AA:AA')],
+              ),
+            ),
+          );
+      actionOf(target).promptMitmCaTrust = () async {};
+
+      await actionOf(
+        target,
+      ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all);
+
+      final mitm = target.read(patchClashConfigProvider).mitm;
+      expect(mitm.coreCa?.fingerprint, 'AA:AA');
+      expect(mitm.retiredCaCertificates.map((ca) => ca.fingerprint), [
+        'OL:DD',
+        'BB:BB',
+      ]);
     });
 
     test('a backup of the same CA keeps the p12 and passphrase here', () async {

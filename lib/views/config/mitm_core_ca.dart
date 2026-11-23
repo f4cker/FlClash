@@ -135,7 +135,7 @@ Future<void> _removeOld(WidgetRef ref, MitmCertificate old) async {
   );
   if (!confirm) return;
   final removed = await globalState.loadingRun<bool>(
-    ref.read(mitmCaMigrationProvider.notifier).removeOld,
+    () => ref.read(mitmCaMigrationProvider.notifier).removeOld(old.fingerprint),
     tag: LoadingTag.mitm,
     title: l.mitmRemoveOldCa,
   );
@@ -144,14 +144,16 @@ Future<void> _removeOld(WidgetRef ref, MitmCertificate old) async {
   }
 }
 
-final mitmOldCaProvider = FutureProvider.autoDispose<MitmCertificate?>((ref) {
+final mitmOldCaProvider = FutureProvider.autoDispose<List<MitmCertificate>>((
+  ref,
+) {
   ref.watch(
     patchClashConfigProvider.select(
-      (state) => (state.mitm.coreCa, state.mitm.retiredCaCertificate),
+      (state) => (state.mitm.coreCa, state.mitm.retiredCaCertificates),
     ),
   );
   ref.watch(mitmLegacyCaProvider);
-  return ref.read(mitmCaMigrationProvider.notifier).oldCertificate();
+  return ref.read(mitmCaMigrationProvider.notifier).oldCertificates();
 });
 
 /// A text, then the certificate it is about by name and full fingerprint.
@@ -315,7 +317,9 @@ class MitmCoreCaSection extends ConsumerWidget {
     final keepsRoot = ref.watch(safeModeProvider);
     final mitm = ref.watch(patchClashConfigProvider.select((s) => s.mitm));
     final trust = ref.watch(mitmCoreCaProvider);
-    final old = keepsRoot ? null : ref.watch(mitmOldCaProvider).value;
+    final old = keepsRoot
+        ? const <MitmCertificate>[]
+        : ref.watch(mitmOldCaProvider).value ?? const [];
     final running = ref.watch(mitmCaMigrationProvider);
     final footer = [
       mitmCoreCaStatusText(l, trust),
@@ -328,14 +332,16 @@ class MitmCoreCaSection extends ConsumerWidget {
           items: [..._rows(context, ref, l, mitm, trust, keepsRoot: keepsRoot)],
           footer: footer.isEmpty ? null : footer,
         ),
-        if (old != null)
+        if (old.isNotEmpty)
           generateSection(
             title: l.mitmOldCaSection,
             items: [
-              MitmOldCaRow(
-                certificate: old,
-                onRemove: running ? null : () => _removeOld(ref, old),
-              ),
+              for (final each in old)
+                MitmOldCaRow(
+                  key: ValueKey(each.fingerprint),
+                  certificate: each,
+                  onRemove: running ? null : () => _removeOld(ref, each),
+                ),
             ],
           ),
       ],
