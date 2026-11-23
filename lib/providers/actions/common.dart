@@ -13,8 +13,7 @@ class CommonAction extends _$CommonAction {
   UpdateCheckScheduler? _updateChecks;
   int _updateDialogs = 0;
 
-  /// Builds (tags off macOS) whose update dialog has shown in this run; an
-  /// automatic check does not offer them again.
+  // Tags stand in for builds off macOS.
   final _offeredUpdates = <Object>{};
 
   @override
@@ -190,8 +189,6 @@ class CommonAction extends _$CommonAction {
     return result is UpdateAvailable;
   }
 
-  /// Checks for an update now and again every few hours while the app runs,
-  /// as long as automatic checks are on; later calls do nothing.
   void startUpdateChecks({
     DateTime Function()? now,
     PeriodicTimerFactory? periodicTimer,
@@ -205,15 +202,11 @@ class CommonAction extends _$CommonAction {
     )..start();
   }
 
-  /// Asks for an automatic check after an event such as the Mac waking up;
-  /// skipped when one ran recently (see [UpdateCheckScheduler]).
   void requestUpdateCheck(String reason) => _updateChecks?.requestCheck(reason);
 
   static Object _updateKey(UpdateAvailable result) =>
       result.manifest?.build ?? result.release['tag_name'] as Object;
 
-  /// An automatic check offers each build once per run, and never while an
-  /// update dialog is open or an update is downloading or installing.
   bool _mayOfferAutomatically(UpdateAvailable result) =>
       _updateDialogs == 0 &&
       !_isInstallingUpdate &&
