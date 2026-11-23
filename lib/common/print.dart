@@ -32,15 +32,25 @@ final _ageSecretKeyPattern = RegExp(
   caseSensitive: false,
 );
 
+/// A run this long mixing digits and both cases is key material (a CA's
+/// p12, a private key), not prose.
+final _longBase64Pattern = RegExp(
+  r'(?<![A-Za-z0-9+/_-])(?=[A-Za-z0-9+/_-]*?[0-9])(?=[A-Za-z0-9+/_-]*?[A-Z])'
+  r'(?=[A-Za-z0-9+/_-]*?[a-z])[A-Za-z0-9+/_-]{200,}={0,2}',
+);
+
 const _hostSchemes = {'http', 'https', 'ws', 'wss'};
 
 /// Cuts every URL in [text] down to scheme and host, so a subscription's
 /// path, query token or login never reaches a log the user may export.
 /// Share links (vmess://, ss:// …) carry their secrets where a host would be,
 /// so anything but a web address keeps only its scheme. `file://` paths in
-/// stack traces stay as they are. An age secret key is cut to its prefix.
+/// stack traces stay as they are. An age secret key is cut to its prefix
+/// and a run of 200 or more mixed base64 characters is dropped.
 String redactUrls(String text) {
-  final keyless = text.replaceAll(_ageSecretKeyPattern, 'AGE-SECRET-KEY-…');
+  final keyless = text
+      .replaceAll(_ageSecretKeyPattern, 'AGE-SECRET-KEY-…')
+      .replaceAll(_longBase64Pattern, '[base64 …]');
   if (!keyless.contains('://')) return keyless;
   return keyless.replaceAllMapped(_urlPattern, (match) {
     final scheme = match[1]!;

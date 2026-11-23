@@ -38,6 +38,18 @@ void main() {
     expect(redactUrls('no link here'), 'no link here');
   });
 
+  test('redactUrls drops a long base64 run such as a p12', () {
+    final p12 = '${'MIIKcQIBAzCCCjcGCSqGSIb3DQEHAaCCCigEggokMIIKIDCC' * 5}==';
+    expect(
+      redactUrls('import failed: {"caP12":"$p12"} done'),
+      'import failed: {"caP12":"[base64 …]"} done',
+    );
+    final short = p12.substring(0, 199);
+    expect(redactUrls('id $short'), 'id $short');
+    expect(redactUrls('x ${'A' * 400} y'), 'x ${'A' * 400} y');
+    expect(redactUrls('x ${p12.substring(0, 200)} y'), 'x [base64 …] y');
+  });
+
   test('redactUrls drops a token that sits right after the host', () {
     expect(
       redactUrls('https://sub.example.com?token=abc'),
