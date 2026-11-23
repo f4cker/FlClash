@@ -669,6 +669,12 @@ class _MitmImportDialogState extends State<MitmImportDialog> {
 
 /// Asked before each backup while the Core's CA is in use: true includes
 /// it, false leaves it out, null cancels.
+// The alert's own stadium cuts a label that wraps at large text sizes.
+final _wrappingAction = ButtonStyle(
+  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  shape: AppShape.all(24),
+);
+
 class MitmBackupDialog extends StatefulWidget {
   const MitmBackupDialog({super.key, this.include = false});
 
@@ -690,12 +696,17 @@ class _MitmBackupDialogState extends State<MitmBackupDialog> {
       title: l.backup,
       actions: [
         TextButton(
+          style: _wrappingAction,
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l.cancel),
         ),
         TextButton(
+          style: _wrappingAction,
           onPressed: () => Navigator.of(context).pop(_include),
-          child: Text(_include ? l.mitmBackupWithKey : l.backup),
+          child: Text(
+            _include ? l.mitmBackupWithKey : l.backup,
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
       child: Column(

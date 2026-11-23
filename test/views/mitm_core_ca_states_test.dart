@@ -20,7 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prism_ui/prism_ui.dart' show Switch, ThemeMode;
+import 'package:prism_ui/prism_ui.dart' show Switch, TextButton, ThemeMode;
 import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 
 import '../helpers/test_app.dart';
@@ -502,6 +502,31 @@ void main() {
     );
     expect(find.text(l.mitmOldCaSection(1)), findsOneWidget);
     expect(find.text(l.mitmOldCaSection(2)), findsNothing);
+  });
+
+  testWidgets('a backup button label at 2x text is never cut', (tester) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      size: const Size(360, 800),
+      textScale: 2,
+      child: const Center(child: MitmBackupDialog(include: true)),
+    );
+    final label = find.text(l.mitmBackupWithKey);
+    final button = tester.getRect(
+      find.ancestor(of: label, matching: find.byType(TextButton)),
+    );
+    final text = tester.getRect(label);
+    expect(text.top - button.top, greaterThanOrEqualTo(12));
+    expect(button.bottom - text.bottom, greaterThanOrEqualTo(12));
+    expect(text.left, greaterThan(button.left));
+    expect(text.right, lessThan(button.right));
+    expect(
+      tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+      isFalse,
+    );
   });
 
   testWidgets('the p12 password keeps its label while typed in', (
