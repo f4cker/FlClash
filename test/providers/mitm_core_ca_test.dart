@@ -304,6 +304,44 @@ void main() {
       expect(calls.last.arguments, {'hold': false});
     });
 
+    test('trust found again resumes nothing until asked to', () async {
+      setMitm(coreMitm());
+      await started();
+      verdict = MitmTrust.untrusted;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      verdict = MitmTrust.ready;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      expect(leases, hasLength(1));
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.untrusted,
+      );
+      expect(container.read(mitmSetupProvider)!['decrypt-tls'], isFalse);
+      expect(mitm().enable, isTrue);
+
+      await container.read(mitmCoreCaProvider.notifier).retrust();
+
+      expect(leases, hasLength(2));
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.leased,
+      );
+      expect(container.read(mitmSetupProvider)!['decrypt-tls'], isTrue);
+    });
+
+    test('a retrust still untrusted stays stopped', () async {
+      setMitm(coreMitm());
+      await started();
+      verdict = MitmTrust.untrusted;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      await container.read(mitmCoreCaProvider.notifier).retrust();
+      expect(leases, hasLength(1));
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.untrusted,
+      );
+    });
+
     test('a Core that failed its identity check gets no CA', () async {
       identity = 'failed:cdhash';
       setMitm(coreMitm());

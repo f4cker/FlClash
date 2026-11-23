@@ -91,6 +91,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   ({int connection, String fingerprint})? _loaded;
   bool _holding = false;
 
+  /// Set once the CA was found untrusted: trust found again later resumes
+  /// nothing until [retrust], a new CA or decryption turned on again.
+  bool _awaitingRetrust = false;
+
   MitmSigner? _signer;
 
   @override
@@ -116,6 +120,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       (previous, next) {
         if (previous?.ca != null && (!next.enable || next.ca != previous?.ca)) {
           unawaited(stopSigning());
+        }
+        if (next.ca != previous?.ca ||
+            (next.enable && previous?.enable != true)) {
+          _awaitingRetrust = false;
         }
         _kick();
       },
@@ -177,7 +185,15 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
     }
   }
 
+  /// The user asked to trust the CA again: check now, and lease if trusted.
+  Future<MitmTrust?> retrust() {
+    _awaitingRetrust = false;
+    _kick();
+    return checkNow();
+  }
+
   Future<MitmTrust?> _check() async {
+    if (_awaitingRetrust) return null;
     final mitm = _mitm;
     final ca = mitm.coreCa;
     final p12 = mitm.caP12;
@@ -312,6 +328,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
 
   Future<void> _untrusted(MitmCertificate ca) async {
     final wasLeased = state.leased != null;
+    _awaitingRetrust = true;
     state = const MitmCoreCaTrust(MitmCoreCaStatus.untrusted);
     _hold(false);
     await stopSigning();
