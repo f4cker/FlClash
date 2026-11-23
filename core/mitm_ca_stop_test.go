@@ -390,3 +390,85 @@ func TestMitmSetCANamingACAWithoutItIsAnError(t *testing.T) {
 		t.Fatal("a malformed setCA cleared the CA")
 	}
 }
+
+func TestMitmFreshLeaseLiftsTheTrustPauseOfItsRuntime(t *testing.T) {
+	generated := withCoreSigner(t, "example.com")
+	runtime := mitmState.Load()
+	pauseFor := func(reason string) {
+		t.Helper()
+		if _, published := mitmActive.pauseGlobal(runtime, reason); !published {
+			t.Fatal("pause not published")
+		}
+	}
+	if _, err := handleMitmSetCASeq(MitmCAParams{}, 0); err != nil {
+		t.Fatal(err)
+	}
+	_, err := issueMitmLeaf(context.Background(), "example.com")
+	if !isRefusal(mitmTrustUnavailable)(err) {
+		t.Fatalf("after the relay dropped the CA: %v", err)
+	}
+	pauseMitm(runtime, "example.com", err)
+	if reason := mitmPausedReason(); reason != mitmTrustUnavailable {
+		t.Fatalf("paused for %q", reason)
+	}
+	loadTestCAGenerated(t, generated)
+	if mitmPausedReason() != mitmTrustUnavailable {
+		t.Fatal("loading the CA alone lifted the pause")
+	}
+	if err := redeem(generated.Fingerprint, issueCheck(t)); err != nil {
+		t.Fatal(err)
+	}
+	if reason := mitmPausedReason(); reason != "" {
+		t.Fatalf("a fresh lease left the pause %q", reason)
+	}
+	if _, err := issueMitmLeaf(context.Background(), "example.com"); err != nil {
+		t.Fatalf("after the fresh lease: %v", err)
+	}
+
+	pauseFor("signTimeout")
+	if err := redeem(generated.Fingerprint, issueCheck(t)); err != nil {
+		t.Fatal(err)
+	}
+	if mitmPausedReason() != "signTimeout" {
+		t.Error("a lease lifted a pause it did not cause")
+	}
+
+	mitmPaused.Store(nil)
+	pauseFor(mitmTrustUnavailable)
+	other := generatedTestCA(t)
+	loadTestCAGenerated(t, other)
+	if err := redeem(other.Fingerprint, issueCheck(t)); err != nil {
+		t.Fatal(err)
+	}
+	if mitmPausedReason() != mitmTrustUnavailable {
+		t.Error("a lease for a CA the runtime does not sign with lifted its pause")
+	}
+}
+
+func TestMitmLapseSeenByACheckDropsKeptLeaves(t *testing.T) {
+	withCoreSigner(t, "example.com")
+	if _, err := issueMitmLeaf(context.Background(), "example.com"); err != nil {
+		t.Fatal(err)
+	}
+	ca := mitmCA.Load()
+	ca.mu.Lock()
+	if ca.expiry != nil {
+		ca.expiry.Stop()
+		ca.expiry = nil
+	}
+	ca.mu.Unlock()
+	mitmLeaves.mu.Lock()
+	before := mitmLeaves.generation
+	mitmLeaves.mu.Unlock()
+	withWallSkew(t, time.Hour)
+	issueCheck(t)
+	if leasedNow() {
+		t.Fatal("the lease outlived the lapse")
+	}
+	mitmLeaves.mu.Lock()
+	after := mitmLeaves.generation
+	mitmLeaves.mu.Unlock()
+	if after == before {
+		t.Error("a lapse seen by a check kept the leaves in flight")
+	}
+}

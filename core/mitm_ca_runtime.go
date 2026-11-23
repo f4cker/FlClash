@@ -78,6 +78,8 @@ type MitmCheckCertificate struct {
 	Check string `json:"check"`
 }
 
+const mitmTrustUnavailable = "trustUnavailable"
+
 func (runtime *mitmRuntime) coreSigns() bool {
 	return runtime != nil && runtime.setup.Signer == mitmSignerCore
 }
@@ -236,15 +238,19 @@ func handleMitmIssueCheck() (MitmCheckCertificate, error) {
 	}
 	check := leaf.SerialNumber.Text(16)
 	ca.mu.Lock()
-	defer ca.mu.Unlock()
 	if ca.retired {
+		ca.mu.Unlock()
 		return MitmCheckCertificate{}, mitmCANotLoaded
 	}
-	ca.lapsedLocked(time.Now())
+	lapsed := ca.lapsedLocked(time.Now())
 	if ca.checks == nil || len(ca.checks) >= mitmCAChecksMax {
 		ca.checks = map[string]time.Time{}
 	}
 	ca.checks[check] = now
+	ca.mu.Unlock()
+	if lapsed {
+		mitmCALapsed(ca)
+	}
 	return MitmCheckCertificate{PEM: mitmCertificateInfo(leaf).PEM, Check: check}, nil
 }
 
@@ -278,8 +284,11 @@ func handleMitmTrustLease(params MitmTrustLeaseParams) (MitmCAState, error) {
 		}
 	}
 	until := issued.Add(length)
-	if ca.lapsedLocked(now) || !mitmBefore(now, until) {
+	if lapsed := ca.lapsedLocked(now); lapsed || !mitmBefore(now, until) {
 		ca.mu.Unlock()
+		if lapsed {
+			mitmCALapsed(ca)
+		}
 		return MitmCAState{}, mitmCALeaseLapsed
 	}
 	if until.After(ca.leaseUntil) {
@@ -290,7 +299,30 @@ func handleMitmTrustLease(params MitmTrustLeaseParams) (MitmCAState, error) {
 		ca.expiry = time.AfterFunc(until.Sub(now), func() { mitmCALeaseEnded(ca) })
 	}
 	ca.mu.Unlock()
+	resumeMitmAfterLease(ca)
 	return currentMitmCAState(), nil
+}
+
+// A fresh lease for the runtime's CA lifts the pause its lapse caused, so a
+// relay that came back with the CA reloaded decrypts again at once.
+func resumeMitmAfterLease(ca *mitmLoadedCA) {
+	runtime := mitmState.Load()
+	if mitmCA.Load() != ca || !runtime.coreSigns() || !runtime.decrypting() ||
+		normalizeMitmFingerprint(runtime.setup.CAFingerprint) != ca.fingerprint {
+		return
+	}
+	if _, leased := ca.lease(time.Now()); !leased {
+		return
+	}
+	mitmActive.mu.Lock()
+	defer mitmActive.mu.Unlock()
+	pause := mitmPaused.Load()
+	if mitmState.Load() != runtime || pause == nil || pause.runtime != runtime || pause.reason != mitmTrustUnavailable {
+		return
+	}
+	if mitmPaused.CompareAndSwap(pause, nil) {
+		log.Infoln("[MITM] decryption resumed: a fresh trust lease")
+	}
 }
 
 // Kept leaves already stop at the lease's end; this also drops in-flight ones.
@@ -298,7 +330,13 @@ func mitmCALeaseEnded(ca *mitmLoadedCA) {
 	ca.mu.Lock()
 	lapsed := ca.lapsedLocked(time.Now())
 	ca.mu.Unlock()
-	if !lapsed || mitmCA.Load() != ca {
+	if lapsed {
+		mitmCALapsed(ca)
+	}
+}
+
+func mitmCALapsed(ca *mitmLoadedCA) {
+	if mitmCA.Load() != ca {
 		return
 	}
 	if runtime := mitmState.Load(); runtime.coreSigns() {
@@ -339,12 +377,12 @@ func issueMitmLeafLocal(runtime *mitmRuntime, host string) (*mitmLeaf, error) {
 	}
 	ca := mitmCA.Load()
 	if ca == nil || ca.fingerprint != normalizeMitmFingerprint(runtime.setup.CAFingerprint) {
-		return nil, mitmAppRefusal("trustUnavailable")
+		return nil, mitmAppRefusal(mitmTrustUnavailable)
 	}
 	now := time.Now()
 	leaseEnd, leased := ca.lease(now)
 	if !leased {
-		return nil, mitmAppRefusal("trustUnavailable")
+		return nil, mitmAppRefusal(mitmTrustUnavailable)
 	}
 	if !now.Before(ca.cert.NotAfter) {
 		return nil, mitmAppRefusal("rootExpired")
@@ -375,7 +413,7 @@ func issueMitmLeafLocal(runtime *mitmRuntime, host string) (*mitmLeaf, error) {
 		ca:       ca,
 	}
 	if issued.revoked() {
-		return nil, mitmAppRefusal("trustUnavailable")
+		return nil, mitmAppRefusal(mitmTrustUnavailable)
 	}
 	return issued, nil
 }
