@@ -390,7 +390,7 @@ final class MitmSetupProvider
   }
 }
 
-String _$mitmSetupHash() => r'b317651c5fe5f2e99cf12c41f7ca927f64af1901';
+String _$mitmSetupHash() => r'bbc1adc498620a9721f2097d916d5c404b1705b4';
 
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();

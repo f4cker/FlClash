@@ -25,6 +25,7 @@ import 'config.dart';
 import 'core.dart';
 import 'database.dart';
 import 'mitm.dart';
+import 'mitm_core_ca.dart';
 import 'tailscale.dart';
 
 part 'generated/state.g.dart';

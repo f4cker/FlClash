@@ -33,6 +33,7 @@ import 'package:fl_clash/plugins/mac_updater.dart';
 import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/providers/actions/system_exit.dart';
 import 'package:fl_clash/providers/mitm.dart';
+import 'package:fl_clash/providers/mitm_core_ca.dart';
 import 'package:fl_clash/providers/tray_menu.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';

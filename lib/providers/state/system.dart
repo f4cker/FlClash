@@ -219,8 +219,9 @@ Map<String, Object?> composeMitmSetup(
   required List<MitmRewrite> rewrites,
   required List<MitmScript> scripts,
   required MitmModuleRules modules,
+  String? leased,
 }) {
-  final base = mitm.coreJson;
+  final base = mitm.coreJsonLeased(leased);
   final rewrite = [
     for (final item in rewrites)
       if (item.enabled && mitmRewriteLists.contains(item.section))
@@ -258,6 +259,7 @@ Map<String, Object?>? mitmSetup(Ref ref) {
     modules:
         ref.watch(enabledMitmModuleRulesProvider).value ??
         MitmModuleRules.empty,
+    leased: ref.watch(mitmCoreCaProvider.select((state) => state.leased)),
   );
 }
 

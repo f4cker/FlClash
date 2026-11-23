@@ -26,6 +26,7 @@ import 'app.dart';
 import 'config.dart';
 import 'core.dart';
 import 'database.dart';
+import 'mitm_core_ca.dart';
 import 'state.dart';
 
 part 'generated/mitm.g.dart';
@@ -40,10 +41,15 @@ MitmSigner? mitmSigner(Ref ref) => system.isMacOS ? const MitmSigner() : null;
 @Riverpod(keepAlive: true)
 class MitmCa extends _$MitmCa {
   @override
-  Future<MitmCertificate?> build() {
+  Future<MitmCertificate?> build() async {
     final signer = ref.read(mitmSignerProvider);
-    return signer?.certificate() ??
-        ref.read(coreHandlerProvider).getMitmCertificate();
+    if (signer == null) {
+      return ref.read(coreHandlerProvider).getMitmCertificate();
+    }
+    final core = ref.watch(
+      patchClashConfigProvider.select((state) => state.mitm.coreCa),
+    );
+    return core ?? await signer.certificate();
   }
 
   /// On macOS a new or deleted root also takes the old one's keychain trust
@@ -54,12 +60,18 @@ class MitmCa extends _$MitmCa {
     }
   }
 
+  /// On macOS with a CA in use the new one waits as pending.
   Future<void> generate() async {
     final signer = ref.read(mitmSignerProvider);
     _checkSafeMode(signer);
-    final certificate =
-        await signer?.generate() ??
-        await ref.read(coreHandlerProvider).generateMitmCertificate();
+    if (signer != null) {
+      await ref.read(mitmCaMigrationProvider.notifier).generate();
+      ref.invalidateSelf();
+      return;
+    }
+    final certificate = await ref
+        .read(coreHandlerProvider)
+        .generateMitmCertificate();
     if (!ref.mounted) {
       return;
     }
@@ -69,6 +81,35 @@ class MitmCa extends _$MitmCa {
   Future<void> delete() async {
     final signer = ref.read(mitmSignerProvider);
     _checkSafeMode(signer);
+    final ca = ref.read(patchClashConfigProvider).mitm.coreCa;
+    if (signer != null && ca != null) {
+      await ref.read(mitmCoreCaProvider.notifier).stopSigning();
+      ref
+          .read(patchClashConfigProvider.notifier)
+          .update(
+            (state) => state.copyWith(
+              mitm: state.mitm.copyWith(
+                caP12: null,
+                caCertificate: null,
+                trustedFingerprint: null,
+              ),
+            ),
+          );
+      try {
+        await ref.read(mitmTrustStoreProvider)?.remove(ca);
+      } on ProcessException catch (error) {
+        commonPrint.log(
+          'Removing the MITM CA from the keychain failed: '
+          '${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
+      }
+      await ref
+          .read(mitmPassphraseStoreProvider)
+          ?.deletePassphrase(ca.fingerprint);
+      ref.invalidateSelf();
+      return;
+    }
     await signer?.delete();
     if (ref.mounted) {
       state = const AsyncData(null);
@@ -728,6 +769,15 @@ class MitmTrustState extends _$MitmTrustState {
       check = const MitmTrustCheck(MitmTrust.notGenerated);
     } else if (store == null) {
       check = const MitmTrustCheck(MitmTrust.notInstalled);
+    } else if (ref.read(mitmSignerProvider) != null &&
+        ref.read(patchClashConfigProvider).mitm.coreCa?.fingerprint ==
+            ca.fingerprint) {
+      // The Core's CA is checked by the lease loop, which also records it.
+      final trust = await ref.read(mitmCoreCaProvider.notifier).checkNow();
+      if (trust == null) {
+        throw StateError('The trust check of the MITM CA did not finish');
+      }
+      return MitmTrustCheck(trust);
     } else {
       final signer = ref.read(mitmSignerProvider);
       final core = ref.read(coreHandlerProvider);

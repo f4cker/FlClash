@@ -48,6 +48,11 @@ class SystemAction extends _$SystemAction {
   @protected
   Future<void> cleanupExitResources(bool needSave) async {
     final saveOperation = needSave ? _savePreferencesSafely() : null;
+    // The relay may outlive the app for a while: the Core signs nothing
+    // more once this replies.
+    if (mitmFeature && ref.read(patchClashConfigProvider).mitm.coreCa != null) {
+      await ref.read(mitmCoreCaProvider.notifier).stopSigning();
+    }
     final tray = trayPort;
     if (tray != null) {
       await tray.shutdown().onError<Object>((error, stackTrace) {
