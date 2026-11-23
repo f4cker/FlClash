@@ -368,6 +368,36 @@ void main() {
       expect(container.read(mitmSetupProvider)!['decrypt-tls'], isTrue);
     });
 
+    test('installing trust after two negatives resumes the lease', () async {
+      setMitm(coreMitm());
+      await started();
+      container.listen(mitmTrustStateProvider, (_, _) {});
+      verdict = MitmTrust.untrusted;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.untrusted,
+      );
+      verdict = MitmTrust.ready;
+
+      expect(
+        await container.read(mitmTrustStateProvider.notifier).install(),
+        MitmInstallOutcome.installed,
+      );
+
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.leased,
+      );
+      expect(leases.length, greaterThan(1));
+      expect(
+        container.read(mitmTrustStateProvider).value?.trust,
+        MitmTrust.ready,
+      );
+      expect(container.read(mitmSetupProvider)!['decrypt-tls'], isTrue);
+    });
+
     test('a retrust still untrusted stays stopped', () async {
       setMitm(coreMitm());
       await started();

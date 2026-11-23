@@ -775,9 +775,7 @@ class MitmTrustState extends _$MitmTrustState {
       check = const MitmTrustCheck(MitmTrust.notGenerated);
     } else if (store == null) {
       check = const MitmTrustCheck(MitmTrust.notInstalled);
-    } else if (ref.read(mitmSignerProvider) != null &&
-        ref.read(patchClashConfigProvider).mitm.coreCa?.fingerprint ==
-            ca.fingerprint) {
+    } else if (_isCoreCa(ca)) {
       // The Core's CA is checked by the lease loop, which also records it.
       final trust = await ref.read(mitmCoreCaProvider.notifier).checkNow();
       if (trust == null) {
@@ -799,6 +797,11 @@ class MitmTrustState extends _$MitmTrustState {
     }
     return check;
   }
+
+  bool _isCoreCa(MitmCertificate ca) =>
+      ref.read(mitmSignerProvider) != null &&
+      ref.read(patchClashConfigProvider).mitm.coreCa?.fingerprint ==
+          ca.fingerprint;
 
   void _record(MitmCertificate? ca, MitmTrustCheck check) {
     final trusted = check.trust == MitmTrust.ready ? ca?.fingerprint : null;
@@ -856,6 +859,10 @@ class MitmTrustState extends _$MitmTrustState {
           (outcome == null ||
               outcome == MitmInstallOutcome.installed ||
               outcome == MitmInstallOutcome.untilReboot)) {
+        // Installing is the user's answer to "trust again" for the Core CA.
+        if (_isCoreCa(ca)) {
+          await ref.read(mitmCoreCaProvider.notifier).retrust();
+        }
         await refresh();
       }
     }
