@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
@@ -25,14 +26,17 @@ class _MockTrustStore extends Mock implements MitmTrustStore {}
 
 class _Passphrases implements MitmPassphraseStore {
   final values = <String, String>{};
+  Completer<void>? gate;
 
   @override
   Future<void> deletePassphrase(String fingerprint) async =>
       values.remove(fingerprint);
 
   @override
-  Future<String?> readPassphrase(String fingerprint) async =>
-      values[fingerprint];
+  Future<String?> readPassphrase(String fingerprint) async {
+    await gate?.future;
+    return values[fingerprint];
+  }
 
   @override
   Future<void> writePassphrase(String fingerprint, String passphrase) async =>
@@ -411,6 +415,53 @@ void main() {
       await settle();
       expect(stops, 1);
       expect(container.read(mitmCoreCaProvider).status, MitmCoreCaStatus.off);
+    });
+
+    test('a CA deleted while its passphrase is read is never loaded', () async {
+      passphrases.gate = Completer<void>();
+      setMitm(coreMitm());
+      await started();
+      setMitm(const Mitm(enable: true, hostname: ['example.com']));
+      await settle();
+      passphrases.gate!.complete();
+      await settle();
+      expect(loaded, isEmpty);
+      expect(leases, isEmpty);
+      expect(container.read(mitmCoreCaProvider).status, MitmCoreCaStatus.off);
+    });
+
+    test('a CA loaded after a stop is unloaded and never leased', () async {
+      final gate = Completer<void>();
+      when(() => core.setMitmCa(any())).thenAnswer((call) async {
+        await gate.future;
+        loaded.add(call.positionalArguments.single as MitmCaSecret);
+        return state(_coreFp);
+      });
+      setMitm(coreMitm());
+      await started();
+      setMitm(coreMitm(enable: false));
+      await settle();
+      expect(stops, 1);
+      gate.complete();
+      await settle();
+      expect(loaded, hasLength(1));
+      expect(stops, 2);
+      expect(leases, isEmpty);
+    });
+
+    test('after shutdown no round loads or leases again', () async {
+      setMitm(coreMitm());
+      await started();
+      await container.read(mitmCoreCaProvider.notifier).shutdown();
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      await settle();
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await settle();
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      expect(loaded, hasLength(1));
+      expect(leases, hasLength(1));
+      expect(stops, 1);
     });
 
     test('a legacy user stays on the app signer', () async {

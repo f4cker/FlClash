@@ -51,7 +51,7 @@ class SystemAction extends _$SystemAction {
     // The relay may outlive the app for a while: the Core signs nothing
     // more once this replies.
     if (mitmFeature && ref.read(patchClashConfigProvider).mitm.coreCa != null) {
-      await ref.read(mitmCoreCaProvider.notifier).stopSigning();
+      await ref.read(mitmCoreCaProvider.notifier).shutdown();
     }
     final tray = trayPort;
     if (tray != null) {

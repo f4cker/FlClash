@@ -100,6 +100,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   int _negatives = 0;
   MitmTrust? _lastVerdict;
 
+  /// Bumped by every stop; a check begun before one goes no further.
+  int _epoch = 0;
+  bool _closed = false;
+
   MitmSigner? _signer;
 
   @override
@@ -159,6 +163,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   bool get _enabled => mitmFeature && _mitm.enable;
 
   void _kick() {
+    if (_closed) return;
     _timer?.cancel();
     _timer = Timer(Duration.zero, _tick);
   }
@@ -206,7 +211,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   }
 
   Future<MitmTrust?> _check() async {
+    if (_closed) return null;
     if (_awaitingRetrust) return _lastVerdict;
+    final epoch = _epoch;
+    bool stale() => !ref.mounted || epoch != _epoch;
     final mitm = _mitm;
     final ca = mitm.coreCa;
     final p12 = mitm.caP12;
@@ -228,12 +236,14 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
         _failed(MitmCoreCaFailure.coreIdentity);
         return null;
       }
-      final leaf = await _load(ca, p12).timeout(_checkBudget);
-      if (leaf == null || !ref.mounted) return null;
+      if (stale()) return _restart();
+      final leaf = await _load(ca, p12, stale).timeout(_checkBudget);
+      if (stale()) return _restart();
+      if (leaf == null) return null;
       final verdict = await store
           .check(ca, () async => leaf.pem)
           .timeout(_checkBudget);
-      if (!ref.mounted) return null;
+      if (stale()) return _restart();
       _lastVerdict = verdict.trust;
       if (verdict.trust != MitmTrust.ready) {
         if (++_negatives < 2) {
@@ -253,7 +263,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       final lease = await ref
           .read(coreHandlerProvider)
           .leaseMitmTrust(ca.fingerprint, leaf.check!);
-      if (!ref.mounted) return null;
+      if (stale()) return _restart();
       if (!lease.leasedFor(ca.fingerprint) ||
           !_sameFingerprint(_mitm.coreCa?.fingerprint, ca.fingerprint)) {
         _lapsed();
@@ -284,13 +294,23 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
     }
   }
 
-  Future<MitmCheckLeaf?> _load(MitmCertificate ca, MitmCaP12 p12) async {
+  MitmTrust? _restart() {
+    if (ref.mounted) _kick();
+    return null;
+  }
+
+  Future<MitmCheckLeaf?> _load(
+    MitmCertificate ca,
+    MitmCaP12 p12,
+    bool Function() stale,
+  ) async {
     final core = ref.read(coreHandlerProvider);
     final key = (connection: _connection, fingerprint: ca.fingerprint);
     if (_loaded != key) {
       final passphrase = await ref
           .read(mitmPassphraseStoreProvider)
           ?.readPassphrase(ca.fingerprint);
+      if (stale()) return null;
       if (passphrase == null) {
         _failed(MitmCoreCaFailure.passphraseMissing);
         return null;
@@ -302,6 +322,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
           fingerprint: ca.fingerprint,
         ),
       );
+      if (stale()) {
+        await stopSigning();
+        return null;
+      }
       if (!loaded.loaded ||
           !_sameFingerprint(loaded.fingerprint, ca.fingerprint)) {
         return null;
@@ -371,6 +395,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
 
   /// Bounded, so a dead Core never holds up quit, turn-off or removal.
   Future<void> stopSigning() async {
+    _epoch++;
     _loaded = null;
     if (ref.read(coreStatusProvider) != CoreStatus.connected) return;
     try {
@@ -384,6 +409,13 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
         logLevel: LogLevel.warning,
       );
     }
+  }
+
+  Future<void> shutdown() {
+    _closed = true;
+    _timer?.cancel();
+    _timer = null;
+    return stopSigning();
   }
 
   /// The migration loaded [fingerprint] in the Core's slot.
