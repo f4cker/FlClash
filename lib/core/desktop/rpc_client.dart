@@ -276,9 +276,14 @@ final class CoreRpcClient implements CoreRpcChannel {
     }
   }
 
+  /// The error's type and offset only: its text can quote the frame, which
+  /// may hold a CA or its passphrase.
   void _logParseFailure(Object error) {
+    final where = error is FormatException && error.offset != null
+        ? ' at offset ${error.offset}'
+        : '';
     commonPrint.log(
-      'Failed to parse transport data: $error',
+      'Failed to parse transport data: ${error.runtimeType}$where',
       logLevel: LogLevel.error,
     );
   }

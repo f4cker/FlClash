@@ -9,6 +9,7 @@ import 'package:fl_clash/core/event.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/core/spill.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 
@@ -375,6 +376,24 @@ void main() {
     transport.addJson({'id': request['id'], 'result': true});
 
     expect(await invocation, isTrue);
+    await client.close();
+    await transport.close();
+  });
+
+  test('a malformed frame is logged without its contents', () async {
+    final printed = <String>[];
+    final print = debugPrint;
+    debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+    addTearDown(() => debugPrint = print);
+    final transport = FakeDesktopCoreTransport.connected();
+    final client = CoreRpcClient(transport);
+    transport.addFrame(
+      Uint8List.fromList(utf8.encode('{"id":"1","result":"hunter2 secret')),
+    );
+    await pumpEventQueue();
+
+    expect(printed.join('\n'), contains('Failed to parse transport data'));
+    expect(printed.join('\n'), isNot(contains('hunter2')));
     await client.close();
     await transport.close();
   });
