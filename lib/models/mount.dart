@@ -16,8 +16,10 @@ const mountProviderPrefix = 'flash-mount-';
 
 String mountProviderName(int sourceId) => '$mountProviderPrefix$sourceId';
 
-@freezed
+@Freezed(toStringOverride: false)
 abstract class MountSource with _$MountSource {
+  const MountSource._();
+
   const factory MountSource({
     required int id,
     required String label,
@@ -27,6 +29,11 @@ abstract class MountSource with _$MountSource {
 
   factory MountSource.fromJson(Map<String, Object?> json) =>
       _$MountSourceFromJson(json);
+
+  @override
+  String toString() =>
+      'MountSource(id: $id, label: $label, path: $path, '
+      'ageSecretKey: ${ageSecretKey == null ? null : '***'})';
 }
 
 /// What `SetupParams.mounts` carries; [revision] binds a readback to it and

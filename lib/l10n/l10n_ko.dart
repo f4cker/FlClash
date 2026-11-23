@@ -5300,7 +5300,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get profileEditMountRejected =>
-      'With its mounted subscriptions merged in, this profile would not apply:';
+      '마운트된 구독을 병합하면 이 설정을 적용할 수 없어 저장할 수 없습니다:';
 
   @override
   String get mountApplyBlocked =>

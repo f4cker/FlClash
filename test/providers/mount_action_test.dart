@@ -179,6 +179,20 @@ Future<void> waitFor(bool Function() ready) async {
 }
 
 void main() {
+  test('announced skips add up, so a narrower report does not re-announce', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final skips = container.read(mountSkipsProvider.notifier);
+    const missing = (sourceId: 2, status: MountSourceStatus.missing);
+    const invalid = (sourceId: 3, status: MountSourceStatus.invalid);
+
+    expect(skips.announce(1, [missing, invalid]), isTrue);
+    expect(skips.announce(1, [missing]), isFalse);
+    expect(skips.announce(1, [missing, invalid]), isFalse);
+    expect(skips.announce(1, const []), isFalse);
+    expect(skips.announce(1, [invalid]), isTrue);
+  });
+
   late Directory home;
   late _MockCore core;
   late db.Database testDatabase;

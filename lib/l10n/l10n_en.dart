@@ -5421,7 +5421,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileEditMountRejected =>
-      'With its mounted subscriptions merged in, this profile would not apply:';
+      'After merging the mounted subscriptions, this configuration cannot be applied and cannot be saved:';
 
   @override
   String get mountApplyBlocked =>

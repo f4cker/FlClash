@@ -40,11 +40,6 @@ int get hashCode {
   return Object.hash(runtimeType,_this.id,_this.label,_this.path,_this.ageSecretKey);
 }
 
-@override
-String toString() {
-  final _this = this as MountSource;
-  return 'MountSource(id: ${_this.id}, label: ${_this.label}, path: ${_this.path}, ageSecretKey: ${_this.ageSecretKey})';
-}
 
 
 }
@@ -217,8 +212,8 @@ return $default(_that.id,_that.label,_that.path,_that.ageSecretKey);case _:
 /// @nodoc
 @JsonSerializable()
 
-class _MountSource implements MountSource {
-  const _MountSource({required this.id, required this.label, required this.path, @JsonKey(name: 'age-secret-key', includeIfNull: false) this.ageSecretKey});
+class _MountSource extends MountSource {
+  const _MountSource({required this.id, required this.label, required this.path, @JsonKey(name: 'age-secret-key', includeIfNull: false) this.ageSecretKey}): super._();
   factory _MountSource.fromJson(Map<String, dynamic> json) => _$MountSourceFromJson(json);
 
 @override final  int id;
@@ -248,10 +243,6 @@ int get hashCode {
     return Object.hash(runtimeType,id,label,path,ageSecretKey);
 }
 
-@override
-String toString() {
-    return 'MountSource(id: $id, label: $label, path: $path, ageSecretKey: $ageSecretKey)';
-}
 
 
 }
