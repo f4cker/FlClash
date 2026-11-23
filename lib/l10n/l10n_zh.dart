@@ -8848,11 +8848,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmMigrationSwitched => '新证书已启用。旧证书尚未移除。';
 
   @override
-  String mitmOldCaKept(Object name) {
-    return '仍保留在这台 Mac 的旧证书：$name';
-  }
-
-  @override
   String get mitmRemoveOldCa => '移除旧证书';
 
   @override
@@ -8914,4 +8909,52 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmRestoreKeptCa => '此备份不含解密证书，本机现有证书会保留。';
+
+  @override
+  String mitmCaConfigured(Object name) {
+    return '当前配置的证书：$name';
+  }
+
+  @override
+  String get mitmRunActive => '正在用此证书解密';
+
+  @override
+  String get mitmRunStopped => '解密已停止';
+
+  @override
+  String get mitmRunOff => '解密未开启';
+
+  @override
+  String get mitmRunChecking => '正在检查能否解密…';
+
+  @override
+  String get mitmRunNotRunning => '解密未运行';
+
+  @override
+  String get mitmRetrust => '重新信任…';
+
+  @override
+  String get mitmCurrentCaActions => '当前证书';
+
+  @override
+  String get mitmOldCaSection => '仍保留在这台 Mac 的旧证书';
+
+  @override
+  String get mitmExportCertificateContent => '只保存公钥证书（.crt），不含私钥。';
+
+  @override
+  String get mitmDeleteCurrentCa => '删除当前证书…';
+
+  @override
+  String get mitmDeleteCurrentCaTitle => '删除当前证书？';
+
+  @override
+  String get mitmDeleteCurrentCaTip =>
+      '这会从这台 Mac 移除此证书及其信任。解密会关闭，直到你再次开启。其他设备不受影响。';
+
+  @override
+  String get mitmDeleteCurrentCaConfirm => '删除当前证书';
+
+  @override
+  String get mitmCaScopeThisMac => '仅影响这台 Mac';
 }

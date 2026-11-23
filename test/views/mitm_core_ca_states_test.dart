@@ -124,14 +124,14 @@ final _states = <String, _State>{
   ),
   'switched': (
     shown: _fresh,
-    mitm: Mitm(caP12: _p12, caCertificate: _fresh),
+    mitm: Mitm(enable: true, caP12: _p12, caCertificate: _fresh),
     trust: MitmCoreCaTrust(MitmCoreCaStatus.leased, leased: _fresh.fingerprint),
     running: false,
     old: _legacy,
   ),
   'untrusted': (
     shown: _fresh,
-    mitm: Mitm(caP12: _p12, caCertificate: _fresh),
+    mitm: Mitm(enable: true, caP12: _p12, caCertificate: _fresh),
     trust: const MitmCoreCaTrust(MitmCoreCaStatus.untrusted),
     running: false,
     old: null,
@@ -245,12 +245,17 @@ void main() {
                 onExport: () {},
                 onDelete: () {},
                 onInstall: () {},
+                onRetrust: () {},
               ),
             ),
           );
-          final inUse = state.mitm.coreCa == null
-              ? l.mitmCaInUseLegacy(state.shown.subject)
-              : l.mitmCaInUseCore(state.shown.subject);
+          final inUse = switch (name) {
+            'untrusted' => l.mitmCaConfigured(state.shown.subject),
+            _ when state.mitm.coreCa == null => l.mitmCaInUseLegacy(
+              state.shown.subject,
+            ),
+            _ => l.mitmCaInUseCore(state.shown.subject),
+          };
           expect(find.text(inUse), findsOneWidget);
           switch (name) {
             case 'legacy':
@@ -264,11 +269,26 @@ void main() {
               expect(find.text(l.mitmVerifying), findsOneWidget);
               expect(find.text(l.mitmPendingVerification), findsNothing);
             case 'switched':
-              expect(find.text(l.mitmOldCaKept(_legacy.subject)), findsOne);
+              expect(find.text(l.mitmOldCaSection), findsOneWidget);
+              expect(find.text(_legacy.subject), findsOneWidget);
               expect(find.text(l.mitmRemoveOldCa), findsOneWidget);
+              expect(find.text(l.mitmDeleteCurrentCa), findsOneWidget);
+              expect(
+                find.text('${l.mitmTrustReady}\n${l.mitmRunActive}'),
+                findsOneWidget,
+              );
             case 'untrusted':
               expect(find.text(l.mitmCoreCaUntrustedTitle), findsOneWidget);
               expect(find.text(l.mitmCoreCaUntrusted), findsOneWidget);
+              expect(find.text(l.mitmRetrust), findsOneWidget);
+              expect(
+                find.text('${l.mitmTrustUntrusted}\n${l.mitmRunStopped}'),
+                findsOneWidget,
+              );
+              expect(
+                find.text(l.mitmCaInUseCore(_fresh.subject)),
+                findsNothing,
+              );
           }
           await save(tester, 'section-$name-$tag-$mode');
         });
@@ -325,6 +345,93 @@ void main() {
       });
     }
   }
+
+  testWidgets('while verifying, install and discard are dimmed, skipped by '
+      'focus and announced as disabled', (tester) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    final state = _states['verifying']!;
+    final semantics = tester.ensureSemantics();
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      mitm: state.mitm,
+      overrides: [
+        mitmCoreCaProvider.overrideWith(() => _FixedLease(state.trust)),
+        mitmCaMigrationProvider.overrideWith(() => _FixedMigration(true)),
+        mitmOldCaProvider.overrideWith((ref) async => null),
+      ],
+      child: SingleChildScrollView(
+        child: MitmCoreCaSection(
+          certificate: state.shown,
+          trustLabel: l.mitmTrustReady,
+          onDetails: () {},
+          onExport: () {},
+        ),
+      ),
+    );
+    for (final label in [l.mitmInstallAndSwitch, l.mitmDiscardPending]) {
+      final row = find.widgetWithText(MitmActionRow, label);
+      expect(
+        tester.getSemantics(row),
+        isSemantics(isButton: true, hasEnabledState: true, isEnabled: false),
+      );
+      final text = tester.widget<Text>(find.text(label));
+      expect(text.style?.color?.a, lessThan(0.5));
+    }
+    for (var i = 0; i < 12; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final focused = FocusManager.instance.primaryFocus?.context;
+      expect(focused?.findAncestorWidgetOfExactType<MitmActionRow>(), isNull);
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('a delete names its target, focuses Cancel, and Enter keeps '
+      'the certificate', (tester) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    late BuildContext host;
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      child: Builder(
+        builder: (context) {
+          host = context;
+          return const SizedBox.expand();
+        },
+      ),
+    );
+    final result = Navigator.of(host).push<bool>(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, _, _) => Center(
+          child: MitmDeleteCaDialog(
+            title: l.mitmDeleteCurrentCaTitle,
+            text: l.mitmDeleteCurrentCaTip,
+            confirmText: l.mitmDeleteCurrentCaConfirm,
+            certificate: _fresh,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(_fresh.subject), findsOneWidget);
+    expect(find.text(_fresh.fingerprint), findsOneWidget);
+    expect(find.text(l.mitmCaScopeThisMac), findsOneWidget);
+    final focused = FocusManager.instance.primaryFocus!.context!;
+    expect(
+      find.descendant(
+        of: find.byElementPredicate((e) => e == focused),
+        matching: find.text(l.cancel),
+      ),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(await result, isFalse);
+  });
 
   testWidgets('the backup warning shows only with the toggle on', (
     tester,

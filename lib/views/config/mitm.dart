@@ -17,6 +17,7 @@ import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/mitm.dart';
+import 'package:fl_clash/providers/mitm_core_ca.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/mitm_core_ca.dart';
 import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModulesItem;
@@ -223,6 +224,21 @@ class _MitmViewState extends ConsumerState<MitmView> {
     }
   }
 
+  /// Reinstalls only if untrusted, then checks the Core's CA afresh.
+  Future<void> _retrust(BuildContext context, WidgetRef ref) async {
+    final appLocalizations = context.appLocalizations;
+    await ref.read(mitmTrustStateProvider.notifier).refresh();
+    if (!context.mounted) return;
+    if (ref.read(mitmTrustStateProvider).value?.trust != MitmTrust.ready) {
+      await _install(context, ref);
+    }
+    await globalState.loadingRun<MitmTrust?>(
+      ref.read(mitmCoreCaProvider.notifier).retrust,
+      tag: LoadingTag.mitm,
+      title: appLocalizations.mitmRetrust,
+    );
+  }
+
   Future<void> _export(
     BuildContext context,
     MitmCertificate certificate,
@@ -341,6 +357,7 @@ class _MitmViewState extends ConsumerState<MitmView> {
                 : appLocalizations.installCertificate)
           : null,
       onInstall: canTrust ? () => _install(context, ref) : null,
+      onRetrust: canTrust ? () => _retrust(context, ref) : null,
       onDetails: certificate == null
           ? null
           : () => _showDetails(context, certificate),
@@ -421,11 +438,20 @@ class _MitmViewState extends ConsumerState<MitmView> {
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final appLocalizations = context.appLocalizations;
-    final res = await dialogs.showMessage(
-      title: appLocalizations.deleteCertificate,
-      message: TextSpan(text: appLocalizations.deleteCertificateTip),
-      destructive: true,
-    );
+    final certificate = ref.read(mitmCaProvider).value;
+    final core = ref.read(patchClashConfigProvider).mitm.coreCa;
+    final res = certificate != null && core != null
+        ? await mitmConfirmDelete(
+            title: appLocalizations.mitmDeleteCurrentCaTitle,
+            text: appLocalizations.mitmDeleteCurrentCaTip,
+            confirmText: appLocalizations.mitmDeleteCurrentCaConfirm,
+            certificate: certificate,
+          )
+        : await dialogs.showMessage(
+            title: appLocalizations.deleteCertificate,
+            message: TextSpan(text: appLocalizations.deleteCertificateTip),
+            destructive: true,
+          );
     if (res != true || !context.mounted) {
       return;
     }

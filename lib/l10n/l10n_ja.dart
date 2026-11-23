@@ -9342,11 +9342,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'The new certificate is active. The old certificate has not been removed.';
 
   @override
-  String mitmOldCaKept(Object name) {
-    return 'Old certificate still on this Mac: $name';
-  }
-
-  @override
   String get mitmRemoveOldCa => 'Remove Old Certificate';
 
   @override
@@ -9417,4 +9412,53 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmRestoreKeptCa => 'バックアップに証明書が含まれていない場合、ローカルの証明書は保持されます。';
+
+  @override
+  String mitmCaConfigured(Object name) {
+    return 'Configured certificate: $name';
+  }
+
+  @override
+  String get mitmRunActive => 'Decryption is running with this certificate';
+
+  @override
+  String get mitmRunStopped => 'Decryption has stopped';
+
+  @override
+  String get mitmRunOff => 'Decryption is off';
+
+  @override
+  String get mitmRunChecking => 'Checking whether decryption can run…';
+
+  @override
+  String get mitmRunNotRunning => 'Decryption isn\'t running';
+
+  @override
+  String get mitmRetrust => 'Trust Again…';
+
+  @override
+  String get mitmCurrentCaActions => 'Certificate in Use';
+
+  @override
+  String get mitmOldCaSection => 'Old Certificate Still on This Mac';
+
+  @override
+  String get mitmExportCertificateContent =>
+      'Saves the public certificate only (.crt). The private key is not included.';
+
+  @override
+  String get mitmDeleteCurrentCa => 'Delete Current Certificate…';
+
+  @override
+  String get mitmDeleteCurrentCaTitle => 'Delete the current certificate?';
+
+  @override
+  String get mitmDeleteCurrentCaTip =>
+      'This removes the certificate and its trust from this Mac. Decryption turns off until you turn it on again. Other devices are not affected.';
+
+  @override
+  String get mitmDeleteCurrentCaConfirm => 'Delete Current Certificate';
+
+  @override
+  String get mitmCaScopeThisMac => 'Affects this Mac only';
 }

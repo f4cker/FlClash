@@ -15736,12 +15736,6 @@ abstract class AppLocalizations {
   /// **'The new certificate is active. The old certificate has not been removed.'**
   String get mitmMigrationSwitched;
 
-  /// No description provided for @mitmOldCaKept.
-  ///
-  /// In en, this message translates to:
-  /// **'Old certificate still on this Mac: {name}'**
-  String mitmOldCaKept(Object name);
-
   /// No description provided for @mitmRemoveOldCa.
   ///
   /// In en, this message translates to:
@@ -15867,6 +15861,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This backup doesn\'t include a decryption certificate. The certificate on this Mac will be kept.'**
   String get mitmRestoreKeptCa;
+
+  /// No description provided for @mitmCaConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Configured certificate: {name}'**
+  String mitmCaConfigured(Object name);
+
+  /// No description provided for @mitmRunActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption is running with this certificate'**
+  String get mitmRunActive;
+
+  /// No description provided for @mitmRunStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption has stopped'**
+  String get mitmRunStopped;
+
+  /// No description provided for @mitmRunOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption is off'**
+  String get mitmRunOff;
+
+  /// No description provided for @mitmRunChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking whether decryption can run…'**
+  String get mitmRunChecking;
+
+  /// No description provided for @mitmRunNotRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption isn\'t running'**
+  String get mitmRunNotRunning;
+
+  /// No description provided for @mitmRetrust.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust Again…'**
+  String get mitmRetrust;
+
+  /// No description provided for @mitmCurrentCaActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate in Use'**
+  String get mitmCurrentCaActions;
+
+  /// No description provided for @mitmOldCaSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Old Certificate Still on This Mac'**
+  String get mitmOldCaSection;
+
+  /// No description provided for @mitmExportCertificateContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves the public certificate only (.crt). The private key is not included.'**
+  String get mitmExportCertificateContent;
+
+  /// No description provided for @mitmDeleteCurrentCa.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Current Certificate…'**
+  String get mitmDeleteCurrentCa;
+
+  /// No description provided for @mitmDeleteCurrentCaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the current certificate?'**
+  String get mitmDeleteCurrentCaTitle;
+
+  /// No description provided for @mitmDeleteCurrentCaTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the certificate and its trust from this Mac. Decryption turns off until you turn it on again. Other devices are not affected.'**
+  String get mitmDeleteCurrentCaTip;
+
+  /// No description provided for @mitmDeleteCurrentCaConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Current Certificate'**
+  String get mitmDeleteCurrentCaConfirm;
+
+  /// No description provided for @mitmCaScopeThisMac.
+  ///
+  /// In en, this message translates to:
+  /// **'Affects this Mac only'**
+  String get mitmCaScopeThisMac;
 }
 
 class _AppLocalizationsDelegate

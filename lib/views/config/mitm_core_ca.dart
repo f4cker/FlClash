@@ -124,13 +124,13 @@ Future<void> mitmImport(WidgetRef ref) async {
 
 Future<void> _removeOld(WidgetRef ref, MitmCertificate old) async {
   final l = currentAppLocalizations;
-  final confirm = await dialogs.showMessage(
+  final confirm = await mitmConfirmDelete(
     title: l.mitmRemoveOldCaTitle,
-    body: MitmCertificateNote(text: l.mitmRemoveOldCaTip, certificate: old),
+    text: l.mitmRemoveOldCaTip,
     confirmText: l.mitmRemoveOldCa,
-    destructive: true,
+    certificate: old,
   );
-  if (confirm != true) return;
+  if (!confirm) return;
   final removed = await globalState.loadingRun<bool>(
     ref.read(mitmCaMigrationProvider.notifier).removeOld,
     tag: LoadingTag.mitm,
@@ -184,8 +184,102 @@ class MitmCertificateNote extends StatelessWidget {
   }
 }
 
-/// The certificate section on macOS: which CA is in use, its trust, and
-/// the staged switch to a new one.
+/// Asks before deleting [certificate]: names it by subject and full
+/// fingerprint, says the change stays on this Mac, and focuses Cancel so a
+/// bare Enter never deletes.
+class MitmDeleteCaDialog extends StatefulWidget {
+  const MitmDeleteCaDialog({
+    super.key,
+    required this.title,
+    required this.text,
+    required this.confirmText,
+    required this.certificate,
+  });
+
+  final String title;
+  final String text;
+  final String confirmText;
+  final MitmCertificate certificate;
+
+  @override
+  State<MitmDeleteCaDialog> createState() => _MitmDeleteCaDialogState();
+}
+
+class _MitmDeleteCaDialogState extends State<MitmDeleteCaDialog> {
+  final _cancel = FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _cancel.descendants
+          .where((node) => node.canRequestFocus && !node.skipTraversal)
+          .firstOrNull
+          ?.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cancel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    return AlertDialog(
+      title: widget.title,
+      destructive: true,
+      actions: [
+        Focus(
+          focusNode: _cancel,
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.cancel),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(widget.confirmText),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MitmCertificateNote(
+            text: widget.text,
+            certificate: widget.certificate,
+          ),
+          const SizedBox(height: 8),
+          Text(l.mitmCaScopeThisMac),
+        ],
+      ),
+    );
+  }
+}
+
+Future<bool> mitmConfirmDelete({
+  required String title,
+  required String text,
+  required String confirmText,
+  required MitmCertificate certificate,
+}) async =>
+    await dialogs.showCommonDialog<bool>(
+      child: MitmDeleteCaDialog(
+        title: title,
+        text: text,
+        confirmText: confirmText,
+        certificate: certificate,
+      ),
+    ) ==
+    true;
+
+/// The certificate section on macOS: which CA is configured, its trust and
+/// whether decryption runs with it, the staged switch to a new one, and the
+/// old CA still on this Mac in a section of its own.
 class MitmCoreCaSection extends ConsumerWidget {
   const MitmCoreCaSection({
     super.key,
@@ -193,6 +287,7 @@ class MitmCoreCaSection extends ConsumerWidget {
     required this.trustLabel,
     this.installLabel,
     this.onInstall,
+    this.onRetrust,
     this.onDetails,
     this.onExport,
     this.onDelete,
@@ -204,6 +299,7 @@ class MitmCoreCaSection extends ConsumerWidget {
   final String trustLabel;
   final String? installLabel;
   final VoidCallback? onInstall;
+  final VoidCallback? onRetrust;
   final VoidCallback? onDetails;
   final VoidCallback? onExport;
   final VoidCallback? onDelete;
@@ -216,14 +312,30 @@ class MitmCoreCaSection extends ConsumerWidget {
     final keepsRoot = ref.watch(safeModeProvider);
     final mitm = ref.watch(patchClashConfigProvider.select((s) => s.mitm));
     final trust = ref.watch(mitmCoreCaProvider);
+    final old = keepsRoot ? null : ref.watch(mitmOldCaProvider).value;
+    final running = ref.watch(mitmCaMigrationProvider);
     final footer = [
       mitmCoreCaStatusText(l, trust),
       this.footer,
     ].nonNulls.join('\n');
-    return generateSection(
-      title: l.certificate,
-      items: [..._rows(context, ref, l, mitm, trust, keepsRoot: keepsRoot)],
-      footer: footer.isEmpty ? null : footer,
+    return Column(
+      children: [
+        generateSection(
+          title: l.certificate,
+          items: [..._rows(context, ref, l, mitm, trust, keepsRoot: keepsRoot)],
+          footer: footer.isEmpty ? null : footer,
+        ),
+        if (old != null)
+          generateSection(
+            title: l.mitmOldCaSection,
+            items: [
+              MitmOldCaRow(
+                certificate: old,
+                onRemove: running ? null : () => _removeOld(ref, old),
+              ),
+            ],
+          ),
+      ],
     );
   }
 
@@ -246,61 +358,60 @@ class MitmCoreCaSection extends ConsumerWidget {
           ),
       ];
     }
-    final untrusted =
-        mitm.coreCa != null && trust.status == MitmCoreCaStatus.untrusted;
+    final core = mitm.coreCa?.fingerprint == certificate.fingerprint;
+    final untrusted = core && trust.status == MitmCoreCaStatus.untrusted;
+    final run = core ? mitmRunText(l, mitm, trust) : null;
     return [
       ListItem(
-        title: Text(mitmCaInUseText(l, mitm, certificate)),
-        subtitle: Text(trustLabel),
+        title: Text(
+          untrusted
+              ? l.mitmCaConfigured(certificate.subject)
+              : mitmCaInUseText(l, mitm, certificate),
+        ),
+        subtitle: Text([trustLabel, ?run].join('\n')),
         onTap: onDetails,
       ),
-      if (untrusted)
+      if (untrusted) ...[
         ListItem(
-          leading: GlyphIcon(
-            AppGlyphs.warning,
-            color: context.colorScheme.error,
+          leading: ExcludeSemantics(
+            child: GlyphIcon(
+              AppGlyphs.warning,
+              color: context.colorScheme.error,
+            ),
           ),
           title: Text(l.mitmCoreCaUntrustedTitle),
           subtitle: Text(l.mitmCoreCaUntrusted),
-          onTap: onInstall,
-        )
-      else if (installLabel case final label?)
+        ),
+        ListItem(title: Text(l.mitmRetrust), onTap: onRetrust),
+      ] else if (installLabel case final label?)
         ListItem(title: Text(label), onTap: onInstall),
-      ListItem(title: Text(l.exportCertificate), onTap: onExport),
-      if (!keepsRoot) ..._migrationRows(ref, l, mitm),
+      ListItem(
+        title: Text(l.exportCertificate),
+        subtitle: Text(l.mitmExportCertificateContent),
+        onTap: onExport,
+      ),
+      if (!keepsRoot) ..._migrationRows(context, ref, l, mitm),
       if (!keepsRoot && mitm.coreCa != null)
-        ListItem(title: Text(l.deleteCertificate), onTap: onDelete),
+        ListItem(
+          title: Text(
+            l.mitmDeleteCurrentCa,
+            style: TextStyle(color: context.colorScheme.destructive),
+          ),
+          onTap: onDelete,
+        ),
     ];
   }
 
-  List<Widget> _migrationRows(WidgetRef ref, AppLocalizations l, Mitm mitm) {
+  List<Widget> _migrationRows(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l,
+    Mitm mitm,
+  ) {
     final pending = mitm.pendingCaCertificate;
     final running = ref.watch(mitmCaMigrationProvider);
-    final old = ref.watch(mitmOldCaProvider).value;
-    return [
-      if (pending != null) ...[
-        ListItem(
-          title: Text(l.mitmPendingCertificate(pending.subject)),
-          subtitle: Text(running ? l.mitmVerifying : l.mitmPendingVerification),
-        ),
-        ListItem(
-          title: Text(l.mitmInstallAndSwitch),
-          subtitle: Text(l.mitmInstallAndSwitchDesc),
-          onTap: running ? null : () => mitmInstallAndSwitch(ref),
-        ),
-        ListItem(
-          title: Text(l.mitmDiscardPending),
-          onTap: running
-              ? null
-              : () => unawaited(
-                  globalState.loadingRun<void>(
-                    ref.read(mitmCaMigrationProvider.notifier).discard,
-                    tag: LoadingTag.mitm,
-                    title: l.mitmDiscardPending,
-                  ),
-                ),
-        ),
-      ] else ...[
+    if (pending == null) {
+      return [
         ListItem(
           title: Text(
             mitm.coreCa == null
@@ -316,17 +427,114 @@ class MitmCoreCaSection extends ConsumerWidget {
           title: Text(l.mitmImportCertificate),
           onTap: () => mitmImport(ref),
         ),
-      ],
-      if (old != null)
-        ListItem(
-          title: Text(l.mitmOldCaKept(old.subject)),
-          trailing: TonalButton(
-            glyph: AppGlyphs.delete,
-            label: l.mitmRemoveOldCa,
-            onPressed: running ? null : () => _removeOld(ref, old),
-          ),
-        ),
+      ];
+    }
+    return [
+      ListItem(
+        title: Text(l.mitmPendingCertificate(pending.subject)),
+        subtitle: Text(running ? l.mitmVerifying : l.mitmPendingVerification),
+      ),
+      MitmActionRow(
+        title: l.mitmInstallAndSwitch,
+        subtitle: l.mitmInstallAndSwitchDesc,
+        onTap: running ? null : () => mitmInstallAndSwitch(ref),
+      ),
+      MitmActionRow(
+        title: l.mitmDiscardPending,
+        onTap: running
+            ? null
+            : () => unawaited(
+                globalState.loadingRun<void>(
+                  ref.read(mitmCaMigrationProvider.notifier).discard,
+                  tag: LoadingTag.mitm,
+                  title: l.mitmDiscardPending,
+                ),
+              ),
+      ),
     ];
+  }
+}
+
+/// Whether decryption runs with the Core's CA; "stopped" only once it was.
+String mitmRunText(AppLocalizations l, Mitm mitm, MitmCoreCaTrust trust) {
+  if (!mitm.enable) return l.mitmRunOff;
+  return switch (trust.status) {
+    MitmCoreCaStatus.leased => l.mitmRunActive,
+    MitmCoreCaStatus.untrusted => l.mitmRunStopped,
+    MitmCoreCaStatus.failed => l.mitmRunNotRunning,
+    _ => l.mitmRunChecking,
+  };
+}
+
+/// A row that does something; with no [onTap] it is dimmed, skipped by
+/// focus and announced as a disabled button.
+class MitmActionRow extends StatelessWidget {
+  const MitmActionRow({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+  });
+
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final style = enabled
+        ? null
+        : TextStyle(color: context.colorScheme.onSurface.opacity38);
+    final subtitle = this.subtitle;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: ExcludeFocus(
+        excluding: !enabled,
+        child: ListItem(
+          title: Text(title, style: style),
+          subtitle: subtitle == null ? null : Text(subtitle, style: style),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+}
+
+/// The old CA by name and fingerprint; its removal sits under the name in
+/// a narrow window and beside it otherwise.
+class MitmOldCaRow extends StatelessWidget {
+  const MitmOldCaRow({super.key, required this.certificate, this.onRemove});
+
+  static const narrowWidth = 480.0;
+
+  final MitmCertificate certificate;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    final button = TonalButton(
+      glyph: AppGlyphs.delete,
+      label: l.mitmRemoveOldCa,
+      onPressed: onRemove,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < narrowWidth;
+        return ListItem(
+          title: Text(certificate.subject),
+          subtitle: narrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [const SizedBox(height: 8), button],
+                )
+              : null,
+          trailing: narrow ? null : button,
+        );
+      },
+    );
   }
 }
 
