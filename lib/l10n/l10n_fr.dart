@@ -9625,4 +9625,138 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get ipQualityExplain =>
       'Qualité : la catégorie correspondant au score de santé ipx.al (0–100).';
+
+  @override
+  String mitmCaInUseCore(Object name) {
+    return 'Utilisé : $name, signé dans le proxy';
+  }
+
+  @override
+  String mitmCaInUseLegacy(Object name) {
+    return 'Utilisé : $name, le certificat d\'origine de votre trousseau';
+  }
+
+  @override
+  String get mitmMigrate => 'Passer à un nouveau certificat';
+
+  @override
+  String get mitmMigrateDesc =>
+      'Signe dans le proxy, les pages n\'attendent donc plus Flash. Le certificat actuel continue de fonctionner jusqu\'à ce que le nouveau soit approuvé et vérifié.';
+
+  @override
+  String mitmPendingCertificate(Object name) {
+    return 'Nouveau certificat : $name';
+  }
+
+  @override
+  String get mitmInstallAndSwitch => 'Installer, approuver et basculer';
+
+  @override
+  String get mitmInstallAndSwitchDesc =>
+      'macOS demande votre mot de passe. Flash vérifie le nouveau certificat et ne bascule qu\'une fois qu\'il fonctionne.';
+
+  @override
+  String get mitmCheckAndSwitch => 'Vérifier à nouveau et basculer';
+
+  @override
+  String get mitmDiscardPending => 'Abandonner le nouveau certificat';
+
+  @override
+  String get mitmMigrationSwitched => 'Le nouveau certificat est utilisé.';
+
+  @override
+  String get mitmMigrationCancelled =>
+      'Non installé. Le certificat actuel reste utilisé ; vous pouvez réessayer.';
+
+  @override
+  String get mitmMigrationUntrusted =>
+      'Le nouveau certificat n\'est pas encore approuvé. Le certificat actuel reste utilisé ; approuvez-le et vérifiez à nouveau.';
+
+  @override
+  String get mitmMigrationFailed =>
+      'Le nouveau certificat n\'a pas pu être vérifié. Le certificat actuel reste utilisé ; vous pouvez réessayer.';
+
+  @override
+  String get mitmMigrationCoreIdentity =>
+      'Le proxy n\'a pas passé sa vérification d\'identité, le nouveau certificat n\'a donc pas été chargé. Rien n\'a changé.';
+
+  @override
+  String get mitmRemoveOldCa => 'Supprimer l\'ancien certificat';
+
+  @override
+  String mitmRemoveOldCaTip(Object name) {
+    return 'Supprimer $name ? Seul ce certificat est supprimé ; celui utilisé reste.';
+  }
+
+  @override
+  String get mitmRemoveOldCaFailed =>
+      'L\'ancien certificat n\'a pas été supprimé.';
+
+  @override
+  String get mitmImportCertificate => 'Importer un certificat (.p12)';
+
+  @override
+  String get mitmImportPassword => 'Mot de passe du fichier .p12';
+
+  @override
+  String get mitmImportBadP12 => 'Le fichier n\'est pas un .p12 lisible.';
+
+  @override
+  String get mitmImportBadPassphrase => 'Mot de passe incorrect.';
+
+  @override
+  String get mitmImportNotRoot => 'Ce certificat n\'est pas une AC racine.';
+
+  @override
+  String get mitmImportKeyMismatch =>
+      'La clé privée ne correspond pas au certificat.';
+
+  @override
+  String get mitmImportExpired => 'Ce certificat a expiré.';
+
+  @override
+  String get mitmImportNotYetValid => 'Ce certificat n\'est pas encore valide.';
+
+  @override
+  String get mitmImportUnsupportedKey =>
+      'Ce type de clé n\'est pas pris en charge. Utilisez une clé ECDSA P-256/P-384 ou RSA de 2048 bits ou plus.';
+
+  @override
+  String get mitmImportNameConstraints =>
+      'Les certificats avec contraintes de nom ne sont pas pris en charge.';
+
+  @override
+  String mitmImportUnusable(Object reason) {
+    return 'Ce certificat ne peut pas signer de certificats de sites web ($reason).';
+  }
+
+  @override
+  String get mitmCoreCaUntrusted =>
+      'Le certificat n\'est plus approuvé, le déchiffrement s\'est donc arrêté. Approuvez-le à nouveau pour reprendre.';
+
+  @override
+  String get mitmCoreCaPassphraseMissing =>
+      'Le mot de passe du certificat manque dans le trousseau. Importez de nouveau le certificat ou générez-en un nouveau.';
+
+  @override
+  String get mitmCoreCaCoreOutdated =>
+      'Le proxy est trop ancien pour signer avec ce certificat. Mettez Flash à jour.';
+
+  @override
+  String get mitmCoreCaRefused =>
+      'Le proxy a refusé le certificat. Générez-en ou importez-en un autre.';
+
+  @override
+  String get mitmRestoredCaTitle => 'Certificat de déchiffrement restauré';
+
+  @override
+  String get mitmRestoredCaTip =>
+      'La sauvegarde contenait son certificat de déchiffrement. Approuvez-le sur ce Mac pour déchiffrer à nouveau le HTTPS.';
+
+  @override
+  String get includeMitmCa => 'Inclure le certificat de déchiffrement';
+
+  @override
+  String get includeMitmCaTip =>
+      'Cette sauvegarde contiendra la clé privée du certificat et son mot de passe. Quiconque l\'obtient et peut atteindre votre réseau (le même Wi-Fi, votre routeur, un nœud proxy) peut usurper n\'importe quel site HTTPS sans que vos appareils ne l\'avertissent. Conservez-la en lieu sûr ; si elle a pu fuiter, générez un nouveau certificat et supprimez l\'ancien sur tous vos appareils.';
 }

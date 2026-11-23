@@ -8792,4 +8792,124 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipQualityExplain => '质量：ipx.al 健康分（0–100）对应的等级。';
+
+  @override
+  String mitmCaInUseCore(Object name) {
+    return '正在使用：$name，由代理直接签发';
+  }
+
+  @override
+  String mitmCaInUseLegacy(Object name) {
+    return '正在使用：$name，钥匙串中的原证书';
+  }
+
+  @override
+  String get mitmMigrate => '换用新证书';
+
+  @override
+  String get mitmMigrateDesc => '由代理直接签发，网页不再等待 Flash。新证书信任并验证通过前，当前证书照常使用。';
+
+  @override
+  String mitmPendingCertificate(Object name) {
+    return '新证书：$name';
+  }
+
+  @override
+  String get mitmInstallAndSwitch => '安装、信任并切换';
+
+  @override
+  String get mitmInstallAndSwitchDesc => '系统会要求输入 Mac 密码。Flash 验证新证书可用后才切换。';
+
+  @override
+  String get mitmCheckAndSwitch => '重新验证并切换';
+
+  @override
+  String get mitmDiscardPending => '放弃新证书';
+
+  @override
+  String get mitmMigrationSwitched => '已切换到新证书。';
+
+  @override
+  String get mitmMigrationCancelled => '未安装。仍在使用当前证书，可稍后重试。';
+
+  @override
+  String get mitmMigrationUntrusted => '新证书尚未受信任。仍在使用当前证书，信任后请重新验证。';
+
+  @override
+  String get mitmMigrationFailed => '新证书验证失败。仍在使用当前证书，可稍后重试。';
+
+  @override
+  String get mitmMigrationCoreIdentity => '代理未通过身份校验，没有载入新证书，一切保持原样。';
+
+  @override
+  String get mitmRemoveOldCa => '移除旧证书';
+
+  @override
+  String mitmRemoveOldCaTip(Object name) {
+    return '要移除 $name 吗？只删除这张证书，正在使用的证书不受影响。';
+  }
+
+  @override
+  String get mitmRemoveOldCaFailed => '旧证书未能移除。';
+
+  @override
+  String get mitmImportCertificate => '导入证书（.p12）';
+
+  @override
+  String get mitmImportPassword => '.p12 文件的密码';
+
+  @override
+  String get mitmImportBadP12 => '文件不是可读取的 .p12。';
+
+  @override
+  String get mitmImportBadPassphrase => '密码错误。';
+
+  @override
+  String get mitmImportNotRoot => '这不是根证书。';
+
+  @override
+  String get mitmImportKeyMismatch => '私钥与证书不匹配。';
+
+  @override
+  String get mitmImportExpired => '证书已过期。';
+
+  @override
+  String get mitmImportNotYetValid => '证书尚未生效。';
+
+  @override
+  String get mitmImportUnsupportedKey =>
+      '不支持此密钥类型，请使用 ECDSA P-256/P-384 或 2048 位以上的 RSA 密钥。';
+
+  @override
+  String get mitmImportNameConstraints => '不支持带名称限制的证书。';
+
+  @override
+  String mitmImportUnusable(Object reason) {
+    return '此证书不能签发网站证书（$reason）。';
+  }
+
+  @override
+  String get mitmCoreCaUntrusted => '证书不再受信任，解密已停止。重新信任后即可恢复。';
+
+  @override
+  String get mitmCoreCaPassphraseMissing => '钥匙串中缺少证书密码。请重新导入证书或生成新证书。';
+
+  @override
+  String get mitmCoreCaCoreOutdated => '代理版本过旧，无法用此证书签发。请更新 Flash。';
+
+  @override
+  String get mitmCoreCaRefused => '代理拒绝了此证书。请生成或导入其他证书。';
+
+  @override
+  String get mitmRestoredCaTitle => '已恢复解密证书';
+
+  @override
+  String get mitmRestoredCaTip => '备份中带有解密证书。在这台 Mac 上信任它后即可继续解密 HTTPS。';
+
+  @override
+  String get includeMitmCa => '包含解密证书';
+
+  @override
+  String get includeMitmCaTip =>
+      '这份备份将包含证书的私钥和密码。拿到它的人如果能接触你的网络（同一 Wi‑Fi、路由器、代理节点），就能冒充任何 HTTPS 网站且你的设备不报警。请妥善保管；若可能泄露，请重新生成证书并在所有设备上删除旧证书。';
 }

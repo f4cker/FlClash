@@ -9548,4 +9548,137 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ipQualityExplain =>
       'Quality: the grade corresponding to the ipx.al health score (0–100).';
+
+  @override
+  String mitmCaInUseCore(Object name) {
+    return 'In use: $name, signed in the proxy';
+  }
+
+  @override
+  String mitmCaInUseLegacy(Object name) {
+    return 'In use: $name, the original certificate in your keychain';
+  }
+
+  @override
+  String get mitmMigrate => 'Switch to a new certificate';
+
+  @override
+  String get mitmMigrateDesc =>
+      'Signs in the proxy, so pages no longer wait on Flash. The current certificate keeps working until the new one is trusted and checked.';
+
+  @override
+  String mitmPendingCertificate(Object name) {
+    return 'New certificate: $name';
+  }
+
+  @override
+  String get mitmInstallAndSwitch => 'Install, trust and switch';
+
+  @override
+  String get mitmInstallAndSwitchDesc =>
+      'macOS asks for your password. Flash checks the new certificate and switches only once it works.';
+
+  @override
+  String get mitmCheckAndSwitch => 'Check again and switch';
+
+  @override
+  String get mitmDiscardPending => 'Discard new certificate';
+
+  @override
+  String get mitmMigrationSwitched => 'Switched to the new certificate.';
+
+  @override
+  String get mitmMigrationCancelled =>
+      'Not installed. The current certificate is still in use; you can try again.';
+
+  @override
+  String get mitmMigrationUntrusted =>
+      'The new certificate is not trusted yet. The current certificate is still in use; trust it and check again.';
+
+  @override
+  String get mitmMigrationFailed =>
+      'The new certificate could not be checked. The current certificate is still in use; you can try again.';
+
+  @override
+  String get mitmMigrationCoreIdentity =>
+      'The proxy did not pass its identity check, so the new certificate was not loaded. Nothing changed.';
+
+  @override
+  String get mitmRemoveOldCa => 'Remove old certificate';
+
+  @override
+  String mitmRemoveOldCaTip(Object name) {
+    return 'Remove $name? Only this certificate is deleted; the one in use stays.';
+  }
+
+  @override
+  String get mitmRemoveOldCaFailed => 'The old certificate was not removed.';
+
+  @override
+  String get mitmImportCertificate => 'Import certificate (.p12)';
+
+  @override
+  String get mitmImportPassword => 'Password of the .p12 file';
+
+  @override
+  String get mitmImportBadP12 => 'The file is not a readable .p12.';
+
+  @override
+  String get mitmImportBadPassphrase => 'Wrong password.';
+
+  @override
+  String get mitmImportNotRoot => 'This certificate is not a root CA.';
+
+  @override
+  String get mitmImportKeyMismatch =>
+      'The private key does not belong to the certificate.';
+
+  @override
+  String get mitmImportExpired => 'This certificate has expired.';
+
+  @override
+  String get mitmImportNotYetValid => 'This certificate is not valid yet.';
+
+  @override
+  String get mitmImportUnsupportedKey =>
+      'This key type is not supported. Use an ECDSA P-256/P-384 or RSA 2048+ key.';
+
+  @override
+  String get mitmImportNameConstraints =>
+      'Certificates with name constraints are not supported.';
+
+  @override
+  String mitmImportUnusable(Object reason) {
+    return 'This certificate cannot sign website certificates ($reason).';
+  }
+
+  @override
+  String get mitmCoreCaUntrusted =>
+      'The certificate is no longer trusted, so decryption stopped. Trust it again to resume.';
+
+  @override
+  String get mitmCoreCaPassphraseMissing =>
+      'The certificate\'s password is missing from the keychain. Import the certificate again or generate a new one.';
+
+  @override
+  String get mitmCoreCaCoreOutdated =>
+      'The proxy is too old to sign with this certificate. Update Flash.';
+
+  @override
+  String get mitmCoreCaRefused =>
+      'The proxy refused the certificate. Generate or import another one.';
+
+  @override
+  String get mitmRestoredCaTitle => 'Decryption certificate restored';
+
+  @override
+  String get mitmRestoredCaTip =>
+      'The backup carried its decryption certificate. Trust it on this Mac to decrypt HTTPS again.';
+
+  @override
+  String get includeMitmCa => 'Include Decryption Certificate';
+
+  @override
+  String get includeMitmCaTip =>
+      'This backup will hold the certificate\'s private key and password. Anyone who gets it and can reach your network (the same Wi-Fi, your router, a proxy node) can impersonate any HTTPS site without your devices warning. Keep it safe; if it may have leaked, generate a new certificate and delete the old one on every device.';
 }

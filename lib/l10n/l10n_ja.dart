@@ -9282,4 +9282,133 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ipQualityExplain => '品質：ipx.al のヘルススコア（0〜100）に対応する等級。';
+
+  @override
+  String mitmCaInUseCore(Object name) {
+    return '使用中：$name（プロキシで署名）';
+  }
+
+  @override
+  String mitmCaInUseLegacy(Object name) {
+    return '使用中：$name（キーチェーンの元の証明書）';
+  }
+
+  @override
+  String get mitmMigrate => '新しい証明書に切り替える';
+
+  @override
+  String get mitmMigrateDesc =>
+      'プロキシで署名するため、ページが Flash を待たなくなります。新しい証明書が信頼され確認されるまで、現在の証明書がそのまま使われます。';
+
+  @override
+  String mitmPendingCertificate(Object name) {
+    return '新しい証明書：$name';
+  }
+
+  @override
+  String get mitmInstallAndSwitch => 'インストールして信頼し、切り替える';
+
+  @override
+  String get mitmInstallAndSwitchDesc =>
+      'macOS がパスワードを求めます。Flash は新しい証明書を確認し、使えると分かってから切り替えます。';
+
+  @override
+  String get mitmCheckAndSwitch => 'もう一度確認して切り替える';
+
+  @override
+  String get mitmDiscardPending => '新しい証明書を破棄';
+
+  @override
+  String get mitmMigrationSwitched => '新しい証明書に切り替えました。';
+
+  @override
+  String get mitmMigrationCancelled =>
+      'インストールされませんでした。現在の証明書を引き続き使用しています。もう一度お試しください。';
+
+  @override
+  String get mitmMigrationUntrusted =>
+      '新しい証明書はまだ信頼されていません。現在の証明書を引き続き使用しています。信頼してからもう一度確認してください。';
+
+  @override
+  String get mitmMigrationFailed =>
+      '新しい証明書を確認できませんでした。現在の証明書を引き続き使用しています。もう一度お試しください。';
+
+  @override
+  String get mitmMigrationCoreIdentity =>
+      'プロキシが本人確認に通らなかったため、新しい証明書は読み込まれませんでした。何も変更されていません。';
+
+  @override
+  String get mitmRemoveOldCa => '古い証明書を削除';
+
+  @override
+  String mitmRemoveOldCaTip(Object name) {
+    return '$name を削除しますか？この証明書だけが削除され、使用中の証明書はそのまま残ります。';
+  }
+
+  @override
+  String get mitmRemoveOldCaFailed => '古い証明書を削除できませんでした。';
+
+  @override
+  String get mitmImportCertificate => '証明書を読み込む（.p12）';
+
+  @override
+  String get mitmImportPassword => '.p12 ファイルのパスワード';
+
+  @override
+  String get mitmImportBadP12 => '読み取れる .p12 ファイルではありません。';
+
+  @override
+  String get mitmImportBadPassphrase => 'パスワードが違います。';
+
+  @override
+  String get mitmImportNotRoot => 'この証明書はルート CA ではありません。';
+
+  @override
+  String get mitmImportKeyMismatch => '秘密鍵が証明書と一致しません。';
+
+  @override
+  String get mitmImportExpired => 'この証明書は期限切れです。';
+
+  @override
+  String get mitmImportNotYetValid => 'この証明書はまだ有効になっていません。';
+
+  @override
+  String get mitmImportUnsupportedKey =>
+      'この鍵の種類には対応していません。ECDSA P-256/P-384 または 2048 ビット以上の RSA 鍵を使ってください。';
+
+  @override
+  String get mitmImportNameConstraints => '名前制約付きの証明書には対応していません。';
+
+  @override
+  String mitmImportUnusable(Object reason) {
+    return 'この証明書ではウェブサイトの証明書に署名できません（$reason）。';
+  }
+
+  @override
+  String get mitmCoreCaUntrusted => '証明書が信頼されなくなったため、復号を停止しました。もう一度信頼すると再開します。';
+
+  @override
+  String get mitmCoreCaPassphraseMissing =>
+      'キーチェーンに証明書のパスワードがありません。証明書を読み込み直すか、新しく生成してください。';
+
+  @override
+  String get mitmCoreCaCoreOutdated =>
+      'プロキシが古すぎるため、この証明書で署名できません。Flash をアップデートしてください。';
+
+  @override
+  String get mitmCoreCaRefused => 'プロキシがこの証明書を拒否しました。別の証明書を生成または読み込んでください。';
+
+  @override
+  String get mitmRestoredCaTitle => '復号証明書を復元しました';
+
+  @override
+  String get mitmRestoredCaTip =>
+      'バックアップに復号証明書が含まれていました。この Mac で信頼すると HTTPS の復号を再開できます。';
+
+  @override
+  String get includeMitmCa => '復号証明書を含める';
+
+  @override
+  String get includeMitmCaTip =>
+      'このバックアップには証明書の秘密鍵とパスワードが含まれます。入手した人があなたのネットワーク（同じ Wi‑Fi、ルーター、プロキシノード）に届けば、デバイスに警告を出させずにあらゆる HTTPS サイトになりすませます。安全に保管してください。漏れたおそれがあれば、証明書を生成し直し、すべてのデバイスで古い証明書を削除してください。';
 }

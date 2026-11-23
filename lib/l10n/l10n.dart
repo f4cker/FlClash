@@ -15639,6 +15639,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quality: the grade corresponding to the ipx.al health score (0–100).'**
   String get ipQualityExplain;
+
+  /// No description provided for @mitmCaInUseCore.
+  ///
+  /// In en, this message translates to:
+  /// **'In use: {name}, signed in the proxy'**
+  String mitmCaInUseCore(Object name);
+
+  /// No description provided for @mitmCaInUseLegacy.
+  ///
+  /// In en, this message translates to:
+  /// **'In use: {name}, the original certificate in your keychain'**
+  String mitmCaInUseLegacy(Object name);
+
+  /// No description provided for @mitmMigrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to a new certificate'**
+  String get mitmMigrate;
+
+  /// No description provided for @mitmMigrateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Signs in the proxy, so pages no longer wait on Flash. The current certificate keeps working until the new one is trusted and checked.'**
+  String get mitmMigrateDesc;
+
+  /// No description provided for @mitmPendingCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'New certificate: {name}'**
+  String mitmPendingCertificate(Object name);
+
+  /// No description provided for @mitmInstallAndSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Install, trust and switch'**
+  String get mitmInstallAndSwitch;
+
+  /// No description provided for @mitmInstallAndSwitchDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'macOS asks for your password. Flash checks the new certificate and switches only once it works.'**
+  String get mitmInstallAndSwitchDesc;
+
+  /// No description provided for @mitmCheckAndSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Check again and switch'**
+  String get mitmCheckAndSwitch;
+
+  /// No description provided for @mitmDiscardPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard new certificate'**
+  String get mitmDiscardPending;
+
+  /// No description provided for @mitmMigrationSwitched.
+  ///
+  /// In en, this message translates to:
+  /// **'Switched to the new certificate.'**
+  String get mitmMigrationSwitched;
+
+  /// No description provided for @mitmMigrationCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed. The current certificate is still in use; you can try again.'**
+  String get mitmMigrationCancelled;
+
+  /// No description provided for @mitmMigrationUntrusted.
+  ///
+  /// In en, this message translates to:
+  /// **'The new certificate is not trusted yet. The current certificate is still in use; trust it and check again.'**
+  String get mitmMigrationUntrusted;
+
+  /// No description provided for @mitmMigrationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The new certificate could not be checked. The current certificate is still in use; you can try again.'**
+  String get mitmMigrationFailed;
+
+  /// No description provided for @mitmMigrationCoreIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'The proxy did not pass its identity check, so the new certificate was not loaded. Nothing changed.'**
+  String get mitmMigrationCoreIdentity;
+
+  /// No description provided for @mitmRemoveOldCa.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove old certificate'**
+  String get mitmRemoveOldCa;
+
+  /// No description provided for @mitmRemoveOldCaTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}? Only this certificate is deleted; the one in use stays.'**
+  String mitmRemoveOldCaTip(Object name);
+
+  /// No description provided for @mitmRemoveOldCaFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The old certificate was not removed.'**
+  String get mitmRemoveOldCaFailed;
+
+  /// No description provided for @mitmImportCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Import certificate (.p12)'**
+  String get mitmImportCertificate;
+
+  /// No description provided for @mitmImportPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password of the .p12 file'**
+  String get mitmImportPassword;
+
+  /// No description provided for @mitmImportBadP12.
+  ///
+  /// In en, this message translates to:
+  /// **'The file is not a readable .p12.'**
+  String get mitmImportBadP12;
+
+  /// No description provided for @mitmImportBadPassphrase.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong password.'**
+  String get mitmImportBadPassphrase;
+
+  /// No description provided for @mitmImportNotRoot.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate is not a root CA.'**
+  String get mitmImportNotRoot;
+
+  /// No description provided for @mitmImportKeyMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The private key does not belong to the certificate.'**
+  String get mitmImportKeyMismatch;
+
+  /// No description provided for @mitmImportExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate has expired.'**
+  String get mitmImportExpired;
+
+  /// No description provided for @mitmImportNotYetValid.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate is not valid yet.'**
+  String get mitmImportNotYetValid;
+
+  /// No description provided for @mitmImportUnsupportedKey.
+  ///
+  /// In en, this message translates to:
+  /// **'This key type is not supported. Use an ECDSA P-256/P-384 or RSA 2048+ key.'**
+  String get mitmImportUnsupportedKey;
+
+  /// No description provided for @mitmImportNameConstraints.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificates with name constraints are not supported.'**
+  String get mitmImportNameConstraints;
+
+  /// No description provided for @mitmImportUnusable.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate cannot sign website certificates ({reason}).'**
+  String mitmImportUnusable(Object reason);
+
+  /// No description provided for @mitmCoreCaUntrusted.
+  ///
+  /// In en, this message translates to:
+  /// **'The certificate is no longer trusted, so decryption stopped. Trust it again to resume.'**
+  String get mitmCoreCaUntrusted;
+
+  /// No description provided for @mitmCoreCaPassphraseMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The certificate\'s password is missing from the keychain. Import the certificate again or generate a new one.'**
+  String get mitmCoreCaPassphraseMissing;
+
+  /// No description provided for @mitmCoreCaCoreOutdated.
+  ///
+  /// In en, this message translates to:
+  /// **'The proxy is too old to sign with this certificate. Update Flash.'**
+  String get mitmCoreCaCoreOutdated;
+
+  /// No description provided for @mitmCoreCaRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'The proxy refused the certificate. Generate or import another one.'**
+  String get mitmCoreCaRefused;
+
+  /// No description provided for @mitmRestoredCaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption certificate restored'**
+  String get mitmRestoredCaTitle;
+
+  /// No description provided for @mitmRestoredCaTip.
+  ///
+  /// In en, this message translates to:
+  /// **'The backup carried its decryption certificate. Trust it on this Mac to decrypt HTTPS again.'**
+  String get mitmRestoredCaTip;
+
+  /// No description provided for @includeMitmCa.
+  ///
+  /// In en, this message translates to:
+  /// **'Include Decryption Certificate'**
+  String get includeMitmCa;
+
+  /// No description provided for @includeMitmCaTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup will hold the certificate\'s private key and password. Anyone who gets it and can reach your network (the same Wi-Fi, your router, a proxy node) can impersonate any HTTPS site without your devices warning. Keep it safe; if it may have leaked, generate a new certificate and delete the old one on every device.'**
+  String get includeMitmCaTip;
 }
 
 class _AppLocalizationsDelegate

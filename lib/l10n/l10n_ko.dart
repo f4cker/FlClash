@@ -9356,4 +9356,134 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ipQualityExplain => '품질: ipx.al 건강 점수(0–100)에 해당하는 등급.';
+
+  @override
+  String mitmCaInUseCore(Object name) {
+    return '사용 중: $name, 프록시에서 서명';
+  }
+
+  @override
+  String mitmCaInUseLegacy(Object name) {
+    return '사용 중: $name, 키체인의 기존 인증서';
+  }
+
+  @override
+  String get mitmMigrate => '새 인증서로 전환';
+
+  @override
+  String get mitmMigrateDesc =>
+      '프록시에서 서명하므로 페이지가 더 이상 Flash를 기다리지 않습니다. 새 인증서가 신뢰되고 확인될 때까지 현재 인증서가 계속 사용됩니다.';
+
+  @override
+  String mitmPendingCertificate(Object name) {
+    return '새 인증서: $name';
+  }
+
+  @override
+  String get mitmInstallAndSwitch => '설치, 신뢰 후 전환';
+
+  @override
+  String get mitmInstallAndSwitchDesc =>
+      'macOS가 암호를 요청합니다. Flash는 새 인증서를 확인하고 작동할 때만 전환합니다.';
+
+  @override
+  String get mitmCheckAndSwitch => '다시 확인하고 전환';
+
+  @override
+  String get mitmDiscardPending => '새 인증서 버리기';
+
+  @override
+  String get mitmMigrationSwitched => '새 인증서로 전환했습니다.';
+
+  @override
+  String get mitmMigrationCancelled =>
+      '설치되지 않았습니다. 현재 인증서를 계속 사용합니다. 다시 시도할 수 있습니다.';
+
+  @override
+  String get mitmMigrationUntrusted =>
+      '새 인증서가 아직 신뢰되지 않았습니다. 현재 인증서를 계속 사용합니다. 신뢰한 뒤 다시 확인하세요.';
+
+  @override
+  String get mitmMigrationFailed =>
+      '새 인증서를 확인하지 못했습니다. 현재 인증서를 계속 사용합니다. 다시 시도할 수 있습니다.';
+
+  @override
+  String get mitmMigrationCoreIdentity =>
+      '프록시가 신원 확인을 통과하지 못해 새 인증서를 불러오지 않았습니다. 바뀐 것은 없습니다.';
+
+  @override
+  String get mitmRemoveOldCa => '이전 인증서 제거';
+
+  @override
+  String mitmRemoveOldCaTip(Object name) {
+    return '$name을(를) 제거할까요? 이 인증서만 삭제되며 사용 중인 인증서는 그대로입니다.';
+  }
+
+  @override
+  String get mitmRemoveOldCaFailed => '이전 인증서를 제거하지 못했습니다.';
+
+  @override
+  String get mitmImportCertificate => '인증서 가져오기(.p12)';
+
+  @override
+  String get mitmImportPassword => '.p12 파일 암호';
+
+  @override
+  String get mitmImportBadP12 => '읽을 수 있는 .p12 파일이 아닙니다.';
+
+  @override
+  String get mitmImportBadPassphrase => '암호가 틀렸습니다.';
+
+  @override
+  String get mitmImportNotRoot => '이 인증서는 루트 CA가 아닙니다.';
+
+  @override
+  String get mitmImportKeyMismatch => '개인 키가 인증서와 맞지 않습니다.';
+
+  @override
+  String get mitmImportExpired => '이 인증서는 만료되었습니다.';
+
+  @override
+  String get mitmImportNotYetValid => '이 인증서는 아직 유효하지 않습니다.';
+
+  @override
+  String get mitmImportUnsupportedKey =>
+      '지원하지 않는 키 유형입니다. ECDSA P-256/P-384 또는 2048비트 이상의 RSA 키를 사용하세요.';
+
+  @override
+  String get mitmImportNameConstraints => '이름 제약이 있는 인증서는 지원하지 않습니다.';
+
+  @override
+  String mitmImportUnusable(Object reason) {
+    return '이 인증서로는 웹사이트 인증서에 서명할 수 없습니다($reason).';
+  }
+
+  @override
+  String get mitmCoreCaUntrusted =>
+      '인증서가 더 이상 신뢰되지 않아 복호화를 중지했습니다. 다시 신뢰하면 재개됩니다.';
+
+  @override
+  String get mitmCoreCaPassphraseMissing =>
+      '키체인에 인증서 암호가 없습니다. 인증서를 다시 가져오거나 새로 생성하세요.';
+
+  @override
+  String get mitmCoreCaCoreOutdated =>
+      '프록시가 너무 오래되어 이 인증서로 서명할 수 없습니다. Flash를 업데이트하세요.';
+
+  @override
+  String get mitmCoreCaRefused => '프록시가 인증서를 거부했습니다. 다른 인증서를 생성하거나 가져오세요.';
+
+  @override
+  String get mitmRestoredCaTitle => '복호화 인증서를 복원했습니다';
+
+  @override
+  String get mitmRestoredCaTip =>
+      '백업에 복호화 인증서가 들어 있었습니다. 이 Mac에서 신뢰하면 HTTPS를 다시 복호화합니다.';
+
+  @override
+  String get includeMitmCa => '복호화 인증서 포함';
+
+  @override
+  String get includeMitmCaTip =>
+      '이 백업에는 인증서의 개인 키와 암호가 들어갑니다. 이를 손에 넣고 내 네트워크(같은 Wi‑Fi, 라우터, 프록시 노드)에 닿을 수 있는 사람은 기기 경고 없이 어떤 HTTPS 사이트든 사칭할 수 있습니다. 안전하게 보관하세요. 유출되었을 수 있다면 인증서를 새로 생성하고 모든 기기에서 이전 인증서를 삭제하세요.';
 }
