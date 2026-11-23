@@ -25,6 +25,29 @@ void main() {
       expect(state.group, true);
     });
 
+    test('stops where groups select each other in a loop', () {
+      final groups = [
+        const Group(
+          name: 'loop-a',
+          type: GroupType.Selector,
+          all: [Proxy(name: 'loop-b', type: 'Selector')],
+        ),
+        const Group(
+          name: 'loop-b',
+          type: GroupType.URLTest,
+          now: 'loop-a',
+          all: [Proxy(name: 'loop-a', type: 'Selector')],
+        ),
+      ];
+      final state = computeRealSelectedProxyState(
+        'loop-a',
+        groups: groups,
+        selectedMap: {'loop-a': 'loop-b'},
+      );
+      expect(state.proxyName, 'loop-a');
+      expect(state.group, true);
+    });
+
     test('resolves single-hop chain via selectedMap', () {
       final groups = [
         const Group(

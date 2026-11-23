@@ -395,6 +395,8 @@ class AppTray implements TrayPort {
         _buildGroupSubmenu(
           group,
           rawGroup: readFailed ? group : rawGroups.getGroup(group.name),
+          rawGroups: rawGroups,
+          selectedMap: selectedMap,
           menuState: menuStates[group.name],
           configuredName: trayState.selectedMap[group.name],
           isStart: trayState.isStart,
@@ -559,8 +561,9 @@ class AppTray implements TrayPort {
     int? delay,
     bool pending,
     Proxy proxy,
-    ColorScheme scheme,
-  ) {
+    ColorScheme scheme, {
+    String untested = '—',
+  }) {
     final l10n = currentAppLocalizations;
     final value = pending || delay == 0 ? null : delay;
     final label = pending
@@ -569,7 +572,7 @@ class AppTray implements TrayPort {
         ? switch (proxy.type.toLowerCase()) {
             'direct' => l10n.direct,
             'reject' || 'rejectdrop' => l10n.trayReject,
-            _ => '—',
+            _ => untested,
           }
         : value > 0
         ? l10n.trayLatencyBadge(value)
@@ -594,6 +597,8 @@ class AppTray implements TrayPort {
   TrayMenuSubmenu _buildGroupSubmenu(
     Group group, {
     required Group? rawGroup,
+    required List<Group> rawGroups,
+    required Map<String, String> selectedMap,
     required TrayGroupMenuState? menuState,
     required String? configuredName,
     required bool isStart,
@@ -642,6 +647,26 @@ class AppTray implements TrayPort {
                   ? null
                   : l10n.traySwitchingTo(displayName(pending)),
           };
+    // A switch in progress or a failure leaves no node to describe.
+    final node =
+        status != null ||
+            selected == null ||
+            group.type == GroupType.LoadBalance
+        ? null
+        : trayCurrentNode(
+            selected,
+            groups: rawGroups,
+            selectedMap: selectedMap,
+          );
+    final latency = node == null
+        ? null
+        : _badge(
+            delays[selected],
+            pendingNames.contains(selected),
+            _proxyNamed(node, group, rawGroups),
+            scheme,
+            untested: l10n.trayNotTested,
+          );
     TrayMenuIcon icon(String name, String source, SurfaceLevel level) =>
         TrayMenuIcon(
           monogram: groupMonogram(name),
@@ -653,6 +678,7 @@ class AppTray implements TrayPort {
       label: group.name,
       detail: status ?? selection,
       icon: icon(group.name, group.icon, SurfaceLevel.block),
+      badge: latency,
       accessibilityLabel: [
         group.name,
         group.type == GroupType.LoadBalance
@@ -660,6 +686,12 @@ class AppTray implements TrayPort {
             : selected == null
             ? l10n.traySelectionUnknown
             : l10n.trayCurrentSelection(displayName(selected)),
+        if (latency != null)
+          _latencyDescription(
+            latency,
+            measuredDelay: delays[selected],
+            testing: pendingNames.contains(selected),
+          ),
         if (status != null) status,
       ].join(', '),
       items: [
@@ -698,6 +730,30 @@ class AppTray implements TrayPort {
     );
   }
 
+  Proxy _proxyNamed(String name, Group group, List<Group> groups) {
+    for (final candidate in [group, ...groups]) {
+      for (final proxy in candidate.all) {
+        if (proxy.name == name) return proxy;
+      }
+    }
+    return Proxy(name: name, type: '');
+  }
+
+  String _latencyDescription(
+    TrayMenuBadge badge, {
+    required int? measuredDelay,
+    required bool testing,
+  }) {
+    final l10n = currentAppLocalizations;
+    return testing
+        ? l10n.trayTesting
+        : measuredDelay != null && measuredDelay > 0
+        ? l10n.trayLatencyMilliseconds(measuredDelay)
+        : badge.label == '—'
+        ? l10n.trayLatencyUnknown
+        : badge.label;
+  }
+
   String _memberLabel(Proxy proxy, Map<String, String> sourceLabels) {
     final source = sourceLabels[proxy.providerName];
     if (source == null || source.isEmpty) return proxy.name;
@@ -722,13 +778,11 @@ class AppTray implements TrayPort {
       accessibilityLabel: [
         label,
         if (checked) currentAppLocalizations.traySelected,
-        testing
-            ? currentAppLocalizations.trayTesting
-            : measuredDelay != null && measuredDelay > 0
-            ? currentAppLocalizations.trayLatencyMilliseconds(measuredDelay)
-            : badge.label == '—'
-            ? currentAppLocalizations.trayLatencyUnknown
-            : badge.label,
+        _latencyDescription(
+          badge,
+          measuredDelay: measuredDelay,
+          testing: testing,
+        ),
       ].join(', '),
       onSelected: onSelected,
     );
@@ -736,6 +790,26 @@ class AppTray implements TrayPort {
 }
 
 final appTray = system.isDesktop ? AppTray() : null;
+
+/// The node a group's selected [member] actually uses; null for load
+/// balancing (several nodes) or groups that select each other in a loop.
+@visibleForTesting
+String? trayCurrentNode(
+  String member, {
+  required List<Group> groups,
+  required Map<String, String> selectedMap,
+}) {
+  final visited = <String>{};
+  var name = member;
+  while (true) {
+    final group = groups.getGroup(name);
+    if (group == null) return name;
+    if (group.type == GroupType.LoadBalance || !visited.add(name)) return null;
+    final next = group.getCurrentSelectedName(selectedMap[name] ?? '');
+    if (next.isEmpty) return name;
+    name = next;
+  }
+}
 
 const mitmDotRed = 0xFFFF3B30;
 const mitmDotAmber = 0xFFFF9F0A;

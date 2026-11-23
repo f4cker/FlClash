@@ -1810,6 +1810,7 @@
   "trayTestLatency": "测试延迟",
   "trayReject": "拒绝",
   "trayLatencyBadge": "{value} ms",
+  "trayNotTested": "未测速",
   "compositionReviewTitle": "首次应用前确认设置",
   "compositionBaselineUnknown": "无法确认之前运行的值和来源。以下是拟应用的配置，不代表与当前运行配置的差异。",
   "compositionCandidateNote": "页面有的设置使用页面保存的值；页面没有的先使用配置文件中的值，文件未设置时使用默认值。以下内容基于已保存的配置准备，不会刷新订阅。密钥和较大的内容已隐藏或遮盖。TUN 显示的是拟开启或关闭，并非实际运行状态；授权、挂载内容和 Tailscale 相关内容将在应用时检查。",

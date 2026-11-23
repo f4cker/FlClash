@@ -206,6 +206,68 @@ void main() {
     }
   });
 
+  test('a group row badge is part of the signature, nested items too', () {
+    String signature(String label, int background, {String child = '8 ms'}) =>
+        TrayCodec.encode(
+          _spec(
+            menu: [
+              TrayMenuSubmenu(
+                label: 'Proxy',
+                detail: 'HK 02',
+                badge: TrayMenuBadge(
+                  label: label,
+                  background: background,
+                  foreground: 2,
+                ),
+                items: [
+                  TrayMenuCheckbox(
+                    label: 'HK 02',
+                    checked: true,
+                    badge: TrayMenuBadge(
+                      label: child,
+                      background: background,
+                      foreground: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ).signature;
+    final base = signature('38 ms', 1);
+    expect(signature('38 ms', 1), base);
+    expect(signature('38 ms', 3), isNot(base));
+    expect(signature('Timeout', 1), isNot(base));
+    expect(signature('38 ms', 1, child: '9 ms'), isNot(base));
+    final encoded = TrayCodec.encode(
+      _spec(
+        menu: const [
+          TrayMenuSubmenu(
+            label: 'Proxy',
+            detail: 'HK 02',
+            badge: TrayMenuBadge(
+              label: '38 ms',
+              background: 0x1ff112233,
+              foreground: 0xffeeeeee,
+            ),
+            items: [],
+          ),
+        ],
+      ),
+    );
+    final row = encoded.menu.single;
+    expect(row.kind, TrayItemKind.submenu);
+    expect(row.detail, 'HK 02');
+    expect(
+      row.badge,
+      const TrayItemBadge(
+        label: '38 ms',
+        background: 0xff112233,
+        foreground: 0xffeeeeee,
+      ),
+    );
+  });
+
   test('signature follows the dot colour and breathing', () {
     String signature(TrayDot? dot) => TrayCodec.encode(
       TraySpec(icon: TrayIcon.asset('assets/icon.png', dot: dot)),

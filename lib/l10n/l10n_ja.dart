@@ -6287,6 +6287,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get trayNotTested => '未測定';
+
+  @override
   String get compositionReviewTitle => 'Review Settings Before First Apply';
 
   @override

@@ -6530,6 +6530,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get trayNotTested => 'Non testé';
+
+  @override
   String get compositionReviewTitle => 'Review Settings Before First Apply';
 
   @override

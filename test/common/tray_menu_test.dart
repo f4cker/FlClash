@@ -1534,6 +1534,327 @@ void main() {
     },
   );
 
+  group('group row latency badge', () {
+    const url = 'https://nested.test';
+    const auto = Group(
+      name: 'Auto',
+      type: GroupType.URLTest,
+      now: 'HK 02',
+      testUrl: url,
+      all: [
+        Proxy(name: 'HK 02', type: 'Shadowsocks'),
+        Proxy(name: 'JP 01', type: 'Shadowsocks'),
+        Proxy(name: 'SG 03', type: 'Shadowsocks'),
+      ],
+    );
+    final proxy = _proxyGroup.copyWith(
+      hidden: false,
+      all: const [
+        Proxy(name: 'Auto', type: 'URLTest'),
+        Proxy(name: 'A', type: 'Shadowsocks'),
+        Proxy(name: 'D', type: 'Direct'),
+      ],
+    );
+    final l10n = currentAppLocalizations;
+
+    ColorScheme scheme() =>
+        container.read(genColorSchemeProvider(Brightness.light));
+    Map<String, Object?> row() => _item(showCall(), 'Proxy');
+    Map? badge() => row()['badge'] as Map?;
+    void delay(String name, int value, {String? at}) => container
+        .read(delayDataSourceProvider.notifier)
+        .setDelay(
+          Delay(
+            name: name,
+            url: at ?? container.read(patchClashConfigProvider).testUrl,
+            value: value,
+          ),
+        );
+    Future<void> show(String selected, {List<Group> extra = const [auto]}) {
+      container.read(groupsProvider.notifier).value = [
+        proxy.copyWith(now: selected),
+        ...extra,
+      ];
+      return update(
+        _trayState(
+          isStart: true,
+          groups: [proxy],
+          selectedMap: {'Proxy': selected},
+        ),
+      );
+    }
+
+    void expectColours(Map badge, Color background, Color foreground) {
+      expect(badge['background'], background.toARGB32());
+      expect(badge['foreground'], foreground.toARGB32());
+    }
+
+    test('the selected node shows its latency beside its name', () async {
+      delay('A', 38);
+      await show('A');
+      expect(row()['detail'], 'A');
+      expect(badge()!['label'], l10n.trayLatencyBadge(38));
+      expectColours(
+        badge()!,
+        scheme().successContainer,
+        scheme().onSuccessContainer,
+      );
+      final member = members('Proxy').firstWhere((m) => m['label'] == 'A');
+      expect(member['badge'], badge());
+      expect(
+        row()['accessibilityLabel'],
+        'Proxy, ${l10n.trayCurrentSelection('A')}, '
+        '${l10n.trayLatencyMilliseconds(38)}',
+      );
+    });
+
+    test(
+      'a member group stands for the node it uses, following auto switches',
+      () async {
+        delay('HK 02', 38, at: url);
+        delay('JP 01', -1, at: url);
+        delay('Auto', 900);
+        await show('Auto');
+        expect(row()['detail'], 'Auto');
+        expect(badge()!['label'], l10n.trayLatencyBadge(38));
+        expectColours(
+          badge()!,
+          scheme().successContainer,
+          scheme().onSuccessContainer,
+        );
+
+        await show('Auto', extra: [auto.copyWith(now: 'JP 01')]);
+        expect(badge()!['label'], l10n.timeout);
+        expectColours(
+          badge()!,
+          scheme().errorContainer,
+          scheme().onErrorContainer,
+        );
+        expect(row()['accessibilityLabel'], endsWith(l10n.timeout));
+
+        await show('Auto', extra: [auto.copyWith(now: 'SG 03')]);
+        expect(badge()!['label'], l10n.trayNotTested);
+        expectColours(
+          badge()!,
+          SurfaceLevel.inset.colorOf(scheme()),
+          scheme().onSurfaceVariant,
+        );
+      },
+    );
+
+    test('a selector in between is followed to its own pick', () async {
+      const middle = Group(
+        name: 'Middle',
+        type: GroupType.Selector,
+        now: 'Auto',
+        all: [
+          Proxy(name: 'Auto', type: 'URLTest'),
+          Proxy(name: 'A', type: 'Shadowsocks'),
+        ],
+      );
+      final outer = proxy.copyWith(
+        all: const [Proxy(name: 'Middle', type: 'Selector')],
+      );
+      delay('HK 02', 612, at: url);
+      container.read(groupsProvider.notifier).value = [outer, middle, auto];
+      await update(
+        _trayState(groups: [outer], selectedMap: const {'Proxy': 'Middle'}),
+      );
+      expect(row()['detail'], 'Middle');
+      expect(badge()!['label'], l10n.trayLatencyBadge(612));
+      expectColours(
+        badge()!,
+        scheme().warningContainer,
+        scheme().onWarningContainer,
+      );
+    });
+
+    test('an untested node is grey and says so', () async {
+      await show('A');
+      expect(badge()!['label'], l10n.trayNotTested);
+      expectColours(
+        badge()!,
+        SurfaceLevel.inset.colorOf(scheme()),
+        scheme().onSurfaceVariant,
+      );
+      expect(row()['accessibilityLabel'], endsWith(l10n.trayNotTested));
+    });
+
+    test('a node that did not answer reads as timed out', () async {
+      delay('A', -1);
+      await show('A');
+      expect(badge()!['label'], l10n.timeout);
+      expectColours(
+        badge()!,
+        scheme().errorContainer,
+        scheme().onErrorContainer,
+      );
+    });
+
+    test(
+      'a pending test shows the testing label, not the old result',
+      () async {
+        delay('HK 02', 38, at: url);
+        container
+            .read(pendingDelayTestsProvider.notifier)
+            .apply(acquired: [delayTestKey(url, 'HK 02')]);
+        await show('Auto');
+        expect(badge()!['label'], l10n.trayTesting);
+        expectColours(
+          badge()!,
+          SurfaceLevel.inset.colorOf(scheme()),
+          scheme().onSurfaceVariant,
+        );
+        expect(row()['accessibilityLabel'], endsWith(l10n.trayTesting));
+      },
+    );
+
+    test('load balancing has no single node and so no badge', () async {
+      delay('A', 38);
+      final balancing = proxy.copyWith(type: GroupType.LoadBalance, now: 'A');
+      container.read(groupsProvider.notifier).value = [balancing, auto];
+      await update(_trayState(isStart: true, groups: [balancing]));
+      expect(row()['detail'], l10n.trayMultipleNodes);
+      expect(badge(), isNull);
+
+      const pool = Group(
+        name: 'Pool',
+        type: GroupType.LoadBalance,
+        now: 'HK 02',
+        all: [Proxy(name: 'HK 02', type: 'Shadowsocks')],
+      );
+      final outer = proxy.copyWith(
+        all: const [Proxy(name: 'Pool', type: 'LoadBalance')],
+      );
+      delay('HK 02', 38);
+      container.read(groupsProvider.notifier).value = [
+        outer.copyWith(now: 'Pool'),
+        pool,
+      ];
+      await update(_trayState(isStart: true, groups: [outer]));
+      expect(row()['detail'], 'Pool');
+      expect(badge(), isNull);
+    });
+
+    test(
+      'a switch in progress or failed keeps its text and drops the badge',
+      () async {
+        delay('A', 38);
+        delay('D', 12);
+        container
+            .read(trayGroupMenuStatesProvider.notifier)
+            .set(
+              'Proxy',
+              const TrayGroupMenuState(confirmedName: 'A', pendingName: 'D'),
+            );
+        await show('A');
+        expect(row()['detail'], l10n.traySwitchingTo('D'));
+        expect(badge(), isNull);
+        container
+            .read(trayGroupMenuStatesProvider.notifier)
+            .set(
+              'Proxy',
+              const TrayGroupMenuState(
+                confirmedName: 'A',
+                switchFailure: TraySwitchFailure.failed,
+              ),
+            );
+        await show('A');
+        expect(row()['detail'], l10n.trayCouldNotSwitch);
+        expect(badge(), isNull);
+      },
+    );
+
+    test('groups that select each other end without a badge', () async {
+      const loop = Group(
+        name: 'Loop',
+        type: GroupType.Selector,
+        now: 'Proxy',
+        all: [Proxy(name: 'Proxy', type: 'Selector')],
+      );
+      final outer = proxy.copyWith(
+        all: const [Proxy(name: 'Loop', type: 'Selector')],
+      );
+      container.read(groupsProvider.notifier).value = [
+        outer.copyWith(now: 'Loop'),
+        loop,
+      ];
+      await update(_trayState(isStart: true, groups: [outer]));
+      expect(row()['detail'], 'Loop');
+      expect(badge(), isNull);
+    });
+
+    test('showing and opening the menu tests nothing', () async {
+      final recorded = <String>[];
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          currentProfileProvider.overrideWithValue(null),
+          coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+          currentBrightnessProvider.overrideWithValue(Brightness.light),
+          proxiesActionProvider.overrideWith(
+            () => _RecordingProxiesAction(recorded),
+          ),
+        ],
+      );
+      await show('Auto');
+      expect(badge()!['label'], l10n.trayNotTested);
+      host.emit(TraySignalKind.menuRequested);
+      host.emit(TraySignalKind.iconActivated);
+      await pumpEventQueue();
+      await show('Auto');
+      expect(recorded, isEmpty);
+      expect(container.read(pendingDelayTestsProvider), isEmpty);
+    });
+  });
+
+  group('trayCurrentNode', () {
+    const leaf = Group(
+      name: 'Leaf',
+      type: GroupType.Fallback,
+      now: 'N2',
+      all: [
+        Proxy(name: 'N1', type: 'ss'),
+        Proxy(name: 'N2', type: 'ss'),
+      ],
+    );
+    test('a plain node is itself', () {
+      expect(trayCurrentNode('N1', groups: [leaf], selectedMap: {}), 'N1');
+    });
+    test('a group follows its current pick', () {
+      expect(trayCurrentNode('Leaf', groups: [leaf], selectedMap: {}), 'N2');
+      expect(
+        trayCurrentNode(
+          'Leaf',
+          groups: [leaf.copyWith(now: 'N1')],
+          selectedMap: {'Leaf': 'N2'},
+        ),
+        'N1',
+      );
+    });
+    test('load balancing and loops have no single node', () {
+      expect(
+        trayCurrentNode(
+          'Leaf',
+          groups: [leaf.copyWith(type: GroupType.LoadBalance)],
+          selectedMap: {},
+        ),
+        isNull,
+      );
+      expect(
+        trayCurrentNode(
+          'Leaf',
+          groups: [
+            leaf.copyWith(now: 'Back'),
+            const Group(name: 'Back', type: GroupType.Selector, now: 'Leaf'),
+          ],
+          selectedMap: {},
+        ),
+        isNull,
+      );
+    });
+  });
+
   test(
     'group testing is scoped and disabled only for that running group',
     () async {
