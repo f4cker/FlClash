@@ -11,6 +11,14 @@ protocol MitmCAStore: AnyObject {
     func deleteAll() throws -> [Error]
 }
 
+/// The passphrase of each p12 CA the Core signs with, by its fingerprint:
+/// the login keychain in the app, memory in tests.
+protocol MitmPassphraseStore: AnyObject {
+    func read(fingerprint: String) throws -> String?
+    func write(fingerprint: String, passphrase: String) throws
+    func delete(fingerprint: String) throws
+}
+
 struct MitmLeftovers: Error, CustomStringConvertible {
     let errors: [Error]
     var description: String { "key deleted; left behind: \(errors.map { String(describing: $0) })" }
@@ -187,6 +195,19 @@ final class MitmSigner {
         if !leftovers.isEmpty { throw MitmLeftovers(errors: leftovers) }
     }
 
+    /// The legacy root goes only while it is the one named: a root generated
+    /// since, or none, is left alone. The p12 CA lives under another name.
+    func deleteLegacy(fingerprint: String) throws -> Bool {
+        let leftovers = try locked { () throws -> [Error]? in
+            guard let found = try readStore(), found.root.fingerprint == fingerprint else { return nil }
+            forget()
+            return try store.deleteAll()
+        }
+        guard let leftovers else { return false }
+        if !leftovers.isEmpty { throw MitmLeftovers(errors: leftovers) }
+        return true
+    }
+
     /// Under `lock`: drops the root, and any read begun before now.
     private func forget() {
         key = nil
@@ -352,7 +373,7 @@ final class MitmSignerDispatcher {
     static func lane(for method: String) -> Lane {
         switch method {
         case "sign": return .sign
-        case "generate", "delete": return .barrier
+        case "generate", "delete", "deleteLegacy": return .barrier
         default: return .check
         }
     }

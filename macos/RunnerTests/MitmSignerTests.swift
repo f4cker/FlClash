@@ -247,6 +247,30 @@ final class MitmSignerTests: XCTestCase {
         XCTAssertEqual(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).failure, .noRoot)
     }
 
+    func testDeleteLegacyRemovesOnlyTheNamedRoot() throws {
+        let first = try signer.generate()
+        XCTAssertFalse(try signer.deleteLegacy(fingerprint: "00:11"))
+        XCTAssertEqual(try signer.certificate(), first)
+        XCTAssertEqual(store.deletes, 1)
+
+        let second = try signer.generate()
+        XCTAssertFalse(try signer.deleteLegacy(fingerprint: first.fingerprint), "a root generated since stays")
+        XCTAssertEqual(try signer.certificate(), second)
+
+        XCTAssertTrue(try signer.deleteLegacy(fingerprint: second.fingerprint))
+        XCTAssertNil(store.key)
+        XCTAssertNil(try signer.certificate())
+        XCTAssertEqual(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).failure, .noRoot)
+        XCTAssertFalse(try signer.deleteLegacy(fingerprint: second.fingerprint))
+    }
+
+    func testDeleteLegacyReportsLeftovers() throws {
+        let root = try signer.generate()
+        store.leftovers = [NSError(domain: NSOSStatusErrorDomain, code: Int(errAuthorizationCanceled))]
+        XCTAssertThrowsError(try signer.deleteLegacy(fingerprint: root.fingerprint)) { XCTAssertTrue($0 is MitmLeftovers) }
+        XCTAssertNil(try signer.certificate())
+    }
+
     func testALeftoverCertificateFailsDeleteButNotGenerate() throws {
         _ = try signer.generate()
         store.leftovers = [NSError(domain: NSOSStatusErrorDomain, code: Int(errAuthorizationCanceled))]

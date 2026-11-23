@@ -85,6 +85,16 @@ final class MitmKeychainStore: MitmCAStore {
     }
 }
 
+/// Stands in for the login keychain's generic passwords.
+final class MemoryPassphrases: MitmPassphraseStore {
+    private let lock = NSLock()
+    private var values = [String: String]()
+
+    func read(fingerprint: String) throws -> String? { lock.lock(); defer { lock.unlock() }; return values[fingerprint] }
+    func write(fingerprint: String, passphrase: String) throws { lock.lock(); values[fingerprint] = passphrase; lock.unlock() }
+    func delete(fingerprint: String) throws { lock.lock(); values[fingerprint] = nil; lock.unlock() }
+}
+
 final class Messenger: FlutterBinaryMessenger {}
 
 /// One call through the channel, answered later on some thread.
@@ -146,6 +156,7 @@ enum Harness {
     }
 
     static func main() {
+        MitmSignerChannel.makePassphraseStore = { MemoryPassphrases() }
         MitmSignerChannel.register(messenger: Messenger())
         guard let registered = FlutterMethodChannel.handlers["com.layoute.flash/mitm_signer"] else {
             print("FAIL: no handler"); exit(1)
@@ -213,6 +224,27 @@ enum Harness {
             }
             if round % 2 == 1 { _ = call("generate") }
         }
+
+        // Passphrases by fingerprint; errors never carry one.
+        check(call("passphrase.read", ["fingerprint": "AA"]) == nil, "no passphrase yet")
+        check(call("passphrase.write", ["fingerprint": "AA", "passphrase": "s3cret"]) == nil, "write a passphrase")
+        check(call("passphrase.read", ["fingerprint": "AA"]) as? String == "s3cret", "read it back")
+        check(call("passphrase.read", ["fingerprint": "BB"]) == nil, "another fingerprint has none")
+        let empty = call("passphrase.write", ["fingerprint": "AA", "passphrase": ""]) as? FlutterError
+        check(empty?.code == "mitmPassphrase", "an empty passphrase is refused")
+        check(call("passphrase.delete", ["fingerprint": "AA"]) == nil, "delete a passphrase")
+        check(call("passphrase.read", ["fingerprint": "AA"]) == nil, "deleted")
+        check(call("passphrase.read") is FlutterError, "no fingerprint")
+        check(call("activity", ["hold": true]) == nil && call("activity", ["hold": false]) == nil, "activity")
+
+        // The legacy root goes only by its own fingerprint.
+        let legacy = fingerprint(call("certificate"))
+        check(call("deleteLegacy", ["fingerprint": "00:11"]) as? Bool == false, "another fingerprint keeps the root")
+        check(fingerprint(call("certificate")) == legacy, "kept")
+        check(call("deleteLegacy", ["fingerprint": legacy ?? ""]) as? Bool == true, "the named root is deleted")
+        check(call("certificate") == nil, "legacy deleted")
+        check(call("deleteLegacy", ["fingerprint": legacy ?? ""]) as? Bool == false, "nothing left to delete")
+        _ = call("generate")
 
         check(call("delete") == nil, "delete")
         check(call("certificate") == nil, "deleted")
