@@ -520,6 +520,91 @@ void main() {
       },
     );
 
+    Future<void> dismissDialog(WidgetTester tester) async {
+      Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('automatic check offers a dismissed build once per run', (
+      tester,
+    ) async {
+      await pump(tester);
+      final first = action.checkUpdateResultHandle(action.answer);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+      await dismissDialog(tester);
+      await first;
+      expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+
+      await action.checkUpdateResultHandle(candidate());
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(container.read(availableUpdateStateProvider), isNotNull);
+
+      final newer = action.checkUpdateResultHandle(
+        candidate(build: 2026111903),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('可更新版本：1.0.0 (2026111903)'), findsOneWidget);
+      await dismissDialog(tester);
+      await newer;
+      expect(calls, isEmpty);
+      expect(adapter.requested, isEmpty);
+    });
+
+    testWidgets('manual check shows a build the automatic one offered', (
+      tester,
+    ) async {
+      await pump(tester);
+      final automatic = action.checkUpdateResultHandle(action.answer);
+      await tester.pumpAndSettle();
+      await dismissDialog(tester);
+      await automatic;
+      for (var i = 0; i < 2; i++) {
+        final manual = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        await dismissDialog(tester);
+        await manual;
+      }
+    });
+
+    testWidgets(
+      'automatic check stays quiet over an open dialog or a running download',
+      (tester) async {
+        await pump(tester);
+        final manual = action.checkUpdateResultHandle(
+          action.answer,
+          isUser: true,
+        );
+        await tester.pumpAndSettle();
+        await action.checkUpdateResultHandle(candidate(build: 2026111903));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.textContaining('(2026111903)'), findsNothing);
+        await dismissDialog(tester);
+        await manual;
+
+        final download = container.read(updateDownloadStateProvider.notifier);
+        download.value = const UpdateDownloading('v1.0.0');
+        await action.checkUpdateResultHandle(candidate(build: 2026111904));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+        download.value = null;
+
+        final offered = action.checkUpdateResultHandle(
+          candidate(build: 2026111904),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('(2026111904)'), findsOneWidget);
+        await dismissDialog(tester);
+        await offered;
+      },
+    );
+
     testWidgets('fetch failure retains known target and never claims latest', (
       tester,
     ) async {

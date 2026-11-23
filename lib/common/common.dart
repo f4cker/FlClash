@@ -52,6 +52,7 @@ export 'system_fonts.dart';
 export 'page_priority.dart';
 export 'task.dart';
 export 'task_pool.dart';
+export 'update_check_scheduler.dart';
 export 'webdav.dart';
 export 'yaml.dart';
 

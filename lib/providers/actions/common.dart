@@ -10,9 +10,27 @@ class CommonAction extends _$CommonAction {
   int _updateCheckRevision = 0;
   bool _isInstallingUpdate = false;
   bool _trayUpdateReserved = false;
+  UpdateCheckScheduler? _updateChecks;
+  int _updateDialogs = 0;
+
+  /// Builds (tags off macOS) whose update dialog has shown in this run; an
+  /// automatic check does not offer them again.
+  final _offeredUpdates = <Object>{};
 
   @override
   void build() {
+    ref.listen(appSettingProvider.select((s) => s.autoCheckUpdate), (
+      previous,
+      next,
+    ) {
+      if (next && previous == false) {
+        _updateChecks?.requestCheck('setting enabled');
+      }
+    });
+    ref.onDispose(() {
+      _updateChecks?.dispose();
+      _updateChecks = null;
+    });
     ref.listen(appSettingProvider.select((s) => s.receiveBetaUpdates), (
       previous,
       next,
@@ -161,8 +179,56 @@ class CommonAction extends _$CommonAction {
   Future<bool> autoCheckUpdate() async {
     if (!ref.read(appSettingProvider).autoCheckUpdate) return false;
     final result = await checkForAppUpdate();
+    // Off macOS the request logs its own failure.
+    if (result is UpdateCheckFailed && system.isMacOS) {
+      commonPrint.log(
+        'Automatic update check failed: ${compactError(result.error)}',
+        logLevel: LogLevel.warning,
+      );
+    }
     await checkUpdateResultHandle(result);
     return result is UpdateAvailable;
+  }
+
+  /// Checks for an update now and again every few hours while the app runs,
+  /// as long as automatic checks are on; later calls do nothing.
+  void startUpdateChecks({
+    DateTime Function()? now,
+    PeriodicTimerFactory? periodicTimer,
+  }) {
+    if (_updateChecks != null) return;
+    _updateChecks = UpdateCheckScheduler(
+      check: autoCheckUpdate,
+      enabled: () => ref.read(appSettingProvider).autoCheckUpdate,
+      now: now,
+      periodicTimer: periodicTimer,
+    )..start();
+  }
+
+  /// Asks for an automatic check after an event such as the Mac waking up;
+  /// skipped when one ran recently (see [UpdateCheckScheduler]).
+  void requestUpdateCheck(String reason) => _updateChecks?.requestCheck(reason);
+
+  static Object _updateKey(UpdateAvailable result) =>
+      result.manifest?.build ?? result.release['tag_name'] as Object;
+
+  /// An automatic check offers each build once per run, and never while an
+  /// update dialog is open or an update is downloading or installing.
+  bool _mayOfferAutomatically(UpdateAvailable result) =>
+      _updateDialogs == 0 &&
+      !_isInstallingUpdate &&
+      !_trayUpdateReserved &&
+      !ref.read(updateInstallBusyProvider) &&
+      ref.read(updateDownloadStateProvider) is! UpdateDownloading &&
+      !_offeredUpdates.contains(_updateKey(result));
+
+  Future<T> _showUpdateDialog<T>(Future<T> Function() show) async {
+    _updateDialogs++;
+    try {
+      return await show();
+    } finally {
+      _updateDialogs--;
+    }
   }
 
   /// macOS reads the signed manifest and compares build numbers; elsewhere
@@ -313,6 +379,11 @@ class CommonAction extends _$CommonAction {
     bool isUser = false,
   }) async {
     if (result is UpdateCheckSuperseded) return;
+    if (!isUser &&
+        result is UpdateAvailable &&
+        !_mayOfferAutomatically(result)) {
+      return;
+    }
     if (result case UpdateAvailable(:final MacUpdateManifest manifest)) {
       if (!_manifestAllowed(manifest)) return;
       await _offerMacUpdate(manifest, isUser: isUser);
@@ -320,18 +391,21 @@ class CommonAction extends _$CommonAction {
       final context = globalState.navigatorKey.currentContext!;
       final tag = data['tag_name'] as String;
       final asset = selfUpdateAsset;
-      final res = await dialogs.showMessage(
-        title: currentAppLocalizations.discoverNewVersion,
-        message: TextSpan(
-          children: [
-            _updateVersions(result.versionLabel),
-            _releaseSpan(context, tag, data['body'] as String?),
-          ],
+      _offeredUpdates.add(tag);
+      final res = await _showUpdateDialog(
+        () => dialogs.showMessage(
+          title: currentAppLocalizations.discoverNewVersion,
+          message: TextSpan(
+            children: [
+              _updateVersions(result.versionLabel),
+              _releaseSpan(context, tag, data['body'] as String?),
+            ],
+          ),
+          confirmText: asset == null
+              ? currentAppLocalizations.goDownload
+              : currentAppLocalizations.update,
+          cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
         ),
-        confirmText: asset == null
-            ? currentAppLocalizations.goDownload
-            : currentAppLocalizations.update,
-        cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
       );
       if (res == true) {
         if (asset == null) {
@@ -401,21 +475,24 @@ class CommonAction extends _$CommonAction {
     final context = globalState.navigatorKey.currentContext;
     if (context == null || !context.mounted) return;
     final asset = manifest.assetFor(macUpdateArch(Abi.current()) ?? '')!;
-    final res = await dialogs.showMessage(
-      title: currentAppLocalizations.discoverNewVersion,
-      message: TextSpan(
-        children: [
-          _macUpdateVersions(manifest),
-          _releaseSpan(context, manifest.tag, manifest.notes),
-          TextSpan(
-            text:
-                '\n${currentAppLocalizations.macUpdateSize(asset.size.traffic.show)}',
-            style: AppTextStyle.subheadline.of(context),
-          ),
-        ],
+    _offeredUpdates.add(manifest.build);
+    final res = await _showUpdateDialog(
+      () => dialogs.showMessage(
+        title: currentAppLocalizations.discoverNewVersion,
+        message: TextSpan(
+          children: [
+            _macUpdateVersions(manifest),
+            _releaseSpan(context, manifest.tag, manifest.notes),
+            TextSpan(
+              text:
+                  '\n${currentAppLocalizations.macUpdateSize(asset.size.traffic.show)}',
+              style: AppTextStyle.subheadline.of(context),
+            ),
+          ],
+        ),
+        confirmText: currentAppLocalizations.macUpdateDownloadAndInstall,
+        cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
       ),
-      confirmText: currentAppLocalizations.macUpdateDownloadAndInstall,
-      cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
     );
     if (res == true) {
       unawaited(_downloadMacUpdate(manifest, asset));
@@ -503,17 +580,19 @@ class CommonAction extends _$CommonAction {
         level: BannerLevel.success,
         onTap: () => unawaited(installUpdate()),
       );
-      final res = await dialogs.showMessage(
-        title: currentAppLocalizations.macUpdateReadyTitle,
-        message: TextSpan(
-          text: macUpdateReadyText(
-            prepared,
-            _macVersionLabel(manifest),
-            currentAppLocalizations,
+      final res = await _showUpdateDialog(
+        () => dialogs.showMessage(
+          title: currentAppLocalizations.macUpdateReadyTitle,
+          message: TextSpan(
+            text: macUpdateReadyText(
+              prepared,
+              _macVersionLabel(manifest),
+              currentAppLocalizations,
+            ),
           ),
+          confirmText: currentAppLocalizations.macUpdateRestartNow,
+          cancelText: currentAppLocalizations.macUpdateLater,
         ),
-        confirmText: currentAppLocalizations.macUpdateRestartNow,
-        cancelText: currentAppLocalizations.macUpdateLater,
       );
       if (res == true) await installUpdate();
     } catch (error) {
