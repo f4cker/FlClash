@@ -205,7 +205,8 @@ func serve(dialed ipcConn) {
 
 		call := &MethodCall{}
 		if err := json.Unmarshal(data, call); err != nil {
-			logError("server unmarshal error: %v (data: %q)", err, data)
+			// The frame may carry the CA key: its length only.
+			logError("server unmarshal error: %v (%d bytes)", err, len(data))
 			continue
 		}
 
