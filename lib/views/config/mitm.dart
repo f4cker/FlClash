@@ -224,19 +224,22 @@ class _MitmViewState extends ConsumerState<MitmView> {
     }
   }
 
-  /// Reinstalls only if untrusted, then checks the Core's CA afresh.
+  /// Checks the Core's CA afresh, and only if still untrusted installs and
+  /// trusts it again before one more check.
   Future<void> _retrust(BuildContext context, WidgetRef ref) async {
     final appLocalizations = context.appLocalizations;
-    await ref.read(mitmTrustStateProvider.notifier).refresh();
-    if (!context.mounted) return;
-    if (ref.read(mitmTrustStateProvider).value?.trust != MitmTrust.ready) {
-      await _install(context, ref);
-    }
-    await globalState.loadingRun<MitmTrust?>(
+    Future<MitmTrust?> check() => globalState.loadingRun<MitmTrust?>(
       ref.read(mitmCoreCaProvider.notifier).retrust,
       tag: LoadingTag.mitm,
       title: appLocalizations.mitmRetrust,
     );
+    if (await check() != MitmTrust.ready && context.mounted) {
+      await _install(context, ref);
+      await check();
+    }
+    if (context.mounted) {
+      await ref.read(mitmTrustStateProvider.notifier).refresh();
+    }
   }
 
   Future<void> _export(

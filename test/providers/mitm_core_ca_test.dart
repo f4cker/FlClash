@@ -286,10 +286,33 @@ void main() {
       expect(loaded, hasLength(2));
     });
 
-    test('untrusted stops signing and turns decryption off', () async {
+    test('one untrusted verdict only lets the lease lapse', () async {
       setMitm(coreMitm());
       await started();
       verdict = MitmTrust.untrusted;
+      expect(
+        await container.read(mitmCoreCaProvider.notifier).checkNow(),
+        MitmTrust.untrusted,
+      );
+      expect(stops, 0);
+      expect(
+        container.read(mitmCoreCaProvider).status,
+        MitmCoreCaStatus.lapsed,
+      );
+      expect(mitm().trustedFingerprint, _coreFp);
+      verdict = MitmTrust.ready;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      verdict = MitmTrust.untrusted;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      expect(stops, 0);
+      expect(leases, hasLength(2));
+    });
+
+    test('untrusted twice stops signing and turns decryption off', () async {
+      setMitm(coreMitm());
+      await started();
+      verdict = MitmTrust.untrusted;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
       await container.read(mitmCoreCaProvider.notifier).checkNow();
       expect(stops, 1);
       expect(
@@ -309,8 +332,12 @@ void main() {
       await started();
       verdict = MitmTrust.untrusted;
       await container.read(mitmCoreCaProvider.notifier).checkNow();
-      verdict = MitmTrust.ready;
       await container.read(mitmCoreCaProvider.notifier).checkNow();
+      verdict = MitmTrust.ready;
+      expect(
+        await container.read(mitmCoreCaProvider.notifier).checkNow(),
+        MitmTrust.untrusted,
+      );
       expect(leases, hasLength(1));
       expect(
         container.read(mitmCoreCaProvider).status,
@@ -333,6 +360,7 @@ void main() {
       setMitm(coreMitm());
       await started();
       verdict = MitmTrust.untrusted;
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
       await container.read(mitmCoreCaProvider.notifier).checkNow();
       await container.read(mitmCoreCaProvider.notifier).retrust();
       expect(leases, hasLength(1));

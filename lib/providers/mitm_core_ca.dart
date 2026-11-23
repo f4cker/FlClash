@@ -95,6 +95,11 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   /// nothing until [retrust], a new CA or decryption turned on again.
   bool _awaitingRetrust = false;
 
+  /// A busy trustd or a tool error reads as untrusted too: one negative
+  /// verdict lets the lease lapse, and only a second one in a row stops.
+  int _negatives = 0;
+  MitmTrust? _lastVerdict;
+
   MitmSigner? _signer;
 
   @override
@@ -129,6 +134,8 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
         if (next.ca != previous?.ca ||
             (next.enable && previous?.enable != true)) {
           _awaitingRetrust = false;
+          _negatives = 0;
+          _lastVerdict = null;
         }
         _kick();
       },
@@ -173,9 +180,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
     _timer = Timer(wait.isNegative ? Duration.zero : wait, _tick);
   }
 
-  /// Shared by callers while it runs; null when it could not tell.
+  /// Shared by callers while it runs; the last verdict while none can run,
+  /// and null when it could not tell.
   Future<MitmTrust?> checkNow() {
-    if (_suspended > 0) return Future.value();
+    if (_suspended > 0) return Future.value(_lastVerdict);
     return _running ??= _check().whenComplete(() => _running = null);
   }
 
@@ -198,7 +206,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   }
 
   Future<MitmTrust?> _check() async {
-    if (_awaitingRetrust) return null;
+    if (_awaitingRetrust) return _lastVerdict;
     final mitm = _mitm;
     final ca = mitm.coreCa;
     final p12 = mitm.caP12;
@@ -226,10 +234,16 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
           .check(ca, () async => leaf.pem)
           .timeout(_checkBudget);
       if (!ref.mounted) return null;
+      _lastVerdict = verdict.trust;
       if (verdict.trust != MitmTrust.ready) {
-        await _untrusted(ca);
+        if (++_negatives < 2) {
+          _lapsed();
+        } else {
+          await _untrusted(ca);
+        }
         return verdict.trust;
       }
+      _negatives = 0;
       if (!enabled) {
         // Checked for the page while decryption is off: nothing to lease.
         await stopSigning();
