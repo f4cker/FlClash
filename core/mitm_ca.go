@@ -89,9 +89,7 @@ const (
 	mitmCANotLoaded       mitmCARefusal = "notLoaded"
 	mitmCAUnknownCheck    mitmCARefusal = "unknownCheck"
 	mitmCALeaseLapsed     mitmCARefusal = "leaseLapsed"
-	mitmCASuperseded      mitmCARefusal = "superseded"
 	mitmCAWeakSignature   mitmCARefusal = "weakSignature"
-	mitmCAUnsupported     mitmCARefusal = "unsupportedPlatform"
 )
 
 func (refusal mitmCARefusal) Error() string {
