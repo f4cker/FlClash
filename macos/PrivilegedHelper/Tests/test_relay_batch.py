@@ -215,6 +215,7 @@ def wait_fixture(variant='stub'):
 #import <sys/wait.h>
 #import <unistd.h>
 #import "HelperCompatibility.h"
+#import "SessionPolicy.h"
 #define FC_HELPER_BUILD "0"
 static os_log_t FCHelperLog(void) { return OS_LOG_DEFAULT; }
 static const size_t FCMaxFrame = 1024;
@@ -247,7 +248,8 @@ static const NSUInteger FCRelayBatchFrames = 64;
 """ + stop + reply + method(SUPERVISOR, '- (void)closeRelay') + '\n' + \
         method(SUPERVISOR, '- (NSArray<NSData *> *)receive:') + '\n' + method(SUPERVISOR, '- (void)releaseWait') + '\n' + \
         method(SUPERVISOR, '- (BOOL)holdReceive:') + '\n' + method(SUPERVISOR, '- (void)answerWaiting:') + '\n' + \
-        method(SUPERVISOR, '- (void)supersedeWaiting') + '\n' + method(SUPERVISOR, '- (void)ownerLost:') + r"""
+        method(SUPERVISOR, '- (void)supersedeWaiting') + '\n' + method(SUPERVISOR, '- (BOOL)writeFrame:') + '\n' + \
+        method(SUPERVISOR, '- (BOOL)stopCoreSigning') + '\n' + method(SUPERVISOR, '- (void)ownerLost:') + r"""
 @end
 static uint64_t Now(void) { return clock_gettime_nsec_np(CLOCK_MONOTONIC); }
 static int OpenFds(void) { int n = 0; for (int fd = 0; fd < 256; fd++) n += fcntl(fd, F_GETFD) != -1; return n; }

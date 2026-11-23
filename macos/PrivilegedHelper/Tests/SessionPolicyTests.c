@@ -26,5 +26,7 @@ int main(void) {
     assert(FCWaitOwnershipUnknown(-1, ECHILD));
     assert(!FCWaitOwnershipUnknown(-1, EINTR));
     assert(!FCWaitOwnershipUnknown(0, 0));
-    puts("20 session-policy assertions passed; no child processes or services used");
+    // The frame the daemon writes to its Core when the app's connection drops.
+    assert(strcmp(FCStopSigningCall, "{\"method\":\"mitm.stopSigning\"}") == 0);
+    puts("21 session-policy assertions passed; no child processes or services used");
 }

@@ -394,6 +394,17 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     if (self.socket < 0 || frame.length > FCMaxFrame) return @"disconnected";
     if (seq < self.written) return @"ok";
     if (seq > self.written) return @"invalidRequest";
+    if ([self writeFrame:frame]) {
+        self.written++;
+        return @"ok";
+    }
+    [self stop];
+    return @"disconnected";
+}
+
+// One whole frame to the Core within a second, or none: the queue is serial, so frames never interleave.
+- (BOOL)writeFrame:(NSData *)frame {
+    if (self.socket < 0) return NO;
     uint32_t size = CFSwapInt32HostToLittle((uint32_t)frame.length);
     NSMutableData *wire = [NSMutableData dataWithBytes:&size length:4];
     [wire appendData:frame];
@@ -407,12 +418,12 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
             poll(&ready, 1, 20);
         } else break;
     }
-    if (offset == wire.length) {
-        self.written++;
-        return @"ok";
-    }
-    [self stop];
-    return @"disconnected";
+    return offset == wire.length;
+}
+
+// Not one of the app's frames, so `written` is left alone; the Core's reply carries no id and the app ignores it.
+- (BOOL)stopCoreSigning {
+    return [self writeFrame:[NSData dataWithBytes:FCStopSigningCall length:strlen(FCStopSigningCall)]];
 }
 
 // Answers with every queued frame from `ack` on (the number of frames the app has taken); frames stay queued until
@@ -566,6 +577,8 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     if (self.waitingConnection == connection) [self releaseWait];
     if (self.owner != connection) return;
     if (self.child <= 0 || self.ownerPid <= 0 || (kill(self.ownerPid, 0) && errno == ESRCH)) { [self stop]; return; }
+    // A live pid is not an app still vouching for the CA it handed over: the Core stops signing now, or is stopped.
+    if (![self stopCoreSigning]) { [self stop]; return; }
     os_log(FCHelperLog(), "app connection lost; Core kept for %lld s for the app to resume", FCOwnerGraceSeconds);
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FCOwnerGraceSeconds * NSEC_PER_SEC), self.queue, ^{
         if (self.owner != connection) return;

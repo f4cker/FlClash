@@ -47,6 +47,10 @@ static inline bool FCGUIReadFailure(const char *failure) {
     return failure && (strncmp(failure, "status-read ", 12) == 0 || strncmp(failure, "cdhash-read ", 12) == 0);
 }
 
+// Written to the Core when the app's connection drops (core/protocol.go mitmStopSigningMethod): it clears the MITM CA
+// the app handed over, so nothing is signed while no app vouches for it.
+static const char FCStopSigningCall[] = "{\"method\":\"mitm.stopSigning\"}";
+
 static inline bool FCWaitOwnershipUnknown(pid_t result, int waitError) {
     return result < 0 && waitError != EINTR;
 }
