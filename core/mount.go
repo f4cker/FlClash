@@ -16,10 +16,10 @@ const mountProviderPrefix = "flash-mount-"
 
 // A file Flash's own updater keeps; mihomo never sees a subscription URL.
 type MountSource struct {
-	ID           int64  `json:"id"`
-	Label        string `json:"label"`
-	Path         string `json:"path"`
-	AgeSecretKey string `json:"age-secret-key,omitempty"`
+	ID           int64        `json:"id"`
+	Label        string       `json:"label"`
+	Path         string       `json:"path"`
+	AgeSecretKey ageSecretKey `json:"age-secret-key,omitempty"`
 }
 
 // Groups collect mounted nodes by their own declarations and filters.
@@ -62,10 +62,10 @@ func mountProviderName(id int64) string {
 }
 
 type MountInspectSourceParams struct {
-	Path         string   `json:"path"`
-	AgeSecretKey string   `json:"age-secret-key,omitempty"`
-	Relay        []string `json:"relay,omitempty"`
-	Managed      []string `json:"managed,omitempty"`
+	Path         string       `json:"path"`
+	AgeSecretKey ageSecretKey `json:"age-secret-key,omitempty"`
+	Relay        []string     `json:"relay,omitempty"`
+	Managed      []string     `json:"managed,omitempty"`
 }
 
 func handleInspectMountSource(params MountInspectSourceParams) MountSourceInspection {
@@ -78,7 +78,16 @@ func handleInspectMountSource(params MountInspectSourceParams) MountSourceInspec
 		relay = newMountRelay(names, managedBases(params.Managed))
 	}
 	refreshGuardSuffixes()
-	return inspectMountSource(params.Path, params.AgeSecretKey, relay)
+	return inspectMountSource(params.Path, string(params.AgeSecretKey), relay)
+}
+
+// Prints as a mark with any verb; JSON still carries the key.
+type ageSecretKey string
+
+func (key ageSecretKey) Format(state fmt.State, _ rune) {
+	if key != "" {
+		_, _ = state.Write([]byte("[age key]"))
+	}
 }
 
 func ageKeys(secretKey string) []string {
@@ -374,7 +383,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		if mappingValue(providers, name) != nil {
 			return nil, fmt.Errorf("proxy provider %s already exists", name)
 		}
-		snapshot := readMountSnapshot(source.Path, source.AgeSecretKey)
+		snapshot := readMountSnapshot(source.Path, string(source.AgeSecretKey))
 		inspection := snapshot.admit(relay)
 		// A source whose copy cannot be read mounts as an empty provider, so
 		// one broken subscription does not hold back the rest and a group

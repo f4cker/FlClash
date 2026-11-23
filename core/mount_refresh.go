@@ -159,7 +159,7 @@ func refreshMountSource(input mountProviderInput, source MountSourceReport, dige
 	if fmt.Sprintf("%x", sha256.Sum256(data)) != digest {
 		return "superseded", nil, nil
 	}
-	data, err = age.DecryptBytes(data, ageKeys(input.source.AgeSecretKey)...)
+	data, err = age.DecryptBytes(data, ageKeys(string(input.source.AgeSecretKey))...)
 	if err != nil {
 		return "kept", nil, err
 	}

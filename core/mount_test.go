@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -883,7 +884,7 @@ rules:
   - MATCH,G
 `
 
-	cfg, report := mountedConfig(t, base, &MountSetup{Sources: []MountSource{{ID: 1, Label: "E", Path: path, AgeSecretKey: secretKey}}, stageInputs: true})
+	cfg, report := mountedConfig(t, base, &MountSetup{Sources: []MountSource{{ID: 1, Label: "E", Path: path, AgeSecretKey: ageSecretKey(secretKey)}}, stageInputs: true})
 
 	if report.Sources[0].Status != mountSourceNodes {
 		t.Fatalf("status = %s, want the encrypted source read with its key", report.Sources[0].Status)
@@ -1039,5 +1040,31 @@ func TestMountKeepsAutoGroupsThatReachTailscaleFreeOfMountedNodes(t *testing.T) 
 		if kinds[name] != want {
 			t.Errorf("%s = %s, want %s", name, kinds[name], want)
 		}
+	}
+}
+
+func TestAgeSecretKeyNeverPrintsButStillTravels(t *testing.T) {
+	const secret = "AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+	source := MountSource{ID: 1, Label: "E", Path: "/p", AgeSecretKey: secret}
+	values := []any{
+		source,
+		&MountSetup{Sources: []MountSource{source}},
+		MountInspectSourceParams{Path: "/p", AgeSecretKey: secret},
+		DecryptConfigParams{Path: "/p", AgeSecretKey: secret},
+	}
+	for _, value := range values {
+		for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q"} {
+			if got := fmt.Sprintf(verb, value); strings.Contains(got, "AGE-SECRET-KEY") {
+				t.Errorf("%s of %T prints the key: %s", verb, value, got)
+			}
+		}
+	}
+	encoded, err := json.Marshal(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded MountSource
+	if err := json.Unmarshal(encoded, &decoded); err != nil || decoded.AgeSecretKey != secret {
+		t.Fatalf("round trip = %+v %v", decoded, err)
 	}
 }

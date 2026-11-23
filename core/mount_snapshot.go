@@ -243,7 +243,7 @@ func (snapshot *mountSnapshot) providerPath() (string, error) {
 	if snapshot.inspection.Status != mountSourceNodes {
 		return "", fmt.Errorf("mount source is %s", snapshot.inspection.Status)
 	}
-	dir := filepath.Join(constant.Path.HomeDir(), "mount-nodes")
+	dir := mountNodesDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
@@ -263,4 +263,21 @@ func (snapshot *mountSnapshot) providerPath() (string, error) {
 	}
 	scheduleReclaimOwnership()
 	return file.Name(), nil
+}
+
+func mountNodesDir() string {
+	return filepath.Join(constant.Path.HomeDir(), "mount-nodes")
+}
+
+// Decrypted nodes a killed Core left behind; no provider of a fresh process
+// watches any of them yet.
+func clearMountNodes() {
+	dir := mountNodesDir()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		_ = os.RemoveAll(filepath.Join(dir, entry.Name()))
+	}
 }

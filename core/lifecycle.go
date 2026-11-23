@@ -32,6 +32,9 @@ func handleInit(params *InitParams) error {
 	constant.SetHomeDir(params.HomeDir)
 	initOwnership(params.HomeDir)
 	clearSpilledResponses()
+	if !isInit.Load() {
+		clearMountNodes()
+	}
 	isInit.Store(true)
 	return nil
 }
