@@ -85,7 +85,6 @@ final class MitmKeychainStore: MitmCAStore {
     }
 }
 
-/// Stands in for the login keychain's generic passwords.
 final class MemoryPassphrases: MitmPassphraseStore {
     private let lock = NSLock()
     private var values = [String: String]()
@@ -225,7 +224,6 @@ enum Harness {
             if round % 2 == 1 { _ = call("generate") }
         }
 
-        // Passphrases by fingerprint; errors never carry one.
         check(call("passphrase.read", ["fingerprint": "AA"]) == nil, "no passphrase yet")
         check(call("passphrase.write", ["fingerprint": "AA", "passphrase": "s3cret"]) == nil, "write a passphrase")
         check(call("passphrase.read", ["fingerprint": "AA"]) as? String == "s3cret", "read it back")
@@ -237,7 +235,6 @@ enum Harness {
         check(call("passphrase.read") is FlutterError, "no fingerprint")
         check(call("activity", ["hold": true]) == nil && call("activity", ["hold": false]) == nil, "activity")
 
-        // The legacy root goes only by its own fingerprint.
         let legacy = fingerprint(call("certificate"))
         check(call("deleteLegacy", ["fingerprint": "00:11"]) as? Bool == false, "another fingerprint keeps the root")
         check(fingerprint(call("certificate")) == legacy, "kept")
