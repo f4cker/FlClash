@@ -461,3 +461,57 @@ func TestFirstInitSweepsDecryptedNodesALostCoreLeft(t *testing.T) {
 		t.Fatalf("the running config lost its mounted input: %v", err)
 	}
 }
+
+func TestMountNodesSweepTouchesOnlyItsOwnFiles(t *testing.T) {
+	writeFile := func(path string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exists := func(path string) bool {
+		_, err := os.Lstat(path)
+		return err == nil
+	}
+
+	t.Run("a symlinked folder is not followed", func(t *testing.T) {
+		home := withMountHome(t)
+		outside := t.TempDir()
+		target := filepath.Join(outside, "source-1.yaml")
+		writeFile(target)
+		if err := os.Symlink(outside, filepath.Join(home, "mount-nodes")); err != nil {
+			t.Fatal(err)
+		}
+		clearMountNodes()
+		if !exists(target) {
+			t.Fatal("the sweep deleted a file behind a symlinked mount-nodes")
+		}
+	})
+
+	t.Run("only regular input files go", func(t *testing.T) {
+		home := withMountHome(t)
+		dir := filepath.Join(home, "mount-nodes")
+		if err := os.MkdirAll(filepath.Join(dir, "source-dir.yaml"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		outside := filepath.Join(t.TempDir(), "secret")
+		writeFile(outside)
+		if err := os.Symlink(outside, filepath.Join(dir, "source-link.yaml")); err != nil {
+			t.Fatal(err)
+		}
+		writeFile(filepath.Join(dir, "notes.txt"))
+		writeFile(filepath.Join(dir, "source-1.yaml"))
+		clearMountNodes()
+		if exists(filepath.Join(dir, "source-1.yaml")) {
+			t.Error("a stale input survived")
+		}
+		for _, kept := range []string{"source-dir.yaml", "source-link.yaml", "notes.txt"} {
+			if !exists(filepath.Join(dir, kept)) {
+				t.Errorf("%s was removed", kept)
+			}
+		}
+		if !exists(outside) {
+			t.Error("a symlink's target was removed")
+		}
+	})
+}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/metacubex/mihomo/constant"
@@ -100,5 +101,46 @@ func TestClearSpilledResponsesKeepsTheDirectory(t *testing.T) {
 	}
 	if len(entries) != 0 {
 		t.Errorf("entries = %v, want none left", entries)
+	}
+}
+
+func TestClearSpilledResponsesTouchesOnlyItsOwnFiles(t *testing.T) {
+	home := withSpillHome(t, 64)
+	outside := t.TempDir()
+	target := filepath.Join(outside, "1.json")
+	if err := os.WriteFile(target, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(home, spilledResponseDirName)); err != nil {
+		t.Fatal(err)
+	}
+	clearSpilledResponses()
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("the sweep followed a symlinked folder: %v", err)
+	}
+
+	if err := os.Remove(filepath.Join(home, spilledResponseDirName)); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(home, spilledResponseDirName)
+	if err := os.MkdirAll(filepath.Join(dir, "2.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"3.json", "keep.txt"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	clearSpilledResponses()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var left []string
+	for _, entry := range entries {
+		left = append(left, entry.Name())
+	}
+	if !slices.Equal(left, []string{"2.json", "keep.txt"}) {
+		t.Errorf("left = %v, want the folder and the foreign file", left)
 	}
 }
