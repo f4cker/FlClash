@@ -2676,7 +2676,7 @@
   "mitmRunNotRunning": "解密未运行",
   "mitmRetrust": "重新信任…",
   "mitmCurrentCaActions": "当前配置的证书",
-  "mitmOldCaSection": "仍保留在这台 Mac 的旧证书",
+  "mitmOldCaSection": "{count, plural, other{仍保留在这台 Mac 的旧证书}}",
   "mitmExportCertificateContent": "只保存公钥证书（.crt），不含私钥。",
   "mitmDeleteCurrentCa": "删除当前配置的证书…",
   "mitmDeleteCurrentCaTitle": "删除当前配置的证书？",
@@ -2699,5 +2699,6 @@
   "mitmBackupRiskImpact": "拿到文件且能接触你网络的人，可能在信任此证书的设备上冒充 HTTPS 网站、读取或修改数据。",
   "mitmBackupRiskRevoke": "请更换证书，并在每台信任过旧证书的设备上取消对旧证书的信任或将其移除。各设备的操作位置可能不同。",
   "mitmRestoreCaLocalNone": "这台 Mac 没有解密证书。",
-  "mitmRestoreCaDamagedNone": "此备份中的解密证书无法读取，不会恢复。"
+  "mitmRestoreCaDamagedNone": "此备份中的解密证书无法读取，不会恢复。",
+  "mitmBackupKeyUnavailable": "无法读取证书密码，备份未完成。"
 }

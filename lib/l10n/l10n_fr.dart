@@ -9788,7 +9788,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mitmCurrentCaActions => 'Configured Certificate';
 
   @override
-  String get mitmOldCaSection => 'Old Certificate Still on This Mac';
+  String mitmOldCaSection(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Old Certificates Still on This Mac',
+      one: 'Old Certificate Still on This Mac',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get mitmExportCertificateContent =>
@@ -9872,4 +9880,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get mitmRestoreCaDamagedNone =>
       'The decryption certificate in this backup can\'t be read and won\'t be restored.';
+
+  @override
+  String get mitmBackupKeyUnavailable =>
+      'Couldn\'t read the certificate password. Backup wasn\'t completed.';
 }

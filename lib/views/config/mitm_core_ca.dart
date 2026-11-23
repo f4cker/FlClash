@@ -334,7 +334,7 @@ class MitmCoreCaSection extends ConsumerWidget {
         ),
         if (old.isNotEmpty)
           generateSection(
-            title: l.mitmOldCaSection,
+            title: l.mitmOldCaSection(old.length),
             items: [
               for (final each in old)
                 MitmOldCaRow(

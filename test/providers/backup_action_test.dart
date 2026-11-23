@@ -1526,6 +1526,43 @@ void main() {
       expect(jsonEncode(configMap), isNot(contains('secret AA:AA')));
     });
 
+    Set<String> homeEntries() =>
+        home.listSync(recursive: true).map((entity) => entity.path).toSet();
+
+    test(
+      'an unreadable passphrase fails the backup and writes nothing',
+      () async {
+        final container = withCa('AA:AA');
+        passphrases.values.clear();
+        final before = homeEntries();
+        var delivered = false;
+
+        await expectLater(
+          actionOf(container).backup((_) async {
+            delivered = true;
+            return true;
+          }, includeMitmCa: true),
+          throwsA(
+            isA<MessageException>().having(
+              (error) => error.message,
+              'message',
+              currentAppLocalizations.mitmBackupKeyUnavailable,
+            ),
+          ),
+        );
+
+        expect(delivered, isFalse);
+        expect(homeEntries(), before);
+      },
+    );
+
+    test('an unreadable passphrase is not needed without the CA', () async {
+      final container = withCa('AA:AA');
+      passphrases.values.clear();
+      final configMap = await actionOf(container).backupConfigMap();
+      expect(mitmOf(configMap)['ca-p12'], isNull);
+    });
+
     test('carries the CA in use and its passphrase when asked', () async {
       final container = withCa('AA:AA');
       final configMap = await actionOf(

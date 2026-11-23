@@ -281,7 +281,7 @@ void main() {
               expect(find.text(l.mitmVerifying), findsOneWidget);
               expect(find.text(l.mitmPendingVerification), findsNothing);
             case 'switched':
-              expect(find.text(l.mitmOldCaSection), findsOneWidget);
+              expect(find.text(l.mitmOldCaSection(2)), findsOneWidget);
               expect(find.text(_legacy.subject), findsOneWidget);
               expect(find.text(_earlier.subject), findsOneWidget);
               expect(find.text(l.mitmRemoveOldCa), findsNWidgets(2));
@@ -467,6 +467,41 @@ void main() {
     await tester.pump();
     expect(find.text(l.mitmBackupRiskImpact), findsOneWidget);
     expect(find.text(l.mitmBackupRiskRevoke), findsOneWidget);
+  });
+
+  test('the old certificate header counts in en and not in zh', () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    expect(en.mitmOldCaSection(1), 'Old Certificate Still on This Mac');
+    expect(en.mitmOldCaSection(2), 'Old Certificates Still on This Mac');
+    expect(zh.mitmOldCaSection(1), '仍保留在这台 Mac 的旧证书');
+    expect(zh.mitmOldCaSection(2), '仍保留在这台 Mac 的旧证书');
+  });
+
+  testWidgets('one old certificate is headed in the singular', (tester) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    final state = _states['switched']!;
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      mitm: state.mitm,
+      overrides: [
+        mitmCoreCaProvider.overrideWith(() => _FixedLease(state.trust)),
+        mitmCaMigrationProvider.overrideWith(() => _FixedMigration(false)),
+        mitmOldCaProvider.overrideWith((ref) async => [_legacy]),
+      ],
+      child: SingleChildScrollView(
+        child: MitmCoreCaSection(
+          certificate: state.shown,
+          trustLabel: l.mitmTrustReady,
+          onExport: () {},
+          onDelete: () {},
+        ),
+      ),
+    );
+    expect(find.text(l.mitmOldCaSection(1)), findsOneWidget);
+    expect(find.text(l.mitmOldCaSection(2)), findsNothing);
   });
 
   testWidgets('the p12 password keeps its label while typed in', (

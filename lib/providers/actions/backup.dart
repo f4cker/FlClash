@@ -54,11 +54,15 @@ class BackupAction extends _$BackupAction {
   @visibleForTesting
   Future<void> Function()? promptMitmCaTrust;
 
-  Future<bool> backup(BackupDelivery deliver, {bool includeMitmCa = false}) {
+  /// Settles the config before any file exists, so a CA whose passphrase
+  /// cannot be read fails the backup with nothing written.
+  Future<bool> backup(
+    BackupDelivery deliver, {
+    bool includeMitmCa = false,
+  }) async {
+    final configMap = await backupConfigMap(includeMitmCa: includeMitmCa);
     return _withWorkDir((workDir) async {
-      return deliver(
-        await _createArchive(workDir, includeMitmCa: includeMitmCa),
-      );
+      return deliver(await _createArchive(workDir, configMap));
     });
   }
 
@@ -121,16 +125,15 @@ class BackupAction extends _$BackupAction {
   }
 
   Future<String> _createArchive(
-    String workDir, {
-    bool includeMitmCa = false,
-  }) async {
+    String workDir,
+    Map<String, Object?> configMap,
+  ) async {
     final databaseSnapshotPath = join(workDir, backupDatabaseName);
     await database.customStatement('VACUUM INTO ?', [databaseSnapshotPath]);
     await _dropRestoreCommits(databaseSnapshotPath);
     final entries = await BackupEntries.ofDatabaseSnapshot(
       databaseSnapshotPath,
     );
-    final configMap = await backupConfigMap(includeMitmCa: includeMitmCa);
     configMap['version'] = await preferences.getVersion();
     final archivePath = join(workDir, 'backup.zip');
     await backupTask((
@@ -143,7 +146,8 @@ class BackupAction extends _$BackupAction {
     return archivePath;
   }
 
-  /// A pending or replaced CA never; the one in use only if [includeMitmCa].
+  /// A pending or replaced CA never; the one in use only if [includeMitmCa],
+  /// and then with its passphrase or not at all.
   @visibleForTesting
   Future<Map<String, Object?>> backupConfigMap({
     bool includeMitmCa = false,
@@ -156,6 +160,9 @@ class BackupAction extends _$BackupAction {
               .read(mitmPassphraseStoreProvider)
               ?.readPassphrase(ca.fingerprint)
         : null;
+    if (includeMitmCa && ca != null && passphrase == null) {
+      throw MessageException(currentAppLocalizations.mitmBackupKeyUnavailable);
+    }
     final kept = passphrase != null;
     final configMap =
         json.decode(

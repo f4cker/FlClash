@@ -48,7 +48,8 @@ void main() {
     final template =
         jsonDecode(File('$_arbDir/intl_en.arb').readAsStringSync())
             as Map<String, Object?>;
-    final placeholder = RegExp(r'\{([A-Za-z_][A-Za-z0-9_]*)');
+    // `{name}` or `{name, plural, ...}`; a plural's `=1{Old ...}` is text.
+    final placeholder = RegExp(r'\{([A-Za-z_][A-Za-z0-9_]*)\s*[,}]');
     final offenders = <String>[];
     for (final MapEntry(:key, :value) in template.entries) {
       if (key.startsWith('@') || value is! String) continue;

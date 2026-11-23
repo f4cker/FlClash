@@ -8937,7 +8937,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmCurrentCaActions => '当前配置的证书';
 
   @override
-  String get mitmOldCaSection => '仍保留在这台 Mac 的旧证书';
+  String mitmOldCaSection(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '仍保留在这台 Mac 的旧证书',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get mitmExportCertificateContent => '只保存公钥证书（.crt），不含私钥。';
@@ -9011,4 +9018,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmRestoreCaDamagedNone => '此备份中的解密证书无法读取，不会恢复。';
+
+  @override
+  String get mitmBackupKeyUnavailable => '无法读取证书密码，备份未完成。';
 }

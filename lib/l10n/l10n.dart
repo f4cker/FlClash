@@ -15913,8 +15913,8 @@ abstract class AppLocalizations {
   /// No description provided for @mitmOldCaSection.
   ///
   /// In en, this message translates to:
-  /// **'Old Certificate Still on This Mac'**
-  String get mitmOldCaSection;
+  /// **'{count, plural, =1{Old Certificate Still on This Mac} other{Old Certificates Still on This Mac}}'**
+  String mitmOldCaSection(num count);
 
   /// No description provided for @mitmExportCertificateContent.
   ///
@@ -16053,6 +16053,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The decryption certificate in this backup can\'t be read and won\'t be restored.'**
   String get mitmRestoreCaDamagedNone;
+
+  /// No description provided for @mitmBackupKeyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the certificate password. Backup wasn\'t completed.'**
+  String get mitmBackupKeyUnavailable;
 }
 
 class _AppLocalizationsDelegate
