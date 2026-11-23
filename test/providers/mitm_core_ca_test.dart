@@ -27,6 +27,7 @@ class _MockTrustStore extends Mock implements MitmTrustStore {}
 class _Passphrases implements MitmPassphraseStore {
   final values = <String, String>{};
   Completer<void>? gate;
+  var reads = 0;
 
   @override
   Future<void> deletePassphrase(String fingerprint) async =>
@@ -34,6 +35,7 @@ class _Passphrases implements MitmPassphraseStore {
 
   @override
   Future<String?> readPassphrase(String fingerprint) async {
+    reads++;
     await gate?.future;
     return values[fingerprint];
   }
@@ -68,6 +70,7 @@ void main() {
   late ProviderContainer container;
   late List<MethodCall> calls;
   late String identity;
+  Completer<void>? identityGate;
   late MitmTrust verdict;
   late Map<String, Object?>? legacy;
   final loaded = <MitmCaSecret>[];
@@ -91,6 +94,7 @@ void main() {
     MitmCoreCaLease.renewEvery = const Duration(hours: 1);
     calls = [];
     identity = 'verified';
+    identityGate = null;
     verdict = MitmTrust.ready;
     legacy = null;
     loaded.clear();
@@ -105,7 +109,10 @@ void main() {
         .setMockMethodCallHandler(_channel, (call) async {
           calls.add(call);
           return switch (call.method) {
-            'coreIdentity' => identity,
+            'coreIdentity' =>
+              await (identityGate?.future ?? Future.value()).then(
+                (_) => identity,
+              ),
             'certificate' => legacy,
             'deleteLegacy' =>
               (call.arguments as Map)['fingerprint'] == _legacyFp,
@@ -183,6 +190,7 @@ void main() {
     container.dispose();
     mitmFeature = false;
     MitmCoreCaLease.renewEvery = const Duration(seconds: 5);
+    MitmCoreCaLease.checkBudget = const Duration(seconds: 4);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
   });
@@ -490,6 +498,41 @@ void main() {
         container.read(mitmCoreCaProvider).failure,
         MitmCoreCaFailure.refused,
       );
+    });
+
+    test('a missing passphrase is read again only after a while or when '
+        'asked', () async {
+      passphrases.values.clear();
+      setMitm(coreMitm());
+      await started();
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      expect(passphrases.reads, 1);
+      await container.read(mitmCoreCaProvider.notifier).retrust();
+      expect(passphrases.reads, 2);
+    });
+
+    test('a Core identity that never answers does not hold up the rounds '
+        'or the switch', () async {
+      MitmCoreCaLease.checkBudget = const Duration(milliseconds: 20);
+      identityGate = Completer<void>();
+      setMitm(coreMitm());
+      container.read(mitmCoreCaProvider);
+      expect(
+        await container.read(mitmCoreCaProvider.notifier).checkNow(),
+        isNull,
+      );
+      expect(loaded, isEmpty);
+      setMitm(
+        coreMitm().copyWith(
+          pendingCaP12: _pendingP12,
+          pendingCaCertificate: _cert(_pendingFp, 'Flash pending'),
+        ),
+      );
+      expect(
+        await container.read(mitmCaMigrationProvider.notifier).verify(),
+        MitmMigrationOutcome.failed,
+      );
+      identityGate!.complete();
     });
 
     test('a legacy user stays on the app signer', () async {

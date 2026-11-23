@@ -81,7 +81,13 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   @visibleForTesting
   static Duration renewEvery = const Duration(seconds: 5);
 
-  static const _checkBudget = Duration(seconds: 4);
+  @visibleForTesting
+  static Duration checkBudget = const Duration(seconds: 4);
+
+  /// After a keychain read that failed or found nothing, how long until the
+  /// rounds try again; a prompt the user dismissed is not shown every round.
+  @visibleForTesting
+  static Duration passphraseBackoff = const Duration(minutes: 1);
   static const _stopBudget = Duration(seconds: 2);
 
   Timer? _timer;
@@ -103,6 +109,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   /// Bumped by every stop; a check begun before one goes no further.
   int _epoch = 0;
   bool _closed = false;
+  DateTime? _passphraseRetryAt;
 
   MitmSigner? _signer;
 
@@ -140,6 +147,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
           _awaitingRetrust = false;
           _negatives = 0;
           _lastVerdict = null;
+          _passphraseRetryAt = null;
         }
         _kick();
       },
@@ -206,6 +214,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
   /// The user asked to trust the CA again: check now, and lease if trusted.
   Future<MitmTrust?> retrust() {
     _awaitingRetrust = false;
+    _passphraseRetryAt = null;
     _kick();
     return checkNow();
   }
@@ -232,17 +241,18 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
     }
     final enabled = _enabled;
     try {
-      if (await signer.coreIdentity() != MitmCoreIdentity.verified) {
+      final identity = await signer.coreIdentity().timeout(checkBudget);
+      if (identity != MitmCoreIdentity.verified) {
         _failed(MitmCoreCaFailure.coreIdentity);
         return null;
       }
       if (stale()) return _restart();
-      final leaf = await _load(ca, p12, stale).timeout(_checkBudget);
+      final leaf = await _load(ca, p12, stale).timeout(checkBudget);
       if (stale()) return _restart();
       if (leaf == null) return null;
       final verdict = await store
           .check(ca, () async => leaf.pem)
-          .timeout(_checkBudget);
+          .timeout(checkBudget);
       if (stale()) return _restart();
       _lastVerdict = verdict.trust;
       if (verdict.trust != MitmTrust.ready) {
@@ -310,6 +320,9 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
     final core = ref.read(coreHandlerProvider);
     final key = (connection: _connection, fingerprint: ca.fingerprint);
     if (_loaded != key) {
+      final retryAt = _passphraseRetryAt;
+      if (retryAt != null && DateTime.now().isBefore(retryAt)) return null;
+      _passphraseRetryAt = DateTime.now().add(passphraseBackoff);
       final passphrase = await ref
           .read(mitmPassphraseStoreProvider)
           ?.readPassphrase(ca.fingerprint);
@@ -318,6 +331,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
         _failed(MitmCoreCaFailure.passphraseMissing);
         return null;
       }
+      _passphraseRetryAt = null;
       final loaded = await core.setMitmCa(
         MitmCaSecret(
           p12: p12,
@@ -586,8 +600,15 @@ class MitmCaMigration extends Notifier<bool> {
     if (pending == null || p12 == null || signer == null || store == null) {
       return MitmMigrationOutcome.failed;
     }
-    if (await signer.coreIdentity() != MitmCoreIdentity.verified) {
-      return MitmMigrationOutcome.coreIdentity;
+    try {
+      final identity = await signer.coreIdentity().timeout(
+        MitmCoreCaLease.checkBudget,
+      );
+      if (identity != MitmCoreIdentity.verified) {
+        return MitmMigrationOutcome.coreIdentity;
+      }
+    } on TimeoutException {
+      return MitmMigrationOutcome.failed;
     }
     final core = ref.read(coreHandlerProvider);
     final lease = ref.read(mitmCoreCaProvider.notifier);
