@@ -14,11 +14,7 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Below this window width the capsule leaves the reason to its tooltip.
-const double mitmBarCompactWidth = 720;
-
 const _fade = Duration(milliseconds: 200);
-const _tint = 0.15;
 
 /// Opens the MITM settings: the sidebar's page where it lists one, else over
 /// whatever [context] shows, as the advanced settings do.
@@ -53,8 +49,8 @@ Future<void> openMitmSettingsFromTray() async {
   await openMitmSettings(context);
 }
 
-/// The dashboard's bar while decryption is on: amber while it is ready or
-/// decrypting, muted while paused, red when the Core failed its identity
+/// The dashboard's bar while decryption is on: green while it is ready or
+/// decrypting, amber while paused, red when the Core failed its identity
 /// check. It opens the MITM settings.
 class MitmBarStatus extends ConsumerWidget {
   const MitmBarStatus({super.key});
@@ -69,94 +65,65 @@ class MitmBarStatus extends ConsumerWidget {
           : MitmStatusCapsule(
               key: const ValueKey('on'),
               indicator: indicator,
-              compact: ref.watch(viewWidthProvider) < mitmBarCompactWidth,
               onPressed: () => unawaited(openMitmSettings(context)),
             ),
     );
   }
 }
 
+/// A round button the size of the live status beside it; the status and
+/// why it is paused are in its tooltip.
 class MitmStatusCapsule extends StatelessWidget {
   final MitmIndicator indicator;
-
-  /// The status without its reason, which moves to the tooltip; for a
-  /// narrow window. The words stay: an icon alone would not say it decrypts.
-  final bool compact;
   final VoidCallback? onPressed;
 
-  const MitmStatusCapsule({
-    super.key,
-    required this.indicator,
-    required this.compact,
-    this.onPressed,
-  });
+  const MitmStatusCapsule({super.key, required this.indicator, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final l = context.appLocalizations;
-    final color = switch (indicator) {
-      MitmIndicator(
-        kind: MitmIndicatorKind.on || MitmIndicatorKind.decrypting,
-      ) =>
-        colorScheme.warning,
-      MitmIndicator(reason: MitmPauseReason.coreIdentity) => colorScheme.error,
-      _ => colorScheme.onSurfaceVariant,
+    final (fill, onFill) = switch (indicator) {
+      MitmIndicator(reason: MitmPauseReason.coreIdentity) => (
+        colorScheme.errorContainer,
+        colorScheme.onErrorContainer,
+      ),
+      _ when mitmIndicatorNeedsAttention(indicator) => (
+        colorScheme.warningContainer,
+        colorScheme.onWarningContainer,
+      ),
+      _ => (colorScheme.successContainer, colorScheme.onSuccessContainer),
     };
+    final pane = TonalButtonTheme.glassOf(context)
+        ? LiquidGlassStyle.tinted(colorScheme, fill)
+        : null;
     final text = mitmIndicatorText(l, indicator);
-    final height = TonalButtonSize.bar.button;
-    final icon = GlyphIcon(
-      switch (indicator.kind) {
-        MitmIndicatorKind.on ||
-        MitmIndicatorKind.decrypting => AppGlyphs.lockOpen,
-        MitmIndicatorKind.paused ||
-        MitmIndicatorKind.unconfirmed => AppGlyphs.lock,
-      },
-      size: TonalButtonSize.section.icon,
-      color: color,
-    );
-    final fill = color.withValues(alpha: _tint);
-    final style =
-        ButtonStyle.from(
-          foregroundColor: color,
-          backgroundColor: fill,
-          shape: AppShape.full,
-          minimumSize: Size.square(height),
-          fixedSize: Size.fromHeight(height),
-          padding: const EdgeInsetsDirectional.only(start: 12, end: 14),
-          tapTargetSize: TapTargetSize.shrinkWrap,
-          pressLook: PressLook.tint,
-        ).merge(
-          ButtonStyle(side: WidgetStatePropertyAll(BorderSide(color: color))),
-        );
     return Padding(
       // The bar's gap to the actions after it.
       padding: const EdgeInsetsDirectional.only(end: barButtonGap),
-      child: AnimatedSize(
-        duration: _fade,
-        curve: Curves.easeInOut,
-        alignment: AlignmentDirectional.centerEnd,
-        child: Semantics(
-          label: '$text. ${l.mitmIndicatorOpenSettings}',
-          button: true,
-          excludeSemantics: true,
-          child: Tooltip(
-            message: '$text\n${l.mitmIndicatorOpenSettings}',
-            excludeFromSemantics: true,
-            child: FilledButton.icon(
-              onPressed: onPressed,
-              style: style,
-              icon: icon,
-              // The reason too, as far as the bar has room for it.
-              label: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: compact ? 160 : 300),
-                child: Text(
-                  compact ? mitmIndicatorLabel(l, indicator) : text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+      child: Semantics(
+        label: '$text. ${l.mitmIndicatorOpenSettings}',
+        button: true,
+        excludeSemantics: true,
+        child: Tooltip(
+          message: '$text\n${l.mitmIndicatorOpenSettings}',
+          excludeFromSemantics: true,
+          child: IconButton.filled(
+            style: ButtonStyle.from(
+              backgroundColor: pane == null ? fill : Colors.transparent,
+              foregroundColor: onFill,
+              backgroundBuilder: pane == null
+                  ? null
+                  : LiquidGlass.buttonBackground((_) => pane),
+              pressLook: PressLook.none,
             ),
+            onPressed: onPressed,
+            icon: GlyphIcon(switch (indicator.kind) {
+              MitmIndicatorKind.on ||
+              MitmIndicatorKind.decrypting => AppGlyphs.lockOpen,
+              MitmIndicatorKind.paused ||
+              MitmIndicatorKind.unconfirmed => AppGlyphs.lock,
+            }, fill: 1),
           ),
         ),
       ),

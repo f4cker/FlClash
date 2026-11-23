@@ -25,6 +25,11 @@ import '../helpers/test_profiles.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
 
+/// The bar's round button says its status only in its tooltip and label.
+Finder statusTip(String text) => find.bySemanticsLabel(
+  '$text. ${currentAppLocalizations.mitmIndicatorOpenSettings}',
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(const MitmRules());
@@ -404,7 +409,7 @@ void main() {
       expect(find.byType(MitmStatusCapsule), findsOneWidget);
       final l = currentAppLocalizations;
       expect(
-        find.text(l.mitmIndicatorPausedBecause(l.mitmPauseIndicatorPending)),
+        statusTip(l.mitmIndicatorPausedBecause(l.mitmPauseIndicatorPending)),
         findsOneWidget,
       );
       await settle(tester);
@@ -435,9 +440,9 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await tester.pump(const Duration(seconds: 2));
       }
-      expect(find.text(l.mitmIndicatorOn), findsOneWidget);
-      expect(find.text(l.mitmIndicatorDecrypting), findsNothing);
-      expect(find.text(l.mitmPartialConnections), findsNothing);
+      expect(statusTip(l.mitmIndicatorOn), findsOneWidget);
+      expect(statusTip(l.mitmIndicatorDecrypting), findsNothing);
+      expect(statusTip(l.mitmPartialConnections), findsNothing);
       final indicator = container.read(mitmIndicatorProvider);
       expect(indicator, const MitmIndicator.on());
       expect(
@@ -490,7 +495,7 @@ void main() {
           .update((_) => const Size(400, 800));
       await tester.pump();
       expect(
-        find.text(currentAppLocalizations.mitmIndicatorOn),
+        statusTip(currentAppLocalizations.mitmIndicatorOn),
         findsOneWidget,
       );
       await tester.tap(find.byType(MitmStatusCapsule));

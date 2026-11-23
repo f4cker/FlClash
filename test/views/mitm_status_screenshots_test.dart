@@ -135,7 +135,6 @@ void main() {
               child: ScaffoldBarStatus(
                 status: MitmStatusCapsule(
                   indicator: indicator,
-                  compact: size.width < mitmBarCompactWidth,
                   onPressed: () {},
                 ),
                 child: Scaffold(
