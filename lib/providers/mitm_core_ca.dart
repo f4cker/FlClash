@@ -277,7 +277,10 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       if (!ref.mounted) return null;
       switch (_refusal(error)) {
         // Cleared or reloaded since: load it again on the next round.
-        case 'notLoaded' || 'unknownCheck' || 'fingerprintMismatch':
+        case 'notLoaded' ||
+            'unknownCheck' ||
+            'fingerprintMismatch' ||
+            'leaseLapsed':
           _loaded = null;
           _lapsed();
         case final String _ when error is CoreMethodException:
@@ -328,6 +331,7 @@ class MitmCoreCaLease extends Notifier<MitmCoreCaTrust> {
       }
       if (!loaded.loaded ||
           !_sameFingerprint(loaded.fingerprint, ca.fingerprint)) {
+        _failed(MitmCoreCaFailure.refused);
         return null;
       }
       _loaded = key;

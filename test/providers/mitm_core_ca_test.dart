@@ -464,6 +464,34 @@ void main() {
       expect(stops, 1);
     });
 
+    test('a lease the Core found late is a lapse, not a refusal', () async {
+      setMitm(coreMitm());
+      await started();
+      when(() => core.leaseMitmTrust(any(), any())).thenThrow(
+        const CoreMethodException(
+          code: 'mitm_ca',
+          message: 'x',
+          details: {'reason': 'leaseLapsed'},
+        ),
+      );
+      await container.read(mitmCoreCaProvider.notifier).checkNow();
+      final trust = container.read(mitmCoreCaProvider);
+      expect(trust.status, MitmCoreCaStatus.lapsed);
+      expect(trust.failure, isNull);
+    });
+
+    test('a CA the Core did not load is said, not left checking', () async {
+      when(
+        () => core.setMitmCa(any()),
+      ).thenAnswer((_) async => const MitmCaState());
+      setMitm(coreMitm());
+      await started();
+      expect(
+        container.read(mitmCoreCaProvider).failure,
+        MitmCoreCaFailure.refused,
+      );
+    });
+
     test('a legacy user stays on the app signer', () async {
       setMitm(
         const Mitm(
