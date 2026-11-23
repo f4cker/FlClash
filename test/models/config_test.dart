@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/method.dart' show CoreMethod;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:prism_ui/prism_ui.dart';
@@ -473,6 +474,33 @@ void main() {
     });
   });
 
+  group('the MITM CA secrets', () {
+    test('print as the mark and refuse what is not base64', () {
+      final p12 = MitmCaP12('AAAA');
+      expect('$p12', '[MITM CA]');
+      expect(
+        '${MitmCaSecret(p12: p12, passphrase: 'pw', fingerprint: 'AB')}',
+        '[MITM CA]',
+      );
+      expect(
+        () => MitmCaP12('not base64!'),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            isNot(contains('not base64')),
+          ),
+        ),
+      );
+    });
+
+    test('are named secret so the Core call log leaves them out', () {
+      expect(CoreMethod.mitmSetCA.isSecret, isTrue);
+      expect(CoreMethod.mitmInspectCA.isSecret, isTrue);
+      expect(CoreMethod.mitmStopSigning.isSecret, isFalse);
+    });
+  });
+
   group('Mitm', () {
     test('speaks the keys of the Core MITM config', () {
       const props = Mitm(
@@ -511,6 +539,30 @@ void main() {
         expect(trusted['ca-fingerprint'], 'AB:CD');
         expect(trusted, isNot(contains('trusted-fingerprint')));
         expect(trusted, isNot(contains('decrypt-untrusted')));
+      });
+
+      test('names the Core as signer only for its leased CA', () {
+        final ca = MitmCertificate(
+          pem: 'PEM',
+          fingerprint: 'AB:CD',
+          subject: 'Flash',
+          notBefore: DateTime.utc(2026),
+          notAfter: DateTime.utc(2027),
+        );
+        final mitm = Mitm(
+          trustedFingerprint: 'AB:CD',
+          caP12: MitmCaP12('AAAA'),
+          caCertificate: ca,
+        );
+
+        expect(mitm.coreJsonLeased(null)['decrypt-tls'], isFalse);
+        expect(mitm.coreJsonLeased(null), isNot(contains('signer')));
+        expect(mitm.coreJsonLeased('AB:CD')['signer'], 'core');
+        expect(mitm.coreJsonLeased('AB:CD')['decrypt-tls'], isTrue);
+        expect(
+          jsonEncode(mitm.coreJsonLeased('AB:CD')),
+          isNot(contains('AAAA')),
+        );
       });
 
       test('bounds what decryption holds with the keys the Core reads', () {

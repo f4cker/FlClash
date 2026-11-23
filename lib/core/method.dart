@@ -76,6 +76,11 @@ enum CoreMethod {
   mitmUpdate('mitm.update'),
   mitmRewriteStatus('mitm.rewriteStatus'),
   mitmRewriteParse('mitm.rewriteParse'),
+  mitmSetCA('mitm.setCA'),
+  mitmInspectCA('mitm.inspectCA'),
+  mitmTrustLease('mitm.trustLease'),
+  mitmCaState('mitm.caState'),
+  mitmStopSigning('mitm.stopSigning'),
   tailscaleNodes('tailscale.nodes'),
   tailscaleStatus('tailscale.status'),
   tailscaleStart('tailscale.start'),
@@ -100,6 +105,17 @@ enum CoreMethod {
   static final _byWireName = {
     for (final method in values) method.wireName: method,
   };
+
+  /// Their arguments or results carry a CA key or its passphrase.
+  static const secret = {
+    mitmSetCA,
+    mitmInspectCA,
+    mitmGenerateCertificate,
+    mitmIssueCertificate,
+    mitmTrustLease,
+  };
+
+  bool get isSecret => secret.contains(this);
 
   static CoreMethod fromWireName(String name) {
     final method = _byWireName[name];

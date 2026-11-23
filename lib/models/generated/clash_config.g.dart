@@ -1078,6 +1078,23 @@ _Mitm _$MitmFromJson(Map<String, dynamic> json) => _Mitm(
   trustedFingerprint: json['trusted-fingerprint'] as String?,
   capture: json['capture'] as bool? ?? false,
   captureEntries: (json['capture-entries'] as num?)?.toInt(),
+  caP12: MitmCaP12.fromJsonValue(json['ca-p12']),
+  caCertificate: json['ca-certificate'] == null
+      ? null
+      : MitmCertificate.fromJson(
+          json['ca-certificate'] as Map<String, dynamic>,
+        ),
+  pendingCaP12: MitmCaP12.fromJsonValue(json['pending-ca-p12']),
+  pendingCaCertificate: json['pending-ca-certificate'] == null
+      ? null
+      : MitmCertificate.fromJson(
+          json['pending-ca-certificate'] as Map<String, dynamic>,
+        ),
+  retiredCaCertificate: json['retired-ca-certificate'] == null
+      ? null
+      : MitmCertificate.fromJson(
+          json['retired-ca-certificate'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$MitmToJson(_Mitm instance) => <String, dynamic>{
@@ -1089,4 +1106,9 @@ Map<String, dynamic> _$MitmToJson(_Mitm instance) => <String, dynamic>{
   'trusted-fingerprint': instance.trustedFingerprint,
   'capture': instance.capture,
   'capture-entries': instance.captureEntries,
+  'ca-p12': ?MitmCaP12.toJsonValue(instance.caP12),
+  'ca-certificate': ?instance.caCertificate,
+  'pending-ca-p12': ?MitmCaP12.toJsonValue(instance.pendingCaP12),
+  'pending-ca-certificate': ?instance.pendingCaCertificate,
+  'retired-ca-certificate': ?instance.retiredCaCertificate,
 };

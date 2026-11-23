@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/core.dart';
+import 'package:fl_clash/models/mitm_ca.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:yaml/yaml.dart';
 
@@ -2257,6 +2258,26 @@ abstract class Mitm with _$Mitm {
     @JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint,
     @Default(false) bool capture,
     @JsonKey(name: 'capture-entries') int? captureEntries,
+    @JsonKey(
+      name: 'ca-p12',
+      includeIfNull: false,
+      fromJson: MitmCaP12.fromJsonValue,
+      toJson: MitmCaP12.toJsonValue,
+    )
+    MitmCaP12? caP12,
+    @JsonKey(name: 'ca-certificate', includeIfNull: false)
+    MitmCertificate? caCertificate,
+    @JsonKey(
+      name: 'pending-ca-p12',
+      includeIfNull: false,
+      fromJson: MitmCaP12.fromJsonValue,
+      toJson: MitmCaP12.toJsonValue,
+    )
+    MitmCaP12? pendingCaP12,
+    @JsonKey(name: 'pending-ca-certificate', includeIfNull: false)
+    MitmCertificate? pendingCaCertificate,
+    @JsonKey(name: 'retired-ca-certificate', includeIfNull: false)
+    MitmCertificate? retiredCaCertificate,
   }) = _Mitm;
 
   factory Mitm.fromJson(Map<String, Object?> json) => _$MitmFromJson(json);
@@ -2323,20 +2344,34 @@ extension MitmExt on Mitm {
     ],
   );
 
+  /// Null until a CA is stored here; the keychain CA signs until then.
+  MitmCertificate? get coreCa => caP12 == null ? null : caCertificate;
+
+  Mitm get withoutCaSecrets => copyWith(caP12: null, pendingCaP12: null);
+
+  Map<String, Object?> get coreJson => coreJsonLeased(null);
+
   /// Decrypts only with the CA this device was found to trust, and never
-  /// with an unverified upstream, which the Core does not offer.
-  Map<String, Object?> get coreJson => {
-    'enable': enable,
-    'hostname': hostname,
-    'auto-quic-block': autoQuicBlock,
-    'h2': h2,
-    'decrypt-tls': trustedFingerprint != null,
-    'ca-fingerprint': trustedFingerprint ?? '',
-    'limits': {
-      ..._mitmLimits(isAndroid: system.isAndroid),
-      'capture-entries': ?captureEntries,
-    },
-  };
+  /// with an unverified upstream. A Core CA also needs [leased] to match.
+  Map<String, Object?> coreJsonLeased(String? leased) {
+    final core = coreCa?.fingerprint;
+    final decrypt = core == null
+        ? trustedFingerprint != null
+        : trustedFingerprint == core && leased == core;
+    return {
+      'enable': enable,
+      'hostname': hostname,
+      'auto-quic-block': autoQuicBlock,
+      'h2': h2,
+      'decrypt-tls': decrypt,
+      'ca-fingerprint': decrypt ? trustedFingerprint! : '',
+      if (core != null && decrypt) 'signer': 'core',
+      'limits': {
+        ..._mitmLimits(isAndroid: system.isAndroid),
+        'capture-entries': ?captureEntries,
+      },
+    };
+  }
 }
 
 /// One of a profile's own rewrite rules: a Surge line of [section], which

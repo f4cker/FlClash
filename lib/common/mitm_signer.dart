@@ -96,7 +96,16 @@ class MitmSignResult {
   };
 }
 
-class MitmSigner {
+/// The passphrase of each stored CA's p12, by fingerprint.
+abstract interface class MitmPassphraseStore {
+  Future<String?> readPassphrase(String fingerprint);
+
+  Future<void> writePassphrase(String fingerprint, String passphrase);
+
+  Future<void> deletePassphrase(String fingerprint);
+}
+
+class MitmSigner implements MitmPassphraseStore {
   const MitmSigner([this._channel = const MethodChannel(channelName)]);
 
   static const channelName = 'com.layoute.flash/mitm_signer';
@@ -159,4 +168,28 @@ class MitmSigner {
   Future<String> checkCertificate() async {
     return (await _channel.invokeMethod<String>('checkCertificate'))!;
   }
+
+  @override
+  Future<String?> readPassphrase(String fingerprint) => _channel
+      .invokeMethod<String>('passphrase.read', {'fingerprint': fingerprint});
+
+  @override
+  Future<void> writePassphrase(String fingerprint, String passphrase) =>
+      _channel.invokeMethod<void>('passphrase.write', {
+        'fingerprint': fingerprint,
+        'passphrase': passphrase,
+      });
+
+  @override
+  Future<void> deletePassphrase(String fingerprint) => _channel
+      .invokeMethod<void>('passphrase.delete', {'fingerprint': fingerprint});
+
+  Future<bool> deleteLegacy(String fingerprint) async =>
+      await _channel.invokeMethod<bool>('deleteLegacy', {
+        'fingerprint': fingerprint,
+      }) ??
+      false;
+
+  Future<void> holdActivity(bool hold) =>
+      _channel.invokeMethod<void>('activity', {'hold': hold});
 }

@@ -36,7 +36,8 @@ abstract class CoreHandlerInterface {
     return await handleWatch(
       onStart: () {
         commonPrint.log(
-          'Invoke method ${method.wireName} ${DateTime.now()} $arguments',
+          'Invoke method ${method.wireName} ${DateTime.now()} '
+          '${method.isSecret ? '[MITM CA]' : arguments}',
         );
       },
       function: () => invokeMethod(
@@ -697,11 +698,58 @@ abstract class CoreHandlerInterface {
     return _command(CoreMethod.mitmSignResult, arguments: result.toJson(reqId));
   }
 
-  Future<String> issueMitmCertificate(String host) {
+  Future<String> issueMitmCertificate(String host) async =>
+      (await issueMitmCheck(host)).pem;
+
+  Future<MitmCheckLeaf> issueMitmCheck([String host = '']) {
     return _query(
       CoreMethod.mitmIssueCertificate,
-      _cast<String>,
+      MitmCheckLeaf.fromCore,
       arguments: {'host': host},
+    );
+  }
+
+  /// The Core signs only the check leaf until a lease.
+  Future<MitmCaState> setMitmCa(MitmCaSecret ca) {
+    return _query(
+      CoreMethod.mitmSetCA,
+      _model(MitmCaState.fromJson),
+      arguments: ca.toCoreJson(),
+    );
+  }
+
+  Future<MitmCaState> stopMitmSigning({Duration? timeout}) {
+    return _query(
+      CoreMethod.mitmStopSigning,
+      _model(MitmCaState.fromJson),
+      timeout: timeout,
+    );
+  }
+
+  Future<MitmCaState> leaseMitmTrust(String fingerprint, String check) {
+    return _query(
+      CoreMethod.mitmTrustLease,
+      _model(MitmCaState.fromJson),
+      arguments: {'fingerprint': fingerprint, 'check': check},
+    );
+  }
+
+  Future<MitmCaState> getMitmCaState() {
+    return _query(CoreMethod.mitmCaState, _model(MitmCaState.fromJson));
+  }
+
+  Future<MitmCertificate> inspectMitmCa(MitmCaP12 p12, String passphrase) {
+    return _query(
+      CoreMethod.mitmInspectCA,
+      _model(MitmCertificate.fromJson),
+      arguments: {'p12': p12.base64, 'passphrase': passphrase},
+    );
+  }
+
+  Future<MitmGeneratedCa> generateMitmCa() {
+    return _query(
+      CoreMethod.mitmGenerateCertificate,
+      _model(MitmGeneratedCa.fromJson),
     );
   }
 

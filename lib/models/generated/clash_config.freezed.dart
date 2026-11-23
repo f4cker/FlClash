@@ -7818,7 +7818,7 @@ $MitmCopyWith<$Res> get mitm {
 /// @nodoc
 mixin _$Mitm {
 
- bool get enable; List<String> get hostname;@JsonKey(name: 'skip-server-cert-verify') bool get skipServerCertVerify;@JsonKey(name: 'auto-quic-block') bool get autoQuicBlock;@JsonKey(name: 'decrypt-h2') bool get h2;@JsonKey(name: 'trusted-fingerprint') String? get trustedFingerprint; bool get capture;@JsonKey(name: 'capture-entries') int? get captureEntries;
+ bool get enable; List<String> get hostname;@JsonKey(name: 'skip-server-cert-verify') bool get skipServerCertVerify;@JsonKey(name: 'auto-quic-block') bool get autoQuicBlock;@JsonKey(name: 'decrypt-h2') bool get h2;@JsonKey(name: 'trusted-fingerprint') String? get trustedFingerprint; bool get capture;@JsonKey(name: 'capture-entries') int? get captureEntries;@JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) MitmCaP12? get caP12;@JsonKey(name: 'ca-certificate', includeIfNull: false) MitmCertificate? get caCertificate;@JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) MitmCaP12? get pendingCaP12;@JsonKey(name: 'pending-ca-certificate', includeIfNull: false) MitmCertificate? get pendingCaCertificate;@JsonKey(name: 'retired-ca-certificate', includeIfNull: false) MitmCertificate? get retiredCaCertificate;
 /// Create a copy of Mitm
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -7832,20 +7832,20 @@ $MitmCopyWith<Mitm> get copyWith => _$MitmCopyWithImpl<Mitm>(this as Mitm, _$ide
 @override
 bool operator ==(Object other) {
   final _this = this as Mitm;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Mitm&&(identical(other.enable, _this.enable) || other.enable == _this.enable)&&const DeepCollectionEquality().equals(other.hostname, _this.hostname)&&(identical(other.skipServerCertVerify, _this.skipServerCertVerify) || other.skipServerCertVerify == _this.skipServerCertVerify)&&(identical(other.autoQuicBlock, _this.autoQuicBlock) || other.autoQuicBlock == _this.autoQuicBlock)&&(identical(other.h2, _this.h2) || other.h2 == _this.h2)&&(identical(other.trustedFingerprint, _this.trustedFingerprint) || other.trustedFingerprint == _this.trustedFingerprint)&&(identical(other.capture, _this.capture) || other.capture == _this.capture)&&(identical(other.captureEntries, _this.captureEntries) || other.captureEntries == _this.captureEntries));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Mitm&&(identical(other.enable, _this.enable) || other.enable == _this.enable)&&const DeepCollectionEquality().equals(other.hostname, _this.hostname)&&(identical(other.skipServerCertVerify, _this.skipServerCertVerify) || other.skipServerCertVerify == _this.skipServerCertVerify)&&(identical(other.autoQuicBlock, _this.autoQuicBlock) || other.autoQuicBlock == _this.autoQuicBlock)&&(identical(other.h2, _this.h2) || other.h2 == _this.h2)&&(identical(other.trustedFingerprint, _this.trustedFingerprint) || other.trustedFingerprint == _this.trustedFingerprint)&&(identical(other.capture, _this.capture) || other.capture == _this.capture)&&(identical(other.captureEntries, _this.captureEntries) || other.captureEntries == _this.captureEntries)&&(identical(other.caP12, _this.caP12) || other.caP12 == _this.caP12)&&(identical(other.caCertificate, _this.caCertificate) || other.caCertificate == _this.caCertificate)&&(identical(other.pendingCaP12, _this.pendingCaP12) || other.pendingCaP12 == _this.pendingCaP12)&&(identical(other.pendingCaCertificate, _this.pendingCaCertificate) || other.pendingCaCertificate == _this.pendingCaCertificate)&&(identical(other.retiredCaCertificate, _this.retiredCaCertificate) || other.retiredCaCertificate == _this.retiredCaCertificate));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Mitm;
-  return Object.hash(runtimeType,_this.enable,const DeepCollectionEquality().hash(_this.hostname),_this.skipServerCertVerify,_this.autoQuicBlock,_this.h2,_this.trustedFingerprint,_this.capture,_this.captureEntries);
+  return Object.hash(runtimeType,_this.enable,const DeepCollectionEquality().hash(_this.hostname),_this.skipServerCertVerify,_this.autoQuicBlock,_this.h2,_this.trustedFingerprint,_this.capture,_this.captureEntries,_this.caP12,_this.caCertificate,_this.pendingCaP12,_this.pendingCaCertificate,_this.retiredCaCertificate);
 }
 
 @override
 String toString() {
   final _this = this as Mitm;
-  return 'Mitm(enable: ${_this.enable}, hostname: ${_this.hostname}, skipServerCertVerify: ${_this.skipServerCertVerify}, autoQuicBlock: ${_this.autoQuicBlock}, h2: ${_this.h2}, trustedFingerprint: ${_this.trustedFingerprint}, capture: ${_this.capture}, captureEntries: ${_this.captureEntries})';
+  return 'Mitm(enable: ${_this.enable}, hostname: ${_this.hostname}, skipServerCertVerify: ${_this.skipServerCertVerify}, autoQuicBlock: ${_this.autoQuicBlock}, h2: ${_this.h2}, trustedFingerprint: ${_this.trustedFingerprint}, capture: ${_this.capture}, captureEntries: ${_this.captureEntries}, caP12: ${_this.caP12}, caCertificate: ${_this.caCertificate}, pendingCaP12: ${_this.pendingCaP12}, pendingCaCertificate: ${_this.pendingCaCertificate}, retiredCaCertificate: ${_this.retiredCaCertificate})';
 }
 
 
@@ -7856,11 +7856,11 @@ abstract mixin class $MitmCopyWith<$Res>  {
   factory $MitmCopyWith(Mitm value, $Res Function(Mitm) _then) = _$MitmCopyWithImpl;
 @useResult
 $Res call({
- bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock,@JsonKey(name: 'decrypt-h2') bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries
+ bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock,@JsonKey(name: 'decrypt-h2') bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries,@JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) MitmCaP12? caP12,@JsonKey(name: 'ca-certificate', includeIfNull: false) MitmCertificate? caCertificate,@JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) MitmCaP12? pendingCaP12,@JsonKey(name: 'pending-ca-certificate', includeIfNull: false) MitmCertificate? pendingCaCertificate,@JsonKey(name: 'retired-ca-certificate', includeIfNull: false) MitmCertificate? retiredCaCertificate
 });
 
 
-
+$MitmCertificateCopyWith<$Res>? get caCertificate;$MitmCertificateCopyWith<$Res>? get pendingCaCertificate;$MitmCertificateCopyWith<$Res>? get retiredCaCertificate;
 
 }
 /// @nodoc
@@ -7873,7 +7873,7 @@ class _$MitmCopyWithImpl<$Res>
 
 /// Create a copy of Mitm
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? enable = null,Object? hostname = null,Object? skipServerCertVerify = null,Object? autoQuicBlock = null,Object? h2 = null,Object? trustedFingerprint = freezed,Object? capture = null,Object? captureEntries = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? enable = null,Object? hostname = null,Object? skipServerCertVerify = null,Object? autoQuicBlock = null,Object? h2 = null,Object? trustedFingerprint = freezed,Object? capture = null,Object? captureEntries = freezed,Object? caP12 = freezed,Object? caCertificate = freezed,Object? pendingCaP12 = freezed,Object? pendingCaCertificate = freezed,Object? retiredCaCertificate = freezed,}) {
   return _then(Mitm(
 enable: null == enable ? _self.enable : enable // ignore: cast_nullable_to_non_nullable
 as bool,hostname: null == hostname ? _self.hostname : hostname // ignore: cast_nullable_to_non_nullable
@@ -7883,10 +7883,51 @@ as bool,h2: null == h2 ? _self.h2 : h2 // ignore: cast_nullable_to_non_nullable
 as bool,trustedFingerprint: freezed == trustedFingerprint ? _self.trustedFingerprint : trustedFingerprint // ignore: cast_nullable_to_non_nullable
 as String?,capture: null == capture ? _self.capture : capture // ignore: cast_nullable_to_non_nullable
 as bool,captureEntries: freezed == captureEntries ? _self.captureEntries : captureEntries // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,caP12: freezed == caP12 ? _self.caP12 : caP12 // ignore: cast_nullable_to_non_nullable
+as MitmCaP12?,caCertificate: freezed == caCertificate ? _self.caCertificate : caCertificate // ignore: cast_nullable_to_non_nullable
+as MitmCertificate?,pendingCaP12: freezed == pendingCaP12 ? _self.pendingCaP12 : pendingCaP12 // ignore: cast_nullable_to_non_nullable
+as MitmCaP12?,pendingCaCertificate: freezed == pendingCaCertificate ? _self.pendingCaCertificate : pendingCaCertificate // ignore: cast_nullable_to_non_nullable
+as MitmCertificate?,retiredCaCertificate: freezed == retiredCaCertificate ? _self.retiredCaCertificate : retiredCaCertificate // ignore: cast_nullable_to_non_nullable
+as MitmCertificate?,
   ));
 }
+/// Create a copy of Mitm
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmCertificateCopyWith<$Res>? get caCertificate {
+    if (_self.caCertificate == null) {
+    return null;
+  }
 
+  return $MitmCertificateCopyWith<$Res>(_self.caCertificate!, (value) {
+    return _then(_self.copyWith(caCertificate: value));
+  });
+}/// Create a copy of Mitm
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmCertificateCopyWith<$Res>? get pendingCaCertificate {
+    if (_self.pendingCaCertificate == null) {
+    return null;
+  }
+
+  return $MitmCertificateCopyWith<$Res>(_self.pendingCaCertificate!, (value) {
+    return _then(_self.copyWith(pendingCaCertificate: value));
+  });
+}/// Create a copy of Mitm
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmCertificateCopyWith<$Res>? get retiredCaCertificate {
+    if (_self.retiredCaCertificate == null) {
+    return null;
+  }
+
+  return $MitmCertificateCopyWith<$Res>(_self.retiredCaCertificate!, (value) {
+    return _then(_self.copyWith(retiredCaCertificate: value));
+  });
+}
 }
 
 
@@ -7968,10 +8009,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries, @JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue)  MitmCaP12? caP12, @JsonKey(name: 'ca-certificate', includeIfNull: false)  MitmCertificate? caCertificate, @JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue)  MitmCaP12? pendingCaP12, @JsonKey(name: 'pending-ca-certificate', includeIfNull: false)  MitmCertificate? pendingCaCertificate, @JsonKey(name: 'retired-ca-certificate', includeIfNull: false)  MitmCertificate? retiredCaCertificate)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Mitm() when $default != null:
-return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries);case _:
+return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries,_that.caP12,_that.caCertificate,_that.pendingCaP12,_that.pendingCaCertificate,_that.retiredCaCertificate);case _:
   return orElse();
 
 }
@@ -7989,10 +8030,10 @@ return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.aut
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries, @JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue)  MitmCaP12? caP12, @JsonKey(name: 'ca-certificate', includeIfNull: false)  MitmCertificate? caCertificate, @JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue)  MitmCaP12? pendingCaP12, @JsonKey(name: 'pending-ca-certificate', includeIfNull: false)  MitmCertificate? pendingCaCertificate, @JsonKey(name: 'retired-ca-certificate', includeIfNull: false)  MitmCertificate? retiredCaCertificate)  $default,) {final _that = this;
 switch (_that) {
 case _Mitm():
-return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries);case _:
+return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries,_that.caP12,_that.caCertificate,_that.pendingCaP12,_that.pendingCaCertificate,_that.retiredCaCertificate);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -8009,10 +8050,10 @@ return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.aut
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries, @JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue)  MitmCaP12? caP12, @JsonKey(name: 'ca-certificate', includeIfNull: false)  MitmCertificate? caCertificate, @JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue)  MitmCaP12? pendingCaP12, @JsonKey(name: 'pending-ca-certificate', includeIfNull: false)  MitmCertificate? pendingCaCertificate, @JsonKey(name: 'retired-ca-certificate', includeIfNull: false)  MitmCertificate? retiredCaCertificate)?  $default,) {final _that = this;
 switch (_that) {
 case _Mitm() when $default != null:
-return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries);case _:
+return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries,_that.caP12,_that.caCertificate,_that.pendingCaP12,_that.pendingCaCertificate,_that.retiredCaCertificate);case _:
   return null;
 
 }
@@ -8024,7 +8065,7 @@ return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.aut
 @JsonSerializable()
 
 class _Mitm implements Mitm {
-  const _Mitm({this.enable = false,  List<String> hostname = const [], @JsonKey(name: 'skip-server-cert-verify') this.skipServerCertVerify = false, @JsonKey(name: 'auto-quic-block') this.autoQuicBlock = true, @JsonKey(name: 'decrypt-h2') this.h2 = true, @JsonKey(name: 'trusted-fingerprint') this.trustedFingerprint, this.capture = false, @JsonKey(name: 'capture-entries') this.captureEntries}): _hostname = hostname;
+  const _Mitm({this.enable = false,  List<String> hostname = const [], @JsonKey(name: 'skip-server-cert-verify') this.skipServerCertVerify = false, @JsonKey(name: 'auto-quic-block') this.autoQuicBlock = true, @JsonKey(name: 'decrypt-h2') this.h2 = true, @JsonKey(name: 'trusted-fingerprint') this.trustedFingerprint, this.capture = false, @JsonKey(name: 'capture-entries') this.captureEntries, @JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) this.caP12, @JsonKey(name: 'ca-certificate', includeIfNull: false) this.caCertificate, @JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) this.pendingCaP12, @JsonKey(name: 'pending-ca-certificate', includeIfNull: false) this.pendingCaCertificate, @JsonKey(name: 'retired-ca-certificate', includeIfNull: false) this.retiredCaCertificate}): _hostname = hostname;
   factory _Mitm.fromJson(Map<String, dynamic> json) => _$MitmFromJson(json);
 
 @override@JsonKey() final  bool enable;
@@ -8041,6 +8082,11 @@ class _Mitm implements Mitm {
 @override@JsonKey(name: 'trusted-fingerprint') final  String? trustedFingerprint;
 @override@JsonKey() final  bool capture;
 @override@JsonKey(name: 'capture-entries') final  int? captureEntries;
+@override@JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) final  MitmCaP12? caP12;
+@override@JsonKey(name: 'ca-certificate', includeIfNull: false) final  MitmCertificate? caCertificate;
+@override@JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) final  MitmCaP12? pendingCaP12;
+@override@JsonKey(name: 'pending-ca-certificate', includeIfNull: false) final  MitmCertificate? pendingCaCertificate;
+@override@JsonKey(name: 'retired-ca-certificate', includeIfNull: false) final  MitmCertificate? retiredCaCertificate;
 
 /// Create a copy of Mitm
 /// with the given fields replaced by the non-null parameter values.
@@ -8055,18 +8101,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Mitm&&(identical(other.enable, enable) || other.enable == enable)&&const DeepCollectionEquality().equals(other.hostname, _hostname)&&(identical(other.skipServerCertVerify, skipServerCertVerify) || other.skipServerCertVerify == skipServerCertVerify)&&(identical(other.autoQuicBlock, autoQuicBlock) || other.autoQuicBlock == autoQuicBlock)&&(identical(other.h2, h2) || other.h2 == h2)&&(identical(other.trustedFingerprint, trustedFingerprint) || other.trustedFingerprint == trustedFingerprint)&&(identical(other.capture, capture) || other.capture == capture)&&(identical(other.captureEntries, captureEntries) || other.captureEntries == captureEntries));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Mitm&&(identical(other.enable, enable) || other.enable == enable)&&const DeepCollectionEquality().equals(other.hostname, _hostname)&&(identical(other.skipServerCertVerify, skipServerCertVerify) || other.skipServerCertVerify == skipServerCertVerify)&&(identical(other.autoQuicBlock, autoQuicBlock) || other.autoQuicBlock == autoQuicBlock)&&(identical(other.h2, h2) || other.h2 == h2)&&(identical(other.trustedFingerprint, trustedFingerprint) || other.trustedFingerprint == trustedFingerprint)&&(identical(other.capture, capture) || other.capture == capture)&&(identical(other.captureEntries, captureEntries) || other.captureEntries == captureEntries)&&(identical(other.caP12, caP12) || other.caP12 == caP12)&&(identical(other.caCertificate, caCertificate) || other.caCertificate == caCertificate)&&(identical(other.pendingCaP12, pendingCaP12) || other.pendingCaP12 == pendingCaP12)&&(identical(other.pendingCaCertificate, pendingCaCertificate) || other.pendingCaCertificate == pendingCaCertificate)&&(identical(other.retiredCaCertificate, retiredCaCertificate) || other.retiredCaCertificate == retiredCaCertificate));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,enable,const DeepCollectionEquality().hash(_hostname),skipServerCertVerify,autoQuicBlock,h2,trustedFingerprint,capture,captureEntries);
+    return Object.hash(runtimeType,enable,const DeepCollectionEquality().hash(_hostname),skipServerCertVerify,autoQuicBlock,h2,trustedFingerprint,capture,captureEntries,caP12,caCertificate,pendingCaP12,pendingCaCertificate,retiredCaCertificate);
 }
 
 @override
 String toString() {
-    return 'Mitm(enable: $enable, hostname: $hostname, skipServerCertVerify: $skipServerCertVerify, autoQuicBlock: $autoQuicBlock, h2: $h2, trustedFingerprint: $trustedFingerprint, capture: $capture, captureEntries: $captureEntries)';
+    return 'Mitm(enable: $enable, hostname: $hostname, skipServerCertVerify: $skipServerCertVerify, autoQuicBlock: $autoQuicBlock, h2: $h2, trustedFingerprint: $trustedFingerprint, capture: $capture, captureEntries: $captureEntries, caP12: $caP12, caCertificate: $caCertificate, pendingCaP12: $pendingCaP12, pendingCaCertificate: $pendingCaCertificate, retiredCaCertificate: $retiredCaCertificate)';
 }
 
 
@@ -8077,11 +8123,11 @@ abstract mixin class _$MitmCopyWith<$Res> implements $MitmCopyWith<$Res> {
   factory _$MitmCopyWith(_Mitm value, $Res Function(_Mitm) _then) = __$MitmCopyWithImpl;
 @override @useResult
 $Res call({
- bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock,@JsonKey(name: 'decrypt-h2') bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries
+ bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock,@JsonKey(name: 'decrypt-h2') bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries,@JsonKey(name: 'ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) MitmCaP12? caP12,@JsonKey(name: 'ca-certificate', includeIfNull: false) MitmCertificate? caCertificate,@JsonKey(name: 'pending-ca-p12', includeIfNull: false, fromJson: MitmCaP12.fromJsonValue, toJson: MitmCaP12.toJsonValue) MitmCaP12? pendingCaP12,@JsonKey(name: 'pending-ca-certificate', includeIfNull: false) MitmCertificate? pendingCaCertificate,@JsonKey(name: 'retired-ca-certificate', includeIfNull: false) MitmCertificate? retiredCaCertificate
 });
 
 
-
+@override $MitmCertificateCopyWith<$Res>? get caCertificate;@override $MitmCertificateCopyWith<$Res>? get pendingCaCertificate;@override $MitmCertificateCopyWith<$Res>? get retiredCaCertificate;
 
 }
 /// @nodoc
@@ -8094,7 +8140,7 @@ class __$MitmCopyWithImpl<$Res>
 
 /// Create a copy of Mitm
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? enable = null,Object? hostname = null,Object? skipServerCertVerify = null,Object? autoQuicBlock = null,Object? h2 = null,Object? trustedFingerprint = freezed,Object? capture = null,Object? captureEntries = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? enable = null,Object? hostname = null,Object? skipServerCertVerify = null,Object? autoQuicBlock = null,Object? h2 = null,Object? trustedFingerprint = freezed,Object? capture = null,Object? captureEntries = freezed,Object? caP12 = freezed,Object? caCertificate = freezed,Object? pendingCaP12 = freezed,Object? pendingCaCertificate = freezed,Object? retiredCaCertificate = freezed,}) {
   return _then(_Mitm(
 enable: null == enable ? _self.enable : enable // ignore: cast_nullable_to_non_nullable
 as bool,hostname: null == hostname ? _self._hostname : hostname // ignore: cast_nullable_to_non_nullable
@@ -8104,11 +8150,52 @@ as bool,h2: null == h2 ? _self.h2 : h2 // ignore: cast_nullable_to_non_nullable
 as bool,trustedFingerprint: freezed == trustedFingerprint ? _self.trustedFingerprint : trustedFingerprint // ignore: cast_nullable_to_non_nullable
 as String?,capture: null == capture ? _self.capture : capture // ignore: cast_nullable_to_non_nullable
 as bool,captureEntries: freezed == captureEntries ? _self.captureEntries : captureEntries // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,caP12: freezed == caP12 ? _self.caP12 : caP12 // ignore: cast_nullable_to_non_nullable
+as MitmCaP12?,caCertificate: freezed == caCertificate ? _self.caCertificate : caCertificate // ignore: cast_nullable_to_non_nullable
+as MitmCertificate?,pendingCaP12: freezed == pendingCaP12 ? _self.pendingCaP12 : pendingCaP12 // ignore: cast_nullable_to_non_nullable
+as MitmCaP12?,pendingCaCertificate: freezed == pendingCaCertificate ? _self.pendingCaCertificate : pendingCaCertificate // ignore: cast_nullable_to_non_nullable
+as MitmCertificate?,retiredCaCertificate: freezed == retiredCaCertificate ? _self.retiredCaCertificate : retiredCaCertificate // ignore: cast_nullable_to_non_nullable
+as MitmCertificate?,
   ));
 }
 
+/// Create a copy of Mitm
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmCertificateCopyWith<$Res>? get caCertificate {
+    if (_self.caCertificate == null) {
+    return null;
+  }
 
+  return $MitmCertificateCopyWith<$Res>(_self.caCertificate!, (value) {
+    return _then(_self.copyWith(caCertificate: value));
+  });
+}/// Create a copy of Mitm
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmCertificateCopyWith<$Res>? get pendingCaCertificate {
+    if (_self.pendingCaCertificate == null) {
+    return null;
+  }
+
+  return $MitmCertificateCopyWith<$Res>(_self.pendingCaCertificate!, (value) {
+    return _then(_self.copyWith(pendingCaCertificate: value));
+  });
+}/// Create a copy of Mitm
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmCertificateCopyWith<$Res>? get retiredCaCertificate {
+    if (_self.retiredCaCertificate == null) {
+    return null;
+  }
+
+  return $MitmCertificateCopyWith<$Res>(_self.retiredCaCertificate!, (value) {
+    return _then(_self.copyWith(retiredCaCertificate: value));
+  });
+}
 }
 
 /// @nodoc

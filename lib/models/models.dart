@@ -6,6 +6,7 @@ export 'common.dart';
 export 'config.dart';
 export 'core.dart';
 export 'ip_quality.dart';
+export 'mitm_ca.dart';
 export 'mount.dart';
 export 'process_info.dart';
 export 'profile.dart';
