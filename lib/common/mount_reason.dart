@@ -7,6 +7,9 @@ final _mountSourcePattern = RegExp(
 
 const _mountReasonMaxLength = 160;
 
+bool isMountSourceProblem(String reason) =>
+    _mountSourcePattern.hasMatch(reason);
+
 /// One short line naming the subscription, else the reason with URLs cut.
 String mountRejectedReason(
   String reason,

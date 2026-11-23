@@ -2945,10 +2945,11 @@ void main() {
         () => core.getProxies(),
       ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
       var message = '';
+      final codes = <String>[];
       when(() => core.setupConfig(any())).thenAnswer((_) async {
         if (message.isEmpty) return;
         throw CoreMethodException(
-          code: 'mount_rejected',
+          code: codes.isEmpty ? 'mount_rejected' : codes.removeAt(0),
           message: message,
           details: const {'outcome': 'kept'},
         );
@@ -2970,7 +2971,6 @@ void main() {
       );
       addTearDown(scoped.dispose);
       addTearDown(() => globalState.lastConfigCounts = null);
-      addTearDown(() => globalState.lastMountRejection = null);
       final printed = <String>[];
       final original = debugPrint;
       debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
@@ -2995,10 +2995,18 @@ void main() {
         '${appLocalizations.mountApplyKept}\n'
         '${appLocalizations.mountSourceMissingReason('Air')}',
       );
-      expect(
-        globalState.lastMountRejection,
-        appLocalizations.mountSourceMissingReason('Air'),
+      final heard = <String>[];
+      final other = <String>[];
+      codes.add('config_rejected');
+      final first = setupAction.applyProfileReporting(
+        onMountRejected: other.add,
       );
+      final second = setupAction.applyProfileReporting(
+        onMountRejected: heard.add,
+      );
+      expect(await (first, second).wait, (false, false));
+      expect(other, isEmpty);
+      expect(heard, [appLocalizations.mountSourceMissingReason('Air')]);
 
       const leaky =
           'proxy-groups: G: fetch https://sub.example.com/api?token=s3cret '

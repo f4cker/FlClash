@@ -9273,13 +9273,13 @@ abstract class AppLocalizations {
   /// No description provided for @mountSourceInvalidReason.
   ///
   /// In en, this message translates to:
-  /// **'The local copy of subscription “{name}” has nodes Flash cannot read.'**
+  /// **'The local copy of subscription “{name}” contains nodes Flash cannot read.'**
   String mountSourceInvalidReason(Object name);
 
   /// No description provided for @mountSourceUnsupportedReason.
   ///
   /// In en, this message translates to:
-  /// **'Subscription “{name}” does not provide a mountable node list.'**
+  /// **'Subscription “{name}” does not provide a node list that can be mounted.'**
   String mountSourceUnsupportedReason(Object name);
 
   /// No description provided for @profileEditMountRejected.

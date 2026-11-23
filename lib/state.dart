@@ -32,9 +32,6 @@ class GlobalState {
 
   String? lastConfigMd5;
   ConfigCounts? lastConfigCounts;
-
-  /// Why the Core last refused a mounted profile, as the user reads it.
-  String? lastMountRejection;
   bool isAttach = false;
 
   GlobalState._internal();

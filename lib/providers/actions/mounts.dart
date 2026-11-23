@@ -2,6 +2,8 @@ part of '../action.dart';
 
 typedef _MountRelay = ({List<String> names, List<String> managed});
 
+typedef MountEditIssue = ({String reason, bool blocking});
+
 /// Mount operations run one at a time. Each save writes the relation with a
 /// pending record first, and only a readback, or a target that is not
 /// running, clears it; an unknown outcome keeps the target locked.
@@ -691,8 +693,8 @@ class MountAction extends _$MountAction {
     _ => null,
   };
 
-  /// Why [data] as [targetId]'s file would be refused with its mounts.
-  Future<String?> preflightEdit(int targetId, List<int> data) async {
+  /// A subscription's own problem does not hold the edit.
+  Future<MountEditIssue?> preflightEdit(int targetId, List<int> data) async {
     final target = await database.mountsDao.target(targetId);
     if (target == null || target.sourceIds.isEmpty) return null;
     final mounts = mountSetupOf(
@@ -701,23 +703,39 @@ class MountAction extends _$MountAction {
       await appPath.profilesPath,
     );
     if (mounts.sources.isEmpty) return null;
-    final preflight = await _inspectionPool.run(
-      () => _core.preflightMounts(
-        config: utf8.decode(data, allowMalformed: true),
-        mounts: mounts,
-      ),
-    );
+    final edited = File(await appPath.tempFilePath);
+    final MountPreflight preflight;
+    try {
+      await edited.safeWriteAsBytes(data);
+      preflight = await _inspectionPool.run(() async {
+        final input = await ref
+            .read(setupActionProvider.notifier)
+            .mountTargetInput(targetId, profilePath: edited.path);
+        return _core.preflightMounts(
+          base: input.base,
+          config: input.config,
+          mounts: mounts,
+        );
+      });
+    } finally {
+      await edited.safeDelete();
+    }
     final error = preflight.error;
     if (error == null) return null;
     commonPrint.log(
       'edited profile rejected with its mounts: $error',
       logLevel: LogLevel.warning,
     );
-    return mountRejectedReason(
-      error,
-      currentAppLocalizations,
-      sourceName: (id) =>
-          mounts.sources.where((source) => source.id == id).firstOrNull?.label,
+    return (
+      reason: mountRejectedReason(
+        error,
+        currentAppLocalizations,
+        sourceName: (id) => mounts.sources
+            .where((source) => source.id == id)
+            .firstOrNull
+            ?.label,
+      ),
+      blocking: !isMountSourceProblem(error),
     );
   }
 

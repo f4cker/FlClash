@@ -5398,22 +5398,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mountSourceMissingReason(Object name) {
-    return 'The local copy of subscription “$name” is missing.';
+    return 'Локальная копия подписки «$name» отсутствует.';
   }
 
   @override
   String mountSourceReadErrorReason(Object name) {
-    return 'The local copy of subscription “$name” cannot be read.';
+    return 'Не удалось прочитать локальную копию подписки «$name».';
   }
 
   @override
   String mountSourceInvalidReason(Object name) {
-    return 'The local copy of subscription “$name” has nodes Flash cannot read.';
+    return 'Локальная копия подписки «$name» содержит узлы, которые Flash не может прочитать.';
   }
 
   @override
   String mountSourceUnsupportedReason(Object name) {
-    return 'Subscription “$name” does not provide a mountable node list.';
+    return 'Подписка «$name» не предоставляет список узлов, который можно подключить.';
   }
 
   @override

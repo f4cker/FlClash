@@ -186,17 +186,20 @@ extension type CoreController._(CoreHandlerInterface _interface)
     );
   }
 
-  Future<Map<String, dynamic>> readConfig(int id) async {
-    final path = await appPath.getProfilePath(id.toString());
+  Future<Map<String, dynamic>> readConfig(int id, {String? path}) async {
+    path ??= await appPath.getProfilePath(id.toString());
     final data = await _interface.readConfig(path);
     data['rules'] = data['rule'];
     data.remove('rule');
     return data;
   }
 
-  Future<Map<String, dynamic>> getProfileOutbounds(int id) async {
+  Future<Map<String, dynamic>> getProfileOutbounds(
+    int id, {
+    String? path,
+  }) async {
     return _interface.getProfileOutbounds(
-      await appPath.getProfilePath(id.toString()),
+      path ?? await appPath.getProfilePath(id.toString()),
     );
   }
 
@@ -215,8 +218,11 @@ extension type CoreController._(CoreHandlerInterface _interface)
     return lastMatchTarget((await _interface.getProfileBase(path)).matchRules);
   }
 
-  Future<({ProfileBase base, String path})> getProfileBase(int id) async {
-    final path = await appPath.getProfilePath(id.toString());
+  Future<({ProfileBase base, String path})> getProfileBase(
+    int id, {
+    String? path,
+  }) async {
+    path ??= await appPath.getProfilePath(id.toString());
     final base = await _interface.getProfileBase(path);
     final config = Map<String, dynamic>.from(base.config)..remove('rule');
     return (base: base.copyWith(config: config), path: path);

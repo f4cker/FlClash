@@ -18,21 +18,59 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum _ProfileField { label, url, autoUpdateInterval }
 
-/// A preflight that cannot run leaves the edit to the apply, as before.
+/// Takes [data] unless its mounts would refuse it; a subscription's own
+/// problem, or a preflight that cannot run, does not hold the edit.
 @visibleForTesting
-Future<String?> mountEditIssue(Future<String?> Function() preflight) async {
-  final String? reason;
+Future<void> saveProfileEdit(
+  BuildContext context,
+  WidgetRef ref,
+  int profileId,
+  Uint8List data,
+) async {
+  final issue = await globalState.safeRun(
+    () =>
+        ref.read(profilesActionProvider.notifier).validateConfigWithData(data),
+    silence: false,
+  );
+  if (issue != null) {
+    unawaited(
+      dialogs.showAlert(
+        title: currentAppLocalizations.tip,
+        message: TextSpan(text: issue),
+      ),
+    );
+    return;
+  }
+  MountEditIssue? mountIssue;
   try {
-    reason = await preflight();
+    mountIssue = await ref
+        .read(mountActionProvider.notifier)
+        .preflightEdit(profileId, data);
   } catch (error) {
     commonPrint.log(
       'mount preflight of the edit failed: ${compactError(error)}',
       logLevel: LogLevel.warning,
     );
-    return null;
   }
-  if (reason == null) return null;
-  return '${currentAppLocalizations.profileEditMountRejected}\n$reason';
+  final message = mountIssue == null
+      ? null
+      : '${currentAppLocalizations.profileEditMountRejected}\n'
+            '${mountIssue.reason}';
+  if (message != null && mountIssue!.blocking) {
+    unawaited(
+      dialogs.showAlert(
+        title: currentAppLocalizations.tip,
+        message: TextSpan(text: message),
+      ),
+    );
+    return;
+  }
+  if (context.mounted) {
+    Navigator.of(context).pop(data);
+  }
+  if (message != null) {
+    dialogs.showBanner(message, level: BannerLevel.warning);
+  }
 }
 
 class EditProfileView extends ConsumerStatefulWidget {
@@ -202,40 +240,8 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
     });
   }
 
-  Future<void> _handleSaveEdit(BuildContext context, Uint8List data) async {
-    final issue = await globalState.safeRun(
-      () => ref
-          .read(profilesActionProvider.notifier)
-          .validateConfigWithData(data),
-      silence: false,
-    );
-    if (issue != null) {
-      unawaited(
-        dialogs.showAlert(
-          title: currentAppLocalizations.tip,
-          message: TextSpan(text: issue),
-        ),
-      );
-      return;
-    }
-    final mountIssue = await mountEditIssue(
-      () => ref
-          .read(mountActionProvider.notifier)
-          .preflightEdit(widget.profile.id, data),
-    );
-    if (mountIssue != null) {
-      unawaited(
-        dialogs.showAlert(
-          title: currentAppLocalizations.tip,
-          message: TextSpan(text: mountIssue),
-        ),
-      );
-      return;
-    }
-    if (context.mounted) {
-      Navigator.of(context).pop(data);
-    }
-  }
+  Future<void> _handleSaveEdit(BuildContext context, Uint8List data) =>
+      saveProfileEdit(context, ref, widget.profile.id, data);
 
   Future<void> _editProfileFile() async {
     final title = widget.profile.label.takeFirstValid([

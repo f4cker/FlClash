@@ -5280,22 +5280,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mountSourceMissingReason(Object name) {
-    return 'The local copy of subscription “$name” is missing.';
+    return '구독 ‘$name’의 로컬 사본이 없습니다.';
   }
 
   @override
   String mountSourceReadErrorReason(Object name) {
-    return 'The local copy of subscription “$name” cannot be read.';
+    return '구독 ‘$name’의 로컬 사본을 읽을 수 없습니다.';
   }
 
   @override
   String mountSourceInvalidReason(Object name) {
-    return 'The local copy of subscription “$name” has nodes Flash cannot read.';
+    return '구독 ‘$name’의 로컬 사본에 Flash가 읽을 수 없는 노드가 있습니다.';
   }
 
   @override
   String mountSourceUnsupportedReason(Object name) {
-    return 'Subscription “$name” does not provide a mountable node list.';
+    return '구독 ‘$name’에는 마운트할 수 있는 노드 목록이 없습니다.';
   }
 
   @override

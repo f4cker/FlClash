@@ -5209,22 +5209,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mountSourceMissingReason(Object name) {
-    return 'The local copy of subscription “$name” is missing.';
+    return 'サブスクリプション「$name」のローカルコピーが見つかりません。';
   }
 
   @override
   String mountSourceReadErrorReason(Object name) {
-    return 'The local copy of subscription “$name” cannot be read.';
+    return 'サブスクリプション「$name」のローカルコピーを読み取れません。';
   }
 
   @override
   String mountSourceInvalidReason(Object name) {
-    return 'The local copy of subscription “$name” has nodes Flash cannot read.';
+    return 'サブスクリプション「$name」のローカルコピーに、Flash が読み取れないノードがあります。';
   }
 
   @override
   String mountSourceUnsupportedReason(Object name) {
-    return 'Subscription “$name” does not provide a mountable node list.';
+    return 'サブスクリプション「$name」には、マウントできるノード一覧がありません。';
   }
 
   @override

@@ -9,7 +9,6 @@ import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
-import 'package:fl_clash/state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -48,8 +47,17 @@ class FakeAddedRulesAction extends AddedRulesAction {
   @override
   Duration get saveTimeout => const Duration(milliseconds: 30);
 
+  /// Told to the next apply's own listener, as the Core's mount refusal.
+  String? rejection;
+
   @override
-  Future<bool> applyAddedRulesProfile() => reload();
+  Future<bool> applyAddedRulesProfile({
+    void Function(String reason)? onMountRejected,
+  }) async {
+    final applied = await reload();
+    if (!applied && rejection != null) onMountRejected?.call(rejection!);
+    return applied;
+  }
 }
 
 void main() {
@@ -609,20 +617,16 @@ void main() {
   });
 
   test('a refused reload tells why the Core kept the running config', () async {
-    addTearDown(() => globalState.lastMountRejection = null);
-    globalState.lastMountRejection = 'stale reason';
     var calls = 0;
+    final fake = FakeAddedRulesAction(() async {
+      calls++;
+      return false;
+    })..rejection = 'source Air is missing';
     container = ProviderContainer(
       overrides: [
         currentProfileIdProvider.overrideWithBuild((_, _) => 1),
         coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
-        addedRulesActionProvider.overrideWith(
-          () => FakeAddedRulesAction(() async {
-            calls++;
-            globalState.lastMountRejection = 'source Air is missing';
-            return false;
-          }),
-        ),
+        addedRulesActionProvider.overrideWith(() => fake),
       ],
     );
     final appLocalizations = currentAppLocalizations;
@@ -644,7 +648,6 @@ void main() {
       result.error,
       contains(appLocalizations.addedRulesRollbackReloadFailed),
     );
-    expect(result.error, isNot(contains('stale reason')));
   });
 
   test('late compensating reload failure is reported after timeout', () async {

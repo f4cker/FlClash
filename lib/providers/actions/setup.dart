@@ -1000,6 +1000,17 @@ class SetupAction extends _$SetupAction {
     return result != _SetupTaskResult.failed;
   }
 
+  /// [onMountRejected] hears this apply's mount refusal, and no other's.
+  Future<bool> applyProfileReporting({
+    required void Function(String reason) onMountRejected,
+  }) async {
+    final result = await _runSetup(
+      silence: true,
+      onMountRejected: onMountRejected,
+    );
+    return result != _SetupTaskResult.failed;
+  }
+
   @protected
   Future<bool> applyAutomatic({
     bool silence = false,
@@ -1016,6 +1027,7 @@ class SetupAction extends _$SetupAction {
     bool force = false,
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
+    void Function(String reason)? onMountRejected,
   }) async {
     final result = await _setupScheduler.run(() async {
       if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
@@ -1032,6 +1044,7 @@ class SetupAction extends _$SetupAction {
           force: force,
           silence: silence,
           preloadInvoke: preloadInvoke,
+          onMountRejected: onMountRejected,
           onUpdated: () async {
             if (ref.exists(tailscaleNodesProvider)) {
               ref.invalidate(tailscaleNodesProvider);
@@ -1079,6 +1092,13 @@ class SetupAction extends _$SetupAction {
   Future<BuiltProfile> getProfile({
     required SetupState setupState,
     required PatchClashConfig patchConfig,
+  }) => _buildProfile(setupState: setupState, patchConfig: patchConfig);
+
+  /// [profilePath] stands in for the profile's file, as an unsaved edit.
+  Future<BuiltProfile> _buildProfile({
+    required SetupState setupState,
+    required PatchClashConfig patchConfig,
+    String? profilePath,
   }) async {
     final profileId = setupState.profileId;
     if (profileId == null) {
@@ -1114,7 +1134,7 @@ class SetupAction extends _$SetupAction {
     final scriptContent = isCustom ? null : await setupState.script?.content;
     final hasScript = scriptContent?.isNotEmpty == true;
     final profileBase = !isCustom && !hasScript
-        ? await _core.getProfileBase(profileId)
+        ? await _core.getProfileBase(profileId, path: profilePath)
         : null;
     Map<String, dynamic> rawConfig = isCustom
         ? {
@@ -1124,7 +1144,8 @@ class SetupAction extends _$SetupAction {
               groups: setupState.proxyGroups,
             ),
           }
-        : profileBase?.base.config ?? await _core.readConfig(profileId);
+        : profileBase?.base.config ??
+              await _core.readConfig(profileId, path: profilePath);
     final proxyGroups = isCustom ? setupState.proxyGroups : <ProxyGroup>[];
     final rules = isCustom ? setupState.rules : <Rule>[];
     var profileRuleSources = const <RuleSource>[];
@@ -1138,7 +1159,8 @@ class SetupAction extends _$SetupAction {
         script: setupState.script?.label ?? '',
       );
     }
-    if (profileId == ref.read(currentProfileIdProvider)) {
+    if (profilePath == null &&
+        profileId == ref.read(currentProfileIdProvider)) {
       ref.read(profileSettingsProvider.notifier).value = Map.of(rawConfig);
     }
     if (!patchConfig.usesPage(
@@ -1186,7 +1208,11 @@ class SetupAction extends _$SetupAction {
         matchTarget: setupState.matchTarget,
         exitTargets: setupState.exitTargets,
         outboundNames: profileBase != null && hasCustomExit
-            ? await _outboundNamesOf(profileId, profileBase.base.digest)
+            ? await _outboundNamesOf(
+                profileId,
+                profileBase.base.digest,
+                path: profilePath,
+              )
             : null,
         defaultExitTarget: profileBase == null
             ? null
@@ -1224,12 +1250,16 @@ class SetupAction extends _$SetupAction {
     );
   }
 
-  Future<Set<String>> _outboundNamesOf(int profileId, String digest) async {
+  Future<Set<String>> _outboundNamesOf(
+    int profileId,
+    String digest, {
+    String? path,
+  }) async {
     final cached = _outboundNames;
     if (cached != null && cached.digest == digest) {
       return cached.names;
     }
-    final outbounds = await _core.getProfileOutbounds(profileId);
+    final outbounds = await _core.getProfileOutbounds(profileId, path: path);
     final names = outboundNamesOf(outbounds);
     _outboundNames = (digest: digest, names: names);
     return names;
@@ -1444,13 +1474,20 @@ class SetupAction extends _$SetupAction {
 
   /// The complete candidate used by mount preflight, never a display projection.
   Future<({SetupBase? base, String? config})> mountTargetInput(
-    int profileId,
-  ) async {
+    int profileId, {
+    String? profilePath,
+  }) async {
     final setupState = await ref.read(setupStateProvider(profileId).future);
-    final built = await getProfile(
-      setupState: setupState,
-      patchConfig: _effectivePatchConfig(ref.read(patchClashConfigProvider)),
+    final patchConfig = _effectivePatchConfig(
+      ref.read(patchClashConfigProvider),
     );
+    final built = profilePath == null
+        ? await getProfile(setupState: setupState, patchConfig: patchConfig)
+        : await _buildProfile(
+            setupState: setupState,
+            patchConfig: patchConfig,
+            profilePath: profilePath,
+          );
     return switch (built.base) {
       final base? => (base: base, config: null),
       null => (base: null, config: built.yaml),
@@ -1468,7 +1505,6 @@ class SetupAction extends _$SetupAction {
       sourceName: (id) =>
           mounts?.sources.where((source) => source.id == id).firstOrNull?.label,
     );
-    globalState.lastMountRejection = shown;
     return shown;
   }
 
@@ -1772,6 +1808,7 @@ class SetupAction extends _$SetupAction {
     bool silence = false,
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
+    void Function(String reason)? onMountRejected,
   }) async {
     if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     final adoptionPending = await _compositionPending;
@@ -1990,6 +2027,7 @@ class SetupAction extends _$SetupAction {
             final reason = outcome == null
                 ? null
                 : _mountRejection(error.message, setupParams.mounts);
+            if (reason != null) onMountRejected?.call(reason);
             if (outcome == MountRejectedOutcome.kept) {
               definitelyKept = true;
               throw MessageException(

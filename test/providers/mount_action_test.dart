@@ -55,9 +55,16 @@ class _FakeSetupAction extends SetupAction {
 
   @override
   Future<({SetupBase? base, String? config})> mountTargetInput(
-    int profileId,
-  ) async {
+    int profileId, {
+    String? profilePath,
+  }) async {
     targetInputs.add(profileId);
+    if (profilePath != null) {
+      return (
+        base: null,
+        config: 'built:${File(profilePath).readAsStringSync()}',
+      );
+    }
     return (base: null, config: config);
   }
 }
@@ -335,16 +342,41 @@ void main() {
       calls.add(invocation.namedArguments);
       return const MountPreflight(error: 'mount source 2 is invalid');
     });
-    expect(
-      await action(container).preflightEdit(1, edited),
-      currentAppLocalizations.mountSourceInvalidReason('Air'),
-    );
+    expect(await action(container).preflightEdit(1, edited), (
+      reason: currentAppLocalizations.mountSourceInvalidReason('Air'),
+      blocking: false,
+    ));
     final call = calls.single;
     expect(call[#base], isNull);
-    expect(call[#config], 'proxy-groups: []\n');
+    expect(call[#config], 'built:proxy-groups: []\n');
     expect((call[#mounts] as MountSetup).sources.map((source) => source.id), [
       2,
     ]);
+  });
+
+  test('an edit the merged config refuses is held', () async {
+    final container = build();
+    await testDatabase.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+    await testDatabase.mountsDao.settle(1, 1);
+    when(
+      () => core.preflightMounts(
+        base: any(named: 'base'),
+        config: any(named: 'config'),
+        mounts: any(named: 'mounts'),
+      ),
+    ).thenAnswer(
+      (_) async => const MountPreflight(error: 'proxy group G: missing X'),
+    );
+    final issue = await action(
+      container,
+    ).preflightEdit(1, Uint8List.fromList(utf8.encode('rules: []')));
+    expect(issue, (reason: 'proxy group G: missing X', blocking: true));
   });
 
   test('delayed refresh never resurrects a deleted profile', () async {

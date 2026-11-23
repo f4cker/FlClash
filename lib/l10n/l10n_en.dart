@@ -5411,12 +5411,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String mountSourceInvalidReason(Object name) {
-    return 'The local copy of subscription “$name” has nodes Flash cannot read.';
+    return 'The local copy of subscription “$name” contains nodes Flash cannot read.';
   }
 
   @override
   String mountSourceUnsupportedReason(Object name) {
-    return 'Subscription “$name” does not provide a mountable node list.';
+    return 'Subscription “$name” does not provide a node list that can be mounted.';
   }
 
   @override

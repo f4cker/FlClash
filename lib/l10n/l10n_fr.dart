@@ -5452,22 +5452,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String mountSourceMissingReason(Object name) {
-    return 'The local copy of subscription “$name” is missing.';
+    return 'La copie locale de l’abonnement « $name » est introuvable.';
   }
 
   @override
   String mountSourceReadErrorReason(Object name) {
-    return 'The local copy of subscription “$name” cannot be read.';
+    return 'Impossible de lire la copie locale de l’abonnement « $name ».';
   }
 
   @override
   String mountSourceInvalidReason(Object name) {
-    return 'The local copy of subscription “$name” has nodes Flash cannot read.';
+    return 'La copie locale de l’abonnement « $name » contient des nœuds que Flash ne peut pas lire.';
   }
 
   @override
   String mountSourceUnsupportedReason(Object name) {
-    return 'Subscription “$name” does not provide a mountable node list.';
+    return 'L’abonnement « $name » ne fournit pas de liste de nœuds pouvant être montée.';
   }
 
   @override
