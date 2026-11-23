@@ -176,16 +176,7 @@ class MacOSMitmTrustStore implements MitmTrustStore {
     if (verified.exitCode == 0) {
       return const MitmTrustCheck(MitmTrust.ready);
     }
-    final found = await run(_security, [
-      'find-certificate',
-      '-a',
-      '-Z',
-      '-c',
-      ca.subject,
-    ]);
-    final installed = '${found.stdout}'.contains(
-      'SHA-256 hash: ${mitmSha256Hex(ca)}',
-    );
+    final installed = _holds(await _find(), ca);
     return MitmTrustCheck(
       installed ? MitmTrust.untrusted : MitmTrust.notInstalled,
     );
@@ -230,17 +221,17 @@ class MacOSMitmTrustStore implements MitmTrustStore {
   }
 
   Future<bool> _absent(MitmCertificate ca) async {
-    final found = await run(_security, [
-      'find-certificate',
-      '-a',
-      '-Z',
-      '-c',
-      ca.subject,
-      _keychain,
-    ]);
-    return found.exitCode == 0 &&
-        !'${found.stdout}'.contains('SHA-256 hash: ${mitmSha256Hex(ca)}');
+    final found = await _find(_keychain);
+    return found.exitCode == 0 && !_holds(found, ca);
   }
+
+  /// Lists every certificate by hash: a search by name misses a CA whose
+  /// label is not its common name, or that has none.
+  Future<ProcessResult> _find([String? keychain]) =>
+      run(_security, ['find-certificate', '-a', '-Z', ?keychain]);
+
+  bool _holds(ProcessResult found, MitmCertificate ca) =>
+      '${found.stdout}'.contains('SHA-256 hash: ${mitmSha256Hex(ca)}');
 }
 
 /// Reads the store through crypt32 rather than certutil, so that a check on

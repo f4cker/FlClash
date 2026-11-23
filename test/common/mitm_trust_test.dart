@@ -279,8 +279,6 @@ void main() {
         'find-certificate',
         '-a',
         '-Z',
-        '-c',
-        _ca.subject,
       ]);
     });
 
@@ -346,8 +344,6 @@ void main() {
         'find-certificate',
         '-a',
         '-Z',
-        '-c',
-        _ca.subject,
         '/Users/someone/Library/Keychains/login.keychain-db',
       ]);
     });
@@ -361,6 +357,41 @@ void main() {
         );
 
       await expectLater(store().remove(_ca), throwsA(isA<ProcessException>()));
+    });
+
+    group('a CA without a common name', () {
+      final unnamed = _ca.copyWith(subject: '');
+
+      // As on a throwaway keychain: `-c ""` lists nothing, with exit 0.
+      void keychainLabelled(String label, {bool present = true}) =>
+          processes.handle('/usr/bin/security', (arguments) {
+            final failed = ProcessResult(0, 1, '', 'failed');
+            if (arguments.first != 'find-certificate') return failed;
+            final name = arguments.indexOf('-c');
+            final listed =
+                present && (name < 0 || arguments[name + 1] == label);
+            final item = 'SHA-256 hash: $_sha256\n    "labl"<blob>="$label"\n';
+            return ProcessResult(0, 0, listed ? item : '', '');
+          });
+
+      test('is found by its hash when its label differs', () async {
+        keychainLabelled('Flash Test Org');
+
+        expect(
+          (await store().check(unnamed, issueLeaf)).trust,
+          MitmTrust.untrusted,
+        );
+        await expectLater(
+          store().remove(unnamed),
+          throwsA(isA<ProcessException>()),
+        );
+      });
+
+      test('counts as removed once the keychain lists it no more', () async {
+        keychainLabelled('Flash Test Org', present: false);
+
+        expect(await store().remove(unnamed), MitmRemoveOutcome.removed);
+      });
     });
 
     test('a removal whose search also failed throws', () async {
