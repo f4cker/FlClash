@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
@@ -14,6 +15,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/mitm_core_ca.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/mitm_core_ca.dart';
+import 'package:fl_clash/views/restore_mount.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -168,6 +170,7 @@ void main() {
     required Brightness brightness,
     required Widget child,
     Size size = const Size(390, 640),
+    double textScale = 1,
     List<Override> overrides = const [],
     Mitm mitm = const Mitm(),
   }) async {
@@ -196,7 +199,14 @@ void main() {
               themeMode: brightness == Brightness.dark
                   ? ThemeMode.dark
                   : ThemeMode.light,
-              child: child,
+              child: Builder(
+                builder: (context) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(textScale)),
+                  child: child,
+                ),
+              ),
             ),
           ),
         ),
@@ -452,8 +462,158 @@ void main() {
       child: const Center(child: MitmBackupDialog()),
     );
     expect(find.text(l.includeMitmCaTip), findsNothing);
+    expect(find.text(l.backup), findsWidgets);
+    expect(find.text(l.mitmBackupWithKey), findsNothing);
     await tester.tap(find.byType(Switch));
     await tester.pump();
     expect(find.text(l.includeMitmCaTip), findsOneWidget);
+    expect(find.text(l.mitmBackupWithKey), findsOneWidget);
+    expect(find.text(l.mitmBackupRiskRevoke), findsNothing);
+    await tester.tap(find.text(l.mitmBackupRiskDetails));
+    await tester.pump();
+    expect(find.text(l.mitmBackupRiskImpact), findsOneWidget);
+    expect(find.text(l.mitmBackupRiskRevoke), findsOneWidget);
   });
+
+  testWidgets('the p12 password keeps its label while typed in', (
+    tester,
+  ) async {
+    final l = lookupAppLocalizations(const Locale('en'));
+    final semantics = tester.ensureSemantics();
+    await pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      child: Center(
+        child: MitmImportDialog(
+          pick: () async => (name: 'Flash CA.p12', bytes: [1, 2, 3]),
+          submit: (_, _) async => null,
+        ),
+      ),
+    );
+    await tester.enterText(find.byType(EditableText), 'secret');
+    await tester.pump();
+    expect(find.text(l.mitmImportPassword), findsOneWidget);
+    expect(find.bySemanticsLabel(l.mitmImportPassword), findsOneWidget);
+    semantics.dispose();
+  });
+
+  const reviewSizes = [
+    (tag: 'zh-390', locale: Locale('zh'), width: 390.0, scale: 1.0),
+    (tag: 'en-360-2x', locale: Locale('en'), width: 360.0, scale: 2.0),
+    (tag: 'ru-360', locale: Locale('ru'), width: 360.0, scale: 1.0),
+  ];
+  for (final size in reviewSizes) {
+    final l = lookupAppLocalizations(size.locale);
+    Future<void> shoot(
+      WidgetTester tester,
+      String name,
+      Widget child, {
+      _State? state,
+    }) async {
+      await pump(
+        tester,
+        locale: size.locale,
+        brightness: Brightness.light,
+        size: Size(size.width, 800),
+        textScale: size.scale,
+        mitm: state?.mitm ?? const Mitm(),
+        overrides: [
+          if (state != null) ...[
+            mitmCoreCaProvider.overrideWith(() => _FixedLease(state.trust)),
+            mitmCaMigrationProvider.overrideWith(
+              () => _FixedMigration(state.running),
+            ),
+            mitmOldCaProvider.overrideWith((ref) async => state.old),
+          ],
+        ],
+        child: child,
+      );
+      expect(tester.takeException(), isNull);
+      await save(tester, 'review-$name-${size.tag}');
+    }
+
+    testWidgets('review-untrusted-${size.tag}', (tester) async {
+      final state = _states['untrusted']!;
+      await shoot(
+        tester,
+        'untrusted',
+        SingleChildScrollView(
+          child: MitmCoreCaSection(
+            certificate: state.shown,
+            trustLabel: l.mitmTrustUntrusted,
+            onRetrust: () {},
+            onExport: () {},
+            onDelete: () {},
+          ),
+        ),
+        state: state,
+      );
+      expect(find.text(l.mitmRetrust), findsOneWidget);
+    });
+
+    testWidgets('review-switched-${size.tag}', (tester) async {
+      final state = _states['switched']!;
+      await shoot(
+        tester,
+        'switched',
+        SingleChildScrollView(
+          child: MitmCoreCaSection(
+            certificate: state.shown,
+            trustLabel: l.mitmTrustReady,
+            onExport: () {},
+            onDelete: () {},
+          ),
+        ),
+        state: state,
+      );
+      expect(find.text(l.mitmRemoveOldCa), findsOneWidget);
+    });
+
+    testWidgets('review-delete-confirm-${size.tag}', (tester) async {
+      await shoot(
+        tester,
+        'delete-confirm',
+        Center(
+          child: MitmDeleteCaDialog(
+            title: l.mitmDeleteCurrentCaTitle,
+            text: l.mitmDeleteCurrentCaTip,
+            confirmText: l.mitmDeleteCurrentCaConfirm,
+            certificate: _fresh,
+          ),
+        ),
+      );
+      expect(find.text(l.mitmDeleteCurrentCaConfirm), findsOneWidget);
+    });
+
+    testWidgets('review-restore-conflict-${size.tag}', (tester) async {
+      await shoot(
+        tester,
+        'restore-conflict',
+        RestoreMountConfirmSheet(
+          plan: RestoreMountPlan.empty,
+          mitmCa: RestoreMitmCa(
+            RestoreMitmCaChange.replaced,
+            local: _legacy,
+            backup: _fresh,
+          ),
+        ),
+      );
+      expect(find.text(_legacy.fingerprint), findsOneWidget);
+      expect(find.text(_fresh.fingerprint), findsOneWidget);
+      expect(find.text(l.mitmRestoreCaLocalKept), findsOneWidget);
+    });
+
+    testWidgets('review-backup-include-${size.tag}', (tester) async {
+      await shoot(
+        tester,
+        'backup-include',
+        const Center(child: MitmBackupDialog(include: true)),
+      );
+      await tester.tap(find.text(l.mitmBackupRiskDetails));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      await save(tester, 'review-backup-include-open-${size.tag}');
+    });
+  }
 }

@@ -646,14 +646,18 @@ class _MitmImportDialogState extends State<MitmImportDialog> {
             Text(error, style: errorStyle),
           ],
           const SizedBox(height: 16),
-          SecretTextFormField(
-            controller: _password,
-            focusNode: _passwordFocus,
-            decoration: InputDecoration(
-              hintText: l.mitmImportPassword,
-              errorText: passwordError ? error : null,
+          ExcludeSemantics(child: Text(l.mitmImportPassword)),
+          const SizedBox(height: 6),
+          Semantics(
+            label: l.mitmImportPassword,
+            child: SecretTextFormField(
+              controller: _password,
+              focusNode: _passwordFocus,
+              decoration: InputDecoration(
+                errorText: passwordError ? error : null,
+              ),
+              onFieldSubmitted: (_) => _submit(),
             ),
-            onFieldSubmitted: (_) => _submit(),
           ),
         ],
       ),
@@ -674,6 +678,7 @@ class MitmBackupDialog extends StatefulWidget {
 
 class _MitmBackupDialogState extends State<MitmBackupDialog> {
   late bool _include = widget.include;
+  bool _risks = false;
 
   @override
   Widget build(BuildContext context) {
@@ -688,7 +693,7 @@ class _MitmBackupDialogState extends State<MitmBackupDialog> {
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_include),
-          child: Text(l.backup),
+          child: Text(_include ? l.mitmBackupWithKey : l.backup),
         ),
       ],
       child: Column(
@@ -734,6 +739,22 @@ class _MitmBackupDialogState extends State<MitmBackupDialog> {
                 ),
               ),
             ),
+            const SizedBox(height: 4),
+            Semantics(
+              expanded: _risks,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _risks = !_risks),
+                icon: GlyphIcon(
+                  _risks ? AppGlyphs.chevronUp : AppGlyphs.chevronDown,
+                ),
+                label: Text(l.mitmBackupRiskDetails),
+              ),
+            ),
+            if (_risks) ...[
+              Text(l.mitmBackupRiskImpact),
+              const SizedBox(height: 8),
+              Text(l.mitmBackupRiskRevoke),
+            ],
           ],
         ],
       ),
