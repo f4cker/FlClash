@@ -627,16 +627,19 @@ class _MitmImportDialogState extends State<MitmImportDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          // Side by side while both fit; at large text the button drops
+          // below the name instead of running off the alert.
+          OverflowBar(
+            alignment: MainAxisAlignment.spaceBetween,
+            overflowAlignment: OverflowBarAlignment.start,
+            spacing: 8,
+            overflowSpacing: 8,
             children: [
-              Expanded(
-                child: Text(
-                  _file?.name ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Text(
+                _file?.name ?? '',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 8),
               TonalButton(
                 label: l.mitmChooseP12,
                 onPressed: _busy ? null : _choose,
@@ -657,6 +660,8 @@ class _MitmImportDialogState extends State<MitmImportDialog> {
               focusNode: _passwordFocus,
               decoration: InputDecoration(
                 errorText: passwordError ? error : null,
+                // Without a limit the field cuts its error to one line.
+                errorMaxLines: 4,
               ),
               onFieldSubmitted: (_) => _submit(),
             ),
@@ -667,13 +672,14 @@ class _MitmImportDialogState extends State<MitmImportDialog> {
   }
 }
 
-/// Asked before each backup while the Core's CA is in use: true includes
-/// it, false leaves it out, null cancels.
 // The alert's own stadium cuts a label that wraps at large text sizes.
 final _wrappingAction = ButtonStyle(
   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   shape: AppShape.all(24),
 );
+
+/// Asked before each backup while the Core's CA is in use: true includes
+/// it, false leaves it out, null cancels.
 
 class MitmBackupDialog extends StatefulWidget {
   const MitmBackupDialog({super.key, this.include = false});

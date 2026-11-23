@@ -200,6 +200,35 @@ void main() {
     return container;
   }
 
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  // At 2x text the toggle sits below the body's fold; a tap at its
+  // off-screen centre would land on an action and pop the route.
+  Future<void> openRiskDetails(WidgetTester tester, AppLocalizations l) async {
+    final details = find.text(l.mitmBackupRiskDetails);
+    await tester.ensureVisible(details);
+    await settle(tester);
+    await tester.tap(details);
+    await settle(tester);
+    expect(find.text(l.mitmBackupRiskImpact), findsOneWidget);
+  }
+
+  Future<void> failImport(WidgetTester tester, AppLocalizations l) async {
+    await tester.ensureVisible(find.text(l.mitmChooseP12));
+    await settle(tester);
+    await tester.tap(find.text(l.mitmChooseP12));
+    await settle(tester);
+    await tester.enterText(find.byType(EditableText), 'wrong');
+    await tester.pump();
+    await tester.tap(find.text(l.mitmContinue));
+    await settle(tester);
+    expect(find.text(l.mitmImportBadPassphrase), findsOneWidget);
+  }
+
   Future<void> save(WidgetTester tester, String name) async {
     if (!_shoot) return;
     final render =
@@ -504,6 +533,103 @@ void main() {
     expect(find.text(l.mitmOldCaSection(2)), findsNothing);
   });
 
+  group('at 360pt and 2x text a dialog stays on screen', () {
+    final l = lookupAppLocalizations(const Locale('en'));
+    final screen = Offset.zero & const Size(360, 800);
+
+    Future<void> pumpNarrow(WidgetTester tester, Widget dialog) => pump(
+      tester,
+      locale: const Locale('en'),
+      brightness: Brightness.light,
+      size: screen.size,
+      textScale: 2,
+      child: Center(child: dialog),
+    );
+
+    void expectOnScreen(WidgetTester tester, Type dialog, List<String> keep) {
+      expect(tester.takeException(), isNull);
+      for (final text in keep) {
+        expect(screen.expandToInclude(tester.getRect(find.text(text))), screen);
+      }
+      final body = find.descendant(
+        of: find.byType(dialog),
+        matching: find.byType(Scrollable),
+      );
+      final viewport = tester.getRect(body.first);
+      expect(screen.expandToInclude(viewport), screen);
+    }
+
+    // The last line of the body can be scrolled fully into its viewport.
+    Future<void> expectReachable(
+      WidgetTester tester,
+      Type dialog,
+      String last,
+    ) async {
+      final body = find.descendant(
+        of: find.byType(dialog),
+        matching: find.byType(Scrollable),
+      );
+      final viewport = tester.getRect(body.first);
+      final position = tester.state<ScrollableState>(body.first).position;
+      position.jumpTo(position.maxScrollExtent);
+      await settle(tester);
+      final rect = tester.getRect(find.text(last));
+      expect(rect.bottom, lessThanOrEqualTo(viewport.bottom + 0.5));
+      expect(rect.left, greaterThanOrEqualTo(viewport.left));
+      expect(rect.right, lessThanOrEqualTo(viewport.right));
+      expect(tester.takeException(), isNull);
+    }
+
+    testWidgets('backup with its details open', (tester) async {
+      await pumpNarrow(tester, const MitmBackupDialog(include: true));
+      await openRiskDetails(tester, l);
+      expectOnScreen(tester, MitmBackupDialog, [
+        l.backup,
+        l.mitmBackupWithKey,
+        l.cancel,
+      ]);
+      await expectReachable(tester, MitmBackupDialog, l.mitmBackupRiskRevoke);
+    });
+
+    testWidgets('delete', (tester) async {
+      await pumpNarrow(
+        tester,
+        MitmDeleteCaDialog(
+          title: l.mitmDeleteCurrentCaTitle,
+          text: l.mitmDeleteCurrentCaTip,
+          confirmText: l.mitmDeleteCurrentCaConfirm,
+          certificate: _fresh,
+        ),
+      );
+      expectOnScreen(tester, MitmDeleteCaDialog, [
+        l.mitmDeleteCurrentCaTitle,
+        l.mitmDeleteCurrentCaConfirm,
+        l.cancel,
+      ]);
+    });
+
+    testWidgets('import with an error', (tester) async {
+      await pumpNarrow(
+        tester,
+        MitmImportDialog(
+          pick: () async => (name: 'Flash CA.p12', bytes: [1, 2, 3]),
+          submit: (_, _) async => 'badPassphrase',
+        ),
+      );
+      await failImport(tester, l);
+      final error = find.text(l.mitmImportBadPassphrase);
+      expect(
+        tester.renderObject<RenderParagraph>(error).didExceedMaxLines,
+        isFalse,
+      );
+      expectOnScreen(tester, MitmImportDialog, [
+        l.mitmImportCertificate,
+        l.mitmContinue,
+        l.cancel,
+      ]);
+    });
+  });
+
   testWidgets('a backup button label at 2x text is never cut', (tester) async {
     final l = lookupAppLocalizations(const Locale('en'));
     await pump(
@@ -684,6 +810,13 @@ void main() {
       expect(find.text(_legacy.fingerprint), findsOneWidget);
       expect(find.text(_fresh.fingerprint), findsOneWidget);
       expect(find.text(l.mitmRestoreCaLocalKept), findsOneWidget);
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -100000),
+      );
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      await save(tester, 'review-restore-conflict-end-${size.tag}');
     });
 
     testWidgets('review-restore-first-${size.tag}', (tester) async {
@@ -696,6 +829,29 @@ void main() {
         ),
       );
       expect(find.text(l.mitmRestoreCaLocalNone), findsOneWidget);
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -100000),
+      );
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      await save(tester, 'review-restore-first-end-${size.tag}');
+    });
+
+    testWidgets('review-import-error-${size.tag}', (tester) async {
+      await shoot(
+        tester,
+        'import-error',
+        Center(
+          child: MitmImportDialog(
+            pick: () async => (name: 'Flash CA.p12', bytes: [1, 2, 3]),
+            submit: (_, _) async => 'badPassphrase',
+          ),
+        ),
+      );
+      await failImport(tester, l);
+      expect(tester.takeException(), isNull);
+      await save(tester, 'review-import-error-${size.tag}');
     });
 
     testWidgets('review-backup-include-${size.tag}', (tester) async {
@@ -704,10 +860,12 @@ void main() {
         'backup-include',
         const Center(child: MitmBackupDialog(include: true)),
       );
-      await tester.tap(find.text(l.mitmBackupRiskDetails));
-      await tester.pump();
+      await openRiskDetails(tester, l);
       expect(tester.takeException(), isNull);
       await save(tester, 'review-backup-include-open-${size.tag}');
+      await tester.ensureVisible(find.text(l.mitmBackupRiskRevoke));
+      await settle(tester);
+      await save(tester, 'review-backup-include-open-end-${size.tag}');
     });
   }
 }
