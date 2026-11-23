@@ -706,6 +706,45 @@ void main() {
     expect(find.text(l.mitmRestoreCaDamaged), findsOneWidget);
   });
 
+  // Full SHA-256 fingerprints: 32 bytes, as a real CA has.
+  String sha256Of(int seed) => [
+    for (var i = 0; i < 32; i++)
+      ((seed * 37 + i * 11) % 256).toRadixString(16).padLeft(2, '0'),
+  ].join(':').toUpperCase();
+  for (final locale in const [Locale('zh'), Locale('en')]) {
+    final l = lookupAppLocalizations(locale);
+    final tag = '${locale.languageCode}-360-2x';
+    testWidgets('restore-confirm-$tag', (tester) async {
+      await pump(
+        tester,
+        locale: locale,
+        brightness: Brightness.light,
+        size: const Size(360, 800),
+        textScale: 2,
+        child: RestoreMountConfirmSheet(
+          plan: RestoreMountPlan.empty,
+          mitmCa: RestoreMitmCa(
+            RestoreMitmCaChange.replaced,
+            local: _legacy.copyWith(fingerprint: sha256Of(1)),
+            backup: _fresh.copyWith(fingerprint: sha256Of(2)),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final cancel = tester.getRect(find.text(l.cancel));
+      await save(tester, 'restore-confirm-$tag');
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -100000),
+      );
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      expect(tester.getRect(find.text(l.cancel)), cancel);
+      expect(find.text(l.mitmRestoreCaTrustNote), findsOneWidget);
+      await save(tester, 'restore-confirm-end-$tag');
+    });
+  }
+
   const reviewSizes = [
     (tag: 'zh-390', locale: Locale('zh'), width: 390.0, scale: 1.0),
     (tag: 'en-360-2x', locale: Locale('en'), width: 360.0, scale: 2.0),
@@ -807,8 +846,8 @@ void main() {
           ),
         ),
       );
-      expect(find.text(_legacy.fingerprint), findsOneWidget);
-      expect(find.text(_fresh.fingerprint), findsOneWidget);
+      expect(find.text(breakAtBytes(_legacy.fingerprint)), findsOneWidget);
+      expect(find.text(breakAtBytes(_fresh.fingerprint)), findsOneWidget);
       expect(find.text(l.mitmRestoreCaLocalKept), findsOneWidget);
       await tester.drag(
         find.byType(CustomScrollView).first,

@@ -318,18 +318,21 @@ List<RestoreMountRow> restoreMitmRows(
 
 /// Lays out a sheet: on a wide, tall window the details scroll on their
 /// own between a pinned header and footer; otherwise the whole page
-/// scrolls and the footer sits in the flow.
+/// scrolls and the footer sits in the flow, unless [pinFooter] keeps it
+/// at the bottom at every size.
 class _SheetFrame extends StatelessWidget {
   final String title;
   final List<Widget> header;
   final List<Widget> Function(bool paged) slivers;
   final Widget footer;
+  final bool pinFooter;
 
   const _SheetFrame({
     required this.title,
     required this.header,
     required this.slivers,
     required this.footer,
+    this.pinFooter = false,
   });
 
   @override
@@ -367,7 +370,7 @@ class _SheetFrame extends StatelessWidget {
       ),
     );
     final Widget content;
-    if (paged) {
+    if (paged && !pinFooter) {
       content = CustomScrollView(
         slivers: [
           head,
@@ -391,7 +394,14 @@ class _SheetFrame extends StatelessWidget {
               ],
             ),
           ),
-          foot,
+          if (paged)
+            // A short window still leaves the details room to scroll.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: height * 0.6),
+              child: SingleChildScrollView(child: foot),
+            )
+          else
+            foot,
         ],
       );
     }
@@ -697,6 +707,23 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
   bool _acknowledged = false;
   bool _submitted = false;
 
+  /// Holds Cancel, which takes the focus first: Enter never restores.
+  final _cancelHost = FocusNode(skipTraversal: true, canRequestFocus: false);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _cancelHost.descendants.firstOrNull?.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cancelHost.dispose();
+    super.dispose();
+  }
+
   void _cancel() => Navigator.of(context).pop(false);
 
   void _confirm() {
@@ -789,7 +816,10 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
     // Narrow or large text: each button gets the full width, so no label
     // is cut, whatever the language.
     final stacked = narrow || MediaQuery.textScalerOf(context).scale(16) > 24;
-    final cancel = TextButton(onPressed: _cancel, child: Text(l10n.cancel));
+    final cancel = Focus(
+      focusNode: _cancelHost,
+      child: TextButton(onPressed: _cancel, child: Text(l10n.cancel)),
+    );
     final confirm = FilledButton(
       onPressed: enabled ? _confirm : null,
       // An override deletes local items, so it always says so.
@@ -970,6 +1000,7 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
               ),
             ],
             footer: footer,
+            pinFooter: true,
           ),
         ),
       ),
@@ -1396,6 +1427,10 @@ class _RestoreResultViewState extends State<RestoreResultView> {
   }
 }
 
+/// A colon-separated fingerprint that wraps only between its bytes.
+String breakAtBytes(String fingerprint) =>
+    fingerprint.replaceAll(':', ':\u200B');
+
 /// The decryption CA before and after a restore, each by name and full
 /// fingerprint, and which one is kept, replaced or still to be trusted.
 class RestoreMitmCaNote extends StatelessWidget {
@@ -1416,7 +1451,8 @@ class RestoreMitmCaNote extends StatelessWidget {
               Text(label, style: _group(context, p)),
               Text(ca.subject, style: _body(context, p)),
               Text(
-                ca.fingerprint,
+                breakAtBytes(ca.fingerprint),
+                semanticsLabel: ca.fingerprint,
                 style: AppTextStyle.custom(
                   context,
                   size: 12,

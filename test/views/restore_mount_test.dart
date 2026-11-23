@@ -271,8 +271,18 @@ void main() {
   /// Pushes [sheet] as a route so its pop value can be read.
   /// The returned list holds the pop value once the route is gone, so a
   /// sheet that never pops fails the test instead of hanging it.
-  Future<List<bool?>> pushSheet(WidgetTester tester, Widget sheet) async {
-    await host(tester, () => const SizedBox.shrink());
+  Future<List<bool?>> pushSheet(
+    WidgetTester tester,
+    Widget sheet, {
+    Size size = const Size(900, 1000),
+    double textScale = 1,
+  }) async {
+    await host(
+      tester,
+      () => const SizedBox.shrink(),
+      size: size,
+      textScale: textScale,
+    );
     final result = <bool?>[];
     unawaited(
       globalState.navigatorKey.currentState!
@@ -548,6 +558,96 @@ void main() {
           pinned: name == 'desktop',
           footer: find.text(currentAppLocalizations.restoreBlockedViewProfiles),
         );
+      });
+    }
+  });
+
+  group('the confirm buttons are pinned', () {
+    for (final (name, size, scale) in [
+      ('360 pt at 200%', const Size(360, 800), 2.0),
+      ('393 pt', const Size(393, 852), 1.0),
+      ('desktop', const Size(900, 1000), 1.0),
+    ]) {
+      testWidgets('and stay put while only the body scrolls: $name', (
+        tester,
+      ) async {
+        await host(
+          tester,
+          () => RestoreMountConfirmSheet(plan: _bigPlan(120)),
+          locale: const Locale('zh'),
+          size: size,
+          textScale: scale,
+        );
+        final l10n = currentAppLocalizations;
+        final cancel = find.widgetWithText(TextButton, l10n.cancel);
+        final confirm = find.widgetWithText(
+          FilledButton,
+          l10n.restoreMountConfirmOverride,
+        );
+        final screen = Offset.zero & size;
+        final before = (tester.getRect(cancel), tester.getRect(confirm));
+        for (final rect in [before.$1, before.$2]) {
+          expect(screen.expandToInclude(rect), screen, reason: '$rect');
+        }
+        if (size.width <= restoreNarrowWidth || scale > 1) {
+          expect(before.$2.top, greaterThanOrEqualTo(before.$1.bottom));
+        }
+
+        final body = find.byType(CustomScrollView);
+        await tester.drag(body, const Offset(0, -300));
+        await tester.pump();
+        expect((tester.getRect(cancel), tester.getRect(confirm)), before);
+
+        final last = find.text('所属配置：配置 119');
+        for (var i = 0; i < 200 && last.evaluate().isEmpty; i++) {
+          await tester.drag(body, const Offset(0, -500));
+          await tester.pump();
+        }
+        await tester.drag(body, const Offset(0, -100000));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect((tester.getRect(cancel), tester.getRect(confirm)), before);
+        final viewport = tester.getRect(body);
+        final footerTop = [
+          before.$1.top,
+          before.$2.top,
+          tester.getRect(find.text(l10n.restoreCancelWritesNothing)).top,
+        ].reduce((a, b) => a < b ? a : b);
+        expect(viewport.bottom, lessThanOrEqualTo(footerTop + 0.5));
+        expect(tester.getRect(last).bottom, lessThanOrEqualTo(viewport.bottom));
+      });
+    }
+
+    for (final (name, size, scale) in [
+      ('360 pt at 200%', const Size(360, 800), 2.0),
+      ('desktop', const Size(900, 1000), 1.0),
+    ]) {
+      testWidgets('Cancel has the focus and Enter restores nothing: $name', (
+        tester,
+      ) async {
+        final popped = await pushSheet(
+          tester,
+          const RestoreMountConfirmSheet(
+            plan: RestoreMountPlan(isOverride: true, mountsCarried: true),
+          ),
+          size: size,
+          textScale: scale,
+        );
+        final l10n = currentAppLocalizations;
+        final confirm = find.widgetWithText(
+          FilledButton,
+          l10n.restoreMountConfirmOverride,
+        );
+        expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+        expect(
+          Focus.of(tester.element(find.text(l10n.cancel))).hasPrimaryFocus,
+          isTrue,
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.byType(RestoreMountConfirmSheet), findsOne);
+        expect(popped, isEmpty);
       });
     }
   });
