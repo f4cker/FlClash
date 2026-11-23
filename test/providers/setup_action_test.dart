@@ -96,6 +96,7 @@ class TestSetupAction extends SetupAction {
   Completer<void>? profileGate;
   bool blockCoreCalls = false;
   Error? coreRunningError;
+  Exception? coreRunningException;
   final Set<bool> unansweredCoreCalls = {};
   int authorizeCalls = 0;
   AuthorizeCode authorizeResult = AuthorizeCode.none;
@@ -126,6 +127,10 @@ class TestSetupAction extends SetupAction {
     final error = coreRunningError;
     if (error != null) {
       throw error;
+    }
+    final exception = coreRunningException;
+    if (exception != null) {
+      throw exception;
     }
     if (unansweredCoreCalls.contains(running)) {
       throw const CoreMethodException(code: 'no_response', message: '');
@@ -294,6 +299,7 @@ void main() {
   tearDown(() async {
     action.blockCoreCalls = false;
     action.coreRunningError = null;
+    action.coreRunningException = null;
     action.unansweredCoreCalls.clear();
     for (final gate in action.pendingCoreCalls) {
       if (!gate.isCompleted) {
@@ -855,6 +861,27 @@ void main() {
       expect(container.read(runTimeProvider), isNull);
       expect(container.read(runningVpnOptionsProvider), isNull);
       expect(action.trafficResets, 1);
+    });
+
+    test('a stop whose answer the transport drops stays stopped, and the '
+        'lost session after it brings nothing back', () async {
+      markInitialized();
+      final setup = container.read(setupActionProvider.notifier);
+      await setup.setRunning(true);
+      action.coreRunningException = const CoreMethodException(
+        code: 'transport_disconnected',
+        message: 'Core transport disconnected',
+      );
+
+      await expectLater(
+        setup.setRunning(false),
+        throwsA(isA<CoreMethodException>()),
+      );
+      setup.onCoreLost();
+
+      expect(container.read(isStartProvider), isFalse);
+      expect(container.read(runTimeProvider), isNull);
+      expect(setup.wantsRunning, isFalse);
     });
 
     test(
