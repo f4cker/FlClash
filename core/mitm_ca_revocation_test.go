@@ -201,9 +201,12 @@ func TestMitmRevocationStopsSigningWithinTheLease(t *testing.T) {
 	times := measureMitmRevocation(t, lease)
 	t.Logf("scaled to a 10s lease: new handshakes stop %.1fs and sessions %.1fs after R",
 		times.handshakes.Seconds()*scale, times.sessions.Seconds()*scale)
-	slack := lease / 10
+	slack := lease / 5
 	if times.handshakes > lease+slack {
 		t.Errorf("new handshakes stopped %v after R, want within the %v lease", times.handshakes, lease)
+	}
+	if times.handshakes < lease-slack {
+		t.Errorf("new handshakes stopped %v after R, before the %v lease ran out", times.handshakes, lease)
 	}
 	if limit := 2*lease + slack; times.sessions > limit {
 		t.Errorf("sessions stopped %v after R, want within %v", times.sessions, limit)

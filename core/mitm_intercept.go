@@ -133,6 +133,7 @@ type mitmLeaf struct {
 	notAfter time.Time
 	// The trust lease it was signed under; zero for the app's leaves.
 	leaseEnd time.Time
+	ca       *mitmLoadedCA
 }
 
 // No later than the leaf's lease, if it has one.
@@ -244,7 +245,7 @@ func (cache *mitmLeafCache) get(ctx context.Context, host string) (*mitmLeaf, er
 	runtime := mitmState.Load()
 	cache.mu.Lock()
 	if kept, found := cache.ready[mitmReadyKeyOf(runtime, host)]; found {
-		if time.Now().Before(kept.reuseTill) {
+		if mitmBefore(time.Now(), kept.reuseTill) {
 			cache.mu.Unlock()
 			return kept.leaf, nil
 		}
@@ -629,6 +630,10 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 		return mitmOutcomePrecommit
 	}
 	defer remove()
+	// After registering: a CA cleared since then has closed it, or shows here.
+	if leaf.revoked() {
+		return mitmOutcomePrecommit
+	}
 	livenessCtx, stopLiveness := context.WithCancel(context.Background())
 	defer stopLiveness()
 	go monitorMitmLiveness(livenessCtx, runtime, host, mitmLivenessInterval, mitmLeaves.fresh)
@@ -737,7 +742,7 @@ func mitmDropsUDP(metadata *C.Metadata) bool {
 	mitmLeaves.mu.Lock()
 	proof := mitmLeaves.quicProof[mitmLeafKey{runtime: runtime, host: host}]
 	mitmLeaves.mu.Unlock()
-	if time.Now().Before(proof) && mitmState.Load() == runtime && !mitmPausedFor(host) {
+	if mitmBefore(time.Now(), proof) && mitmState.Load() == runtime && !mitmPausedFor(host) {
 		return true
 	}
 	select {

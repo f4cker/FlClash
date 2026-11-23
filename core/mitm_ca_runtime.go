@@ -28,7 +28,25 @@ var (
 
 	mitmCA          atomic.Pointer[mitmLoadedCA]
 	mitmCAIntentSeq uint64
+	// Held while the CA key signs; a clear waits for it to drain.
+	mitmCASigning sync.RWMutex
+	// How far tests move the wall clock past the monotonic one.
+	mitmWallSkew atomic.Int64
 )
+
+func mitmWallNow() time.Time {
+	return time.Now().Round(0).Add(time.Duration(mitmWallSkew.Load()))
+}
+
+// Go's monotonic clock stands still while the Mac sleeps and the wall clock
+// may be set back, so a deadline holds only while both say so.
+func mitmBefore(now, deadline time.Time) bool {
+	return now.Before(deadline) && mitmWallNow().Before(deadline.Round(0))
+}
+
+func mitmRemaining(deadline time.Time) time.Duration {
+	return min(time.Until(deadline), deadline.Round(0).Sub(mitmWallNow()))
+}
 
 type mitmLoadedCA struct {
 	key         crypto.Signer
@@ -67,18 +85,54 @@ func (runtime *mitmRuntime) coreSigns() bool {
 func (ca *mitmLoadedCA) lease(now time.Time) (time.Time, bool) {
 	ca.mu.Lock()
 	defer ca.mu.Unlock()
-	return ca.leaseUntil, !ca.retired && now.Before(ca.leaseUntil)
+	return ca.leaseUntil, !ca.retired && mitmBefore(now, ca.leaseUntil)
 }
 
 func (ca *mitmLoadedCA) retire() {
 	ca.mu.Lock()
 	ca.retired = true
+	ca.endLeaseLocked()
+	ca.mu.Unlock()
+}
+
+// The CA stays loaded; checks issued so far can no longer grant a lease.
+func (ca *mitmLoadedCA) endLease() {
+	ca.mu.Lock()
+	ca.endLeaseLocked()
+	ca.mu.Unlock()
+}
+
+func (ca *mitmLoadedCA) endLeaseLocked() {
 	ca.leaseUntil = time.Time{}
 	ca.checks = nil
 	if ca.expiry != nil {
 		ca.expiry.Stop()
+		ca.expiry = nil
 	}
-	ca.mu.Unlock()
+}
+
+// Under ca.mu: a lapsed lease is ended, so no check issued under it renews it.
+func (ca *mitmLoadedCA) lapsedLocked(now time.Time) bool {
+	if ca.leaseUntil.IsZero() || mitmBefore(now, ca.leaseUntil) {
+		return false
+	}
+	ca.endLeaseLocked()
+	return true
+}
+
+// A lease vouches for the decryption it was renewed under: turning that off,
+// away from the Core or to another CA ends it. A new CA's lease is kept.
+func endMitmLeaseFor(previous, next *mitmRuntime) {
+	if !previous.coreSigns() || !previous.decrypting() {
+		return
+	}
+	fingerprint := normalizeMitmFingerprint(previous.setup.CAFingerprint)
+	if next.coreSigns() && next.decrypting() && normalizeMitmFingerprint(next.setup.CAFingerprint) == fingerprint {
+		return
+	}
+	if ca := mitmCA.Load(); ca != nil && ca.fingerprint == fingerprint {
+		ca.endLease()
+	}
 }
 
 func currentMitmCAState() MitmCAState {
@@ -88,7 +142,7 @@ func currentMitmCAState() MitmCAState {
 	}
 	state := MitmCAState{Loaded: true, Fingerprint: mitmFingerprintDisplay(ca.cert.Raw)}
 	if until, leased := ca.lease(time.Now()); leased {
-		state.LeaseMillis = time.Until(until).Milliseconds()
+		state.LeaseMillis = mitmRemaining(until).Milliseconds()
 	}
 	return state
 }
@@ -105,6 +159,9 @@ func markMitmCAIntent(seq uint64) {
 // goroutines, only the one the app sent last applies.
 func handleMitmSetCASeq(params MitmCAParams, seq uint64) (MitmCAState, error) {
 	var next *mitmLoadedCA
+	if len(params.P12) == 0 && params.Fingerprint != "" {
+		return MitmCAState{}, mitmCABadP12
+	}
 	if len(params.P12) > 0 {
 		key, cert, err := decodeMitmCA(params.P12, params.Passphrase, time.Now())
 		clear(params.P12)
@@ -130,13 +187,16 @@ func handleMitmSetCASeq(params MitmCAParams, seq uint64) (MitmCAState, error) {
 	return currentMitmCAState(), nil
 }
 
-// Under mitmIntentMu. Leaves of the outgoing CA are never served again.
+// Under mitmIntentMu. Returns once no issuance holds the outgoing key, and
+// leaves of the outgoing CA are never served again.
 func installMitmCA(previous, next *mitmLoadedCA) {
 	mitmCA.Store(next)
 	if previous == nil {
 		return
 	}
 	previous.retire()
+	mitmCASigning.Lock()
+	defer mitmCASigning.Unlock()
 	runtime := mitmState.Load()
 	if !runtime.coreSigns() {
 		return
@@ -151,6 +211,8 @@ func installMitmCA(previous, next *mitmLoadedCA) {
 // The leaf only the trust check asks for: the fixed check host over a
 // throwaway key, whatever host the caller names, and never a listed host.
 func handleMitmIssueCheck() (MitmCheckCertificate, error) {
+	mitmCASigning.RLock()
+	defer mitmCASigning.RUnlock()
 	ca := mitmCA.Load()
 	if ca == nil {
 		return MitmCheckCertificate{}, mitmCANotLoaded
@@ -178,6 +240,7 @@ func handleMitmIssueCheck() (MitmCheckCertificate, error) {
 	if ca.retired {
 		return MitmCheckCertificate{}, mitmCANotLoaded
 	}
+	ca.lapsedLocked(time.Now())
 	if ca.checks == nil || len(ca.checks) >= mitmCAChecksMax {
 		ca.checks = map[string]time.Time{}
 	}
@@ -186,7 +249,9 @@ func handleMitmIssueCheck() (MitmCheckCertificate, error) {
 }
 
 // A check of the loaded CA passed: listed hosts may be signed until the
-// check's leaf is mitmCALeaseMax old. Each check grants one lease.
+// check's leaf is mitmCALeaseMax old. Each check grants one lease, and
+// redeeming it supersedes older checks. A check issued before the lease
+// lapsed or was ended never restarts signing.
 func handleMitmTrustLease(params MitmTrustLeaseParams) (MitmCAState, error) {
 	ca := mitmCA.Load()
 	if ca == nil {
@@ -207,8 +272,13 @@ func handleMitmTrustLease(params MitmTrustLeaseParams) (MitmCAState, error) {
 		return MitmCAState{}, mitmCAUnknownCheck
 	}
 	delete(ca.checks, params.Check)
+	for other, otherIssued := range ca.checks {
+		if otherIssued.Before(issued) {
+			delete(ca.checks, other)
+		}
+	}
 	until := issued.Add(length)
-	if !until.After(now) {
+	if ca.lapsedLocked(now) || !mitmBefore(now, until) {
 		ca.mu.Unlock()
 		return MitmCAState{}, mitmCALeaseLapsed
 	}
@@ -225,13 +295,25 @@ func handleMitmTrustLease(params MitmTrustLeaseParams) (MitmCAState, error) {
 
 // Kept leaves already stop at the lease's end; this also drops in-flight ones.
 func mitmCALeaseEnded(ca *mitmLoadedCA) {
-	if _, leased := ca.lease(time.Now()); leased || mitmCA.Load() != ca {
+	ca.mu.Lock()
+	lapsed := ca.lapsedLocked(time.Now())
+	ca.mu.Unlock()
+	if !lapsed || mitmCA.Load() != ca {
 		return
 	}
 	if runtime := mitmState.Load(); runtime.coreSigns() {
 		mitmLeaves.forget()
 		log.Infoln("[MITM] the trust lease of the signing CA lapsed")
 	}
+}
+
+// A leaf the Core signed whose CA was cleared or whose lease ended.
+func (leaf *mitmLeaf) revoked() bool {
+	if leaf == nil || leaf.ca == nil {
+		return false
+	}
+	_, leased := leaf.ca.lease(time.Now())
+	return !leased || mitmCA.Load() != leaf.ca
 }
 
 // Under mitmIntentMu: the relay that handed the CA over is gone.
@@ -247,6 +329,8 @@ func dropMitmCA(seq uint64) {
 // The Core's own issuance: the native signer's gates, on the runtime the
 // connection was chosen under.
 func issueMitmLeafLocal(runtime *mitmRuntime, host string) (*mitmLeaf, error) {
+	mitmCASigning.RLock()
+	defer mitmCASigning.RUnlock()
 	if !runtime.decrypting() || !runtime.hosts.Match(host) {
 		return nil, errMitmNotListed
 	}
@@ -284,11 +368,16 @@ func issueMitmLeafLocal(runtime *mitmRuntime, host string) (*mitmLeaf, error) {
 	if mitmState.Load() != runtime {
 		return nil, errMitmSetupChanged
 	}
-	return &mitmLeaf{
+	issued := &mitmLeaf{
 		cert:     tls.Certificate{Certificate: [][]byte{leaf.Raw}, PrivateKey: key, Leaf: leaf},
 		notAfter: leaf.NotAfter,
 		leaseEnd: leaseEnd,
-	}, nil
+		ca:       ca,
+	}
+	if issued.revoked() {
+		return nil, mitmAppRefusal("trustUnavailable")
+	}
+	return issued, nil
 }
 
 func issueMitmLeafFor(ctx context.Context, host string) (*mitmLeaf, bool, error) {
@@ -365,6 +454,13 @@ func handleMitmCAStateCall(*MethodCall) (any, error) {
 	return currentMitmCAState(), nil
 }
 
+// Clears the CA as setCA with no p12 does. The reply means no leaf is being
+// signed, none signed before is served again and decrypted sessions under
+// the CA are closed. The helper sends it when the app's connection drops.
+func handleMitmStopSigningCall(call *MethodCall) (any, error) {
+	return handleMitmSetCASeq(MitmCAParams{}, call.seq)
+}
+
 // Never written to a spill file, whatever their size.
 var mitmCASecretMethods = map[CoreMethod]bool{
 	mitmSetCAMethod:               true,
@@ -373,6 +469,7 @@ var mitmCASecretMethods = map[CoreMethod]bool{
 	mitmIssueCertificateMethod:    true,
 	mitmTrustLeaseMethod:          true,
 	mitmCAStateMethod:             true,
+	mitmStopSigningMethod:         true,
 }
 
 var mitmCAHandlers = map[CoreMethod]methodHandler{
@@ -382,4 +479,5 @@ var mitmCAHandlers = map[CoreMethod]methodHandler{
 	mitmIssueCertificateMethod:    handleMitmIssueCheckCall,
 	mitmTrustLeaseMethod:          handleMitmTrustLeaseCall,
 	mitmCAStateMethod:             handleMitmCAStateCall,
+	mitmStopSigningMethod:         handleMitmStopSigningCall,
 }

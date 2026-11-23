@@ -585,7 +585,7 @@ func TestMitmTrustLeaseRunsFromTheCheckAndOnlyOnce(t *testing.T) {
 	}
 	stale, _ := handleMitmIssueCheck()
 	time.Sleep(450 * time.Millisecond)
-	if _, err := handleMitmTrustLease(MitmTrustLeaseParams{Fingerprint: generated.Fingerprint, Check: stale.Check}); !errors.Is(err, mitmCALeaseLapsed) {
+	if _, err := handleMitmTrustLease(MitmTrustLeaseParams{Fingerprint: generated.Fingerprint, Check: stale.Check}); !errors.Is(err, mitmCALeaseLapsed) && !errors.Is(err, mitmCAUnknownCheck) {
 		t.Errorf("a check older than the lease: %v", err)
 	}
 }

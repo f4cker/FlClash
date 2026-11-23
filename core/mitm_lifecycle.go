@@ -123,6 +123,7 @@ func replaceMitmRuntimeClearing(runtime *mitmRuntime, clearReady bool) {
 	mitmSignMu.Unlock()
 	mitmLeaves.mu.Unlock()
 	mitmActive.mu.Unlock()
+	endMitmLeaseFor(previous, runtime)
 	for _, request := range pending {
 		request.answer <- mitmSignAnswer{err: errMitmSetupChanged}
 	}

@@ -157,6 +157,9 @@ func mitmDecrypts(host string) bool {
 // nothing checked; a Core already not decrypting is left as it is.
 func handleMitmDisable() {
 	previous := mitmState.Load()
+	if ca := mitmCA.Load(); ca != nil {
+		ca.endLease()
+	}
 	// Rewriting stops with the switch, plain HTTP included.
 	installMitmRewrite(nil)
 	if !previous.decrypting() && (previous == nil || !previous.setup.Enable) {
@@ -164,7 +167,7 @@ func handleMitmDisable() {
 	}
 	runtime := &mitmRuntime{}
 	runtime.ignored.Store(previous.ignored.Load())
-	replaceMitmRuntime(runtime)
+	replaceMitmRuntimeFrom(previous, runtime)
 	log.Infoln("[MITM] decryption turned off")
 }
 

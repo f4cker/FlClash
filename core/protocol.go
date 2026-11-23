@@ -100,6 +100,7 @@ const (
 	mitmInspectCAMethod           CoreMethod = "mitm.inspectCA"
 	mitmTrustLeaseMethod          CoreMethod = "mitm.trustLease"
 	mitmCAStateMethod             CoreMethod = "mitm.caState"
+	mitmStopSigningMethod         CoreMethod = "mitm.stopSigning"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"

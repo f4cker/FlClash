@@ -42,7 +42,7 @@ func dispatchMethodCall(call *MethodCall, reply func(data []byte)) {
 	if call.Method == mitmUpdateMethod || call.Method == mitmDisableMethod {
 		markMitmIntent(call.seq)
 	}
-	if call.Method == mitmSetCAMethod {
+	if call.Method == mitmSetCAMethod || call.Method == mitmStopSigningMethod {
 		markMitmCAIntent(call.seq)
 	}
 	// A developer-only fatal-path test. It runs outside every recovery so the
