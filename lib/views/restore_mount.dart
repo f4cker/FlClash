@@ -6,6 +6,8 @@ import 'package:fl_clash/common/restore_mount_plan.dart';
 import 'package:fl_clash/common/restore_result.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/models/core.dart' show MitmCertificate;
+import 'package:fl_clash/models/mitm_ca.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/semantics.dart';
@@ -676,11 +678,14 @@ class RestoreMountConfirmSheet extends StatefulWidget {
   /// consented to on this device. Confirming never consents to them.
   final List<RestoreMitmModule> mitmModules;
 
+  final RestoreMitmCa? mitmCa;
+
   const RestoreMountConfirmSheet({
     super.key,
     required this.plan,
     this.backupName,
     this.mitmModules = const [],
+    this.mitmCa,
   });
 
   @override
@@ -708,7 +713,8 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
     final rows = restoreMountRows(plan, l10n);
     final mitmRows = restoreMitmRows(widget.mitmModules, l10n);
     // Only MITM modules and no mount change: nothing about mounts is shown.
-    final mitmOnly = plan.isEmpty && mitmRows.isNotEmpty;
+    final mitmCa = widget.mitmCa;
+    final mitmOnly = plan.isEmpty && (mitmRows.isNotEmpty || mitmCa != null);
     final title = plan.isOverride
         ? l10n.restoreMountTitleOverride
         : l10n.restoreMountTitleMerge;
@@ -874,6 +880,10 @@ class _RestoreMountConfirmSheetState extends State<RestoreMountConfirmSheet> {
                   lead: l10n.restoreOverrideDeletesLocal,
                   note: l10n.restoreOverrideScopeNote,
                 ),
+              ],
+              if (mitmCa != null) ...[
+                const SizedBox(height: 20),
+                RestoreMitmCaNote(mitmCa),
               ],
               if (!mitmOnly) ...[
                 // An override has one callout, the deletion line; what it
@@ -1382,6 +1392,75 @@ class _RestoreResultViewState extends State<RestoreResultView> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The decryption CA before and after a restore, each by name and full
+/// fingerprint, and which one is kept, replaced or still to be trusted.
+class RestoreMitmCaNote extends StatelessWidget {
+  const RestoreMitmCaNote(this.mitmCa, {super.key});
+
+  final RestoreMitmCa mitmCa;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final p = _Palette.of(context);
+    Widget certificate(String label, MitmCertificate ca, String outcome) =>
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: _group(context, p)),
+              Text(ca.subject, style: _body(context, p)),
+              Text(
+                ca.fingerprint,
+                style: AppTextStyle.custom(
+                  context,
+                  size: 12,
+                  leading: 18,
+                ).toJetBrainsMono,
+              ),
+              Text(outcome, style: _aux(context, p)),
+            ],
+          ),
+        );
+    final local = mitmCa.local;
+    final backup = mitmCa.backup;
+    return Column(
+      key: const ValueKey('restore-mitm-ca'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.mitmRestoreCaSection, style: _group(context, p)),
+        switch (mitmCa.change) {
+          RestoreMitmCaChange.kept => Text(l10n.mitmRestoreCaKept),
+          RestoreMitmCaChange.same => Text(l10n.mitmRestoreCaSame),
+          RestoreMitmCaChange.damaged => _Callout(
+            lead: l10n.mitmRestoreCaDamaged,
+          ),
+          RestoreMitmCaChange.replaced => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (local != null)
+                certificate(
+                  l10n.mitmRestoreCaLocal,
+                  local,
+                  l10n.mitmRestoreCaLocalKept,
+                ),
+              if (backup != null)
+                certificate(
+                  l10n.mitmRestoreCaFromBackup,
+                  backup,
+                  l10n.mitmRestoreCaPending,
+                ),
+              const SizedBox(height: 8),
+              Text(l10n.mitmRestoreCaTrustNote, style: _aux(context, p)),
+            ],
+          ),
+        },
+      ],
     );
   }
 }

@@ -9,11 +9,12 @@ typedef BackupFetch = Future<String?> Function(String downloadPath);
 /// Shown the mount plan of a restore before anything is written; false
 /// cancels it. [mitmModules] are the backup's MITM modules the restore
 /// writes, each turned off until consented to on this device; confirming
-/// never consents to them.
+/// never consents to them. [mitmCa] says what happens to the decryption CA.
 typedef RestoreMountConfirm =
     Future<bool> Function(
       RestoreMountPlan plan, {
       List<RestoreMitmModule> mitmModules,
+      RestoreMitmCa? mitmCa,
     });
 
 /// What a committed restore did to mounts. [stillPending] are the targets
@@ -175,6 +176,68 @@ class BackupAction extends _$BackupAction {
     return configMap;
   }
 
+  /// Null when neither side has a CA. A CA in the backup that cannot be read
+  /// is left out of the map returned, so the rest restores and this Mac's
+  /// stays.
+  (RestoreMitmCa?, Map<String, Object?>) _restoreMitmCaOf(
+    Map<String, Object?> configMap,
+  ) {
+    final local = ref.read(patchClashConfigProvider).mitm.coreCa;
+    final raw = switch (configMap['patchClashConfig']) {
+      {'mitm': final Map<String, Object?> mitm} => mitm,
+      _ => null,
+    };
+    final passphrase = configMap[mitmCaPassphraseKey];
+    final carriesCa =
+        raw != null &&
+            (raw.containsKey('ca-p12') || raw.containsKey('ca-certificate')) ||
+        passphrase != null;
+    if (!carriesCa) {
+      return (
+        local == null
+            ? null
+            : RestoreMitmCa(RestoreMitmCaChange.kept, local: local),
+        configMap,
+      );
+    }
+    MitmCertificate? backup;
+    try {
+      MitmCaP12.fromJsonValue(raw?['ca-p12'])!;
+      backup = MitmCertificate.fromJson(
+        raw!['ca-certificate']! as Map<String, Object?>,
+      );
+    } catch (_) {
+      backup = null;
+    }
+    if (backup == null || passphrase is! String || passphrase.isEmpty) {
+      final patch = configMap['patchClashConfig'];
+      return (
+        RestoreMitmCa(RestoreMitmCaChange.damaged, local: local),
+        {
+          for (final MapEntry(:key, :value) in configMap.entries)
+            if (key != mitmCaPassphraseKey) key: value,
+          if (patch is Map<String, Object?> && raw != null)
+            'patchClashConfig': {
+              ...patch,
+              'mitm': {...raw}
+                ..remove('ca-p12')
+                ..remove('ca-certificate'),
+            },
+        },
+      );
+    }
+    return (
+      RestoreMitmCa(
+        backup.fingerprint == local?.fingerprint
+            ? RestoreMitmCaChange.same
+            : RestoreMitmCaChange.replaced,
+        local: local,
+        backup: backup,
+      ),
+      configMap,
+    );
+  }
+
   /// Keeps this Mac's CA unless the backup carries another, untrusted here.
   (Mitm, _MitmKeychainChange?) _restoredMitm(
     Mitm restored,
@@ -271,7 +334,12 @@ class BackupAction extends _$BackupAction {
     String? stagingDirPath,
     RestoreMountConfirm? confirm,
   }) async {
-    final configMap = data.configMap;
+    final (mitmCa, configMap) = switch (data.configMap) {
+      final map? when option != RestoreOption.onlyProfiles => _restoreMitmCaOf(
+        map,
+      ),
+      final map => (null, map),
+    };
     final config = option == RestoreOption.onlyProfiles || configMap == null
         ? null
         : Config.fromJson(configMap);
@@ -309,9 +377,16 @@ class BackupAction extends _$BackupAction {
     ];
     // An override deletes local items the backup lacks, so it is always
     // confirmed; a compatible restore with nothing listed is not asked.
-    if (previewOverride || !preview.isEmpty || mitmModules.isNotEmpty) {
+    if (previewOverride ||
+        !preview.isEmpty ||
+        mitmModules.isNotEmpty ||
+        mitmCa != null) {
       final accepted = switch (confirm) {
-        final confirm? => await confirm(preview, mitmModules: mitmModules),
+        final confirm? => await confirm(
+          preview,
+          mitmModules: mitmModules,
+          mitmCa: mitmCa,
+        ),
         null => !preview.hasLosses,
       };
       if (!accepted) return null;
@@ -538,6 +613,11 @@ class BackupAction extends _$BackupAction {
     }
     if (restoredMitmCa) {
       unawaited((promptMitmCaTrust ?? _promptMitmCaTrust)());
+    } else if (mitmCa?.change == RestoreMitmCaChange.damaged) {
+      dialogs.showBanner(
+        currentAppLocalizations.mitmRestoreCaDamaged,
+        level: BannerLevel.warning,
+      );
     } else if (keptMitmCa) {
       dialogs.showBanner(currentAppLocalizations.mitmRestoreKeptCa);
     }

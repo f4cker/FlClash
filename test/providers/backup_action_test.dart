@@ -248,7 +248,7 @@ void main() {
         MigrationData(profiles: [_sub(77712, 'Restored')]),
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (plan, {mitmModules = const []}) async {
+        confirm: (plan, {mitmModules = const [], mitmCa}) async {
           shown = plan;
           return true;
         },
@@ -305,7 +305,7 @@ void main() {
       final result = await action.applyRestore(
         data,
         RestoreOption.all,
-        confirm: (plan, {mitmModules = const []}) async {
+        confirm: (plan, {mitmModules = const [], mitmCa}) async {
           asked.add((
             plan.isEmpty,
             [for (final m in mitmModules) (m.id, m.name)],
@@ -354,7 +354,7 @@ void main() {
       await compatible.applyRestore(
         data,
         RestoreOption.all,
-        confirm: (_, {mitmModules = const []}) async {
+        confirm: (_, {mitmModules = const [], mitmCa}) async {
           askedCompatible++;
           return true;
         },
@@ -367,6 +367,7 @@ void main() {
       Future<bool> answer(
         RestoreMountPlan plan, {
         List<RestoreMitmModule> mitmModules = const [],
+        RestoreMitmCa? mitmCa,
       }) async {
         asked.add((plan.isOverride, plan.isEmpty, mitmModules.length));
         return false;
@@ -382,7 +383,7 @@ void main() {
       await override.applyRestore(
         data,
         RestoreOption.all,
-        confirm: (_, {mitmModules = const []}) async => true,
+        confirm: (_, {mitmModules = const [], mitmCa}) async => true,
       );
       expect(await moduleIds(), isEmpty, reason: 'confirmed: deleted');
     });
@@ -406,7 +407,7 @@ void main() {
           ],
         ),
         RestoreOption.all,
-        confirm: (plan, {mitmModules = const []}) async {
+        confirm: (plan, {mitmModules = const [], mitmCa}) async {
           listed.addAll([for (final m in mitmModules) m.id]);
           return true;
         },
@@ -450,7 +451,7 @@ void main() {
         data,
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (plan, {mitmModules = const []}) async {
+        confirm: (plan, {mitmModules = const [], mitmCa}) async {
           declined = plan;
           return false;
         },
@@ -486,7 +487,7 @@ void main() {
         data,
         RestoreOption.onlyProfiles,
         stagingDirPath: staging.path,
-        confirm: (_, {mitmModules = const []}) async => true,
+        confirm: (_, {mitmModules = const [], mitmCa}) async => true,
       );
 
       expect(result!.plan.removals.single.reason.id, 'source-missing');
@@ -525,7 +526,7 @@ void main() {
             ],
           ),
           RestoreOption.onlyProfiles,
-          confirm: (plan, {mitmModules = const []}) async {
+          confirm: (plan, {mitmModules = const [], mitmCa}) async {
             shown = plan;
             return true;
           },
@@ -581,7 +582,7 @@ void main() {
           MigrationData(profiles: [_sub(77792, 'Restored')]),
           RestoreOption.onlyProfiles,
           stagingDirPath: staging.path,
-          confirm: (_, {mitmModules = const []}) async {
+          confirm: (_, {mitmModules = const [], mitmCa}) async {
             final current = await testDatabase.mountsDao.target(77791);
             final saved = await testDatabase.mountsDao.save(
               targetId: 77791,
@@ -1558,6 +1559,69 @@ void main() {
         expect(passphrases.values['AA:AA'], 'secret AA:AA');
       },
     );
+
+    group('is said before the restore', () {
+      Future<RestoreMitmCa?> askedFor(
+        Map<String, Object?> configMap,
+        ProviderContainer target, {
+        bool accept = true,
+      }) async {
+        RestoreMitmCa? asked;
+        actionOf(target).promptMitmCaTrust = () async {};
+        await actionOf(target).applyRestore(
+          MigrationData(configMap: configMap),
+          RestoreOption.all,
+          confirm: (_, {mitmModules = const [], mitmCa}) async {
+            asked = mitmCa;
+            return accept;
+          },
+        );
+        return asked;
+      }
+
+      test('another CA: both named, nothing written when declined', () async {
+        final configMap = await actionOf(
+          withCa('AA:AA'),
+        ).backupConfigMap(includeMitmCa: true);
+        final target = withCa('BB:BB', p12: 'BBBB');
+        final asked = await askedFor(configMap, target, accept: false);
+        expect(asked?.change, RestoreMitmCaChange.replaced);
+        expect(asked?.local?.fingerprint, 'BB:BB');
+        expect(asked?.backup?.fingerprint, 'AA:AA');
+        expect(
+          target.read(patchClashConfigProvider).mitm.caP12,
+          MitmCaP12('BBBB'),
+        );
+        expect(passphrases.values, isNot(contains('AA:AA')));
+      });
+
+      test('the same CA', () async {
+        final configMap = await actionOf(
+          withCa('AA:AA'),
+        ).backupConfigMap(includeMitmCa: true);
+        final asked = await askedFor(configMap, withCa('AA:AA'));
+        expect(asked?.change, RestoreMitmCaChange.same);
+      });
+
+      test('no CA in the backup keeps the one here', () async {
+        final configMap = await actionOf(withCa('AA:AA')).backupConfigMap();
+        final asked = await askedFor(configMap, withCa('BB:BB'));
+        expect(asked?.change, RestoreMitmCaChange.kept);
+      });
+
+      test('a damaged CA is said as such and the rest restores', () async {
+        final configMap = await actionOf(
+          withCa('AA:AA'),
+        ).backupConfigMap(includeMitmCa: true);
+        configMap.remove(mitmCaPassphraseKey);
+        final target = withCa('BB:BB', p12: 'BBBB');
+        final asked = await askedFor(configMap, target);
+        expect(asked?.change, RestoreMitmCaChange.damaged);
+        final mitm = target.read(patchClashConfigProvider).mitm;
+        expect(mitm.coreCa?.fingerprint, 'BB:BB');
+        expect(mitm.caP12, MitmCaP12('BBBB'));
+      });
+    });
 
     test('a restore rolled back writes no passphrase', () async {
       final configMap = await actionOf(

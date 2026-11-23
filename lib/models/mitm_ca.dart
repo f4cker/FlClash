@@ -146,3 +146,20 @@ class MitmGeneratedCa {
   @override
   String toString() => mitmCaMark;
 }
+
+enum RestoreMitmCaChange {
+  kept,
+  same,
+  // The local CA, if any, stays on this Mac as the old CA.
+  replaced,
+  damaged,
+}
+
+@immutable
+class RestoreMitmCa {
+  const RestoreMitmCa(this.change, {this.local, this.backup});
+
+  final RestoreMitmCaChange change;
+  final MitmCertificate? local;
+  final MitmCertificate? backup;
+}

@@ -4090,5 +4090,18 @@
   "mitmDeleteCurrentCaConfirm": "Delete Current Certificate",
   "mitmCaScopeThisMac": "Affects this Mac only",
   "mitmImportInUse": "This certificate is already in use.",
-  "mitmCaAvailable": "Available certificate: {name}"
+  "mitmCaAvailable": "Available certificate: {name}",
+  "mitmRestoreCaSection": "Decryption Certificate",
+  "mitmRestoreCaLocal": "On this Mac now",
+  "mitmRestoreCaFromBackup": "The backup will restore",
+  "mitmRestoreCaLocalKept": "Kept on this Mac as the old certificate. You can remove it later.",
+  "mitmRestoreCaPending": "Becomes the configured certificate. Decryption uses it only after it is trusted on this Mac.",
+  "mitmRestoreCaKept": "This backup doesn't include a decryption certificate. The certificate on this Mac stays as it is.",
+  "mitmRestoreCaTrustNote": "Restoring doesn't trust a certificate on this Mac. You'll be asked about that afterwards.",
+  "mitmRestoreCaSame": "The backup has the certificate this Mac already uses. It stays as it is.",
+  "mitmRestoreCaDamaged": "The decryption certificate in this backup can't be read, so it isn't restored. The certificate on this Mac stays as it is.",
+  "mitmBackupWithKey": "Back Up (Includes Private Key)",
+  "mitmBackupRiskDetails": "If the file is shared by mistake",
+  "mitmBackupRiskImpact": "Someone with the file and access to your network could impersonate HTTPS sites on devices that trust this certificate and read or change data.",
+  "mitmBackupRiskRevoke": "Replace the certificate, then remove the old one on every device that trusted it: on a Mac in Keychain Access; on iPhone or iPad under Settings > General > VPN & Device Management, and turn it off in Certificate Trust Settings; on Android under Settings > Security > Encryption & credentials > User credentials."
 }

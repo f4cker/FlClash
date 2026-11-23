@@ -9791,4 +9791,51 @@ class AppLocalizationsRu extends AppLocalizations {
   String mitmCaAvailable(Object name) {
     return 'Available certificate: $name';
   }
+
+  @override
+  String get mitmRestoreCaSection => 'Decryption Certificate';
+
+  @override
+  String get mitmRestoreCaLocal => 'On this Mac now';
+
+  @override
+  String get mitmRestoreCaFromBackup => 'The backup will restore';
+
+  @override
+  String get mitmRestoreCaLocalKept =>
+      'Kept on this Mac as the old certificate. You can remove it later.';
+
+  @override
+  String get mitmRestoreCaPending =>
+      'Becomes the configured certificate. Decryption uses it only after it is trusted on this Mac.';
+
+  @override
+  String get mitmRestoreCaKept =>
+      'This backup doesn\'t include a decryption certificate. The certificate on this Mac stays as it is.';
+
+  @override
+  String get mitmRestoreCaTrustNote =>
+      'Restoring doesn\'t trust a certificate on this Mac. You\'ll be asked about that afterwards.';
+
+  @override
+  String get mitmRestoreCaSame =>
+      'The backup has the certificate this Mac already uses. It stays as it is.';
+
+  @override
+  String get mitmRestoreCaDamaged =>
+      'The decryption certificate in this backup can\'t be read, so it isn\'t restored. The certificate on this Mac stays as it is.';
+
+  @override
+  String get mitmBackupWithKey => 'Back Up (Includes Private Key)';
+
+  @override
+  String get mitmBackupRiskDetails => 'If the file is shared by mistake';
+
+  @override
+  String get mitmBackupRiskImpact =>
+      'Someone with the file and access to your network could impersonate HTTPS sites on devices that trust this certificate and read or change data.';
+
+  @override
+  String get mitmBackupRiskRevoke =>
+      'Replace the certificate, then remove the old one on every device that trusted it: on a Mac in Keychain Access; on iPhone or iPad under Settings > General > VPN & Device Management, and turn it off in Certificate Trust Settings; on Android under Settings > Security > Encryption & credentials > User credentials.';
 }

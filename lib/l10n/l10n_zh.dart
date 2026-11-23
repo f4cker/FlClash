@@ -8965,4 +8965,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String mitmCaAvailable(Object name) {
     return '可用的证书：$name';
   }
+
+  @override
+  String get mitmRestoreCaSection => '解密证书';
+
+  @override
+  String get mitmRestoreCaLocal => '本机当前';
+
+  @override
+  String get mitmRestoreCaFromBackup => '备份将恢复';
+
+  @override
+  String get mitmRestoreCaLocalKept => '将作为旧证书保留在这台 Mac，可稍后移除。';
+
+  @override
+  String get mitmRestoreCaPending => '将成为当前配置的证书。在这台 Mac 上信任后才会用于解密。';
+
+  @override
+  String get mitmRestoreCaKept => '此备份不含解密证书，本机证书保持不变。';
+
+  @override
+  String get mitmRestoreCaTrustNote => '恢复不会让这台 Mac 信任证书，之后会另外询问。';
+
+  @override
+  String get mitmRestoreCaSame => '备份中的证书与本机正在使用的相同，保持不变。';
+
+  @override
+  String get mitmRestoreCaDamaged => '此备份中的解密证书无法读取，不会恢复。本机证书保持不变。';
+
+  @override
+  String get mitmBackupWithKey => '备份（含私钥）';
+
+  @override
+  String get mitmBackupRiskDetails => '如果误分享了文件';
+
+  @override
+  String get mitmBackupRiskImpact =>
+      '拿到文件且能接触你网络的人，可能在信任此证书的设备上冒充 HTTPS 网站、读取或修改数据。';
+
+  @override
+  String get mitmBackupRiskRevoke =>
+      '请更换证书，并在每台信任过旧证书的设备上移除它：Mac 在“钥匙串访问”中删除；iPhone 或 iPad 在“设置 > 通用 > VPN 与设备管理”中移除，并在“证书信任设置”中关闭；Android 在“设置 > 安全 > 加密与凭据 > 用户凭据”中移除。';
 }
