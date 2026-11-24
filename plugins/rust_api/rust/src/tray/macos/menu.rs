@@ -42,11 +42,16 @@ const ROOT_MAXIMUM_WIDTH: f64 = 380.0;
 const SUBMENU_MAXIMUM_WIDTH: f64 = 420.0;
 const DETAIL_GAP: f64 = 12.0;
 const ARROW_GAP: f64 = 8.0;
+const BADGE_GAP: f64 = 8.0;
+const BADGE_ARROW_GAP: f64 = 5.0;
+const BADGE_PADDING: f64 = 4.0;
+const BADGE_MINIMUM_WIDTH: f64 = 40.0;
 const DETAIL_MAXIMUM_WIDTH: f64 = 110.0;
 /// A group row's selection up to this wide is never cut, and a longer one is
-/// cut no further: it holds four CJK characters, "DIRECT" or "HK 01" at 13pt.
-const DETAIL_MINIMUM_WIDTH: f64 = 64.0;
-const GROUP_BADGE_MINIMUM_WIDTH: f64 = 60.0;
+/// cut no further: it holds five CJK characters or "香港节点 01" at 13pt.
+const DETAIL_MINIMUM_WIDTH: f64 = 75.0;
+/// Fits up to 4-digit delays and 未测速, 超时 or 测试中 at the badge font.
+const GROUP_BADGE_MINIMUM_WIDTH: f64 = 56.0;
 const ICON_PNG_MAXIMUM_BYTES: usize = 2_100_000;
 const ICON_MAXIMUM_PIXELS: isize = 4096;
 const PNG_SIGNATURE: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -796,7 +801,7 @@ impl Style {
                 NSFontWeightRegular
             }),
             badge_font: NSFont::monospacedDigitSystemFontOfSize_weight(
-                (size - 1.0).max(12.0),
+                (size - 2.0).max(11.0),
                 unsafe { NSFontWeightMedium },
             ),
             monogram_font: NSFont::systemFontOfSize_weight(10.0, unsafe { NSFontWeightSemibold }),
@@ -807,12 +812,17 @@ impl Style {
     }
 
     fn badge_width(&self, label: &str) -> f64 {
-        let measured = text_width(label, &self.badge_font) + 12.0;
+        let measured = text_width(label, &self.badge_font) + 2.0 * BADGE_PADDING;
         if is_delay(label) {
             let digits = label.chars().filter(char::is_ascii_digit).count();
-            return measured.max(if digits >= 5 { 76.0 } else { 60.0 });
+            let floor = if digits >= 5 {
+                64.0
+            } else {
+                GROUP_BADGE_MINIMUM_WIDTH
+            };
+            return measured.max(floor);
         }
-        measured.min(110.0).max(46.0)
+        measured.min(110.0).max(BADGE_MINIMUM_WIDTH)
     }
 
     fn row_badge_width(&self, label: &str, group_row: bool) -> f64 {
@@ -1211,7 +1221,7 @@ impl ItemView {
                 f64::INFINITY,
                 bounds,
             );
-            trailing_x -= arrow_width + ARROW_GAP;
+            trailing_x -= arrow_width + arrow_gap(content.badge.is_some());
         }
         let layout = trailing_layout(
             trailing_x - style.title_x,
@@ -1228,7 +1238,7 @@ impl ItemView {
         );
         if let Some(badge) = &content.badge {
             let width = layout.badge;
-            let height = (style.badge_font.ascender() - style.badge_font.descender()).ceil() + 4.0;
+            let height = (style.badge_font.ascender() - style.badge_font.descender()).ceil() + 2.0;
             let rect = NSRect::new(
                 NSPoint::new(trailing_x - width, (bounds.size.height - height) / 2.0),
                 NSSize::new(width, height),
@@ -1239,7 +1249,7 @@ impl ItemView {
                 argb(badge.background)
             };
             background.setFill();
-            NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 5.0, 5.0).fill();
+            NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 4.0, 4.0).fill();
             let color = if highlighted {
                 primary.clone()
             } else if !content.enabled {
@@ -1249,15 +1259,15 @@ impl ItemView {
             };
             draw_text(
                 &badge.label,
-                rect.origin.x + 6.0,
-                width - 12.0,
+                rect.origin.x + BADGE_PADDING,
+                width - 2.0 * BADGE_PADDING,
                 &color,
                 &style.badge_font,
                 bounds,
                 NSTextAlignment::Right,
                 NSLineBreakMode::ByTruncatingMiddle,
             );
-            trailing_x -= width + DETAIL_GAP;
+            trailing_x -= width + BADGE_GAP;
         }
         if let Some(detail) = &content.detail {
             let color = if highlighted {
@@ -1311,8 +1321,8 @@ fn trailing_layout(
     has_submenu: bool,
 ) -> TrailingLayout {
     let badge_width = badge.map_or(0.0, |width| {
-        let width = width.min(room.max(46.0));
-        room -= width + DETAIL_GAP;
+        let width = width.min(room.max(BADGE_MINIMUM_WIDTH));
+        room -= width + BADGE_GAP;
         width
     });
     let detail_width = detail.map_or(0.0, |width| {
@@ -1332,6 +1342,14 @@ fn trailing_layout(
     }
 }
 
+fn arrow_gap(has_badge: bool) -> f64 {
+    if has_badge {
+        BADGE_ARROW_GAP
+    } else {
+        ARROW_GAP
+    }
+}
+
 /// A group row always fits its badge, title and selection cut to the minimum.
 fn row_width(
     edges: f64,
@@ -1344,13 +1362,13 @@ fn row_width(
     let trailing = match (badge, arrow) {
         (Some(badge), Some(_)) => detail_room.max(
             badge
-                + DETAIL_GAP
+                + BADGE_GAP
                 + detail.map_or(0.0, |width| width.min(DETAIL_MINIMUM_WIDTH) + DETAIL_GAP),
         ),
-        (Some(badge), None) => detail_room + badge + DETAIL_GAP,
+        (Some(badge), None) => detail_room + badge + BADGE_GAP,
         (None, _) => detail_room,
     };
-    let arrow = arrow.map_or(0.0, |width| width + ARROW_GAP);
+    let arrow = arrow.map_or(0.0, |width| width + arrow_gap(badge.is_some()));
     (edges + title + trailing + arrow).ceil()
 }
 
@@ -1918,8 +1936,8 @@ mod tests {
     use super::topology::{grouped, matches, retained_enabled, retained_status, shared_index};
     use super::{
         is_delay, item_enabled, row_width, segment_track, takes_key, text_width, trailing_layout,
-        Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP, DETAIL_GAP,
-        DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH, GROUP_BADGE_MINIMUM_WIDTH,
+        Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP, BADGE_ARROW_GAP, BADGE_GAP,
+        DETAIL_GAP, DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH, GROUP_BADGE_MINIMUM_WIDTH,
     };
     use objc2_app_kit::NSEventModifierFlags;
     use objc2_app_kit::NSFont;
@@ -2180,7 +2198,8 @@ mod tests {
     const EDGES: f64 = 54.0;
     const TITLE: f64 = 52.0;
     const ARROW: f64 = 10.0;
-    const BADGE: f64 = 60.0;
+    const BADGE: f64 = GROUP_BADGE_MINIMUM_WIDTH;
+    const BADGE_ROOM: f64 = BADGE + BADGE_GAP + BADGE_ARROW_GAP - ARROW_GAP;
 
     fn menu_width(details: &[f64], badge: Option<f64>) -> f64 {
         details
@@ -2190,7 +2209,7 @@ mod tests {
     }
 
     fn layout_in(width: f64, detail: f64) -> TrailingLayout {
-        let room = width - EDGES - ARROW - ARROW_GAP;
+        let room = width - EDGES - ARROW - BADGE_ARROW_GAP;
         trailing_layout(room, TITLE, Some(detail), Some(BADGE), true)
     }
 
@@ -2199,7 +2218,7 @@ mod tests {
         let details = [38.0, 46.0, 52.0];
         let before = menu_width(&details, None);
         let after = menu_width(&details, Some(BADGE));
-        assert_eq!(after - before, BADGE + DETAIL_GAP);
+        assert_eq!(after - before, BADGE_ROOM);
         for detail in details {
             let layout = layout_in(after, detail);
             assert_eq!(layout.detail, detail);
@@ -2216,7 +2235,7 @@ mod tests {
         let before = menu_width(&[DETAIL_MAXIMUM_WIDTH], None);
         assert_eq!(
             long - before,
-            BADGE + DETAIL_GAP + DETAIL_MINIMUM_WIDTH - DETAIL_MAXIMUM_WIDTH
+            BADGE_ROOM + DETAIL_MINIMUM_WIDTH - DETAIL_MAXIMUM_WIDTH
         );
         let layout = layout_in(long, DETAIL_MAXIMUM_WIDTH);
         assert_eq!(
@@ -2227,6 +2246,14 @@ mod tests {
                 title: TITLE
             }
         );
+    }
+
+    #[test]
+    fn five_cjk_characters_stay_whole_beside_a_badge() {
+        let style = Style::current();
+        for name in ["香港节点 01", "新加坡节点"] {
+            assert!(text_width(name, &style.detail_font) <= DETAIL_MINIMUM_WIDTH);
+        }
     }
 
     #[test]
@@ -2244,14 +2271,15 @@ mod tests {
     #[test]
     fn group_row_badges_share_a_width_and_member_badges_keep_theirs() {
         let style = Style::current();
-        for label in ["38 ms", "未测速", "超时", "测试中"] {
+        assert_eq!(style.badge_font.pointSize(), style.font.pointSize() - 2.0);
+        for label in ["38 ms", "9999 ms", "未测速", "超时", "测试中"] {
             assert_eq!(
                 style.row_badge_width(label, true),
                 GROUP_BADGE_MINIMUM_WIDTH
             );
         }
         assert!(style.row_badge_width("超时", false) < GROUP_BADGE_MINIMUM_WIDTH);
-        assert_eq!(style.row_badge_width("38 ms", false), 60.0);
+        assert_eq!(style.row_badge_width("38 ms", false), BADGE);
     }
 
     #[test]
@@ -2273,7 +2301,7 @@ mod tests {
         assert_eq!(layout.title, 150.0 - 100.0 - DETAIL_GAP);
         let member = trailing_layout(150.0, 200.0, Some(100.0), Some(60.0), false);
         assert_eq!(member.badge, 60.0);
-        assert_eq!(member.detail, 150.0 - 60.0 - DETAIL_GAP);
+        assert_eq!(member.detail, 150.0 - 60.0 - BADGE_GAP);
     }
 
     #[test]
