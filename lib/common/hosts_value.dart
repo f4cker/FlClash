@@ -3,13 +3,34 @@ import 'package:fl_clash/common/go_net.dart';
 final _separators = RegExp(r'[, ;]+');
 
 // config.go parseHosts, on the value as splitByMultipleSeparators splits it.
-bool isHostsValue(String value) {
+bool isHostsValue(String value) => isHostsItems(_appItems(value));
+
+List<String> _appItems(String value) {
   final parts = value.split(_separators).where((part) => part.isNotEmpty);
-  if (parts.length > 1) {
-    return parts.every((part) => goParseAddr(part) != null);
+  return parts.length > 1 ? parts.toList() : [value];
+}
+
+List<String>? hostsItemsOf(Object? value) => switch (value) {
+  final String text => [text],
+  final List list => [for (final item in list) '$item'],
+  _ => null,
+};
+
+bool isHostsItems(Iterable<String> items) {
+  if (items.length > 1) {
+    return items.every((item) => goParseAddr(item) != null);
   }
+  if (items.isEmpty) return false;
+  final value = items.single;
   if (value == 'lan' || goParseAddr(value) != null) return true;
   return _trimDots(value).split('.').length >= 2;
+}
+
+String? _targetOf(List<String> items) {
+  if (!isHostsItems(items) || items.length > 1) return null;
+  final value = items.single;
+  if (value == 'lan' || goParseAddr(value) != null) return null;
+  return _trimDots(value);
 }
 
 String _trimDots(String value) {
@@ -25,23 +46,23 @@ String _trimDots(String value) {
 }
 
 /// A domain whose mapping leads back to itself, which mihomo refuses.
-String? hostsCycleOf(Map<String, String> hosts) {
-  String? target(String domain) {
-    final value = hosts[domain];
-    if (value == null || !isHostsValue(value)) return null;
-    final parts = value.split(_separators).where((part) => part.isNotEmpty);
-    if (parts.length > 1 || value == 'lan' || goParseAddr(value) != null) {
-      return null;
-    }
-    return _trimDots(value);
-  }
+String? hostsCycleOf(Map<String, String> hosts) => hostsItemsCycleOf({
+  for (final MapEntry(:key, :value) in hosts.entries) key: _appItems(value),
+});
 
+// Lowercased, as mihomo's trie lowercases every domain.
+String? hostsItemsCycleOf(Map<String, List<String>> hosts) {
+  final targets = {
+    for (final MapEntry(:key, :value) in hosts.entries)
+      key.toLowerCase(): _targetOf(value)?.toLowerCase(),
+  };
   for (final domain in hosts.keys) {
+    final self = domain.toLowerCase();
     final seen = <String>{};
-    var next = target(domain);
+    var next = targets[self];
     while (next != null && seen.add(next)) {
-      if (next == domain) return domain;
-      next = target(next);
+      if (next == self) return domain;
+      next = targets[next];
     }
   }
   return null;

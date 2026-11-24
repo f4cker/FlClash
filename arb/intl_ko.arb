@@ -4143,6 +4143,6 @@
   "configBuildHostsCycle": "Couldn't apply “{profile}”: once the app's Hosts are merged with this profile's, “{domain}” leads back to itself through other entries. Check Hosts under Advanced configuration → General and in this profile, and change one of them.",
   "configRejectedProxyServerNameserverPolicy": "Couldn't apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile's DNS settings.",
   "bannerDetails": "Details",
-  "configRejectedRuleSetUnnamed": "Couldn't apply the configuration: it refers to a rule set that doesn't exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.",
+  "configRejectedRuleSetUnnamed": "Couldn't apply the configuration: a rule set reference is invalid. Check the rule sets referenced in Fake-IP filter, nameserver policies and sniffer settings.",
   "configBuildHostsInvalid": "Couldn't apply “{profile}”: the Hosts value for “{domain}” can't be used. Check Hosts under Advanced configuration → General and in this profile."
 }

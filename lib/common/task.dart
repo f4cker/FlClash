@@ -446,16 +446,20 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     }
   }
   if (rawConfig['hosts'] case final Map hosts) {
-    final text = {
-      for (final MapEntry(:key, :value) in hosts.entries)
-        '$key': value is List ? value.join(',') : '$value',
-    };
-    for (final MapEntry(:key, :value) in text.entries) {
-      if (!isHostsValue(value)) {
-        throw ConfigBuildException(ConfigBuildIssue.hostsInvalid, detail: key);
+    // As utils.ToStringSlice reads them: a profile's string is one item,
+    // unsplit; the app's values were already split by the merge.
+    final items = <String, List<String>>{};
+    for (final MapEntry(:key, :value) in hosts.entries) {
+      final read = hostsItemsOf(value);
+      if (read == null || !isHostsItems(read)) {
+        throw ConfigBuildException(
+          ConfigBuildIssue.hostsInvalid,
+          detail: '$key',
+        );
       }
+      items['$key'] = read;
     }
-    if (hostsCycleOf(text) case final domain?) {
+    if (hostsItemsCycleOf(items) case final domain?) {
       throw ConfigBuildException(ConfigBuildIssue.hostsCycle, detail: domain);
     }
   }

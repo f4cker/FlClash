@@ -1603,6 +1603,36 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
           reason: 'the app value replaces it',
         );
       });
+
+      test('a profile\'s string is one item, its list is not', () async {
+        expect(await hostsOf({}, file: {'one.test': '1.1.1.1 example.com'}), {
+          'one.test': '1.1.1.1 example.com',
+        }, reason: 'mihomo reads the string as a single domain');
+        await expectLater(
+          hostsOf(
+            {},
+            file: {
+              'list.test': ['1.1.1.1', 'example.com'],
+            },
+          ),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsInvalid)
+                .having((e) => e.detail, 'detail', 'list.test'),
+          ),
+        );
+      });
+
+      test('a cycle is found whatever the case of its domains', () async {
+        await expectLater(
+          hostsOf({'A.test': 'b.test'}, file: {'b.test': 'a.test'}),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsCycle)
+                .having((e) => e.detail, 'detail', 'b.test'),
+          ),
+        );
+      });
     });
 
     test(

@@ -16315,7 +16315,7 @@ abstract class AppLocalizations {
   /// No description provided for @configRejectedRuleSetUnnamed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: it refers to a rule set that doesn\'t exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.'**
+  /// **'Couldn\'t apply the configuration: a rule set reference is invalid. Check the rule sets referenced in Fake-IP filter, nameserver policies and sniffer settings.'**
   String get configRejectedRuleSetUnnamed;
 
   /// No description provided for @configBuildHostsInvalid.

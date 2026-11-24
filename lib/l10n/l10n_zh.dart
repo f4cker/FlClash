@@ -9193,7 +9193,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get configRejectedRuleSetUnnamed =>
-      '无法应用配置：引用了不存在的规则集。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。';
+      '无法应用配置：规则集引用有误。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。';
 
   @override
   String configBuildHostsInvalid(Object profile, Object domain) {
