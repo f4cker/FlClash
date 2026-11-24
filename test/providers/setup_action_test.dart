@@ -80,10 +80,12 @@ class _CappedDebounceSetupAction extends _UnflooredDebounceSetupAction {
 
 class TestCommonAction extends CommonAction {
   int trafficUpdates = 0;
+  Completer<void>? trafficGate;
 
   @override
   Future<void> updateTraffic() async {
     trafficUpdates++;
+    await trafficGate?.future;
   }
 }
 
@@ -973,6 +975,43 @@ void main() {
       expect(trafficUpdates(), 5);
 
       await setup.setRunning(false);
+    });
+
+    testWidgets('the clock moves once its tick has read the traffic', (
+      tester,
+    ) async {
+      final setup = buildScoped();
+      await setup.setRunning(true);
+      final common =
+          scoped.read(commonActionProvider.notifier) as TestCommonAction;
+      final gate = common.trafficGate = Completer<void>();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 700)),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(trafficUpdates(), 2);
+      expect(scoped.read(runTimeProvider), 0);
+
+      gate.complete();
+      await tester.pump();
+      expect(scoped.read(runTimeProvider), 1000);
+
+      await setup.setRunning(false);
+    });
+
+    testWidgets('a lost Core session stops the clock for good', (tester) async {
+      final setup = buildScoped();
+      await setup.setRunning(true);
+      await tester.pump(const Duration(seconds: 2));
+
+      setup.onCoreLost();
+      final updates = trafficUpdates();
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(scoped.read(runTimeProvider), isNull);
+      expect(trafficUpdates(), updates);
+      expect(scoped.read(isStartProvider), isFalse);
     });
 
     testWidgets('a start while hidden waits for the app to be shown', (

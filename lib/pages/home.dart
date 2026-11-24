@@ -245,6 +245,7 @@ class _HomePageView extends ConsumerStatefulWidget {
 
 class _HomePageViewState extends ConsumerState<_HomePageView> {
   late PageController _pageController;
+  final _switching = ValueNotifier(false);
 
   List<int>? _order;
   int _slide = 0;
@@ -306,6 +307,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       _pageController.jumpToPage(current);
     }
     if (!isMobile || ignoreAnimateTo) {
+      _switching.value = false;
       _pageController.jumpToPage(index);
       return;
     }
@@ -320,12 +322,17 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
       _pageController.jumpToPage(adjacent);
     }
     final fade = tabAnimation == TabAnimation.fade;
+    _switching.value = true;
     await _pageController.animateToPage(
       index,
       duration: fade ? fadeTabDuration : kTabScrollDuration,
       curve: fade ? fadeTabCurve : Curves.easeOut,
     );
-    if (mounted && slide == _slide && _order != null) {
+    if (!mounted || slide != _slide) {
+      return;
+    }
+    _switching.value = false;
+    if (_order != null) {
       setState(() => _order = null);
     }
   }
@@ -338,6 +345,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   @override
   void dispose() {
     _pageController.dispose();
+    _switching.dispose();
     super.dispose();
   }
 
@@ -372,6 +380,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
         return _FadeTabPage(
           key: page.key,
           controller: _pageController,
+          switching: _switching,
           position: index,
           enabled: fade,
           child: page,
@@ -390,12 +399,16 @@ class _FadeTabPage extends StatefulWidget {
   const _FadeTabPage({
     super.key,
     required this.controller,
+    required this.switching,
     required this.position,
     required this.enabled,
     required this.child,
   });
 
   final PageController controller;
+
+  /// While set, the page at rest also draws from its snapshot.
+  final ValueListenable<bool> switching;
   final int position;
   final bool enabled;
   final Widget child;
@@ -431,10 +444,11 @@ class _FadeTabPageState extends State<_FadeTabPage> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: widget.controller,
+      animation: Listenable.merge([widget.controller, widget.switching]),
       builder: (_, child) {
         final offset = _delta;
-        _snapshot.allowSnapshotting = offset.abs() > _restingDelta;
+        _snapshot.allowSnapshotting =
+            widget.switching.value || offset.abs() > _restingDelta;
         final delta = widget.enabled ? offset : 0.0;
         return FractionalTranslation(
           translation: Offset(-delta, 0),
