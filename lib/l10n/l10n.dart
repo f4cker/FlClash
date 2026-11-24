@@ -16063,19 +16063,19 @@ abstract class AppLocalizations {
   /// No description provided for @dnsRespectRulesUnmetError.
   ///
   /// In en, this message translates to:
-  /// **'Respect rules is on but Proxy Server Nameserver is empty, so this configuration can\'t run. In Advanced configuration → DNS, fill in Proxy Server Nameserver or turn off Respect rules.'**
+  /// **'Couldn\'t apply the configuration: Respect Rules is on, but Proxy Server Nameserver is empty. Fill it in under Advanced Configuration → DNS, or turn off Respect Rules.'**
   String get dnsRespectRulesUnmetError;
 
   /// No description provided for @dnsRespectRulesUnmetWarning.
   ///
   /// In en, this message translates to:
-  /// **'Respect rules is on but Proxy Server Nameserver is empty, so starting will fail. Fill in Proxy Server Nameserver or turn off Respect rules.'**
+  /// **'Respect Rules is on, but Proxy Server Nameserver is empty. This configuration won\'t start. Fill it in or turn off Respect Rules.'**
   String get dnsRespectRulesUnmetWarning;
 
   /// No description provided for @dnsRespectRulesNeedsProxyServer.
   ///
   /// In en, this message translates to:
-  /// **'Respect rules needs a Proxy Server Nameserver, which resolves proxy server hostnames. Without one, starting fails, so Respect rules stays off until you fill it in.'**
+  /// **'Before turning on Respect Rules, fill in Proxy Server Nameserver to resolve proxy server hostnames. Saving a non-empty list will turn on Respect Rules.'**
   String get dnsRespectRulesNeedsProxyServer;
 
   /// No description provided for @dnsFillProxyServerNameserver.
@@ -16087,14 +16087,20 @@ abstract class AppLocalizations {
   /// No description provided for @dnsUseNameserverForProxyServer.
   ///
   /// In en, this message translates to:
-  /// **'Use Nameserver and turn on'**
+  /// **'Copy Nameserver and Turn On'**
   String get dnsUseNameserverForProxyServer;
 
   /// No description provided for @dnsTurnOffRespectRules.
   ///
   /// In en, this message translates to:
-  /// **'Turn off Respect rules'**
+  /// **'Turn Off Respect Rules'**
   String get dnsTurnOffRespectRules;
+
+  /// No description provided for @dnsUseNameserverForProxyServerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the current Nameserver list to Proxy Server Nameserver and turn on Respect Rules.'**
+  String get dnsUseNameserverForProxyServerDesc;
 }
 
 class _AppLocalizationsDelegate

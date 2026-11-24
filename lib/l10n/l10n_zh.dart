@@ -9024,22 +9024,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dnsRespectRulesUnmetError =>
-      '已开启「遵守规则」，但 Proxy Server Nameserver（代理服务器 DNS）为空，此配置无法运行。请在 进阶配置 → DNS 中填写 Proxy Server Nameserver，或关闭「遵守规则」。';
+      '无法应用配置：「遵守规则」已开启，但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写该项，或关闭「遵守规则」。';
 
   @override
   String get dnsRespectRulesUnmetWarning =>
-      '「遵守规则」已开启，但 Proxy Server Nameserver（代理服务器 DNS）为空，启动会失败。请填写 Proxy Server Nameserver，或关闭「遵守规则」。';
+      '「遵守规则」已开启，但 Proxy Server Nameserver（代理服务器 DNS）为空。启动此配置会失败。请填写该项或关闭「遵守规则」。';
 
   @override
   String get dnsRespectRulesNeedsProxyServer =>
-      '「遵守规则」需要 Proxy Server Nameserver（代理服务器 DNS）来解析代理服务器的域名。它为空时启动会失败，因此填写之前「遵守规则」保持关闭。';
+      '开启「遵守规则」前，请先填写 Proxy Server Nameserver（代理服务器 DNS），用于解析代理服务器的域名。保存非空列表后，「遵守规则」将开启。';
 
   @override
   String get dnsFillProxyServerNameserver => '填写 Proxy Server Nameserver';
 
   @override
-  String get dnsUseNameserverForProxyServer => '使用 Nameserver 并开启';
+  String get dnsUseNameserverForProxyServer => '复制 Nameserver 并开启';
 
   @override
   String get dnsTurnOffRespectRules => '关闭「遵守规则」';
+
+  @override
+  String get dnsUseNameserverForProxyServerDesc =>
+      '将当前 Nameserver 列表复制到 Proxy Server Nameserver，并开启「遵守规则」。';
 }
