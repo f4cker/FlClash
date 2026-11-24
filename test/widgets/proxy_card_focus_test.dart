@@ -56,7 +56,17 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  Future<void> pumpCards(WidgetTester tester, ProxyCardType type) async {
+  Future<void> pumpCards(
+    WidgetTester tester,
+    ProxyCardType type, {
+    List<Proxy>? proxies,
+  }) async {
+    final cards =
+        proxies ??
+        [
+          for (var index = 0; index < 2; index++)
+            Proxy(name: 'proxy $index', type: 'Shadowsocks'),
+        ];
     tester.view.physicalSize = const Size(900, 600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -69,14 +79,14 @@ void main() {
           homeBuilder: (child) => HostScaffold(body: child),
           child: Column(
             children: [
-              for (var index = 0; index < 2; index++)
+              for (var index = 0; index < cards.length; index++)
                 SizedBox(
                   height: 120,
                   child: ProxyCard(
                     key: ValueKey('proxy $index'),
                     groupName: 'group',
                     testUrl: _testUrl,
-                    proxy: Proxy(name: 'proxy $index', type: 'Shadowsocks'),
+                    proxy: cards[index],
                     groupType: GroupType.Selector,
                     type: type,
                   ),
@@ -191,4 +201,94 @@ void main() {
     await tester.pumpAndSettle();
     expect(_RecordingProxiesAction.changed, ['proxy 1']);
   });
+
+  const vless = Proxy(
+    name: 'proxy 0',
+    type: 'Vless',
+    udp: true,
+    xudp: true,
+    tfo: true,
+  );
+
+  Iterable<NodeField> iconsIn(WidgetTester tester, String key) => tester
+      .widgetList<NodeFieldIcon>(
+        find.descendant(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byType(NodeFieldIcon),
+        ),
+      )
+      .map((icon) => icon.field);
+
+  testWidgets('arrows step through the icons to the delay and back', (
+    tester,
+  ) async {
+    await pumpCards(tester, ProxyCardType.standard, proxies: [vless]);
+    expect(iconsIn(tester, 'proxy 0'), [
+      NodeField.udp,
+      NodeField.xudp,
+      NodeField.tfo,
+    ]);
+    await focusCard(tester, 0);
+
+    NodeFieldIcon? focusedIcon() => FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<NodeFieldIcon>();
+
+    // The card hands arrow right to its delay, the rightmost action; arrow
+    // left then walks back over the icons to the card.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(focusedIcon(), isNull);
+    expect(FocusManager.instance.primaryFocus, isA<SkipTraversalFocusNode>());
+
+    for (final field in [NodeField.tfo, NodeField.xudp, NodeField.udp]) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(focusedIcon()?.field, field);
+      expect(find.text(_tipOf(field)), findsOneWidget);
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(focusedIcon()?.field, NodeField.xudp);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(focusedIcon(), isNull);
+    expect(
+      FocusManager.instance.primaryFocus?.context?.widget,
+      isNot(
+        isA<Focus>().having(
+          (f) => f.focusNode,
+          'node',
+          isA<SkipTraversalFocusNode>(),
+        ),
+      ),
+    );
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<ProxyCard>(),
+      isNotNull,
+    );
+  });
+
+  testWidgets('a group that disables UDP hides it on its cards', (
+    tester,
+  ) async {
+    container.read(groupsProvider.notifier).value = [
+      const Group(
+        type: GroupType.Selector,
+        name: 'group',
+        disableUdp: true,
+        all: [vless],
+      ),
+    ];
+    await pumpCards(tester, ProxyCardType.standard, proxies: [vless]);
+    expect(iconsIn(tester, 'proxy 0'), [NodeField.tfo]);
+  });
 }
+
+String _tipOf(NodeField field) => switch (field) {
+  NodeField.udp => 'UDP: Enabled in config',
+  NodeField.xudp => 'XUDP packet encoding: Enabled in config',
+  _ => 'TCP Fast Open (TFO): Enabled in config',
+};

@@ -162,6 +162,12 @@ class ProxyCard extends ConsumerWidget {
     final follows = current == proxy.name
         ? null
         : context.appLocalizations.nodeUdpFollowsNode(current);
+    final fields = NodeField.onIn(
+      proxy,
+      udp: udp?.state,
+      of: NodeField.rowFields,
+      udpOff: watchGroupDisablesUdp(ref, groupName),
+    );
     final proxyNameText = _buildProxyNameText(context);
     final typeStyle = AppTextStyle.footnote
         .of(context)
@@ -181,7 +187,7 @@ class ProxyCard extends ConsumerWidget {
                       ? typeLabel
                       : '$typeLabel($current)',
                   style: typeStyle,
-                  udp: udp,
+                  fields: fields,
                   udpNote: follows,
                 ),
               ),
@@ -201,7 +207,7 @@ class ProxyCard extends ConsumerWidget {
                     proxy: proxy,
                     label: typeLabel,
                     style: typeStyle,
-                    udp: udp,
+                    fields: fields,
                     udpNote: follows,
                   ),
                 ),
@@ -272,7 +278,8 @@ class ProxyCard extends ConsumerWidget {
               right: 4,
               child: InfoButton(
                 label: context.appLocalizations.nodeInfoButton(proxy.name),
-                builder: (_) => NodeInfoView(proxy: proxy),
+                builder: (_) =>
+                    NodeInfoView(proxy: proxy, groupName: groupName),
               ),
             ),
           ],
@@ -384,6 +391,7 @@ class _DelayTextState extends ConsumerState<_DelayText> {
       },
       child: Focus(
         focusNode: _focusNode,
+        onKeyEvent: stepCardAction,
         child: SizedBox(
           height: measure.textHeight(AppTextStyle.caption2),
           child: FadeBox(

@@ -9257,10 +9257,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nodeFieldSmux => '多路复用（smux）';
 
   @override
-  String get nodeFieldDialerProxy => '拨号代理';
+  String get nodeFieldDialerProxy => '链式代理';
 
   @override
-  String get nodeFieldInterface => '绑定接口';
+  String get nodeFieldInterface => '绑定网卡';
 
   @override
   String get nodeFieldProvider => '节点来源';
@@ -9269,10 +9269,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nodeFieldCurrentNode => '当前节点';
 
   @override
-  String get routeExitDirect => '实际出口：直连';
+  String get routeExitDirect => '直连';
 
   @override
-  String get routeExitUnknown => '实际出口：未知';
+  String get routeExitUnknown => '未知';
 
   @override
   String routeUdpSkippedDisabled(Object rule, Object target) {
@@ -9303,7 +9303,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routeShortNoMatch => '无匹配规则';
 
   @override
-  String get routeShortUdpSkipped => '规则因 UDP 跳过';
+  String get routeShortUdpSkipped => '规则因 UDP 被跳过';
 
   @override
   String get routeShortModeDirect => '直连模式';
@@ -9316,4 +9316,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get routeShortNoRule => '未记录规则';
+
+  @override
+  String get routeExitTitle => '实际出口';
+
+  @override
+  String get routeReasonTitle => '原因';
+
+  @override
+  String get routeSkippedTitle => '已跳过的规则';
+
+  @override
+  String routeUdpSkippedDisabledBy(Object rule, Object target, Object group) {
+    return '规则「$rule」指向的「$target」中，「$group」已禁用 UDP，这条规则被跳过。';
+  }
+
+  @override
+  String get routeModeGlobalProxy => '当时使用全局模式。';
+
+  @override
+  String nodeUdpDisabledBy(Object name) {
+    return '「$name」已禁用 UDP。';
+  }
+
+  @override
+  String get nodeFieldThisGroup => '此分组';
+
+  @override
+  String get nodeGroupDisablesUdp => '禁用 UDP';
 }

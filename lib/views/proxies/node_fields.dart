@@ -8,6 +8,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -17,6 +18,27 @@ import 'package:flutter_svg/flutter_svg.dart';
 // the config turns it on; off and unknown are told apart in the info alone.
 
 const _assetDir = 'assets/images/node_fields';
+
+// Which Core types read each option, from mihomo's adapter/outbound.
+const _tcpDialed = {
+  'Shadowsocks',
+  'ShadowsocksR',
+  'Snell',
+  'Socks5',
+  'Http',
+  'Vmess',
+  'Vless',
+  'Trojan',
+  'Ssh',
+  'Mieru',
+  'AnyTLS',
+  'Sudoku',
+  'TrustTunnel',
+  'OpenVPN',
+  'GostRelay',
+  'Direct',
+};
+const _smuxTypes = {'Shadowsocks', 'Vmess', 'Vless', 'Trojan', 'GostRelay'};
 
 enum NodeField {
   udp('udp'),
@@ -34,6 +56,8 @@ enum NodeField {
   final String _asset;
 
   String get asset => '$_assetDir/$_asset.svg';
+
+  bool get needsUdp => this == uot || this == xudp;
 
   String label(AppLocalizations l) => switch (this) {
     udp => l.nodeFieldUdp,
@@ -55,15 +79,30 @@ enum NodeField {
     _ => null,
   };
 
-  /// A switch as configured, null when unknown or for a named field.
-  bool? switchOf(Proxy proxy) => switch (this) {
-    uot => proxy.uot,
-    xudp => proxy.xudp,
-    tfo => proxy.tfo,
-    mptcp => proxy.mptcp,
-    smux => proxy.smux,
-    _ => null,
+  bool appliesTo(String type) => switch (this) {
+    uot => type == 'Shadowsocks',
+    xudp => type == 'Vmess' || type == 'Vless',
+    tfo => _tcpDialed.contains(type) || type == 'Hysteria' || type == 'Tuic',
+    mptcp => _tcpDialed.contains(type),
+    smux => _smuxTypes.contains(type),
+    _ => true,
   };
+
+  /// A switch as configured, null when unknown, not read by the protocol, or
+  /// a named field. The Core sends false for every switch of every node.
+  bool? switchOf(Proxy proxy) {
+    final value = switch (this) {
+      uot => proxy.uot,
+      xudp => proxy.xudp,
+      tfo => proxy.tfo,
+      mptcp => proxy.mptcp,
+      smux => proxy.smux,
+      _ => null,
+    };
+    // Only UoT reports a protocol's nature rather than its config when on.
+    if (value == true && this != uot) return true;
+    return appliesTo(proxy.type) ? value : null;
+  }
 
   /// UDP is judged by [nodeUdpOf], which a group's selection decides.
   bool isOn(Proxy proxy) => switch (this) {
@@ -87,9 +126,10 @@ enum NodeField {
     Proxy proxy, {
     NodeUdp? udp,
     List<NodeField> of = values,
+    bool udpOff = false,
   }) => [
-    if (udp == NodeUdp.enabled) NodeField.udp,
-    ...of.where((field) => field.isOn(proxy)),
+    if (udp == NodeUdp.enabled && !udpOff) NodeField.udp,
+    ...of.where((field) => field.isOn(proxy) && !(udpOff && field.needsUdp)),
   ];
 }
 
@@ -111,6 +151,10 @@ enum NodeUdp {
     unknown => l.nodeStatusUnknown,
   };
 }
+
+typedef UdpOf = ({NodeUdp state, String? by});
+
+UdpOf _udp(NodeUdp state) => (state: state, by: null);
 
 const _actionTypes = {
   'Reject',
@@ -139,14 +183,14 @@ String nodeProtocolName(String type) => _protocolNames[type] ?? type;
 
 /// A group follows the member it routes through, unless it disables UDP
 /// itself; a load balance or relay answers only as a whole.
-NodeUdp groupUdpOf(
+UdpOf groupUdpOf(
   Group group, {
   required List<Group> groups,
   required Map<String, String> selectedMap,
   int depth = 0,
 }) {
   if (group.disableUdp == true) {
-    return NodeUdp.disabledByGroup;
+    return (state: NodeUdp.disabledByGroup, by: group.name);
   }
   final follows =
       group.type.isComputedSelected || group.type == GroupType.Selector;
@@ -160,14 +204,14 @@ NodeUdp groupUdpOf(
             selectedMap: selectedMap,
             depth: depth + 1,
           ) ??
-          NodeUdp.unknown;
+          _udp(NodeUdp.unknown);
     }
   }
-  return NodeUdp.of(group.udp);
+  return _udp(NodeUdp.of(group.udp));
 }
 
 /// Null for an action such as REJECT, which carries no traffic to judge.
-NodeUdp? nodeUdpOf(
+UdpOf? nodeUdpOf(
   Proxy proxy, {
   required List<Group> groups,
   required Map<String, String> selectedMap,
@@ -187,13 +231,13 @@ NodeUdp? nodeUdpOf(
       );
     }
     if (proxy.disableUdp == true) {
-      return NodeUdp.disabledByGroup;
+      return (state: NodeUdp.disabledByGroup, by: proxy.name);
     }
   }
-  return NodeUdp.of(proxy.udp);
+  return _udp(NodeUdp.of(proxy.udp));
 }
 
-NodeUdp? watchNodeUdp(WidgetRef ref, Proxy proxy) {
+UdpOf? watchNodeUdp(WidgetRef ref, Proxy proxy) {
   if (GroupTypeExtension.getGroupType(proxy.type) == null) {
     return nodeUdpOf(proxy, groups: const [], selectedMap: const {});
   }
@@ -212,45 +256,130 @@ NodeUdp watchGroupUdp(WidgetRef ref, String groupName) {
       final group = groups.getGroup(groupName);
       return group == null
           ? NodeUdp.unknown
-          : groupUdpOf(group, groups: groups, selectedMap: selectedMap);
+          : groupUdpOf(group, groups: groups, selectedMap: selectedMap).state;
     }),
   );
 }
 
-/// Shows [message] on hover and while keyboard focus rests on [child].
+bool watchGroupDisablesUdp(WidgetRef ref, String? groupName) {
+  if (groupName == null) return false;
+  return ref.watch(
+    groupsProvider.select(
+      (groups) => groups.getGroup(groupName)?.disableUdp == true,
+    ),
+  );
+}
+
+/// Shows [message] on hover and on focus, which arrow keys in a card give.
 class FieldTip extends StatelessWidget {
-  const FieldTip({super.key, required this.message, required this.child});
+  const FieldTip({
+    super.key,
+    required this.message,
+    required this.child,
+    this.focusable = true,
+  });
 
   final String message;
   final Widget child;
+  final bool focusable;
 
   @override
   Widget build(BuildContext context) {
+    final content = Semantics(
+      label: message,
+      excludeSemantics: true,
+      child: child,
+    );
     return Tooltip(
       message: message,
       excludeFromSemantics: true,
-      child: Builder(
-        // Off the tab order, as the delay is: arrow keys reach it.
-        builder: (context) => Focus(
-          skipTraversal: true,
-          onFocusChange: (focused) {
-            if (focused) {
-              context
-                  .findAncestorStateOfType<RawTooltipState>()
-                  ?.ensureTooltipVisible();
-            } else {
-              RawTooltip.dismissAllToolTips();
-            }
-          },
-          child: Semantics(
-            label: message,
-            excludeSemantics: true,
-            child: child,
-          ),
-        ),
-      ),
+      child: !focusable
+          ? content
+          : Builder(
+              builder: (context) => _FocusTip(
+                onFocusChange: (focused) {
+                  if (focused) {
+                    context
+                        .findAncestorStateOfType<RawTooltipState>()
+                        ?.ensureTooltipVisible();
+                  } else {
+                    RawTooltip.dismissAllToolTips();
+                  }
+                },
+                child: content,
+              ),
+            ),
     );
   }
+}
+
+class _FocusTip extends StatefulWidget {
+  const _FocusTip({required this.onFocusChange, required this.child});
+
+  final ValueChanged<bool> onFocusChange;
+  final Widget child;
+
+  @override
+  State<_FocusTip> createState() => _FocusTipState();
+}
+
+class _FocusTipState extends State<_FocusTip> {
+  final _focusNode = SkipTraversalFocusNode();
+  bool _focused = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Focus(
+      focusNode: _focusNode,
+      onKeyEvent: stepCardAction,
+      onFocusChange: (focused) {
+        setState(() => _focused = focused);
+        widget.onFocusChange(focused);
+      },
+      child: widget.child,
+    );
+    if (!_focused) return child;
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: ShapeDecoration(
+        shape: AppShape.xs.copyWith(side: focusRingSide(context.colorScheme)),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Arrows between a card's icons and delay in the order they sit; left from
+/// the leftmost goes back to the card.
+KeyEventResult stepCardAction(FocusNode node, KeyEvent event) {
+  final key = event.logicalKey;
+  final right = key == LogicalKeyboardKey.arrowRight;
+  if (event is! KeyDownEvent ||
+      (!right && key != LogicalKeyboardKey.arrowLeft)) {
+    return KeyEventResult.ignored;
+  }
+  final card = node.ancestors.firstWhereOrNull(
+    (ancestor) => ancestor.canRequestFocus && !ancestor.skipTraversal,
+  );
+  if (card == null) return KeyEventResult.ignored;
+  final actions =
+      card.descendants
+          .where((other) => other.skipTraversal && other.canRequestFocus)
+          .toList()
+        ..sort((a, b) => a.rect.left.compareTo(b.rect.left));
+  final index = actions.indexOf(node);
+  final next = right
+      ? actions.elementAtOrNull(index + 1)
+      : (index > 0 ? actions[index - 1] : card);
+  if (next == null) return KeyEventResult.ignored;
+  next.requestFocus();
+  return KeyEventResult.handled;
 }
 
 double nodeMarkSize(
@@ -268,6 +397,7 @@ class NodeFieldIcon extends StatelessWidget {
     required this.proxy,
     this.note,
     this.line = AppTextStyle.footnote,
+    this.focusable = true,
   });
 
   final NodeField field;
@@ -279,11 +409,14 @@ class NodeFieldIcon extends StatelessWidget {
   /// What follows the state, as the node a group's UDP comes from.
   final String? note;
 
+  final bool focusable;
+
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
     final size = nodeMarkSize(context, line);
     return FieldTip(
+      focusable: focusable,
       message: [
         l.nodeFieldState(
           field.label(l),
@@ -302,6 +435,29 @@ class NodeFieldIcon extends StatelessWidget {
   }
 }
 
+/// How many of at most three icons fit after [label] in [width], and whether
+/// +N does; icons fold first, then +N, and the protocol stays.
+@visibleForTesting
+({int shown, bool more}) foldNodeFields({
+  required int count,
+  required double width,
+  required double label,
+  required double icon,
+  required double gap,
+  required double Function(int rest) plus,
+}) {
+  double need(int shown) {
+    final rest = count - shown;
+    return label + shown * (gap + icon) + (rest > 0 ? gap + plus(rest) : 0);
+  }
+
+  var shown = math.min(3, count);
+  while (shown > 0 && need(shown) > width) {
+    shown--;
+  }
+  return (shown: shown, more: shown < count && need(shown) <= width);
+}
+
 /// The protocol and up to three fields the config turns on, the rest folded
 /// into +N, and fewer as the row narrows.
 class NodeMetaLine extends StatelessWidget {
@@ -310,20 +466,19 @@ class NodeMetaLine extends StatelessWidget {
     required this.proxy,
     required this.label,
     required this.style,
-    required this.udp,
+    required this.fields,
     this.udpNote,
   });
 
   final Proxy proxy;
   final String label;
   final TextStyle style;
-  final NodeUdp? udp;
+  final List<NodeField> fields;
   final String? udpNote;
 
   static const _gap = 6.0;
-  static const _maxFields = 3;
 
-  double _width(BuildContext context, String text, TextStyle style) {
+  double _width(BuildContext context, String text) {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
@@ -338,29 +493,21 @@ class NodeMetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
-    final fields = NodeField.onIn(proxy, udp: udp, of: NodeField.rowFields);
     final size = nodeMarkSize(context);
+    final labelWidth = _width(context, label);
+    final plusWidths = <int, double>{};
     return LayoutBuilder(
       builder: (context, constraints) {
-        final labelWidth = _width(context, label, style);
-        double need(int shown) {
-          final rest = fields.length - shown;
-          return labelWidth +
-              shown * (_gap + size) +
-              (rest > 0 ? _gap + _width(context, '+$rest', style) : 0);
-        }
-
-        // Every icon folds before the protocol is cut, and +N goes too when
-        // only the protocol fits; the info still lists them all.
-        var shown = math.min(_maxFields, fields.length);
-        while (shown > 0 && need(shown) > constraints.maxWidth) {
-          shown--;
-        }
-        final fits =
-            shown > 0 ||
-            need(0) <= constraints.maxWidth ||
-            labelWidth > constraints.maxWidth;
-        final rest = fits ? fields.sublist(shown) : const <NodeField>[];
+        final fold = foldNodeFields(
+          count: fields.length,
+          width: constraints.maxWidth,
+          label: labelWidth,
+          icon: size,
+          gap: _gap,
+          plus: (rest) =>
+              plusWidths.putIfAbsent(rest, () => _width(context, '+$rest')),
+        );
+        final rest = fields.sublist(fold.shown);
         return Row(
           spacing: _gap,
           children: [
@@ -374,13 +521,13 @@ class NodeMetaLine extends StatelessWidget {
                 ),
               ),
             ),
-            for (final field in fields.take(shown))
+            for (final field in fields.take(fold.shown))
               NodeFieldIcon(
                 field: field,
                 proxy: proxy,
                 note: field == NodeField.udp ? udpNote : null,
               ),
-            if (rest.isNotEmpty)
+            if (fold.more)
               FieldTip(
                 message: l.nodeFieldsMore(
                   rest.length,
@@ -395,17 +542,20 @@ class NodeMetaLine extends StatelessWidget {
   }
 }
 
-/// The read-only facts behind a node's marks, from the current config.
+/// A node's facts from the current config, as seen from [groupName].
 class NodeInfoView extends ConsumerWidget {
-  const NodeInfoView({super.key, required this.proxy});
+  const NodeInfoView({super.key, required this.proxy, this.groupName});
 
   final Proxy proxy;
+  final String? groupName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final udp = watchNodeUdp(ref, proxy);
+    final groupUdpOff =
+        groupName != proxy.name && watchGroupDisablesUdp(ref, groupName);
     final isGroup = GroupTypeExtension.getGroupType(proxy.type) != null;
     final current = isGroup
         ? ref.watch(
@@ -442,9 +592,13 @@ class NodeInfoView extends ConsumerWidget {
         row(l.nodeFieldProtocol, nodeProtocolName(proxy.type)),
         if (isGroup && current.isNotEmpty && current != proxy.name)
           row(l.nodeFieldCurrentNode, current),
-        if (udp != null) row(l.nodeFieldUdp, udp.state(l)),
-        if (udp == NodeUdp.disabledByGroup)
-          Text(l.nodeGroupUdpDisabled, style: valueStyle),
+        if (udp != null) row(l.nodeFieldUdp, udp.state.state(l)),
+        if (udp?.by case final by?)
+          Text(
+            by == proxy.name ? l.nodeGroupUdpDisabled : l.nodeUdpDisabledBy(by),
+            style: valueStyle,
+          ),
+        if (groupUdpOff) row(l.nodeFieldThisGroup, l.nodeGroupDisablesUdp),
         // Off is said here only; unknown, as everywhere, is left out.
         for (final field in NodeField.values)
           if (field.valueOf(proxy) case final value? when value.isNotEmpty)

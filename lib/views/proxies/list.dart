@@ -235,6 +235,7 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
               final columns = getProxiesColumns(
                 max(groupWidth - _headerInset * 2, 0),
                 proxiesLayout,
+                textScale: MediaQuery.textScalerOf(context).scale(1),
               );
               _columns = columns;
               _groupColumns = groupColumns;
@@ -881,6 +882,8 @@ class _SelectedProxyName extends ConsumerWidget {
           proxy: Proxy(name: groupName, type: ''),
           line: AppTextStyle.caption1,
           note: context.appLocalizations.nodeUdpFollowsNode(proxyName),
+          // Arrow right in the header goes to its buttons.
+          focusable: false,
         ),
       ],
     );

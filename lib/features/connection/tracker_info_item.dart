@@ -739,18 +739,36 @@ class TrackerInfoDetailView extends ConsumerWidget {
     );
   }
 
-  Widget _buildRule(BuildContext context) {
+  /// The rule that decided, else the exit; a skipped rule is never shown.
+  List<Widget> _buildRule(BuildContext context) {
     final l = context.appLocalizations;
     final reason = RouteReason(trackerInfo);
-    final exitLine = reason.exitLine(l);
+    final exit = reason.exit(l);
     final notes = reason.notes(l);
-    if (exitLine != null || notes.isNotEmpty) {
-      return _buildRoute(context, exitLine, notes);
-    }
+    return [
+      if (exit != null)
+        DetailRow.text(title: l.routeExitTitle, value: exit)
+      else
+        ?_buildRuleRow(context),
+      if (notes.isNotEmpty)
+        DetailRow(
+          title: reason.notesTitle(l),
+          copyText: notes.join('\n'),
+          stacked: true,
+          value: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 4,
+            children: [for (final note in notes) Text(note)],
+          ),
+        ),
+    ];
+  }
+
+  Widget? _buildRuleRow(BuildContext context) {
     final ruleText = trackerInfo.ruleText;
     if (!canLookUpTrackerRule(context, trackerInfo)) {
       return ruleText.isEmpty
-          ? const SizedBox.shrink()
+          ? null
           : DetailRow.text(
               title: context.appLocalizations.rule,
               value: ruleText,
@@ -764,58 +782,18 @@ class TrackerInfoDetailView extends ConsumerWidget {
         spacing: 10,
         children: [
           Flexible(child: Text(ruleText)),
-          _lookUpLink(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _lookUpLink(BuildContext context) {
-    return GestureDetector(
-      onTap: () => lookUpTrackerRule(context, trackerInfo),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Text(
-          context.appLocalizations.lookupRule,
-          style: AppTextStyle.footnote
-              .of(context, emphasized: true)
-              .copyWith(color: context.colorScheme.primary),
-        ),
-      ),
-    );
-  }
-
-  /// The rule, or the exit when none decided, then what the Core recorded of
-  /// the rules passed over and why; a skipped rule is never the one shown.
-  Widget _buildRoute(
-    BuildContext context,
-    String? exitLine,
-    List<String> notes,
-  ) {
-    final head = trackerInfo.rule.isEmpty ? exitLine : trackerInfo.ruleText;
-    final canLookUp = canLookUpTrackerRule(context, trackerInfo);
-    return DetailRow(
-      title: context.appLocalizations.rule,
-      copyText: [?head, ...notes].join('\n'),
-      value: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        spacing: 4,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 10,
-            children: [
-              if (head != null) Flexible(child: Text(head)),
-              if (canLookUp) _lookUpLink(context),
-            ],
-          ),
-          for (final note in notes)
-            Text(
-              note,
-              style: AppTextStyle.footnote
-                  .of(context)
-                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+          GestureDetector(
+            onTap: () => lookUpTrackerRule(context, trackerInfo),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Text(
+                context.appLocalizations.lookupRule,
+                style: AppTextStyle.footnote
+                    .of(context, emphasized: true)
+                    .copyWith(color: context.colorScheme.primary),
+              ),
             ),
+          ),
         ],
       ),
     );
@@ -904,7 +882,7 @@ class TrackerInfoDetailView extends ConsumerWidget {
               if (process == null)
                 (appLocalizations.process, trackerInfo.progressText),
             ]),
-            _buildRule(context),
+            ..._buildRule(context),
             ..._buildRows([
               (appLocalizations.upload, trackerInfo.upload.traffic.show),
               (appLocalizations.download, trackerInfo.download.traffic.show),

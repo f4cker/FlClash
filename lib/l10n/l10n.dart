@@ -16429,7 +16429,7 @@ abstract class AppLocalizations {
   /// No description provided for @nodeFieldInterface.
   ///
   /// In en, this message translates to:
-  /// **'Bound interface'**
+  /// **'Bound network interface'**
   String get nodeFieldInterface;
 
   /// No description provided for @nodeFieldProvider.
@@ -16447,13 +16447,13 @@ abstract class AppLocalizations {
   /// No description provided for @routeExitDirect.
   ///
   /// In en, this message translates to:
-  /// **'Actual exit: Direct'**
+  /// **'Direct'**
   String get routeExitDirect;
 
   /// No description provided for @routeExitUnknown.
   ///
   /// In en, this message translates to:
-  /// **'Actual exit: Unknown'**
+  /// **'Unknown'**
   String get routeExitUnknown;
 
   /// No description provided for @routeUdpSkippedDisabled.
@@ -16489,7 +16489,7 @@ abstract class AppLocalizations {
   /// No description provided for @routeInternal.
   ///
   /// In en, this message translates to:
-  /// **'This is an internal connection of the core, and it went direct.'**
+  /// **'This was an internal connection of the core and went direct.'**
   String get routeInternal;
 
   /// No description provided for @routeReasonUnknown.
@@ -16533,6 +16533,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No rule recorded'**
   String get routeShortNoRule;
+
+  /// No description provided for @routeExitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual exit'**
+  String get routeExitTitle;
+
+  /// No description provided for @routeReasonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get routeReasonTitle;
+
+  /// No description provided for @routeSkippedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped rules'**
+  String get routeSkippedTitle;
+
+  /// No description provided for @routeUdpSkippedDisabledBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule “{rule}” points to “{target}”, where “{group}” has UDP disabled, so the rule was skipped.'**
+  String routeUdpSkippedDisabledBy(Object rule, Object target, Object group);
+
+  /// No description provided for @routeModeGlobalProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Global mode was in use at the time.'**
+  String get routeModeGlobalProxy;
+
+  /// No description provided for @nodeUdpDisabledBy.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” has UDP disabled.'**
+  String nodeUdpDisabledBy(Object name);
+
+  /// No description provided for @nodeFieldThisGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'This group'**
+  String get nodeFieldThisGroup;
+
+  /// No description provided for @nodeGroupDisablesUdp.
+  ///
+  /// In en, this message translates to:
+  /// **'UDP disabled'**
+  String get nodeGroupDisablesUdp;
 }
 
 class _AppLocalizationsDelegate

@@ -163,11 +163,21 @@ class DetailRow extends StatelessWidget {
   final Widget? value;
   final String? copyText;
 
-  const DetailRow({super.key, required this.title, this.value, this.copyText});
+  /// Puts [value] under the title, left aligned, for prose that runs long.
+  final bool stacked;
+
+  const DetailRow({
+    super.key,
+    required this.title,
+    this.value,
+    this.copyText,
+    this.stacked = false,
+  });
 
   DetailRow.text({super.key, required this.title, required String value})
     : value = Text(value),
-      copyText = value;
+      copyText = value,
+      stacked = false;
 
   Future<void> _copy(BuildContext context, String text) async {
     await Clipboard.setData(ClipboardData(text: text));
@@ -179,6 +189,16 @@ class DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final value = this.value;
     final copyText = this.copyText;
+    final valueStyle = AppTextStyle.subheadline
+        .of(context)
+        .copyWith(color: context.colorScheme.onSurfaceVariant);
+    if (stacked && value != null) {
+      return DecorationListItem(
+        onPressed: copyText == null ? null : () => _copy(context, copyText),
+        title: Text(title),
+        subtitle: DefaultTextStyle.merge(style: valueStyle, child: value),
+      );
+    }
     return DecorationListItem(
       onPressed: copyText == null ? null : () => _copy(context, copyText),
       title: value == null
@@ -193,11 +213,7 @@ class DetailRow extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     child: DefaultTextStyle.merge(
                       textAlign: TextAlign.end,
-                      style: AppTextStyle.subheadline
-                          .of(context)
-                          .copyWith(
-                            color: context.colorScheme.onSurfaceVariant,
-                          ),
+                      style: valueStyle,
                       child: value,
                     ),
                   ),

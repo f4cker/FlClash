@@ -10120,7 +10120,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get nodeFieldDialerProxy => 'Dialer proxy';
 
   @override
-  String get nodeFieldInterface => 'Bound interface';
+  String get nodeFieldInterface => 'Bound network interface';
 
   @override
   String get nodeFieldProvider => 'Source';
@@ -10129,10 +10129,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get nodeFieldCurrentNode => 'Current node';
 
   @override
-  String get routeExitDirect => 'Actual exit: Direct';
+  String get routeExitDirect => 'Direct';
 
   @override
-  String get routeExitUnknown => 'Actual exit: Unknown';
+  String get routeExitUnknown => 'Unknown';
 
   @override
   String routeUdpSkippedDisabled(Object rule, Object target) {
@@ -10157,7 +10157,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get routeInternal =>
-      'This is an internal connection of the core, and it went direct.';
+      'This was an internal connection of the core and went direct.';
 
   @override
   String get routeReasonUnknown =>
@@ -10180,4 +10180,32 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get routeShortNoRule => 'No rule recorded';
+
+  @override
+  String get routeExitTitle => 'Actual exit';
+
+  @override
+  String get routeReasonTitle => 'Reason';
+
+  @override
+  String get routeSkippedTitle => 'Skipped rules';
+
+  @override
+  String routeUdpSkippedDisabledBy(Object rule, Object target, Object group) {
+    return 'Rule “$rule” points to “$target”, where “$group” has UDP disabled, so the rule was skipped.';
+  }
+
+  @override
+  String get routeModeGlobalProxy => 'Global mode was in use at the time.';
+
+  @override
+  String nodeUdpDisabledBy(Object name) {
+    return '“$name” has UDP disabled.';
+  }
+
+  @override
+  String get nodeFieldThisGroup => 'This group';
+
+  @override
+  String get nodeGroupDisablesUdp => 'UDP disabled';
 }

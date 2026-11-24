@@ -16,22 +16,21 @@ class RouteReason {
 
   bool get _noRule => info.rule.isEmpty;
 
-  String? exitLine(AppLocalizations l) {
+  String? exit(AppLocalizations l) {
     if (!_noRule) return null;
     return switch (_exit) {
       null || '' => l.routeExitUnknown,
       _direct => l.routeExitDirect,
-      _ => null,
+      final name => name,
     };
   }
 
+  String notesTitle(AppLocalizations l) =>
+      _noRule ? l.routeReasonTitle : l.routeSkippedTitle;
+
   List<String> notes(AppLocalizations l) {
     return [
-      for (final skip in _metadata.udpSkipped)
-        switch (skip.cause) {
-          'disabled' => l.routeUdpSkippedDisabled(_ruleOf(skip), skip.adapter),
-          _ => l.routeUdpSkippedUnsupported(_ruleOf(skip), skip.adapter),
-        },
+      for (final skip in _metadata.udpSkipped) _skipNote(l, skip),
       if (_noRule && _exit == _direct)
         ?switch (_metadata.routeReason) {
           'no-match' => l.routeNoMatch,
@@ -41,8 +40,24 @@ class RouteReason {
           // A special proxy is not taken as internal, so no reason is given.
           'special' => null,
           _ => l.routeReasonUnknown,
-        },
+        }
+      else if (_noRule && _metadata.routeReason == 'mode-global')
+        l.routeModeGlobalProxy,
     ];
+  }
+
+  static String _skipNote(AppLocalizations l, UdpSkip skip) {
+    final rule = skip.payload.isEmpty
+        ? skip.type
+        : '${skip.type}(${skip.payload})';
+    if (skip.cause != 'disabled') {
+      return l.routeUdpSkippedUnsupported(rule, skip.adapter);
+    }
+    // The group that disabled UDP may sit inside the rule's target.
+    if (skip.refused.isNotEmpty && skip.refused != skip.adapter) {
+      return l.routeUdpSkippedDisabledBy(rule, skip.adapter, skip.refused);
+    }
+    return l.routeUdpSkippedDisabled(rule, skip.adapter);
   }
 
   String short(AppLocalizations l) {
@@ -55,7 +70,4 @@ class RouteReason {
       _ => l.routeShortNoRule,
     };
   }
-
-  static String _ruleOf(UdpSkip skip) =>
-      skip.payload.isEmpty ? skip.type : '${skip.type}(${skip.payload})';
 }

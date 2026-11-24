@@ -645,6 +645,25 @@ void main() {
         debouncer.cancel((FunctionTag.changeProxy, 'Proxy'));
       },
     );
+    // A relay or load balance reports UDP by its members' selection.
+    test('reads the groups again once the Core applied the switch', () async {
+      when(
+        core.getProxies,
+      ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
+      final container = runningContainer();
+      final action = actionOf(container);
+      clearInteractions(core);
+
+      action.changeProxyDebounce('Proxy', 'HK-01');
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+      verify(
+        () => core.changeProxy(
+          const ChangeProxyParams(groupName: 'Proxy', proxyName: 'HK-01'),
+        ),
+      ).called(1);
+      verify(core.getProxies).called(greaterThanOrEqualTo(1));
+    });
   });
 
   group('changeProxyForTray', () {
