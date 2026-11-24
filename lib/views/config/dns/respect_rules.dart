@@ -55,6 +55,7 @@ Future<void> _fillProxyServerNameserver(
       description: appLocalizations.proxyServerNameserverDesc,
       items: target.read(ref).model.proxyServerNameserver,
       itemMaxLength: TextInputLimits.dnsServer,
+      itemValidator: (item) => validateDnsServer(item, appLocalizations),
       titleBuilder: (item) => Text(item),
       saveError: (servers) =>
           _proxyServerSaveError(target.read(ref).model, servers),
@@ -106,6 +107,7 @@ class _ProxyServerNameserverField extends ListOverrideField<Dns> {
         _proxyServerNameserver,
         _setProxyServerNameserver,
         itemMaxLength: TextInputLimits.dnsServer,
+        itemValidator: validateDnsServer,
         description: _proxyServerNameserverDesc,
       );
 
@@ -124,6 +126,7 @@ class _ProxyServerNameserverField extends ListOverrideField<Dns> {
       selector: model.selectModel(select),
       onChanged: model.modelWriter(update),
       itemMaxLength: itemMaxLength,
+      itemValidator: itemValidator,
       description: description,
       saveError: (ref, servers) =>
           _proxyServerSaveError(model.read(ref).model, servers),

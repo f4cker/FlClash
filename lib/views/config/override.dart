@@ -324,10 +324,15 @@ class ListOverrideField<M> extends ValueOverrideField<M, List<String>> {
     required this.itemMaxLength,
     this.itemValidator,
     this.description,
+    this.saveError,
   });
 
   final int itemMaxLength;
   final ConfigValidator? itemValidator;
+
+  /// Why the list cannot be saved as it is, given the page it is on.
+  final String? Function(OverrideModel<M> model, WidgetRef ref, List<String>)?
+  saveError;
 
   /// Shown on the list's own page, so long lists do not crowd the section.
   final ConfigLabel? description;
@@ -346,6 +351,10 @@ class ListOverrideField<M> extends ValueOverrideField<M, List<String>> {
       itemMaxLength: itemMaxLength,
       itemValidator: itemValidator,
       description: description,
+      saveError: switch (saveError) {
+        final saveError? => (ref, items) => saveError(model, ref, items),
+        null => null,
+      },
     );
   }
 }

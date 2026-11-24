@@ -2719,5 +2719,10 @@
   "configRejectedFakeIpFilter": "无法应用配置：Fake-IP过滤中有无法识别的条目。过滤模式为 rule 时，每条需写成「类型,内容,fake-ip」或「类型,内容,real-ip」。请在「进阶配置 → DNS」中修改，或把过滤模式改回 blacklist。",
   "configRejectedFakeIpRange": "无法应用配置：Fake-IP 范围有误。Fake-IP范围需为 IPv4 网段，Fake-IP范围（IPv6）需为 IPv6 网段，网段不能太小，两者也不能同时为空。请检查这份配置的 DNS 设置。",
   "configRejectedNameserverPolicy": "无法应用配置：Nameserver Policy（DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。",
-  "configRejectedHosts": "无法应用配置：Hosts 中有无法使用的条目。每个域名只能对应一个域名或若干个 IP 地址，域名之间也不能互相指向。请在「进阶配置 → 常规 → Hosts」中修改。"
+  "configRejectedHosts": "无法应用配置：Hosts 中有无法使用的条目。每个域名只能对应一个域名或若干个 IP 地址，域名之间也不能互相指向。请在「进阶配置 → 常规 → Hosts」中修改。",
+  "dnsServerSchemeTip": "不支持这个协议。可用的有 udp、tcp、tls、https、http、quic、system、dhcp 和 rcode。",
+  "dnsServerFormatTip": "地址格式不对，请检查协议、主机和端口。",
+  "defaultNameserverPureIpTip": "Default Nameserver 只能填写 IP 地址（如 223.5.5.5、tls://223.5.5.5），不能填写域名。",
+  "defaultNameserverEmptyTip": "Default Nameserver 至少保留一个 IP 地址，否则无法启动。",
+  "nameserverEmptyTip": "至少保留一个 Nameserver。开启了 DNS 的配置在 Nameserver 为空时无法启动；也可以打开「追加系统DNS」。"
 }

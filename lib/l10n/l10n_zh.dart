@@ -9095,4 +9095,23 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get configRejectedHosts =>
       '无法应用配置：Hosts 中有无法使用的条目。每个域名只能对应一个域名或若干个 IP 地址，域名之间也不能互相指向。请在「进阶配置 → 常规 → Hosts」中修改。';
+
+  @override
+  String get dnsServerSchemeTip =>
+      '不支持这个协议。可用的有 udp、tcp、tls、https、http、quic、system、dhcp 和 rcode。';
+
+  @override
+  String get dnsServerFormatTip => '地址格式不对，请检查协议、主机和端口。';
+
+  @override
+  String get defaultNameserverPureIpTip =>
+      'Default Nameserver 只能填写 IP 地址（如 223.5.5.5、tls://223.5.5.5），不能填写域名。';
+
+  @override
+  String get defaultNameserverEmptyTip =>
+      'Default Nameserver 至少保留一个 IP 地址，否则无法启动。';
+
+  @override
+  String get nameserverEmptyTip =>
+      '至少保留一个 Nameserver。开启了 DNS 的配置在 Nameserver 为空时无法启动；也可以打开「追加系统DNS」。';
 }

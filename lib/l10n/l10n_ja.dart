@@ -9611,4 +9611,24 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get configRejectedHosts =>
       'Couldn\'t apply the configuration: an entry in Hosts can\'t be used. Each domain maps to one domain or to IP addresses, and domains can\'t point at each other in a loop. Change it under Advanced configuration → General → Hosts.';
+
+  @override
+  String get dnsServerSchemeTip =>
+      'This scheme isn\'t supported. Use udp, tcp, tls, https, http, quic, system, dhcp or rcode.';
+
+  @override
+  String get dnsServerFormatTip =>
+      'This address is malformed. Check its scheme, host and port.';
+
+  @override
+  String get defaultNameserverPureIpTip =>
+      'Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames.';
+
+  @override
+  String get defaultNameserverEmptyTip =>
+      'Keep at least one IP address in Default Nameserver, or the core can\'t start.';
+
+  @override
+  String get nameserverEmptyTip =>
+      'Keep at least one Nameserver. A profile that turns DNS on can\'t start with Nameserver empty, unless Append system DNS is on.';
 }

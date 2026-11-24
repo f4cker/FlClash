@@ -16173,6 +16173,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t apply the configuration: an entry in Hosts can\'t be used. Each domain maps to one domain or to IP addresses, and domains can\'t point at each other in a loop. Change it under Advanced configuration → General → Hosts.'**
   String get configRejectedHosts;
+
+  /// No description provided for @dnsServerSchemeTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This scheme isn\'t supported. Use udp, tcp, tls, https, http, quic, system, dhcp or rcode.'**
+  String get dnsServerSchemeTip;
+
+  /// No description provided for @dnsServerFormatTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This address is malformed. Check its scheme, host and port.'**
+  String get dnsServerFormatTip;
+
+  /// No description provided for @defaultNameserverPureIpTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames.'**
+  String get defaultNameserverPureIpTip;
+
+  /// No description provided for @defaultNameserverEmptyTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep at least one IP address in Default Nameserver, or the core can\'t start.'**
+  String get defaultNameserverEmptyTip;
+
+  /// No description provided for @nameserverEmptyTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep at least one Nameserver. A profile that turns DNS on can\'t start with Nameserver empty, unless Append system DNS is on.'**
+  String get nameserverEmptyTip;
 }
 
 class _AppLocalizationsDelegate

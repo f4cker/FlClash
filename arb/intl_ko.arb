@@ -4119,5 +4119,10 @@
   "configRejectedFakeIpFilter": "Couldn't apply the configuration: an entry in Fake-IP filter isn't valid. In rule mode, each entry is TYPE,value,fake-ip or TYPE,value,real-ip. Change it under Advanced configuration → DNS, or set the filter mode back to blacklist.",
   "configRejectedFakeIpRange": "Couldn't apply the configuration: a Fake-IP range is wrong. The Fake-IP range must be an IPv4 prefix and the IPv6 one an IPv6 prefix, neither too small, and they can't both be empty. Check the profile's DNS settings.",
   "configRejectedNameserverPolicy": "Couldn't apply the configuration: a domain in Nameserver Policy is malformed. Check the profile's DNS settings.",
-  "configRejectedHosts": "Couldn't apply the configuration: an entry in Hosts can't be used. Each domain maps to one domain or to IP addresses, and domains can't point at each other in a loop. Change it under Advanced configuration → General → Hosts."
+  "configRejectedHosts": "Couldn't apply the configuration: an entry in Hosts can't be used. Each domain maps to one domain or to IP addresses, and domains can't point at each other in a loop. Change it under Advanced configuration → General → Hosts.",
+  "dnsServerSchemeTip": "This scheme isn't supported. Use udp, tcp, tls, https, http, quic, system, dhcp or rcode.",
+  "dnsServerFormatTip": "This address is malformed. Check its scheme, host and port.",
+  "defaultNameserverPureIpTip": "Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames.",
+  "defaultNameserverEmptyTip": "Keep at least one IP address in Default Nameserver, or the core can't start.",
+  "nameserverEmptyTip": "Keep at least one Nameserver. A profile that turns DNS on can't start with Nameserver empty, unless Append system DNS is on."
 }

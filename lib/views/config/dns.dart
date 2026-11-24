@@ -5,6 +5,7 @@ import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/editor.dart';
+import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
@@ -299,7 +300,9 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.defaultNameserver,
       (dns, value) => dns.copyWith(defaultNameserver: value),
       itemMaxLength: TextInputLimits.dnsServer,
+      itemValidator: validateDefaultNameserver,
       description: (l) => l.defaultNameserverDesc,
+      saveError: _defaultNameserverSaveError,
     ),
     DnsOverrideKey.nameserverPolicy => _PolicyField(
       (dns) => dns.nameserverPolicy,
@@ -310,12 +313,15 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.nameserver,
       (dns, value) => dns.copyWith(nameserver: value),
       itemMaxLength: TextInputLimits.dnsServer,
+      itemValidator: validateDnsServer,
       description: (l) => l.nameserverDesc,
+      saveError: _nameserverSaveError,
     ),
     DnsOverrideKey.fallback => ListOverrideField(
       (dns) => dns.fallback,
       (dns, value) => dns.copyWith(fallback: value),
       itemMaxLength: TextInputLimits.dnsServer,
+      itemValidator: validateDnsServer,
       description: (l) => l.fallbackDesc,
     ),
     DnsOverrideKey.fallbackLazyQuery => ToggleOverrideField(
@@ -332,6 +338,7 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.directNameserver,
       (dns, value) => dns.copyWith(directNameserver: value),
       itemMaxLength: TextInputLimits.dnsServer,
+      itemValidator: validateDnsServer,
       description: (l) => l.directNameserverDesc,
     ),
     DnsOverrideKey.directNameserverFollowPolicy => ToggleOverrideField(
@@ -368,6 +375,24 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
     ),
   };
 }
+
+String? _defaultNameserverSaveError(
+  OverrideModel<Dns> model,
+  WidgetRef ref,
+  List<String> servers,
+) => servers.isEmpty ? currentAppLocalizations.defaultNameserverEmptyTip : null;
+
+// Only the app's list is over every profile; Append system DNS fills it in.
+String? _nameserverSaveError(
+  OverrideModel<Dns> model,
+  WidgetRef ref,
+  List<String> servers,
+) =>
+    model is PatchOverrideTarget<DnsOverrideKey, Dns> &&
+        servers.isEmpty &&
+        !ref.read(networkSettingProvider).appendSystemDns
+    ? currentAppLocalizations.nameserverEmptyTip
+    : null;
 
 class _ProfileDnsOverrideSpec extends _DnsOverrideSpec
     with OverrideQuickEdit<DnsOverrideKey, Dns> {

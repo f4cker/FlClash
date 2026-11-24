@@ -32,6 +32,23 @@ String? validateIpMatcher(String? value, AppLocalizations appLocalizations) {
   return validateCidr(value, appLocalizations);
 }
 
+/// What mihomo's parseNameServer refuses, in every nameserver list.
+String? validateDnsServer(String? value, AppLocalizations appLocalizations) =>
+    switch (dnsServerIssue(value ?? '')) {
+      DnsServerIssue.scheme => appLocalizations.dnsServerSchemeTip,
+      DnsServerIssue.format => appLocalizations.dnsServerFormatTip,
+      null => null,
+    };
+
+String? validateDefaultNameserver(
+  String? value,
+  AppLocalizations appLocalizations,
+) =>
+    validateDnsServer(value, appLocalizations) ??
+    (isPureIpDnsServer(value ?? '')
+        ? null
+        : appLocalizations.defaultNameserverPureIpTip);
+
 final _portRange = RegExp(r'^([0-9]{1,5})(?:-([0-9]{1,5}))?$');
 
 final _domainLabel = RegExp(
