@@ -18,6 +18,7 @@ export 'fixed.dart';
 export 'function.dart';
 export 'future.dart';
 export 'go_net.dart';
+export 'hosts_value.dart';
 export 'http.dart';
 export 'indexing.dart';
 export 'input_entries.dart';

@@ -109,3 +109,21 @@ func TestConfigFieldVectors(t *testing.T) {
 		}
 	}
 }
+
+// The same maps test/common/config_field_test.dart finds cycles in.
+func TestHostsCycles(t *testing.T) {
+	for _, tc := range []struct {
+		hosts map[string]any
+		cycle bool
+	}{
+		{map[string]any{"a.com": "b.com", "b.com": "a.com."}, true},
+		{map[string]any{"a.com": "b.com", "b.com": "c.com", "c.com": "a.com"}, true},
+		{map[string]any{"a.com": "b.com", "b.com": "1.1.1.1"}, false},
+		{map[string]any{"a.com": "b.com", "c.com": "b.com"}, false},
+	} {
+		err := parseFieldConfig(fieldDNS(), tc.hosts)
+		if (err != nil) != tc.cycle {
+			t.Errorf("%v: want cycle=%v, got %v", tc.hosts, tc.cycle, err)
+		}
+	}
+}

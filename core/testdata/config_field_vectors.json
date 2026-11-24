@@ -240,5 +240,27 @@
     {"value": "any:53:53", "ok": false},
     {"value": "udp://[::]:53", "ok": true},
     {"value": "198.18.0.2:5353", "ok": true}
+  ],
+  "hosts": [
+    {"value": "1.1.1.1", "ok": true},
+    {"value": "1.1.1.1 2.2.2.2", "ok": true},
+    {"value": "1.1.1.1,2.2.2.2", "ok": true},
+    {"value": "1.1.1.1;2001:db8::1", "ok": true},
+    {"value": "1.1.1.1 example.com", "ok": false},
+    {"value": "example.org", "ok": true},
+    {"value": "localhost", "ok": false},
+    {"value": "lan", "ok": true},
+    {"value": "foo.lan.", "ok": true},
+    {"value": "1.1.1.1,", "ok": true},
+    {"value": "::1", "ok": true},
+    {"value": "fe80::1%en0", "ok": true},
+    {"value": "01.1.1.1", "ok": true},
+    {"value": "1.1.1.1 01.1.1.1", "ok": false},
+    {"value": "a", "ok": false},
+    {"value": ".a.b", "ok": true},
+    {"value": "1.1.1.1  2.2.2.2", "ok": true},
+    {"value": "2001:db8::1 2001:db8::2", "ok": true},
+    {"value": "1.1.1.1, example.com", "ok": false},
+    {"value": "a.b", "ok": true}
   ]
 }

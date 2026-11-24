@@ -16227,6 +16227,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TUN didn\'t start. Check the TUN settings, such as DNS hijacking; the log says why.'**
   String get tunNotListening;
+
+  /// No description provided for @hostsValueTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter one domain (such as example.com), or one or more IP addresses separated by commas or spaces, not a mix.'**
+  String get hostsValueTip;
+
+  /// No description provided for @hostsCycleTip.
+  ///
+  /// In en, this message translates to:
+  /// **'“{domain}” leads back to itself through other entries, and the core refuses such Hosts. Change one of them.'**
+  String hostsCycleTip(Object domain);
 }
 
 class _AppLocalizationsDelegate

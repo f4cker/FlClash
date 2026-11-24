@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/dns_server.dart';
+import 'package:fl_clash/common/hosts_value.dart';
 import 'package:fl_clash/l10n/l10n_en.dart';
 import 'package:fl_clash/widgets/config_item.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,7 @@ void main() {
     'default-nameserver': (value) =>
         validateDefaultNameserver(value, l) == null,
     'dns-hijack': (value) => validateDnsHijack(value, l) == null,
+    'hosts': isHostsValue,
   };
 
   for (final MapEntry(key: kind, value: check) in validators.entries) {
@@ -89,5 +91,15 @@ void main() {
         isNull,
       );
     });
+  });
+
+  test('a hosts domain that leads back to itself is a cycle', () {
+    expect(hostsCycleOf({'a.com': 'b.com', 'b.com': 'a.com.'}), 'a.com');
+    expect(
+      hostsCycleOf({'a.com': 'b.com', 'b.com': 'c.com', 'c.com': 'a.com'}),
+      'a.com',
+    );
+    expect(hostsCycleOf({'a.com': 'b.com', 'b.com': '1.1.1.1'}), isNull);
+    expect(hostsCycleOf({'a.com': 'b.com', 'c.com': 'b.com'}), isNull);
   });
 }

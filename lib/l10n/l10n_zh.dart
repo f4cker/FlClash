@@ -9129,4 +9129,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tunNotListening => '虚拟网卡未能启动。请检查「虚拟网卡」中的设置（如 DNS劫持），原因见日志。';
+
+  @override
+  String get hostsValueTip =>
+      '请填写一个域名（如 example.com），或一个或多个 IP 地址（用逗号或空格分隔），不能混用。';
+
+  @override
+  String hostsCycleTip(Object domain) {
+    return '「$domain」经过其他条目又指回了自己，内核会拒绝这份 Hosts。请修改其中一条。';
+  }
 }

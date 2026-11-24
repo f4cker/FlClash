@@ -9970,4 +9970,13 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get tunNotListening =>
       'TUN didn\'t start. Check the TUN settings, such as DNS hijacking; the log says why.';
+
+  @override
+  String get hostsValueTip =>
+      'Enter one domain (such as example.com), or one or more IP addresses separated by commas or spaces, not a mix.';
+
+  @override
+  String hostsCycleTip(Object domain) {
+    return '“$domain” leads back to itself through other entries, and the core refuses such Hosts. Change one of them.';
+  }
 }

@@ -146,6 +146,12 @@ class HostsItem extends ConsumerWidget {
         entries: hosts,
         keyMaxLength: TextInputLimits.domain,
         valueMaxLength: TextInputLimits.hostValue,
+        valueValidator: (value) =>
+            isHostsValue(value) ? null : appLocalizations.hostsValueTip,
+        saveError: (hosts) => switch (hostsCycleOf(hosts)) {
+          final domain? => appLocalizations.hostsCycleTip(domain),
+          null => null,
+        },
         titleBuilder: (item) => Text(item.key),
         subtitleBuilder: (item) => Text(
           [

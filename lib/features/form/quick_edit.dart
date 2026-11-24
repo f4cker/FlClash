@@ -150,6 +150,7 @@ Future<void> showMapQuickEdit(
   int? valueMaxLength,
   bool ignoreKeyCase = false,
   Set<String> reservedKeys = const {},
+  String? Function(String value)? valueValidator,
   required ValueChanged<List<MapEntry<String, String>>> onChanged,
 }) {
   return showQuickEdit(
@@ -188,6 +189,9 @@ Future<void> showMapQuickEdit(
       for (final entry in parsed.entries) {
         if (reserved.contains(fold(entry.key))) {
           throw MessageException(appLocalizations.existsTip(entry.key));
+        }
+        if (valueValidator?.call(entry.value) case final message?) {
+          throw MessageException('${entry.key}: $message');
         }
       }
       onChanged(parsed.entries);
