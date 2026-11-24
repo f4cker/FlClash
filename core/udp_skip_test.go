@@ -1,7 +1,10 @@
 package core
 
 import (
+	"context"
 	"encoding/json"
+	"net"
+	"net/netip"
 	"slices"
 	"testing"
 	"time"
@@ -184,5 +187,208 @@ func TestProxyViewTellsUnknownFromUnsupported(t *testing.T) {
 	}
 	if view := encode(udpGroup(t, "off", true, namedProxy("node-d"))); view["udp"] != false || view["disableUdp"] != true {
 		t.Errorf("disabled group view = %v, want udp false, disableUdp true", view)
+	}
+}
+
+type udpRule struct{ tp, payload, target string }
+
+// routeRules installs rules in order, with named sub-rule sets, over proxies.
+func routeRules(t *testing.T, proxies map[string]constant.Proxy, sub map[string][]udpRule, list ...udpRule) {
+	t.Helper()
+	keepTunnel(t)
+	proxies["DIRECT"] = namedProxy("DIRECT")
+	tunnel.UpdateProxies(proxies, nil)
+	subRules := map[string][]constant.Rule{}
+	parse := func(r udpRule) constant.Rule {
+		rule, err := rules.ParseRule(r.tp, r.payload, r.target, nil, subRules)
+		if err != nil {
+			t.Fatalf("ParseRule %v: %v", r, err)
+		}
+		return rule
+	}
+	for name, list := range sub {
+		for _, r := range list {
+			subRules[name] = append(subRules[name], parse(r))
+		}
+	}
+	parsed := make([]constant.Rule, 0, len(list))
+	for _, r := range list {
+		parsed = append(parsed, parse(r))
+	}
+	tunnel.UpdateRules(parsed, subRules, nil)
+	tunnel.SetMode(tunnel.Rule)
+	currentRuleTable.observe()
+}
+
+func rematchProxy(t *testing.T, name string, option outbound.RematchOption) constant.Proxy {
+	t.Helper()
+	option.Name = name
+	rematch, err := outbound.NewRematch(option)
+	if err != nil {
+		t.Fatalf("NewRematch: %v", err)
+	}
+	return adapter.NewProxy(rematch)
+}
+
+func skipOf(payload, adapter, refused string) constant.UDPSkip {
+	return constant.UDPSkip{Type: "Domain", Payload: payload, Adapter: adapter, Refused: refused, Cause: tunnel.UDPSkipUnsupported}
+}
+
+func TestUDPSkipThenALaterRuleDecides(t *testing.T) {
+	routeRules(t, map[string]constant.Proxy{
+		"Off": udpGroup(t, "Off", false, udpLessProxy(t, "http-a")),
+		"On":  namedProxy("On"),
+	}, nil, udpRule{"DOMAIN", "example.com", "Off"}, udpRule{"DOMAIN-SUFFIX", "com", "On"})
+
+	m, proxy, rule := routeFlow(t, constant.UDP, "example.com")
+	if proxy.Name() != "On" || rule == nil || rule.Payload() != "com" {
+		t.Fatalf("routed to %s by %v, want On by the later rule", proxy.Name(), rule)
+	}
+	if want := []constant.UDPSkip{skipOf("example.com", "Off", "http-a")}; !slices.Equal(m.UDPSkipped, want) || m.RouteReason != "" {
+		t.Errorf("recorded %+v / %q, want %+v and no reason", m.UDPSkipped, m.RouteReason, want)
+	}
+}
+
+func TestUDPSkipKeepsThreeAndPassesOverPass(t *testing.T) {
+	proxies := map[string]constant.Proxy{"PASS": adapter.NewProxy(outbound.NewPass())}
+	list := []udpRule{{"DOMAIN", "example.com", "PASS"}}
+	for _, name := range []string{"a", "b", "c", "d"} {
+		proxies[name] = udpGroup(t, name, false, udpLessProxy(t, "http-"+name))
+		list = append(list, udpRule{"DOMAIN-KEYWORD", name, name})
+	}
+	routeRules(t, proxies, nil, list...)
+
+	m, proxy, _ := routeFlow(t, constant.UDP, "abcd.example.com")
+	want := []constant.UDPSkip{
+		{Type: "DomainKeyword", Payload: "a", Adapter: "a", Refused: "http-a", Cause: tunnel.UDPSkipUnsupported},
+		{Type: "DomainKeyword", Payload: "b", Adapter: "b", Refused: "http-b", Cause: tunnel.UDPSkipUnsupported},
+		{Type: "DomainKeyword", Payload: "c", Adapter: "c", Refused: "http-c", Cause: tunnel.UDPSkipUnsupported},
+	}
+	if proxy.Name() != "DIRECT" || !slices.Equal(m.UDPSkipped, want) || m.RouteReason != tunnel.RouteNoMatch {
+		t.Errorf("routed to %s with %+v / %q, want DIRECT with the first three skips and no PASS",
+			proxy.Name(), m.UDPSkipped, m.RouteReason)
+	}
+}
+
+func TestUDPSkipSurvivesRematch(t *testing.T) {
+	sub := "after"
+	again := "again"
+	routeRules(t, map[string]constant.Proxy{
+		"Off":   udpGroup(t, "Off", false, udpLessProxy(t, "http-a")),
+		"On":    namedProxy("On"),
+		"ToSub": rematchProxy(t, "ToSub", outbound.RematchOption{TargetSubRule: &sub}),
+		"Again": rematchProxy(t, "Again", outbound.RematchOption{TargetRematchName: &again}),
+	}, map[string][]udpRule{sub: {{"MATCH", "", "On"}}},
+		udpRule{"DOMAIN", "example.com", "Off"},
+		udpRule{"DOMAIN", "example.com", "ToSub"},
+		udpRule{"DOMAIN", "example.org", "Off"},
+		udpRule{"DOMAIN", "example.org", "Again"},
+	)
+
+	m, proxy, rule := routeFlow(t, constant.UDP, "example.com")
+	if proxy.Name() != "On" || rule == nil {
+		t.Fatalf("routed to %s by %v, want On by the sub-rule after rematch", proxy.Name(), rule)
+	}
+	if want := []constant.UDPSkip{skipOf("example.com", "Off", "http-a")}; !slices.Equal(m.UDPSkipped, want) || m.RouteReason != "" {
+		t.Errorf("recorded %+v / %q, want the skip before the rematch", m.UDPSkipped, m.RouteReason)
+	}
+
+	// A rematch that runs the same rules again records their skip once.
+	m, proxy, _ = routeFlow(t, constant.UDP, "example.org")
+	if want := []constant.UDPSkip{skipOf("example.org", "Off", "http-a")}; proxy.Name() != "Again" || !slices.Equal(m.UDPSkipped, want) {
+		t.Errorf("routed to %s with %+v, want Again with one skip", proxy.Name(), m.UDPSkipped)
+	}
+}
+
+func TestUDPSkipNamesTheSubRule(t *testing.T) {
+	routeRules(t, map[string]constant.Proxy{
+		"Off": udpGroup(t, "Off", false, udpLessProxy(t, "http-a")),
+	}, map[string][]udpRule{"inner": {{"MATCH", "", "Off"}}},
+		udpRule{"SUB-RULE", "(DOMAIN,example.com)", "inner"},
+	)
+
+	m, proxy, _ := routeFlow(t, constant.UDP, "example.com")
+	if proxy.Name() != "DIRECT" || len(m.UDPSkipped) != 1 {
+		t.Fatalf("routed to %s with %+v, want DIRECT with one skip", proxy.Name(), m.UDPSkipped)
+	}
+	if skip := m.UDPSkipped[0]; skip.Type != "SubRules" || skip.Adapter != "Off" || skip.Refused != "http-a" {
+		t.Errorf("skip = %+v, want the outer SUB-RULE pointing at Off", skip)
+	}
+}
+
+type routedUDPPacket struct{ from net.Addr }
+
+func (p *routedUDPPacket) Data() []byte                                { return []byte{0} }
+func (p *routedUDPPacket) WriteBack(b []byte, _ net.Addr) (int, error) { return len(b), nil }
+func (p *routedUDPPacket) Drop()                                       {}
+func (p *routedUDPPacket) LocalAddr() net.Addr                         { return p.from }
+
+func trackedUDP(t *testing.T, dst netip.AddrPort) *constant.Metadata {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		var found *constant.Metadata
+		statistic.DefaultManager.Range(func(c statistic.Tracker) bool {
+			if m := c.Info().Metadata; m.NetWork == constant.UDP && m.AddrPort() == dst {
+				found = m
+				_ = c.Close()
+				return false
+			}
+			return true
+		})
+		if found != nil {
+			return found
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("no UDP connection to %s was tracked", dst)
+	return nil
+}
+
+// The NAT path routes a clone; the packet's own metadata keeps no record.
+func TestUDPSkipRecordedOnTheTrackedFlowOnly(t *testing.T) {
+	routeRules(t, map[string]constant.Proxy{
+		"Off": udpGroup(t, "Off", false, udpLessProxy(t, "http-a")),
+	}, nil, udpRule{"IP-CIDR", "127.0.0.0/8", "Off"})
+	tunnel.OnRunning()
+
+	dst := netip.MustParseAddrPort("127.0.0.1:9")
+	metadata := &constant.Metadata{
+		NetWork: constant.UDP, Type: constant.SOCKS5,
+		SrcIP: netip.MustParseAddr("127.0.0.1"), SrcPort: 40001,
+		DstIP: dst.Addr(), DstPort: dst.Port(),
+	}
+	tunnel.Tunnel.HandleUDPPacket(&routedUDPPacket{from: &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 40001}}, metadata)
+
+	tracked := trackedUDP(t, dst)
+	want := []constant.UDPSkip{{Type: "IPCIDR", Payload: "127.0.0.0/8", Adapter: "Off", Refused: "http-a", Cause: tunnel.UDPSkipUnsupported}}
+	if !slices.Equal(tracked.UDPSkipped, want) || tracked.RouteReason != tunnel.RouteNoMatch {
+		t.Errorf("tracked %+v / %q, want %+v / %q", tracked.UDPSkipped, tracked.RouteReason, want, tunnel.RouteNoMatch)
+	}
+	if tracked == metadata || metadata.UDPSkipped != nil || metadata.RouteReason != "" {
+		t.Errorf("the packet's metadata was written: %+v / %q", metadata.UDPSkipped, metadata.RouteReason)
+	}
+}
+
+func TestDNSDialerPinnedToDirectIsInternal(t *testing.T) {
+	routeRules(t, map[string]constant.Proxy{}, nil)
+	tunnel.OnRunning()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+
+	conn, err := tunnel.NewDNSDialer(nil, nil, "DIRECT").DialContext(context.Background(), "tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+	tracker, ok := conn.(statistic.Tracker)
+	if !ok {
+		t.Fatalf("conn %T is not tracked", conn)
+	}
+	if m := tracker.Info().Metadata; m.RouteReason != tunnel.RouteInternal {
+		t.Errorf("pinned DNS reason = %q, want %q", m.RouteReason, tunnel.RouteInternal)
 	}
 }
