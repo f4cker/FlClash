@@ -4255,5 +4255,136 @@
         "type": "Object"
       }
     }
+  },
+  "nodeConfigEnabled": "Enabled in config",
+  "nodeConfigDisabled": "Not enabled in config",
+  "nodeStatusUnknown": "Status unknown",
+  "nodeGroupUdpDisabled": "This group has UDP disabled.",
+  "nodeUdpFollowsNode": "Follows the current node “{name}”.",
+  "@nodeUdpFollowsNode": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "nodeInfoConfigNote": "Based on the current configuration. The server hasn't been tested.",
+  "nodeInfoButton": "Show info for “{name}”",
+  "@nodeInfoButton": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "nodeFieldState": "{field}: {state}",
+  "@nodeFieldState": {
+    "placeholders": {
+      "field": {
+        "type": "Object"
+      },
+      "state": {
+        "type": "Object"
+      }
+    }
+  },
+  "nodeFieldsMore": "{count} more: {names}",
+  "@nodeFieldsMore": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "names": {
+        "type": "Object"
+      }
+    }
+  },
+  "nodeFieldProtocol": "Protocol",
+  "nodeFieldUdp": "UDP",
+  "nodeFieldUot": "UDP over TCP (UoT)",
+  "nodeFieldXudp": "XUDP packet encoding",
+  "nodeFieldTfo": "TCP Fast Open (TFO)",
+  "nodeFieldMptcp": "Multipath TCP (MPTCP)",
+  "nodeFieldSmux": "Multiplexing (smux)",
+  "nodeFieldDialerProxy": "Dialer proxy",
+  "nodeFieldInterface": "Bound network interface",
+  "nodeFieldProvider": "Source",
+  "nodeFieldCurrentNode": "Current node",
+  "routeExitDirect": "Direct",
+  "routeExitUnknown": "Unknown",
+  "routeUdpSkippedDisabled": "Rule “{rule}” points to “{target}”, which doesn't have UDP enabled, so the rule was skipped.",
+  "@routeUdpSkippedDisabled": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      },
+      "target": {
+        "type": "Object"
+      }
+    }
+  },
+  "routeUdpSkippedUnsupported": "Rule “{rule}” points to “{target}”, which couldn't forward this UDP connection, so the rule was skipped.",
+  "@routeUdpSkippedUnsupported": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      },
+      "target": {
+        "type": "Object"
+      }
+    }
+  },
+  "routeNoMatch": "No rule matched this connection, so it went direct.",
+  "routeModeDirect": "Direct mode was in use at the time.",
+  "routeModeGlobal": "Global mode was in use at the time, and the actual exit was Direct.",
+  "routeInternal": "This was an internal connection of the core and went direct.",
+  "routeReasonUnknown": "The reason for going direct wasn't recorded.",
+  "routeShortNoMatch": "No rule matched",
+  "routeShortUdpSkipped": "Rule skipped (UDP)",
+  "routeShortModeDirect": "Direct mode",
+  "routeShortModeGlobal": "Global mode",
+  "routeShortInternal": "Internal",
+  "routeShortNoRule": "No rule recorded",
+  "routeExitTitle": "Actual exit",
+  "routeReasonTitle": "Reason",
+  "routeSkippedTitle": "Skipped rules",
+  "routeUdpSkippedDisabledBy": "Rule “{rule}” points to “{target}”, where “{group}” has UDP disabled, so the rule was skipped.",
+  "@routeUdpSkippedDisabledBy": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      },
+      "target": {
+        "type": "Object"
+      },
+      "group": {
+        "type": "Object"
+      }
+    }
+  },
+  "routeModeGlobalProxy": "Global mode was in use at the time.",
+  "nodeUdpDisabledBy": "“{name}” has UDP disabled.",
+  "@nodeUdpDisabledBy": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "nodeFieldThisGroup": "This group",
+  "nodeGroupDisablesUdp": "UDP disabled",
+  "routeUdpSkippedUnsupportedBy": "Rule “{rule}” points to “{target}”, where “{node}” couldn't forward this UDP connection, so the rule was skipped.",
+  "@routeUdpSkippedUnsupportedBy": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      },
+      "target": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
   }
 }

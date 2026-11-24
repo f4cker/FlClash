@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'detail_tabs.dart';
 import 'mitm_exchanges.dart';
 import 'process_view.dart';
+import 'route_reason.dart';
 
 String mitmOutcomeText(BuildContext context, String outcome) {
   final l = context.appLocalizations;
@@ -738,17 +739,41 @@ class TrackerInfoDetailView extends ConsumerWidget {
     );
   }
 
-  Widget _buildRule(BuildContext context) {
+  /// The rule that decided, else the exit; a skipped rule is never shown.
+  List<Widget> _buildRule(BuildContext context) {
+    final l = context.appLocalizations;
+    final reason = RouteReason(trackerInfo);
+    final exit = reason.exit(l);
+    final notes = reason.notes(l);
+    return [
+      if (exit != null)
+        DetailRow.text(title: l.routeExitTitle, value: exit)
+      else
+        ?_buildRuleRow(context),
+      if (notes.isNotEmpty)
+        DetailRow(
+          title: reason.notesTitle(l),
+          copyText: notes.join('\n'),
+          stacked: true,
+          value: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 4,
+            children: [for (final note in notes) Text(note)],
+          ),
+        ),
+    ];
+  }
+
+  Widget? _buildRuleRow(BuildContext context) {
     final ruleText = trackerInfo.ruleText;
     if (!canLookUpTrackerRule(context, trackerInfo)) {
       return ruleText.isEmpty
-          ? const SizedBox.shrink()
+          ? null
           : DetailRow.text(
               title: context.appLocalizations.rule,
               value: ruleText,
             );
     }
-    final colorScheme = context.colorScheme;
     return DetailRow(
       title: context.appLocalizations.rule,
       copyText: ruleText.isEmpty ? null : ruleText,
@@ -765,7 +790,7 @@ class TrackerInfoDetailView extends ConsumerWidget {
                 context.appLocalizations.lookupRule,
                 style: AppTextStyle.footnote
                     .of(context, emphasized: true)
-                    .copyWith(color: colorScheme.primary),
+                    .copyWith(color: context.colorScheme.primary),
               ),
             ),
           ),
@@ -857,7 +882,7 @@ class TrackerInfoDetailView extends ConsumerWidget {
               if (process == null)
                 (appLocalizations.process, trackerInfo.progressText),
             ]),
-            _buildRule(context),
+            ..._buildRule(context),
             ..._buildRows([
               (appLocalizations.upload, trackerInfo.upload.traffic.show),
               (appLocalizations.download, trackerInfo.download.traffic.show),

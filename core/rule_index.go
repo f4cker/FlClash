@@ -87,6 +87,22 @@ func (t *ruleTable) indexOf(info *statistic.TrackerInfo, listed bool) *int {
 	return found(index, ok)
 }
 
+// Of the rules a UDP flow passed over, the first is the one its host had meant.
+func (t *ruleTable) indexOfSkipped(info *statistic.TrackerInfo, listed bool) *int {
+	if info.Metadata == nil || len(info.Metadata.UDPSkipped) == 0 || info.Metadata.SpecialRules != "" {
+		return nil
+	}
+	skip := info.Metadata.UDPSkipped[0]
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.refresh()
+	if listed && info.Start.Before(t.since) {
+		return nil
+	}
+	index, ok := t.byKey[ruleKey{skip.Type, skip.Payload, skip.Adapter}]
+	return found(index, ok)
+}
+
 func found(index int, ok bool) *int {
 	if !ok {
 		return nil
@@ -96,8 +112,9 @@ func found(index int, ok bool) *int {
 
 type requestInfo struct {
 	*statistic.TrackerInfo
-	RuleIndex  *int     `json:"ruleIndex,omitempty"`
-	DnsQueries []uint64 `json:"dnsQueries,omitempty"`
+	RuleIndex       *int     `json:"ruleIndex,omitempty"`
+	UDPSkippedIndex *int     `json:"udpSkippedIndex,omitempty"`
+	DnsQueries      []uint64 `json:"dnsQueries,omitempty"`
 }
 
 type connectionSnapshot struct {
@@ -110,9 +127,10 @@ type connectionSnapshot struct {
 func newRequestInfo(tracker statistic.Tracker) requestInfo {
 	info := tracker.Info()
 	return requestInfo{
-		TrackerInfo: info,
-		RuleIndex:   currentRuleTable.indexOf(info, false),
-		DnsQueries:  currentDnsTrail.linkedQueries(info.Metadata, info.Start, dialedAddr(info)),
+		TrackerInfo:     info,
+		RuleIndex:       currentRuleTable.indexOf(info, false),
+		UDPSkippedIndex: currentRuleTable.indexOfSkipped(info, false),
+		DnsQueries:      currentDnsTrail.linkedQueries(info.Metadata, info.Start, dialedAddr(info)),
 	}
 }
 
@@ -124,8 +142,9 @@ func newConnectionSnapshot(snapshot *statistic.Snapshot) *connectionSnapshot {
 	}
 	for _, info := range snapshot.Connections {
 		result.Connections = append(result.Connections, requestInfo{
-			TrackerInfo: info,
-			RuleIndex:   currentRuleTable.indexOf(info, true),
+			TrackerInfo:     info,
+			RuleIndex:       currentRuleTable.indexOf(info, true),
+			UDPSkippedIndex: currentRuleTable.indexOfSkipped(info, true),
 		})
 	}
 	return result

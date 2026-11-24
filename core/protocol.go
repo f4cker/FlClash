@@ -447,10 +447,20 @@ type ProxiesData struct {
 	All               []string       `json:"all"`
 }
 
+// A capability is present for every outbound and absent for an action such as
+// REJECT or a group, so the host reads a missing key as unknown, never as false.
 type nodeView struct {
 	Name         string `json:"name"`
 	Type         string `json:"type"`
 	ProviderName string `json:"provider-name,omitempty"`
+	UDP          *bool  `json:"udp,omitempty"`
+	UoT          *bool  `json:"uot,omitempty"`
+	XUDP         *bool  `json:"xudp,omitempty"`
+	TFO          *bool  `json:"tfo,omitempty"`
+	MPTCP        *bool  `json:"mptcp,omitempty"`
+	SMUX         *bool  `json:"smux,omitempty"`
+	DialerProxy  string `json:"dialer-proxy,omitempty"`
+	Interface    string `json:"interface,omitempty"`
 }
 
 type GeoUpdateStatus struct {

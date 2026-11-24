@@ -578,9 +578,291 @@ as int,
 
 
 /// @nodoc
+mixin _$UdpSkip {
+
+ String get type; String get payload; String get adapter; String get refused; String get cause;
+/// Create a copy of UdpSkip
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$UdpSkipCopyWith<UdpSkip> get copyWith => _$UdpSkipCopyWithImpl<UdpSkip>(this as UdpSkip, _$identity);
+
+  /// Serializes this UdpSkip to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as UdpSkip;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UdpSkip&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.payload, _this.payload) || other.payload == _this.payload)&&(identical(other.adapter, _this.adapter) || other.adapter == _this.adapter)&&(identical(other.refused, _this.refused) || other.refused == _this.refused)&&(identical(other.cause, _this.cause) || other.cause == _this.cause));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as UdpSkip;
+  return Object.hash(runtimeType,_this.type,_this.payload,_this.adapter,_this.refused,_this.cause);
+}
+
+@override
+String toString() {
+  final _this = this as UdpSkip;
+  return 'UdpSkip(type: ${_this.type}, payload: ${_this.payload}, adapter: ${_this.adapter}, refused: ${_this.refused}, cause: ${_this.cause})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $UdpSkipCopyWith<$Res>  {
+  factory $UdpSkipCopyWith(UdpSkip value, $Res Function(UdpSkip) _then) = _$UdpSkipCopyWithImpl;
+@useResult
+$Res call({
+ String type, String payload, String adapter, String refused, String cause
+});
+
+
+
+
+}
+/// @nodoc
+class _$UdpSkipCopyWithImpl<$Res>
+    implements $UdpSkipCopyWith<$Res> {
+  _$UdpSkipCopyWithImpl(this._self, this._then);
+
+  final UdpSkip _self;
+  final $Res Function(UdpSkip) _then;
+
+/// Create a copy of UdpSkip
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? payload = null,Object? adapter = null,Object? refused = null,Object? cause = null,}) {
+  return _then(UdpSkip(
+type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,payload: null == payload ? _self.payload : payload // ignore: cast_nullable_to_non_nullable
+as String,adapter: null == adapter ? _self.adapter : adapter // ignore: cast_nullable_to_non_nullable
+as String,refused: null == refused ? _self.refused : refused // ignore: cast_nullable_to_non_nullable
+as String,cause: null == cause ? _self.cause : cause // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [UdpSkip].
+extension UdpSkipPatterns on UdpSkip {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UdpSkip value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _UdpSkip() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UdpSkip value)  $default,){
+final _that = this;
+switch (_that) {
+case _UdpSkip():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UdpSkip value)?  $default,){
+final _that = this;
+switch (_that) {
+case _UdpSkip() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  String payload,  String adapter,  String refused,  String cause)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _UdpSkip() when $default != null:
+return $default(_that.type,_that.payload,_that.adapter,_that.refused,_that.cause);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  String payload,  String adapter,  String refused,  String cause)  $default,) {final _that = this;
+switch (_that) {
+case _UdpSkip():
+return $default(_that.type,_that.payload,_that.adapter,_that.refused,_that.cause);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  String payload,  String adapter,  String refused,  String cause)?  $default,) {final _that = this;
+switch (_that) {
+case _UdpSkip() when $default != null:
+return $default(_that.type,_that.payload,_that.adapter,_that.refused,_that.cause);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _UdpSkip implements UdpSkip {
+  const _UdpSkip({this.type = '', this.payload = '', this.adapter = '', this.refused = '', this.cause = ''});
+  factory _UdpSkip.fromJson(Map<String, dynamic> json) => _$UdpSkipFromJson(json);
+
+@override@JsonKey() final  String type;
+@override@JsonKey() final  String payload;
+@override@JsonKey() final  String adapter;
+@override@JsonKey() final  String refused;
+@override@JsonKey() final  String cause;
+
+/// Create a copy of UdpSkip
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$UdpSkipCopyWith<_UdpSkip> get copyWith => __$UdpSkipCopyWithImpl<_UdpSkip>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$UdpSkipToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _UdpSkip&&(identical(other.type, type) || other.type == type)&&(identical(other.payload, payload) || other.payload == payload)&&(identical(other.adapter, adapter) || other.adapter == adapter)&&(identical(other.refused, refused) || other.refused == refused)&&(identical(other.cause, cause) || other.cause == cause));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,type,payload,adapter,refused,cause);
+}
+
+@override
+String toString() {
+    return 'UdpSkip(type: $type, payload: $payload, adapter: $adapter, refused: $refused, cause: $cause)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$UdpSkipCopyWith<$Res> implements $UdpSkipCopyWith<$Res> {
+  factory _$UdpSkipCopyWith(_UdpSkip value, $Res Function(_UdpSkip) _then) = __$UdpSkipCopyWithImpl;
+@override @useResult
+$Res call({
+ String type, String payload, String adapter, String refused, String cause
+});
+
+
+
+
+}
+/// @nodoc
+class __$UdpSkipCopyWithImpl<$Res>
+    implements _$UdpSkipCopyWith<$Res> {
+  __$UdpSkipCopyWithImpl(this._self, this._then);
+
+  final _UdpSkip _self;
+  final $Res Function(_UdpSkip) _then;
+
+/// Create a copy of UdpSkip
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? payload = null,Object? adapter = null,Object? refused = null,Object? cause = null,}) {
+  return _then(_UdpSkip(
+type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,payload: null == payload ? _self.payload : payload // ignore: cast_nullable_to_non_nullable
+as String,adapter: null == adapter ? _self.adapter : adapter // ignore: cast_nullable_to_non_nullable
+as String,refused: null == refused ? _self.refused : refused // ignore: cast_nullable_to_non_nullable
+as String,cause: null == cause ? _self.cause : cause // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$Metadata {
 
- int get uid; String get network; String get type; String get sourceIP; String get sourcePort; String get destinationIP; String get destinationPort; String get inboundIP; String get host; DnsMode? get dnsMode; String get process; String get processPath; String get remoteDestination; List<String> get sourceGeoIP; List<String> get destinationGeoIP; String get destinationIPASN; String get sourceIPASN; String get specialRules; String get specialProxy; bool get mitm; bool get mitmRefused;
+ int get uid; String get network; String get type; String get sourceIP; String get sourcePort; String get destinationIP; String get destinationPort; String get inboundIP; String get host; DnsMode? get dnsMode; String get process; String get processPath; String get remoteDestination; List<String> get sourceGeoIP; List<String> get destinationGeoIP; String get destinationIPASN; String get sourceIPASN; String get specialRules; String get specialProxy; bool get mitm; bool get mitmRefused; List<UdpSkip> get udpSkipped; String get routeReason;
 /// Create a copy of Metadata
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -594,20 +876,20 @@ $MetadataCopyWith<Metadata> get copyWith => _$MetadataCopyWithImpl<Metadata>(thi
 @override
 bool operator ==(Object other) {
   final _this = this as Metadata;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Metadata&&(identical(other.uid, _this.uid) || other.uid == _this.uid)&&(identical(other.network, _this.network) || other.network == _this.network)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.sourceIP, _this.sourceIP) || other.sourceIP == _this.sourceIP)&&(identical(other.sourcePort, _this.sourcePort) || other.sourcePort == _this.sourcePort)&&(identical(other.destinationIP, _this.destinationIP) || other.destinationIP == _this.destinationIP)&&(identical(other.destinationPort, _this.destinationPort) || other.destinationPort == _this.destinationPort)&&(identical(other.inboundIP, _this.inboundIP) || other.inboundIP == _this.inboundIP)&&(identical(other.host, _this.host) || other.host == _this.host)&&(identical(other.dnsMode, _this.dnsMode) || other.dnsMode == _this.dnsMode)&&(identical(other.process, _this.process) || other.process == _this.process)&&(identical(other.processPath, _this.processPath) || other.processPath == _this.processPath)&&(identical(other.remoteDestination, _this.remoteDestination) || other.remoteDestination == _this.remoteDestination)&&const DeepCollectionEquality().equals(other.sourceGeoIP, _this.sourceGeoIP)&&const DeepCollectionEquality().equals(other.destinationGeoIP, _this.destinationGeoIP)&&(identical(other.destinationIPASN, _this.destinationIPASN) || other.destinationIPASN == _this.destinationIPASN)&&(identical(other.sourceIPASN, _this.sourceIPASN) || other.sourceIPASN == _this.sourceIPASN)&&(identical(other.specialRules, _this.specialRules) || other.specialRules == _this.specialRules)&&(identical(other.specialProxy, _this.specialProxy) || other.specialProxy == _this.specialProxy)&&(identical(other.mitm, _this.mitm) || other.mitm == _this.mitm)&&(identical(other.mitmRefused, _this.mitmRefused) || other.mitmRefused == _this.mitmRefused));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Metadata&&(identical(other.uid, _this.uid) || other.uid == _this.uid)&&(identical(other.network, _this.network) || other.network == _this.network)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.sourceIP, _this.sourceIP) || other.sourceIP == _this.sourceIP)&&(identical(other.sourcePort, _this.sourcePort) || other.sourcePort == _this.sourcePort)&&(identical(other.destinationIP, _this.destinationIP) || other.destinationIP == _this.destinationIP)&&(identical(other.destinationPort, _this.destinationPort) || other.destinationPort == _this.destinationPort)&&(identical(other.inboundIP, _this.inboundIP) || other.inboundIP == _this.inboundIP)&&(identical(other.host, _this.host) || other.host == _this.host)&&(identical(other.dnsMode, _this.dnsMode) || other.dnsMode == _this.dnsMode)&&(identical(other.process, _this.process) || other.process == _this.process)&&(identical(other.processPath, _this.processPath) || other.processPath == _this.processPath)&&(identical(other.remoteDestination, _this.remoteDestination) || other.remoteDestination == _this.remoteDestination)&&const DeepCollectionEquality().equals(other.sourceGeoIP, _this.sourceGeoIP)&&const DeepCollectionEquality().equals(other.destinationGeoIP, _this.destinationGeoIP)&&(identical(other.destinationIPASN, _this.destinationIPASN) || other.destinationIPASN == _this.destinationIPASN)&&(identical(other.sourceIPASN, _this.sourceIPASN) || other.sourceIPASN == _this.sourceIPASN)&&(identical(other.specialRules, _this.specialRules) || other.specialRules == _this.specialRules)&&(identical(other.specialProxy, _this.specialProxy) || other.specialProxy == _this.specialProxy)&&(identical(other.mitm, _this.mitm) || other.mitm == _this.mitm)&&(identical(other.mitmRefused, _this.mitmRefused) || other.mitmRefused == _this.mitmRefused)&&const DeepCollectionEquality().equals(other.udpSkipped, _this.udpSkipped)&&(identical(other.routeReason, _this.routeReason) || other.routeReason == _this.routeReason));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Metadata;
-  return Object.hashAll([runtimeType,_this.uid,_this.network,_this.type,_this.sourceIP,_this.sourcePort,_this.destinationIP,_this.destinationPort,_this.inboundIP,_this.host,_this.dnsMode,_this.process,_this.processPath,_this.remoteDestination,const DeepCollectionEquality().hash(_this.sourceGeoIP),const DeepCollectionEquality().hash(_this.destinationGeoIP),_this.destinationIPASN,_this.sourceIPASN,_this.specialRules,_this.specialProxy,_this.mitm,_this.mitmRefused]);
+  return Object.hashAll([runtimeType,_this.uid,_this.network,_this.type,_this.sourceIP,_this.sourcePort,_this.destinationIP,_this.destinationPort,_this.inboundIP,_this.host,_this.dnsMode,_this.process,_this.processPath,_this.remoteDestination,const DeepCollectionEquality().hash(_this.sourceGeoIP),const DeepCollectionEquality().hash(_this.destinationGeoIP),_this.destinationIPASN,_this.sourceIPASN,_this.specialRules,_this.specialProxy,_this.mitm,_this.mitmRefused,const DeepCollectionEquality().hash(_this.udpSkipped),_this.routeReason]);
 }
 
 @override
 String toString() {
   final _this = this as Metadata;
-  return 'Metadata(uid: ${_this.uid}, network: ${_this.network}, type: ${_this.type}, sourceIP: ${_this.sourceIP}, sourcePort: ${_this.sourcePort}, destinationIP: ${_this.destinationIP}, destinationPort: ${_this.destinationPort}, inboundIP: ${_this.inboundIP}, host: ${_this.host}, dnsMode: ${_this.dnsMode}, process: ${_this.process}, processPath: ${_this.processPath}, remoteDestination: ${_this.remoteDestination}, sourceGeoIP: ${_this.sourceGeoIP}, destinationGeoIP: ${_this.destinationGeoIP}, destinationIPASN: ${_this.destinationIPASN}, sourceIPASN: ${_this.sourceIPASN}, specialRules: ${_this.specialRules}, specialProxy: ${_this.specialProxy}, mitm: ${_this.mitm}, mitmRefused: ${_this.mitmRefused})';
+  return 'Metadata(uid: ${_this.uid}, network: ${_this.network}, type: ${_this.type}, sourceIP: ${_this.sourceIP}, sourcePort: ${_this.sourcePort}, destinationIP: ${_this.destinationIP}, destinationPort: ${_this.destinationPort}, inboundIP: ${_this.inboundIP}, host: ${_this.host}, dnsMode: ${_this.dnsMode}, process: ${_this.process}, processPath: ${_this.processPath}, remoteDestination: ${_this.remoteDestination}, sourceGeoIP: ${_this.sourceGeoIP}, destinationGeoIP: ${_this.destinationGeoIP}, destinationIPASN: ${_this.destinationIPASN}, sourceIPASN: ${_this.sourceIPASN}, specialRules: ${_this.specialRules}, specialProxy: ${_this.specialProxy}, mitm: ${_this.mitm}, mitmRefused: ${_this.mitmRefused}, udpSkipped: ${_this.udpSkipped}, routeReason: ${_this.routeReason})';
 }
 
 
@@ -618,7 +900,7 @@ abstract mixin class $MetadataCopyWith<$Res>  {
   factory $MetadataCopyWith(Metadata value, $Res Function(Metadata) _then) = _$MetadataCopyWithImpl;
 @useResult
 $Res call({
- int uid, String network, String type, String sourceIP, String sourcePort, String destinationIP, String destinationPort, String inboundIP, String host, DnsMode? dnsMode, String process, String processPath, String remoteDestination, List<String> sourceGeoIP, List<String> destinationGeoIP, String destinationIPASN, String sourceIPASN, String specialRules, String specialProxy, bool mitm, bool mitmRefused
+ int uid, String network, String type, String sourceIP, String sourcePort, String destinationIP, String destinationPort, String inboundIP, String host, DnsMode? dnsMode, String process, String processPath, String remoteDestination, List<String> sourceGeoIP, List<String> destinationGeoIP, String destinationIPASN, String sourceIPASN, String specialRules, String specialProxy, bool mitm, bool mitmRefused, List<UdpSkip> udpSkipped, String routeReason
 });
 
 
@@ -635,7 +917,7 @@ class _$MetadataCopyWithImpl<$Res>
 
 /// Create a copy of Metadata
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? network = null,Object? type = null,Object? sourceIP = null,Object? sourcePort = null,Object? destinationIP = null,Object? destinationPort = null,Object? inboundIP = null,Object? host = null,Object? dnsMode = freezed,Object? process = null,Object? processPath = null,Object? remoteDestination = null,Object? sourceGeoIP = null,Object? destinationGeoIP = null,Object? destinationIPASN = null,Object? sourceIPASN = null,Object? specialRules = null,Object? specialProxy = null,Object? mitm = null,Object? mitmRefused = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? network = null,Object? type = null,Object? sourceIP = null,Object? sourcePort = null,Object? destinationIP = null,Object? destinationPort = null,Object? inboundIP = null,Object? host = null,Object? dnsMode = freezed,Object? process = null,Object? processPath = null,Object? remoteDestination = null,Object? sourceGeoIP = null,Object? destinationGeoIP = null,Object? destinationIPASN = null,Object? sourceIPASN = null,Object? specialRules = null,Object? specialProxy = null,Object? mitm = null,Object? mitmRefused = null,Object? udpSkipped = null,Object? routeReason = null,}) {
   return _then(Metadata(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as int,network: null == network ? _self.network : network // ignore: cast_nullable_to_non_nullable
@@ -658,7 +940,9 @@ as String,specialRules: null == specialRules ? _self.specialRules : specialRules
 as String,specialProxy: null == specialProxy ? _self.specialProxy : specialProxy // ignore: cast_nullable_to_non_nullable
 as String,mitm: null == mitm ? _self.mitm : mitm // ignore: cast_nullable_to_non_nullable
 as bool,mitmRefused: null == mitmRefused ? _self.mitmRefused : mitmRefused // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,udpSkipped: null == udpSkipped ? _self.udpSkipped : udpSkipped // ignore: cast_nullable_to_non_nullable
+as List<UdpSkip>,routeReason: null == routeReason ? _self.routeReason : routeReason // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -743,10 +1027,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int uid,  String network,  String type,  String sourceIP,  String sourcePort,  String destinationIP,  String destinationPort,  String inboundIP,  String host,  DnsMode? dnsMode,  String process,  String processPath,  String remoteDestination,  List<String> sourceGeoIP,  List<String> destinationGeoIP,  String destinationIPASN,  String sourceIPASN,  String specialRules,  String specialProxy,  bool mitm,  bool mitmRefused)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int uid,  String network,  String type,  String sourceIP,  String sourcePort,  String destinationIP,  String destinationPort,  String inboundIP,  String host,  DnsMode? dnsMode,  String process,  String processPath,  String remoteDestination,  List<String> sourceGeoIP,  List<String> destinationGeoIP,  String destinationIPASN,  String sourceIPASN,  String specialRules,  String specialProxy,  bool mitm,  bool mitmRefused,  List<UdpSkip> udpSkipped,  String routeReason)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Metadata() when $default != null:
-return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePort,_that.destinationIP,_that.destinationPort,_that.inboundIP,_that.host,_that.dnsMode,_that.process,_that.processPath,_that.remoteDestination,_that.sourceGeoIP,_that.destinationGeoIP,_that.destinationIPASN,_that.sourceIPASN,_that.specialRules,_that.specialProxy,_that.mitm,_that.mitmRefused);case _:
+return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePort,_that.destinationIP,_that.destinationPort,_that.inboundIP,_that.host,_that.dnsMode,_that.process,_that.processPath,_that.remoteDestination,_that.sourceGeoIP,_that.destinationGeoIP,_that.destinationIPASN,_that.sourceIPASN,_that.specialRules,_that.specialProxy,_that.mitm,_that.mitmRefused,_that.udpSkipped,_that.routeReason);case _:
   return orElse();
 
 }
@@ -764,10 +1048,10 @@ return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePo
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int uid,  String network,  String type,  String sourceIP,  String sourcePort,  String destinationIP,  String destinationPort,  String inboundIP,  String host,  DnsMode? dnsMode,  String process,  String processPath,  String remoteDestination,  List<String> sourceGeoIP,  List<String> destinationGeoIP,  String destinationIPASN,  String sourceIPASN,  String specialRules,  String specialProxy,  bool mitm,  bool mitmRefused)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int uid,  String network,  String type,  String sourceIP,  String sourcePort,  String destinationIP,  String destinationPort,  String inboundIP,  String host,  DnsMode? dnsMode,  String process,  String processPath,  String remoteDestination,  List<String> sourceGeoIP,  List<String> destinationGeoIP,  String destinationIPASN,  String sourceIPASN,  String specialRules,  String specialProxy,  bool mitm,  bool mitmRefused,  List<UdpSkip> udpSkipped,  String routeReason)  $default,) {final _that = this;
 switch (_that) {
 case _Metadata():
-return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePort,_that.destinationIP,_that.destinationPort,_that.inboundIP,_that.host,_that.dnsMode,_that.process,_that.processPath,_that.remoteDestination,_that.sourceGeoIP,_that.destinationGeoIP,_that.destinationIPASN,_that.sourceIPASN,_that.specialRules,_that.specialProxy,_that.mitm,_that.mitmRefused);case _:
+return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePort,_that.destinationIP,_that.destinationPort,_that.inboundIP,_that.host,_that.dnsMode,_that.process,_that.processPath,_that.remoteDestination,_that.sourceGeoIP,_that.destinationGeoIP,_that.destinationIPASN,_that.sourceIPASN,_that.specialRules,_that.specialProxy,_that.mitm,_that.mitmRefused,_that.udpSkipped,_that.routeReason);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -784,10 +1068,10 @@ return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePo
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int uid,  String network,  String type,  String sourceIP,  String sourcePort,  String destinationIP,  String destinationPort,  String inboundIP,  String host,  DnsMode? dnsMode,  String process,  String processPath,  String remoteDestination,  List<String> sourceGeoIP,  List<String> destinationGeoIP,  String destinationIPASN,  String sourceIPASN,  String specialRules,  String specialProxy,  bool mitm,  bool mitmRefused)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int uid,  String network,  String type,  String sourceIP,  String sourcePort,  String destinationIP,  String destinationPort,  String inboundIP,  String host,  DnsMode? dnsMode,  String process,  String processPath,  String remoteDestination,  List<String> sourceGeoIP,  List<String> destinationGeoIP,  String destinationIPASN,  String sourceIPASN,  String specialRules,  String specialProxy,  bool mitm,  bool mitmRefused,  List<UdpSkip> udpSkipped,  String routeReason)?  $default,) {final _that = this;
 switch (_that) {
 case _Metadata() when $default != null:
-return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePort,_that.destinationIP,_that.destinationPort,_that.inboundIP,_that.host,_that.dnsMode,_that.process,_that.processPath,_that.remoteDestination,_that.sourceGeoIP,_that.destinationGeoIP,_that.destinationIPASN,_that.sourceIPASN,_that.specialRules,_that.specialProxy,_that.mitm,_that.mitmRefused);case _:
+return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePort,_that.destinationIP,_that.destinationPort,_that.inboundIP,_that.host,_that.dnsMode,_that.process,_that.processPath,_that.remoteDestination,_that.sourceGeoIP,_that.destinationGeoIP,_that.destinationIPASN,_that.sourceIPASN,_that.specialRules,_that.specialProxy,_that.mitm,_that.mitmRefused,_that.udpSkipped,_that.routeReason);case _:
   return null;
 
 }
@@ -799,7 +1083,7 @@ return $default(_that.uid,_that.network,_that.type,_that.sourceIP,_that.sourcePo
 @JsonSerializable()
 
 class _Metadata implements Metadata {
-  const _Metadata({this.uid = 0, this.network = '', this.type = '', this.sourceIP = '', this.sourcePort = '', this.destinationIP = '', this.destinationPort = '', this.inboundIP = '', this.host = '', this.dnsMode, this.process = '', this.processPath = '', this.remoteDestination = '',  List<String> sourceGeoIP = const [],  List<String> destinationGeoIP = const [], this.destinationIPASN = '', this.sourceIPASN = '', this.specialRules = '', this.specialProxy = '', this.mitm = false, this.mitmRefused = false}): _sourceGeoIP = sourceGeoIP,_destinationGeoIP = destinationGeoIP;
+  const _Metadata({this.uid = 0, this.network = '', this.type = '', this.sourceIP = '', this.sourcePort = '', this.destinationIP = '', this.destinationPort = '', this.inboundIP = '', this.host = '', this.dnsMode, this.process = '', this.processPath = '', this.remoteDestination = '',  List<String> sourceGeoIP = const [],  List<String> destinationGeoIP = const [], this.destinationIPASN = '', this.sourceIPASN = '', this.specialRules = '', this.specialProxy = '', this.mitm = false, this.mitmRefused = false,  List<UdpSkip> udpSkipped = const [], this.routeReason = ''}): _sourceGeoIP = sourceGeoIP,_destinationGeoIP = destinationGeoIP,_udpSkipped = udpSkipped;
   factory _Metadata.fromJson(Map<String, dynamic> json) => _$MetadataFromJson(json);
 
 @override@JsonKey() final  int uid;
@@ -835,6 +1119,14 @@ class _Metadata implements Metadata {
 @override@JsonKey() final  String specialProxy;
 @override@JsonKey() final  bool mitm;
 @override@JsonKey() final  bool mitmRefused;
+ final  List<UdpSkip> _udpSkipped;
+@override@JsonKey() List<UdpSkip> get udpSkipped {
+  if (_udpSkipped is EqualUnmodifiableListView) return _udpSkipped;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_udpSkipped);
+}
+
+@override@JsonKey() final  String routeReason;
 
 /// Create a copy of Metadata
 /// with the given fields replaced by the non-null parameter values.
@@ -849,18 +1141,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Metadata&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.network, network) || other.network == network)&&(identical(other.type, type) || other.type == type)&&(identical(other.sourceIP, sourceIP) || other.sourceIP == sourceIP)&&(identical(other.sourcePort, sourcePort) || other.sourcePort == sourcePort)&&(identical(other.destinationIP, destinationIP) || other.destinationIP == destinationIP)&&(identical(other.destinationPort, destinationPort) || other.destinationPort == destinationPort)&&(identical(other.inboundIP, inboundIP) || other.inboundIP == inboundIP)&&(identical(other.host, host) || other.host == host)&&(identical(other.dnsMode, dnsMode) || other.dnsMode == dnsMode)&&(identical(other.process, process) || other.process == process)&&(identical(other.processPath, processPath) || other.processPath == processPath)&&(identical(other.remoteDestination, remoteDestination) || other.remoteDestination == remoteDestination)&&const DeepCollectionEquality().equals(other.sourceGeoIP, _sourceGeoIP)&&const DeepCollectionEquality().equals(other.destinationGeoIP, _destinationGeoIP)&&(identical(other.destinationIPASN, destinationIPASN) || other.destinationIPASN == destinationIPASN)&&(identical(other.sourceIPASN, sourceIPASN) || other.sourceIPASN == sourceIPASN)&&(identical(other.specialRules, specialRules) || other.specialRules == specialRules)&&(identical(other.specialProxy, specialProxy) || other.specialProxy == specialProxy)&&(identical(other.mitm, mitm) || other.mitm == mitm)&&(identical(other.mitmRefused, mitmRefused) || other.mitmRefused == mitmRefused));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Metadata&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.network, network) || other.network == network)&&(identical(other.type, type) || other.type == type)&&(identical(other.sourceIP, sourceIP) || other.sourceIP == sourceIP)&&(identical(other.sourcePort, sourcePort) || other.sourcePort == sourcePort)&&(identical(other.destinationIP, destinationIP) || other.destinationIP == destinationIP)&&(identical(other.destinationPort, destinationPort) || other.destinationPort == destinationPort)&&(identical(other.inboundIP, inboundIP) || other.inboundIP == inboundIP)&&(identical(other.host, host) || other.host == host)&&(identical(other.dnsMode, dnsMode) || other.dnsMode == dnsMode)&&(identical(other.process, process) || other.process == process)&&(identical(other.processPath, processPath) || other.processPath == processPath)&&(identical(other.remoteDestination, remoteDestination) || other.remoteDestination == remoteDestination)&&const DeepCollectionEquality().equals(other.sourceGeoIP, _sourceGeoIP)&&const DeepCollectionEquality().equals(other.destinationGeoIP, _destinationGeoIP)&&(identical(other.destinationIPASN, destinationIPASN) || other.destinationIPASN == destinationIPASN)&&(identical(other.sourceIPASN, sourceIPASN) || other.sourceIPASN == sourceIPASN)&&(identical(other.specialRules, specialRules) || other.specialRules == specialRules)&&(identical(other.specialProxy, specialProxy) || other.specialProxy == specialProxy)&&(identical(other.mitm, mitm) || other.mitm == mitm)&&(identical(other.mitmRefused, mitmRefused) || other.mitmRefused == mitmRefused)&&const DeepCollectionEquality().equals(other.udpSkipped, _udpSkipped)&&(identical(other.routeReason, routeReason) || other.routeReason == routeReason));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hashAll([runtimeType,uid,network,type,sourceIP,sourcePort,destinationIP,destinationPort,inboundIP,host,dnsMode,process,processPath,remoteDestination,const DeepCollectionEquality().hash(_sourceGeoIP),const DeepCollectionEquality().hash(_destinationGeoIP),destinationIPASN,sourceIPASN,specialRules,specialProxy,mitm,mitmRefused]);
+    return Object.hashAll([runtimeType,uid,network,type,sourceIP,sourcePort,destinationIP,destinationPort,inboundIP,host,dnsMode,process,processPath,remoteDestination,const DeepCollectionEquality().hash(_sourceGeoIP),const DeepCollectionEquality().hash(_destinationGeoIP),destinationIPASN,sourceIPASN,specialRules,specialProxy,mitm,mitmRefused,const DeepCollectionEquality().hash(_udpSkipped),routeReason]);
 }
 
 @override
 String toString() {
-    return 'Metadata(uid: $uid, network: $network, type: $type, sourceIP: $sourceIP, sourcePort: $sourcePort, destinationIP: $destinationIP, destinationPort: $destinationPort, inboundIP: $inboundIP, host: $host, dnsMode: $dnsMode, process: $process, processPath: $processPath, remoteDestination: $remoteDestination, sourceGeoIP: $sourceGeoIP, destinationGeoIP: $destinationGeoIP, destinationIPASN: $destinationIPASN, sourceIPASN: $sourceIPASN, specialRules: $specialRules, specialProxy: $specialProxy, mitm: $mitm, mitmRefused: $mitmRefused)';
+    return 'Metadata(uid: $uid, network: $network, type: $type, sourceIP: $sourceIP, sourcePort: $sourcePort, destinationIP: $destinationIP, destinationPort: $destinationPort, inboundIP: $inboundIP, host: $host, dnsMode: $dnsMode, process: $process, processPath: $processPath, remoteDestination: $remoteDestination, sourceGeoIP: $sourceGeoIP, destinationGeoIP: $destinationGeoIP, destinationIPASN: $destinationIPASN, sourceIPASN: $sourceIPASN, specialRules: $specialRules, specialProxy: $specialProxy, mitm: $mitm, mitmRefused: $mitmRefused, udpSkipped: $udpSkipped, routeReason: $routeReason)';
 }
 
 
@@ -871,7 +1163,7 @@ abstract mixin class _$MetadataCopyWith<$Res> implements $MetadataCopyWith<$Res>
   factory _$MetadataCopyWith(_Metadata value, $Res Function(_Metadata) _then) = __$MetadataCopyWithImpl;
 @override @useResult
 $Res call({
- int uid, String network, String type, String sourceIP, String sourcePort, String destinationIP, String destinationPort, String inboundIP, String host, DnsMode? dnsMode, String process, String processPath, String remoteDestination, List<String> sourceGeoIP, List<String> destinationGeoIP, String destinationIPASN, String sourceIPASN, String specialRules, String specialProxy, bool mitm, bool mitmRefused
+ int uid, String network, String type, String sourceIP, String sourcePort, String destinationIP, String destinationPort, String inboundIP, String host, DnsMode? dnsMode, String process, String processPath, String remoteDestination, List<String> sourceGeoIP, List<String> destinationGeoIP, String destinationIPASN, String sourceIPASN, String specialRules, String specialProxy, bool mitm, bool mitmRefused, List<UdpSkip> udpSkipped, String routeReason
 });
 
 
@@ -888,7 +1180,7 @@ class __$MetadataCopyWithImpl<$Res>
 
 /// Create a copy of Metadata
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? network = null,Object? type = null,Object? sourceIP = null,Object? sourcePort = null,Object? destinationIP = null,Object? destinationPort = null,Object? inboundIP = null,Object? host = null,Object? dnsMode = freezed,Object? process = null,Object? processPath = null,Object? remoteDestination = null,Object? sourceGeoIP = null,Object? destinationGeoIP = null,Object? destinationIPASN = null,Object? sourceIPASN = null,Object? specialRules = null,Object? specialProxy = null,Object? mitm = null,Object? mitmRefused = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? network = null,Object? type = null,Object? sourceIP = null,Object? sourcePort = null,Object? destinationIP = null,Object? destinationPort = null,Object? inboundIP = null,Object? host = null,Object? dnsMode = freezed,Object? process = null,Object? processPath = null,Object? remoteDestination = null,Object? sourceGeoIP = null,Object? destinationGeoIP = null,Object? destinationIPASN = null,Object? sourceIPASN = null,Object? specialRules = null,Object? specialProxy = null,Object? mitm = null,Object? mitmRefused = null,Object? udpSkipped = null,Object? routeReason = null,}) {
   return _then(_Metadata(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as int,network: null == network ? _self.network : network // ignore: cast_nullable_to_non_nullable
@@ -911,7 +1203,9 @@ as String,specialRules: null == specialRules ? _self.specialRules : specialRules
 as String,specialProxy: null == specialProxy ? _self.specialProxy : specialProxy // ignore: cast_nullable_to_non_nullable
 as String,mitm: null == mitm ? _self.mitm : mitm // ignore: cast_nullable_to_non_nullable
 as bool,mitmRefused: null == mitmRefused ? _self.mitmRefused : mitmRefused // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,udpSkipped: null == udpSkipped ? _self._udpSkipped : udpSkipped // ignore: cast_nullable_to_non_nullable
+as List<UdpSkip>,routeReason: null == routeReason ? _self.routeReason : routeReason // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -3760,7 +4054,7 @@ as String,
 /// @nodoc
 mixin _$Group {
 
-@JsonKey(fromJson: GroupType.parse) GroupType get type; List<Proxy> get all; String? get now; bool? get hidden; String? get testUrl; String get icon; String get name;
+@JsonKey(fromJson: GroupType.parse) GroupType get type; List<Proxy> get all; String? get now; bool? get hidden; String? get testUrl; String get icon; String get name; bool? get udp; bool? get disableUdp;
 /// Create a copy of Group
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3774,20 +4068,20 @@ $GroupCopyWith<Group> get copyWith => _$GroupCopyWithImpl<Group>(this as Group, 
 @override
 bool operator ==(Object other) {
   final _this = this as Group;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Group&&(identical(other.type, _this.type) || other.type == _this.type)&&const DeepCollectionEquality().equals(other.all, _this.all)&&(identical(other.now, _this.now) || other.now == _this.now)&&(identical(other.hidden, _this.hidden) || other.hidden == _this.hidden)&&(identical(other.testUrl, _this.testUrl) || other.testUrl == _this.testUrl)&&(identical(other.icon, _this.icon) || other.icon == _this.icon)&&(identical(other.name, _this.name) || other.name == _this.name));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Group&&(identical(other.type, _this.type) || other.type == _this.type)&&const DeepCollectionEquality().equals(other.all, _this.all)&&(identical(other.now, _this.now) || other.now == _this.now)&&(identical(other.hidden, _this.hidden) || other.hidden == _this.hidden)&&(identical(other.testUrl, _this.testUrl) || other.testUrl == _this.testUrl)&&(identical(other.icon, _this.icon) || other.icon == _this.icon)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.udp, _this.udp) || other.udp == _this.udp)&&(identical(other.disableUdp, _this.disableUdp) || other.disableUdp == _this.disableUdp));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Group;
-  return Object.hash(runtimeType,_this.type,const DeepCollectionEquality().hash(_this.all),_this.now,_this.hidden,_this.testUrl,_this.icon,_this.name);
+  return Object.hash(runtimeType,_this.type,const DeepCollectionEquality().hash(_this.all),_this.now,_this.hidden,_this.testUrl,_this.icon,_this.name,_this.udp,_this.disableUdp);
 }
 
 @override
 String toString() {
   final _this = this as Group;
-  return 'Group(type: ${_this.type}, all: ${_this.all}, now: ${_this.now}, hidden: ${_this.hidden}, testUrl: ${_this.testUrl}, icon: ${_this.icon}, name: ${_this.name})';
+  return 'Group(type: ${_this.type}, all: ${_this.all}, now: ${_this.now}, hidden: ${_this.hidden}, testUrl: ${_this.testUrl}, icon: ${_this.icon}, name: ${_this.name}, udp: ${_this.udp}, disableUdp: ${_this.disableUdp})';
 }
 
 
@@ -3798,7 +4092,7 @@ abstract mixin class $GroupCopyWith<$Res>  {
   factory $GroupCopyWith(Group value, $Res Function(Group) _then) = _$GroupCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(fromJson: GroupType.parse) GroupType type, List<Proxy> all, String? now, bool? hidden, String? testUrl, String icon, String name
+@JsonKey(fromJson: GroupType.parse) GroupType type, List<Proxy> all, String? now, bool? hidden, String? testUrl, String icon, String name, bool? udp, bool? disableUdp
 });
 
 
@@ -3815,7 +4109,7 @@ class _$GroupCopyWithImpl<$Res>
 
 /// Create a copy of Group
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? all = null,Object? now = freezed,Object? hidden = freezed,Object? testUrl = freezed,Object? icon = null,Object? name = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? all = null,Object? now = freezed,Object? hidden = freezed,Object? testUrl = freezed,Object? icon = null,Object? name = null,Object? udp = freezed,Object? disableUdp = freezed,}) {
   return _then(Group(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as GroupType,all: null == all ? _self.all : all // ignore: cast_nullable_to_non_nullable
@@ -3824,7 +4118,9 @@ as String?,hidden: freezed == hidden ? _self.hidden : hidden // ignore: cast_nul
 as bool?,testUrl: freezed == testUrl ? _self.testUrl : testUrl // ignore: cast_nullable_to_non_nullable
 as String?,icon: null == icon ? _self.icon : icon // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,
+as String,udp: freezed == udp ? _self.udp : udp // ignore: cast_nullable_to_non_nullable
+as bool?,disableUdp: freezed == disableUdp ? _self.disableUdp : disableUdp // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
@@ -3909,10 +4205,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(fromJson: GroupType.parse)  GroupType type,  List<Proxy> all,  String? now,  bool? hidden,  String? testUrl,  String icon,  String name)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(fromJson: GroupType.parse)  GroupType type,  List<Proxy> all,  String? now,  bool? hidden,  String? testUrl,  String icon,  String name,  bool? udp,  bool? disableUdp)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Group() when $default != null:
-return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.icon,_that.name);case _:
+return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.icon,_that.name,_that.udp,_that.disableUdp);case _:
   return orElse();
 
 }
@@ -3930,10 +4226,10 @@ return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(fromJson: GroupType.parse)  GroupType type,  List<Proxy> all,  String? now,  bool? hidden,  String? testUrl,  String icon,  String name)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(fromJson: GroupType.parse)  GroupType type,  List<Proxy> all,  String? now,  bool? hidden,  String? testUrl,  String icon,  String name,  bool? udp,  bool? disableUdp)  $default,) {final _that = this;
 switch (_that) {
 case _Group():
-return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.icon,_that.name);case _:
+return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.icon,_that.name,_that.udp,_that.disableUdp);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3950,10 +4246,10 @@ return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(fromJson: GroupType.parse)  GroupType type,  List<Proxy> all,  String? now,  bool? hidden,  String? testUrl,  String icon,  String name)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(fromJson: GroupType.parse)  GroupType type,  List<Proxy> all,  String? now,  bool? hidden,  String? testUrl,  String icon,  String name,  bool? udp,  bool? disableUdp)?  $default,) {final _that = this;
 switch (_that) {
 case _Group() when $default != null:
-return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.icon,_that.name);case _:
+return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.icon,_that.name,_that.udp,_that.disableUdp);case _:
   return null;
 
 }
@@ -3965,7 +4261,7 @@ return $default(_that.type,_that.all,_that.now,_that.hidden,_that.testUrl,_that.
 @JsonSerializable()
 
 class _Group implements Group {
-  const _Group({@JsonKey(fromJson: GroupType.parse) required this.type,  List<Proxy> all = const [], this.now, this.hidden, this.testUrl, this.icon = '', required this.name}): _all = all;
+  const _Group({@JsonKey(fromJson: GroupType.parse) required this.type,  List<Proxy> all = const [], this.now, this.hidden, this.testUrl, this.icon = '', required this.name, this.udp, this.disableUdp}): _all = all;
   factory _Group.fromJson(Map<String, dynamic> json) => _$GroupFromJson(json);
 
 @override@JsonKey(fromJson: GroupType.parse) final  GroupType type;
@@ -3981,6 +4277,8 @@ class _Group implements Group {
 @override final  String? testUrl;
 @override@JsonKey() final  String icon;
 @override final  String name;
+@override final  bool? udp;
+@override final  bool? disableUdp;
 
 /// Create a copy of Group
 /// with the given fields replaced by the non-null parameter values.
@@ -3995,18 +4293,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Group&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.all, _all)&&(identical(other.now, now) || other.now == now)&&(identical(other.hidden, hidden) || other.hidden == hidden)&&(identical(other.testUrl, testUrl) || other.testUrl == testUrl)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.name, name) || other.name == name));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Group&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.all, _all)&&(identical(other.now, now) || other.now == now)&&(identical(other.hidden, hidden) || other.hidden == hidden)&&(identical(other.testUrl, testUrl) || other.testUrl == testUrl)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.name, name) || other.name == name)&&(identical(other.udp, udp) || other.udp == udp)&&(identical(other.disableUdp, disableUdp) || other.disableUdp == disableUdp));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,type,const DeepCollectionEquality().hash(_all),now,hidden,testUrl,icon,name);
+    return Object.hash(runtimeType,type,const DeepCollectionEquality().hash(_all),now,hidden,testUrl,icon,name,udp,disableUdp);
 }
 
 @override
 String toString() {
-    return 'Group(type: $type, all: $all, now: $now, hidden: $hidden, testUrl: $testUrl, icon: $icon, name: $name)';
+    return 'Group(type: $type, all: $all, now: $now, hidden: $hidden, testUrl: $testUrl, icon: $icon, name: $name, udp: $udp, disableUdp: $disableUdp)';
 }
 
 
@@ -4017,7 +4315,7 @@ abstract mixin class _$GroupCopyWith<$Res> implements $GroupCopyWith<$Res> {
   factory _$GroupCopyWith(_Group value, $Res Function(_Group) _then) = __$GroupCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(fromJson: GroupType.parse) GroupType type, List<Proxy> all, String? now, bool? hidden, String? testUrl, String icon, String name
+@JsonKey(fromJson: GroupType.parse) GroupType type, List<Proxy> all, String? now, bool? hidden, String? testUrl, String icon, String name, bool? udp, bool? disableUdp
 });
 
 
@@ -4034,7 +4332,7 @@ class __$GroupCopyWithImpl<$Res>
 
 /// Create a copy of Group
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? all = null,Object? now = freezed,Object? hidden = freezed,Object? testUrl = freezed,Object? icon = null,Object? name = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? all = null,Object? now = freezed,Object? hidden = freezed,Object? testUrl = freezed,Object? icon = null,Object? name = null,Object? udp = freezed,Object? disableUdp = freezed,}) {
   return _then(_Group(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as GroupType,all: null == all ? _self._all : all // ignore: cast_nullable_to_non_nullable
@@ -4043,7 +4341,9 @@ as String?,hidden: freezed == hidden ? _self.hidden : hidden // ignore: cast_nul
 as bool?,testUrl: freezed == testUrl ? _self.testUrl : testUrl // ignore: cast_nullable_to_non_nullable
 as String?,icon: null == icon ? _self.icon : icon // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,
+as String,udp: freezed == udp ? _self.udp : udp // ignore: cast_nullable_to_non_nullable
+as bool?,disableUdp: freezed == disableUdp ? _self.disableUdp : disableUdp // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 

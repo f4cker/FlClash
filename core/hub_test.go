@@ -1072,7 +1072,11 @@ func TestProxyViewKeepsWhatTheHostReads(t *testing.T) {
 	}
 
 	node := encode(namedProxy("node-a"))
-	if want := map[string]any{"name": "node-a", "type": "Direct"}; fmt.Sprint(node) != fmt.Sprint(want) {
+	want := map[string]any{
+		"name": "node-a", "type": "Direct",
+		"udp": true, "uot": false, "xudp": false, "tfo": false, "mptcp": false, "smux": false,
+	}
+	if fmt.Sprint(node) != fmt.Sprint(want) {
 		t.Errorf("node view = %v, want %v", node, want)
 	}
 	fromProvider := encode(adapter.NewProxy(outbound.NewDirectWithOption(outbound.DirectOption{
@@ -1102,6 +1106,9 @@ func TestProxyViewKeepsWhatTheHostReads(t *testing.T) {
 	group := encode(adapter.NewProxy(selector))
 	if group["name"] != "group" || group["type"] != "Selector" || group["now"] != "node-a" {
 		t.Errorf("group view = %v, want its name, type and selection", group)
+	}
+	if group["udp"] != true || group["disableUdp"] != false {
+		t.Errorf("group view = %v, want udp from its selection and its own disableUdp", group)
 	}
 	if fmt.Sprint(group["all"]) != "[node-a node-b]" {
 		t.Errorf("group members = %v, want [node-a node-b]", group["all"])

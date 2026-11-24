@@ -9719,4 +9719,159 @@ class AppLocalizationsJa extends AppLocalizations {
   String configBuildHostsInvalid(Object profile, Object domain) {
     return 'Couldn\'t apply “$profile”: the Hosts value for “$domain” can\'t be used. Check Hosts under Advanced configuration → General and in this profile.';
   }
+
+  @override
+  String get nodeConfigEnabled => 'Enabled in config';
+
+  @override
+  String get nodeConfigDisabled => 'Not enabled in config';
+
+  @override
+  String get nodeStatusUnknown => 'Status unknown';
+
+  @override
+  String get nodeGroupUdpDisabled => 'This group has UDP disabled.';
+
+  @override
+  String nodeUdpFollowsNode(Object name) {
+    return 'Follows the current node “$name”.';
+  }
+
+  @override
+  String get nodeInfoConfigNote =>
+      'Based on the current configuration. The server hasn\'t been tested.';
+
+  @override
+  String nodeInfoButton(Object name) {
+    return 'Show info for “$name”';
+  }
+
+  @override
+  String nodeFieldState(Object field, Object state) {
+    return '$field: $state';
+  }
+
+  @override
+  String nodeFieldsMore(Object count, Object names) {
+    return '$count more: $names';
+  }
+
+  @override
+  String get nodeFieldProtocol => 'Protocol';
+
+  @override
+  String get nodeFieldUdp => 'UDP';
+
+  @override
+  String get nodeFieldUot => 'UDP over TCP (UoT)';
+
+  @override
+  String get nodeFieldXudp => 'XUDP packet encoding';
+
+  @override
+  String get nodeFieldTfo => 'TCP Fast Open (TFO)';
+
+  @override
+  String get nodeFieldMptcp => 'Multipath TCP (MPTCP)';
+
+  @override
+  String get nodeFieldSmux => 'Multiplexing (smux)';
+
+  @override
+  String get nodeFieldDialerProxy => 'Dialer proxy';
+
+  @override
+  String get nodeFieldInterface => 'Bound network interface';
+
+  @override
+  String get nodeFieldProvider => 'Source';
+
+  @override
+  String get nodeFieldCurrentNode => 'Current node';
+
+  @override
+  String get routeExitDirect => 'Direct';
+
+  @override
+  String get routeExitUnknown => 'Unknown';
+
+  @override
+  String routeUdpSkippedDisabled(Object rule, Object target) {
+    return 'Rule “$rule” points to “$target”, which doesn\'t have UDP enabled, so the rule was skipped.';
+  }
+
+  @override
+  String routeUdpSkippedUnsupported(Object rule, Object target) {
+    return 'Rule “$rule” points to “$target”, which couldn\'t forward this UDP connection, so the rule was skipped.';
+  }
+
+  @override
+  String get routeNoMatch =>
+      'No rule matched this connection, so it went direct.';
+
+  @override
+  String get routeModeDirect => 'Direct mode was in use at the time.';
+
+  @override
+  String get routeModeGlobal =>
+      'Global mode was in use at the time, and the actual exit was Direct.';
+
+  @override
+  String get routeInternal =>
+      'This was an internal connection of the core and went direct.';
+
+  @override
+  String get routeReasonUnknown =>
+      'The reason for going direct wasn\'t recorded.';
+
+  @override
+  String get routeShortNoMatch => 'No rule matched';
+
+  @override
+  String get routeShortUdpSkipped => 'Rule skipped (UDP)';
+
+  @override
+  String get routeShortModeDirect => 'Direct mode';
+
+  @override
+  String get routeShortModeGlobal => 'Global mode';
+
+  @override
+  String get routeShortInternal => 'Internal';
+
+  @override
+  String get routeShortNoRule => 'No rule recorded';
+
+  @override
+  String get routeExitTitle => 'Actual exit';
+
+  @override
+  String get routeReasonTitle => 'Reason';
+
+  @override
+  String get routeSkippedTitle => 'Skipped rules';
+
+  @override
+  String routeUdpSkippedDisabledBy(Object rule, Object target, Object group) {
+    return 'Rule “$rule” points to “$target”, where “$group” has UDP disabled, so the rule was skipped.';
+  }
+
+  @override
+  String get routeModeGlobalProxy => 'Global mode was in use at the time.';
+
+  @override
+  String nodeUdpDisabledBy(Object name) {
+    return '“$name” has UDP disabled.';
+  }
+
+  @override
+  String get nodeFieldThisGroup => 'This group';
+
+  @override
+  String get nodeGroupDisablesUdp => 'UDP disabled';
+
+  @override
+  String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
+    return 'Rule “$rule” points to “$target”, where “$node” couldn\'t forward this UDP connection, so the rule was skipped.';
+  }
 }

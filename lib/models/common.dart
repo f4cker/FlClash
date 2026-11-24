@@ -90,6 +90,20 @@ extension PackagesExt on List<Package> {
 }
 
 @freezed
+abstract class UdpSkip with _$UdpSkip {
+  const factory UdpSkip({
+    @Default('') String type,
+    @Default('') String payload,
+    @Default('') String adapter,
+    @Default('') String refused,
+    @Default('') String cause,
+  }) = _UdpSkip;
+
+  factory UdpSkip.fromJson(Map<String, Object?> json) =>
+      _$UdpSkipFromJson(json);
+}
+
+@freezed
 abstract class Metadata with _$Metadata {
   const factory Metadata({
     @Default(0) int uid,
@@ -113,6 +127,9 @@ abstract class Metadata with _$Metadata {
     @Default('') String specialProxy,
     @Default(false) bool mitm,
     @Default(false) bool mitmRefused,
+    @Default([]) List<UdpSkip> udpSkipped,
+    // Empty when a rule decided, or when the Core did not record why.
+    @Default('') String routeReason,
   }) = _Metadata;
 
   factory Metadata.fromJson(Map<String, Object?> json) =>
@@ -660,6 +677,8 @@ abstract class Group with _$Group {
     String? testUrl,
     @Default('') String icon,
     required String name,
+    bool? udp,
+    bool? disableUdp,
   }) = _Group;
 
   factory Group.fromJson(Map<String, Object?> json) => _$GroupFromJson(json);

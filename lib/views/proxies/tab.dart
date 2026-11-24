@@ -218,6 +218,7 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
                         final columns = getProxiesColumns(
                           max(width - 32, 0),
                           proxiesLayout,
+                          textScale: MediaQuery.textScalerOf(context).scale(1),
                         );
                         _columns = columns;
                         return TabBarView(

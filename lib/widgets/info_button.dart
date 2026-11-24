@@ -17,9 +17,17 @@ const _popoverMargin = 8.0;
 /// info glyph right after a title that opens [paragraphs] in a popover.
 /// Problems never go here; they stay inline where they happen.
 class InfoButton extends StatefulWidget {
-  const InfoButton({super.key, required this.paragraphs, this.label});
+  const InfoButton({
+    super.key,
+    this.paragraphs = const [],
+    this.builder,
+    this.label,
+  });
 
   final List<String> paragraphs;
+
+  /// Replaces [paragraphs] when the popover holds more than prose.
+  final WidgetBuilder? builder;
 
   /// The tooltip and the name a screen reader reads; 说明 when null.
   final String? label;
@@ -115,6 +123,7 @@ class _InfoButtonState extends State<InfoButton> {
                 focusNode: _popoverFocus,
                 label: label,
                 paragraphs: widget.paragraphs,
+                builder: widget.builder,
                 onDismiss: _dismiss,
               ),
             ),
@@ -221,12 +230,14 @@ class _Popover extends StatelessWidget {
     required this.focusNode,
     required this.label,
     required this.paragraphs,
+    required this.builder,
     required this.onDismiss,
   });
 
   final FocusNode focusNode;
   final String label;
   final List<String> paragraphs;
+  final WidgetBuilder? builder;
   final VoidCallback onDismiss;
 
   @override
@@ -256,20 +267,23 @@ class _Popover extends StatelessWidget {
                   horizontal: 16,
                   vertical: 12,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 8,
-                  children: [
-                    for (final paragraph in paragraphs)
-                      Text(
-                        paragraph,
-                        style: AppTextStyle.body
-                            .of(context)
-                            .copyWith(color: colorScheme.onSurface),
-                      ),
-                  ],
-                ),
+                child: switch (builder) {
+                  final builder? => builder(context),
+                  null => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 8,
+                    children: [
+                      for (final paragraph in paragraphs)
+                        Text(
+                          paragraph,
+                          style: AppTextStyle.body
+                              .of(context)
+                              .copyWith(color: colorScheme.onSurface),
+                        ),
+                    ],
+                  ),
+                },
               ),
             ),
           ),

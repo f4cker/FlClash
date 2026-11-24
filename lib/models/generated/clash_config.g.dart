@@ -94,6 +94,15 @@ _Proxy _$ProxyFromJson(Map<String, dynamic> json) => _Proxy(
   type: json['type'] as String,
   now: json['now'] as String?,
   providerName: json['provider-name'] as String?,
+  udp: json['udp'] as bool?,
+  uot: json['uot'] as bool?,
+  xudp: json['xudp'] as bool?,
+  tfo: json['tfo'] as bool?,
+  mptcp: json['mptcp'] as bool?,
+  smux: json['smux'] as bool?,
+  dialerProxy: json['dialer-proxy'] as String?,
+  interfaceName: json['interface'] as String?,
+  disableUdp: json['disableUdp'] as bool?,
 );
 
 Map<String, dynamic> _$ProxyToJson(_Proxy instance) => <String, dynamic>{
@@ -101,6 +110,15 @@ Map<String, dynamic> _$ProxyToJson(_Proxy instance) => <String, dynamic>{
   'type': instance.type,
   'now': instance.now,
   'provider-name': instance.providerName,
+  'udp': instance.udp,
+  'uot': instance.uot,
+  'xudp': instance.xudp,
+  'tfo': instance.tfo,
+  'mptcp': instance.mptcp,
+  'smux': instance.smux,
+  'dialer-proxy': instance.dialerProxy,
+  'interface': instance.interfaceName,
+  'disableUdp': instance.disableUdp,
 };
 
 _CustomProxy _$CustomProxyFromJson(Map<String, dynamic> json) => _CustomProxy(

@@ -61,13 +61,24 @@ Size windowControlsOverPage({
   return windowControlsOverSidebar(isMacOS: isMacOS, version: version);
 }
 
-int getProxiesColumns(double viewWidth, ProxiesLayout proxiesLayout) {
+const _scaledProxyCardWidth = 110.0;
+
+/// Text scaled up widens each card, down to one column, so a protocol and a
+/// delay such as 1234 ms still sit side by side.
+int getProxiesColumns(
+  double viewWidth,
+  ProxiesLayout proxiesLayout, {
+  double textScale = 1,
+}) {
   final columns = max((viewWidth / 250).ceil(), 2);
-  return switch (proxiesLayout) {
+  final laid = switch (proxiesLayout) {
     ProxiesLayout.tight => columns + 1,
     ProxiesLayout.standard => columns,
     ProxiesLayout.loose => columns - 1,
   };
+  if (textScale <= 1) return laid;
+  final fit = (viewWidth / (_scaledProxyCardWidth * textScale)).floor();
+  return min(laid, max(fit, 1));
 }
 
 double cardSpacingOf(BuildContext context, ViewMode viewMode) =>

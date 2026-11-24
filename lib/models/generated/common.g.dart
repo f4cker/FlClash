@@ -22,6 +22,22 @@ Map<String, dynamic> _$PackageToJson(_Package instance) => <String, dynamic>{
   'lastUpdateTime': instance.lastUpdateTime,
 };
 
+_UdpSkip _$UdpSkipFromJson(Map<String, dynamic> json) => _UdpSkip(
+  type: json['type'] as String? ?? '',
+  payload: json['payload'] as String? ?? '',
+  adapter: json['adapter'] as String? ?? '',
+  refused: json['refused'] as String? ?? '',
+  cause: json['cause'] as String? ?? '',
+);
+
+Map<String, dynamic> _$UdpSkipToJson(_UdpSkip instance) => <String, dynamic>{
+  'type': instance.type,
+  'payload': instance.payload,
+  'adapter': instance.adapter,
+  'refused': instance.refused,
+  'cause': instance.cause,
+};
+
 _Metadata _$MetadataFromJson(Map<String, dynamic> json) => _Metadata(
   uid: (json['uid'] as num?)?.toInt() ?? 0,
   network: json['network'] as String? ?? '',
@@ -52,6 +68,12 @@ _Metadata _$MetadataFromJson(Map<String, dynamic> json) => _Metadata(
   specialProxy: json['specialProxy'] as String? ?? '',
   mitm: json['mitm'] as bool? ?? false,
   mitmRefused: json['mitmRefused'] as bool? ?? false,
+  udpSkipped:
+      (json['udpSkipped'] as List<dynamic>?)
+          ?.map((e) => UdpSkip.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  routeReason: json['routeReason'] as String? ?? '',
 );
 
 Map<String, dynamic> _$MetadataToJson(_Metadata instance) => <String, dynamic>{
@@ -76,6 +98,8 @@ Map<String, dynamic> _$MetadataToJson(_Metadata instance) => <String, dynamic>{
   'specialProxy': instance.specialProxy,
   'mitm': instance.mitm,
   'mitmRefused': instance.mitmRefused,
+  'udpSkipped': instance.udpSkipped,
+  'routeReason': instance.routeReason,
 };
 
 const _$DnsModeEnumMap = {
@@ -219,6 +243,8 @@ _Group _$GroupFromJson(Map<String, dynamic> json) => _Group(
   testUrl: json['testUrl'] as String?,
   icon: json['icon'] as String? ?? '',
   name: json['name'] as String,
+  udp: json['udp'] as bool?,
+  disableUdp: json['disableUdp'] as bool?,
 );
 
 Map<String, dynamic> _$GroupToJson(_Group instance) => <String, dynamic>{
@@ -229,6 +255,8 @@ Map<String, dynamic> _$GroupToJson(_Group instance) => <String, dynamic>{
   'testUrl': instance.testUrl,
   'icon': instance.icon,
   'name': instance.name,
+  'udp': instance.udp,
+  'disableUdp': instance.disableUdp,
 };
 
 const _$GroupTypeEnumMap = {

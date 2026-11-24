@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'card.dart';
 import 'common.dart';
 import 'hidden_group_name.dart';
+import 'node_fields.dart';
 
 const _headerInset = 10.0;
 const _headerButtonInset = 4.0;
@@ -20,6 +21,48 @@ const _liftDistance = 16.0;
 const _groupMinWidth = 360.0;
 const _groupMaxColumns = 3;
 const _lastRowGrowth = _headerInset - proxyGridSpacing;
+const _headerActionsGap = 6.0;
+final _headerActionsRow = TonalButtonSize.compact.button + _headerActionsGap;
+
+/// Whether [group]'s name would be cut beside its actions in [width], which
+/// then move to a row of their own.
+bool _headerStacks(
+  BuildContext context,
+  Group group,
+  double width,
+  ProxiesIconStyle iconStyle,
+) {
+  final scaler = MediaQuery.textScalerOf(context);
+  double widthOf(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
+  final button = TonalButtonSize.compact.button;
+  final typeWidth = widthOf(
+    group.type.name,
+    AppTextStyle.caption1.of(context, emphasized: true),
+  );
+  final actions = max(button * 2, typeWidth) + _headerActionsGap + button;
+  final iconSide = listHeaderHeight - _headerInset * 2;
+  final icon = switch (iconStyle) {
+    ProxiesIconStyle.filled => iconSide + 12,
+    ProxiesIconStyle.plain => iconSide + 12,
+    ProxiesIconStyle.hidden => 4.0,
+  };
+  final name = widthOf(
+    group.name,
+    AppTextStyle.callout.of(context, emphasized: true),
+  );
+  return name > width - _headerInset * 2 - icon - actions;
+}
 
 class ProxiesListView extends ConsumerStatefulWidget {
   const ProxiesListView({super.key});
@@ -31,6 +74,7 @@ class ProxiesListView extends ConsumerStatefulWidget {
 class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
   late final ScrollController _controller;
   int _columns = 1;
+  Map<String, double> _headerHeights = const {};
   int _groupColumns = 1;
   double _gap = 0;
 
@@ -99,7 +143,7 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
     for (final (index, group) in state.groups.indexed) {
       final column = index % _groupColumns;
       offsets.add(columnOffsets[column]);
-      columnOffsets[column] += listHeaderHeight + _gap;
+      columnOffsets[column] += _headerHeightOf(group.name) + _gap;
       if (state.currentUnfoldSet.contains(group.name)) {
         final rowCount = (group.all.length + _columns - 1) ~/ _columns;
         columnOffsets[column] += _rowsExtent(rowCount, rowExtent);
@@ -107,6 +151,9 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
     }
     return GroupOffsets(state.groups, offsets);
   }
+
+  double _headerHeightOf(String groupName) =>
+      _headerHeights[groupName] ?? listHeaderHeight;
 
   double _getGroupOffset(String groupName) {
     if (!_controller.hasClients || _controller.position.maxScrollExtent == 0) {
@@ -164,7 +211,7 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
       ),
       pixels: pixels,
       start: offset,
-      end: offset + listHeaderHeight,
+      end: offset + _headerHeightOf(groupName),
     );
   }
 
@@ -202,6 +249,9 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
           proxiesListStateProvider.select((state) => state.proxyCardType),
         );
         ref.watch(themeSettingProvider.select((state) => state.textScale));
+        final iconStyle = ref.watch(
+          proxiesStyleSettingProvider.select((state) => state.iconStyle),
+        );
         final viewMode = ref.watch(viewModeProvider);
         final proxiesLayout = ref.watch(
           proxiesStyleSettingProvider.select((state) => state.layout),
@@ -234,13 +284,23 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
               final columns = getProxiesColumns(
                 max(groupWidth - _headerInset * 2, 0),
                 proxiesLayout,
+                textScale: MediaQuery.textScalerOf(context).scale(1),
               );
               _columns = columns;
               _groupColumns = groupColumns;
               _gap = gap;
+              _headerHeights = {
+                for (final group in groups)
+                  group.name:
+                      listHeaderHeight +
+                      (_headerStacks(context, group, groupWidth, iconStyle)
+                          ? _headerActionsRow
+                          : 0),
+              };
               Widget buildGroup(Group group) => _GroupSliver(
                 key: _GroupSliverKey(group.name),
                 group: group,
+                headerHeight: _headerHeightOf(group.name),
                 columns: columns,
                 cardType: cardType,
                 gap: gap,
@@ -320,6 +380,7 @@ class _GroupSliver extends ConsumerStatefulWidget {
   const _GroupSliver({
     super.key,
     required this.group,
+    required this.headerHeight,
     required this.columns,
     required this.cardType,
     required this.gap,
@@ -328,6 +389,7 @@ class _GroupSliver extends ConsumerStatefulWidget {
   });
 
   final Group group;
+  final double headerHeight;
   final int columns;
   final ProxyCardType cardType;
   final double gap;
@@ -512,8 +574,9 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
       _rows = null;
     }
     Widget buildHeader({double floating = 0, double lift = 0}) => SizedBox(
-      height: listHeaderHeight,
+      height: widget.headerHeight,
       child: ListHeader(
+        stacked: widget.headerHeight > listHeaderHeight,
         enterAnimated: false,
         floating: floating,
         lift: lift,
@@ -545,8 +608,9 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
     final columns = widget.columns;
     final rowCount = (widget.group.all.length + columns - 1) ~/ columns;
     final rowsExtent = isExpand ? _rowsExtent(rowCount, _rowExtent) : 0.0;
+    final headerHeight = widget.headerHeight;
     final groupExtent =
-        listHeaderHeight +
+        headerHeight +
         (_controller.isDismissed
             ? 0.0
             : _rowsExtent(rowCount, getRowExtent(widget.cardType)));
@@ -577,7 +641,7 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
         headerState = state;
         if (state == null) {
           return header = PinnedHeaderSliver(
-            child: SizedBox(height: listHeaderHeight),
+            child: SizedBox(height: headerHeight),
           );
         }
         final (floating, lift, cover, pageColor) = state;
@@ -590,7 +654,7 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
                   top: -cover,
                   left: 0,
                   right: 0,
-                  height: cover + listHeaderHeight / 2,
+                  height: cover + headerHeight / 2,
                   child: ColoredBox(color: pageColor),
                 ),
                 buildHeader(floating: floating, lift: lift),
@@ -615,6 +679,9 @@ class ListHeader extends ConsumerWidget {
 
   final bool enterAnimated;
 
+  /// Puts the actions on a row under the name, which would be cut beside them.
+  final bool stacked;
+
   /// How far the group's own rows have scrolled under the pinned header, as a
   /// fraction of the distance that rounds its bottom corners.
   final double floating;
@@ -625,6 +692,7 @@ class ListHeader extends ConsumerWidget {
   const ListHeader({
     super.key,
     this.enterAnimated = true,
+    this.stacked = false,
     this.floating = 0,
     this.lift = 0,
     required this.group,
@@ -653,6 +721,28 @@ class ListHeader extends ConsumerWidget {
     final revealed = ref.watch(
       proxiesRevealProvider.select((reveal) => reveal?.group == groupName),
     );
+    final title = Row(
+      children: [
+        _GroupIcon(src: group.icon, name: groupName),
+        Flexible(
+          child: _GroupSummary(groupName: groupName, hidden: showHiddenTag),
+        ),
+      ],
+    );
+    final actions = _GroupActions(
+      isExpand: isExpand,
+      isDelayTesting: isDelayTesting,
+      groupType: group.type.name,
+      onScrollToSelected: () {
+        onScrollToSelected(groupName);
+      },
+      onDelayTest: () {
+        ref.read(proxiesActionProvider.notifier).delayTestPageGroup(groupName);
+      },
+      onToggle: () {
+        onChange(groupName);
+      },
+    );
     final card = Card(
       enterActionsOnRight: true,
       enterAnimated: enterAnimated,
@@ -660,40 +750,25 @@ class ListHeader extends ConsumerWidget {
       radius: radius - _headerButtonInset,
       child: Padding(
         padding: const EdgeInsets.all(_headerInset - _headerButtonInset),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Row(
+        child: stacked
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                spacing: _headerActionsGap,
                 children: [
-                  _GroupIcon(src: group.icon, name: groupName),
-                  Flexible(
-                    child: _GroupSummary(
-                      groupName: groupName,
-                      hidden: showHiddenTag,
-                    ),
+                  SizedBox(
+                    height: listHeaderHeight - _headerInset * 2,
+                    child: title,
                   ),
+                  actions,
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(child: title),
+                  actions,
                 ],
               ),
-            ),
-            _GroupActions(
-              isExpand: isExpand,
-              isDelayTesting: isDelayTesting,
-              groupType: group.type.name,
-              onScrollToSelected: () {
-                onScrollToSelected(groupName);
-              },
-              onDelayTest: () {
-                ref
-                    .read(proxiesActionProvider.notifier)
-                    .delayTestPageGroup(groupName);
-              },
-              onToggle: () {
-                onChange(groupName);
-              },
-            ),
-          ],
-        ),
       ),
       onPressed: () {
         onChange(groupName);
@@ -862,11 +937,28 @@ class _SelectedProxyName extends ConsumerWidget {
     if (proxyName.isEmpty) {
       return const SizedBox.shrink();
     }
-    return EmojiText(
+    final name = EmojiText(
       proxyName,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: AppTextStyle.caption1.of(context, emphasized: true).toLight,
+    );
+    if (watchGroupUdp(ref, groupName) != NodeUdp.enabled) {
+      return name;
+    }
+    return Row(
+      spacing: 6,
+      children: [
+        Flexible(child: name),
+        NodeFieldIcon(
+          field: NodeField.udp,
+          proxy: Proxy(name: groupName, type: ''),
+          line: AppTextStyle.caption1,
+          note: context.appLocalizations.nodeUdpFollowsNode(proxyName),
+          // Arrow right in the header goes to its buttons.
+          focusable: false,
+        ),
+      ],
     );
   }
 }
@@ -893,6 +985,7 @@ class _GroupActions extends StatelessWidget {
     return TonalButtonTheme(
       size: TonalButtonSize.compact,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (isExpand)
             TonalButtonGroup(
