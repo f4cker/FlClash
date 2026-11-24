@@ -442,6 +442,15 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       );
     }
   }
+  if (rawConfig['hosts'] case final Map hosts) {
+    final text = {
+      for (final MapEntry(:key, :value) in hosts.entries)
+        '$key': value is List ? value.join(',') : '$value',
+    };
+    if (hostsCycleOf(text) case final domain?) {
+      throw ConfigBuildException(ConfigBuildIssue.hostsCycle, detail: domain);
+    }
+  }
   // A colliding set is rewritten only through its stable paired rule id.
   // Older rows have no persistent association; refusing an ambiguous
   // collision preserves the previously running configuration and all rules.
@@ -681,7 +690,9 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
     ...page.geoXUrl.raw,
   };
   put(PageConfigKey.globalUa, page.globalUa ?? data.defaultUA);
+  // The app's Hosts add to the profile's; on the same domain the app wins.
   rawConfig['hosts'] = {
+    if (rawConfig['hosts'] case final Map hosts) ...hosts,
     for (final MapEntry(:key, :value) in page.hosts.entries)
       key: value.splitByMultipleSeparators,
   };

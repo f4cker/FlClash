@@ -172,7 +172,7 @@ void main() {
         'inbound-interface': 'a b',
         'sibling': 0,
       });
-      expect(config['hosts'], isEmpty);
+      expect(config['hosts'], {'file.test': '1.2.3.4'});
       expect(
         () => applyPageSettings(<String, dynamic>{
           'iptables': {'enable': true, 'inbound-interface': 'a b'},

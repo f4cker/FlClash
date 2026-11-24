@@ -9178,4 +9178,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String interfaceNameMissingTip(Object name) {
     return '本机现在没有名为「$name」的网卡。网卡不存在时内核仍能启动，但所有连接都会失败。';
   }
+
+  @override
+  String configBuildHostsCycle(Object profile, Object domain) {
+    return '无法应用配置「$profile」：App 的 Hosts 加上这份配置自带的 Hosts 后，「$domain」经过其他条目又指回了自己，内核会拒绝。请在「进阶配置 → 常规 → Hosts」或这份配置的 Hosts 中修改其中一条。';
+  }
 }

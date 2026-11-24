@@ -9772,4 +9772,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String interfaceNameMissingTip(Object name) {
     return 'This Mac has no network interface named “$name” right now. The core still starts, but every connection fails while it is missing.';
   }
+
+  @override
+  String configBuildHostsCycle(Object profile, Object domain) {
+    return 'Couldn\'t apply “$profile”: with the app\'s Hosts added to the profile\'s own, “$domain” leads back to itself through other entries, which the core refuses. Change one of them under Advanced configuration → General → Hosts, or in the profile\'s Hosts.';
+  }
 }

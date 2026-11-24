@@ -93,6 +93,9 @@ enum ConfigBuildIssue {
 
   /// [ConfigBuildException.detail] is the rule set's name.
   fakeIpFilterRuleSetMissing,
+
+  /// [ConfigBuildException.detail] is the domain that maps back to itself.
+  hostsCycle,
 }
 
 final class ConfigBuildException implements Exception {

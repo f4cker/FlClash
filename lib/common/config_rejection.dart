@@ -105,6 +105,9 @@ String configBuildMessage(
       ),
     ConfigBuildIssue.fakeIpFilterRuleSetMissing =>
       appLocalizations.configRejectedRuleSet(error.detail ?? ''),
+    ConfigBuildIssue.hostsCycle when profile != null =>
+      appLocalizations.configBuildHostsCycle(profile, error.detail ?? ''),
+    ConfigBuildIssue.hostsCycle => appLocalizations.configRejectedHosts,
   };
 }
 

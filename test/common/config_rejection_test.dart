@@ -132,5 +132,14 @@ void main() {
       userFacingErrorMessage(ruleSet.withProfile('机场'), l),
       l.configBuildFakeIpFilterRuleSet('机场', 'cn'),
     );
+    const cycle = ConfigBuildException(
+      ConfigBuildIssue.hostsCycle,
+      detail: 'a.test',
+    );
+    expect(userFacingErrorMessage(cycle, l), l.configRejectedHosts);
+    expect(
+      userFacingErrorMessage(cycle.withProfile('机场'), l),
+      l.configBuildHostsCycle('机场', 'a.test'),
+    );
   });
 }

@@ -1473,41 +1473,100 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
       return loadYaml(result.yaml) as YamlMap;
     }
 
-    test(
-      'page defaults and the whole Hosts dictionary replace the file',
-      () async {
-        for (final hosts in [
-          <String, String>{},
-          {'page.test': '192.0.2.1,192.0.2.2'},
-        ]) {
-          final config = await build(
-            rawConfig: {
-              'allow-lan': true,
-              'port': 8888,
-              'ipv6': true,
-              'unified-delay': false,
-              'tcp-concurrent': false,
-              'hosts': {'file.test': '192.0.2.3'},
-            },
-            page: PatchClashConfig(hosts: hosts),
-          );
+    test('page defaults replace the file\'s', () async {
+      final config = await build(
+        rawConfig: {
+          'allow-lan': true,
+          'port': 8888,
+          'ipv6': true,
+          'unified-delay': false,
+          'tcp-concurrent': false,
+        },
+        page: const PatchClashConfig(),
+      );
 
-          expect(config['allow-lan'], false);
-          expect(config['port'], 0);
-          expect(config['ipv6'], false);
-          expect(config['unified-delay'], true);
-          expect(config['tcp-concurrent'], true);
-          expect(
-            config['hosts'],
-            hosts.isEmpty
-                ? {}
-                : {
-                    'page.test': ['192.0.2.1', '192.0.2.2'],
-                  },
-          );
-        }
-      },
-    );
+      expect(config['allow-lan'], false);
+      expect(config['port'], 0);
+      expect(config['ipv6'], false);
+      expect(config['unified-delay'], true);
+      expect(config['tcp-concurrent'], true);
+    });
+
+    group('Hosts', () {
+      Future<Object?> hostsOf(
+        Map<String, String> page, {
+        Map<String, Object>? file,
+      }) async {
+        final config = await build(
+          rawConfig: {'hosts': ?file},
+          page: PatchClashConfig(hosts: page),
+        );
+        return config['hosts'];
+      }
+
+      test('the app\'s Hosts add to the profile\'s', () async {
+        expect(
+          await hostsOf(
+            {'page.test': '192.0.2.1,192.0.2.2'},
+            file: {'file.test': '192.0.2.3'},
+          ),
+          {
+            'file.test': '192.0.2.3',
+            'page.test': ['192.0.2.1', '192.0.2.2'],
+          },
+        );
+      });
+
+      test('on the same domain the app\'s value wins', () async {
+        expect(
+          await hostsOf(
+            {'same.test': '192.0.2.1'},
+            file: {
+              'same.test': ['192.0.2.9'],
+              'file.test': 'lan',
+            },
+          ),
+          {'same.test': '192.0.2.1', 'file.test': 'lan'},
+        );
+      });
+
+      test('empty app Hosts leave the profile\'s as they are', () async {
+        expect(
+          await hostsOf(
+            {},
+            file: {
+              'file.test': ['192.0.2.3', '192.0.2.4'],
+            },
+          ),
+          {
+            'file.test': ['192.0.2.3', '192.0.2.4'],
+          },
+        );
+      });
+
+      test('a profile without Hosts takes the app\'s', () async {
+        expect(await hostsOf({}), isEmpty);
+        expect(await hostsOf({'page.test': '192.0.2.1'}), {
+          'page.test': '192.0.2.1',
+        });
+      });
+
+      test('a cycle the merge makes is refused before the Core', () async {
+        await expectLater(
+          hostsOf({'a.test': 'b.test'}, file: {'b.test': 'a.test'}),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsCycle)
+                .having((e) => e.detail, 'detail', 'b.test'),
+          ),
+        );
+        expect(
+          await hostsOf({'b.test': '192.0.2.1'}, file: {'b.test': 'a.test'}),
+          {'b.test': '192.0.2.1'},
+          reason: 'the app value breaks it',
+        );
+      });
+    });
 
     test(
       'custom profile overrides apply only their selected controls',
