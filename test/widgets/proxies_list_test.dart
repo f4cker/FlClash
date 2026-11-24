@@ -7,6 +7,7 @@ import 'package:fl_clash/views/proxies/card.dart';
 import 'package:fl_clash/views/proxies/list.dart';
 import 'package:fl_clash/widgets/widgets.dart' hide ListHeader;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,8 +45,12 @@ void main() {
     List<Group>? groups,
     Set<String> unfoldSet = const {'G0', 'G1', 'G2'},
     ValueListenable<Brightness>? brightness,
+    Size size = const Size(900, 700),
+    double textScale = 1,
   }) async {
-    tester.view.physicalSize = const Size(900, 700);
+    tester.view.physicalSize = size;
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -369,5 +374,38 @@ void main() {
     await tester.pump();
 
     expect(find.byType(ActivityIndicator), findsNothing);
+  });
+
+  testWidgets('a name cut beside the actions moves them to a row below', (
+    tester,
+  ) async {
+    Rect nameOf(String name) =>
+        tester.getRect(find.text(name, findRichText: true).first);
+    Rect testOf(String name) =>
+        tester.getRect(actionOf(name, currentAppLocalizations.delayTest));
+    bool cut(String name) => tester
+        .renderObject<RenderParagraph>(
+          find.text(name, findRichText: true).first,
+        )
+        .didExceedMaxLines;
+
+    await pumpList(
+      tester,
+      groups: [_group('Global', 2)],
+      unfoldSet: const {'Global'},
+    );
+    expect(testOf('Global').center.dy, closeTo(nameOf('Global').bottom, 20));
+    final wide = tester.getSize(headerOf('Global')).height;
+
+    await pumpList(
+      tester,
+      groups: [_group('Global', 2)],
+      unfoldSet: const {'Global'},
+      size: const Size(360, 900),
+      textScale: 2,
+    );
+    expect(cut('Global'), isFalse);
+    expect(testOf('Global').top, greaterThan(nameOf('Global').bottom));
+    expect(tester.getSize(headerOf('Global')).height, greaterThan(wide));
   });
 }
