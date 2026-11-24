@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/metacubex/mihomo/adapter"
+	"github.com/metacubex/mihomo/adapter/outbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	"github.com/metacubex/mihomo/adapter/provider"
 	"github.com/metacubex/mihomo/common/convert"
@@ -128,7 +129,7 @@ func proxyView(proxy constant.Proxy) any {
 	}
 	if !isProxyGroupType(proxy.Type()) {
 		if isOutbound(proxy.Type()) {
-			node.UDP, node.UoT = new(proxy.SupportUDP()), new(proxy.SupportUOT())
+			node.UDP, node.UoT = new(proxy.SupportUDP()), new(outbound.ConfiguredUOT(proxy.Adapter()))
 			node.XUDP, node.TFO = new(info.XUDP), new(info.TFO)
 			node.MPTCP, node.SMUX = new(info.MPTCP), new(info.SMUX)
 			node.DialerProxy, node.Interface = info.DialerProxy, info.Interface

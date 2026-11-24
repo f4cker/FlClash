@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net"
 	"net/netip"
 	"slices"
@@ -390,5 +391,33 @@ func TestDNSDialerPinnedToDirectIsInternal(t *testing.T) {
 	}
 	if m := tracker.Info().Metadata; m.RouteReason != tunnel.RouteInternal {
 		t.Errorf("pinned DNS reason = %q, want %q", m.RouteReason, tunnel.RouteInternal)
+	}
+}
+
+func TestProxyViewUoTIsTheConfigNotSmux(t *testing.T) {
+	uotOf := func(extra map[string]any) any {
+		t.Helper()
+		mapping := map[string]any{
+			"name": "ss", "type": "ss", "server": "192.0.2.3", "port": 8388,
+			"cipher": "aes-128-gcm", "password": "p", "smux": map[string]any{"enabled": true},
+		}
+		maps.Copy(mapping, extra)
+		proxy, err := adapter.ParseProxy(mapping)
+		if err != nil {
+			t.Fatalf("ParseProxy: %v", err)
+		}
+		if !proxy.SupportUOT() {
+			t.Fatalf("smux SupportUOT = false, want the wrapper to report true")
+		}
+		data, _ := json.Marshal(proxyView(proxy))
+		view := map[string]any{}
+		_ = json.Unmarshal(data, &view)
+		return view["uot"]
+	}
+	if uot := uotOf(nil); uot != false {
+		t.Errorf("smux node without udp-over-tcp: uot = %v, want false", uot)
+	}
+	if uot := uotOf(map[string]any{"udp-over-tcp": true}); uot != true {
+		t.Errorf("smux node with udp-over-tcp: uot = %v, want true", uot)
 	}
 }
