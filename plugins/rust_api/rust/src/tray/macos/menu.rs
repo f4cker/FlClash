@@ -44,14 +44,13 @@ const DETAIL_GAP: f64 = 12.0;
 const ARROW_GAP: f64 = 8.0;
 const BADGE_GAP: f64 = 8.0;
 const BADGE_ARROW_GAP: f64 = 5.0;
-const BADGE_PADDING: f64 = 4.0;
-const BADGE_MINIMUM_WIDTH: f64 = 40.0;
+const BADGE_PADDING: f64 = 3.0;
+const BADGE_MINIMUM_WIDTH: f64 = 28.0;
 const DETAIL_MAXIMUM_WIDTH: f64 = 110.0;
 /// A group row's selection up to this wide is never cut, and a longer one is
-/// cut no further: it holds five CJK characters or "香港节点 01" at 13pt.
-const DETAIL_MINIMUM_WIDTH: f64 = 75.0;
-/// Fits up to 4-digit delays and 未测速, 超时 or 测试中 at the badge font.
-const GROUP_BADGE_MINIMUM_WIDTH: f64 = 56.0;
+/// cut no further: six CJK characters at 13pt. Beside a 3-digit delay a menu
+/// of long selections is as wide as it was with the old 60pt badge.
+const DETAIL_MINIMUM_WIDTH: f64 = 87.0;
 const ICON_PNG_MAXIMUM_BYTES: usize = 2_100_000;
 const ICON_MAXIMUM_PIXELS: isize = 4096;
 const PNG_SIGNATURE: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -801,7 +800,7 @@ impl Style {
                 NSFontWeightRegular
             }),
             badge_font: NSFont::monospacedDigitSystemFontOfSize_weight(
-                (size - 2.0).max(11.0),
+                (size - 3.0).max(10.0),
                 unsafe { NSFontWeightMedium },
             ),
             monogram_font: NSFont::systemFontOfSize_weight(10.0, unsafe { NSFontWeightSemibold }),
@@ -814,23 +813,9 @@ impl Style {
     fn badge_width(&self, label: &str) -> f64 {
         let measured = text_width(label, &self.badge_font) + 2.0 * BADGE_PADDING;
         if is_delay(label) {
-            let digits = label.chars().filter(char::is_ascii_digit).count();
-            let floor = if digits >= 5 {
-                64.0
-            } else {
-                GROUP_BADGE_MINIMUM_WIDTH
-            };
-            return measured.max(floor);
-        }
-        measured.min(110.0).max(BADGE_MINIMUM_WIDTH)
-    }
-
-    fn row_badge_width(&self, label: &str, group_row: bool) -> f64 {
-        let width = self.badge_width(label);
-        if group_row {
-            width.max(GROUP_BADGE_MINIMUM_WIDTH)
+            measured
         } else {
-            width
+            measured.min(110.0)
         }
     }
 }
@@ -978,7 +963,7 @@ impl ItemView {
                 content
                     .badge
                     .as_ref()
-                    .map(|badge| style.row_badge_width(&badge.label, content.has_submenu)),
+                    .map(|badge| style.badge_width(&badge.label)),
                 content.has_submenu.then(|| style.arrow.size().width),
             )
         })
@@ -1233,7 +1218,7 @@ impl ItemView {
             content
                 .badge
                 .as_ref()
-                .map(|badge| style.row_badge_width(&badge.label, content.has_submenu)),
+                .map(|badge| style.badge_width(&badge.label)),
             content.has_submenu,
         );
         if let Some(badge) = &content.badge {
@@ -1243,16 +1228,13 @@ impl ItemView {
                 NSPoint::new(trailing_x - width, (bounds.size.height - height) / 2.0),
                 NSSize::new(width, height),
             );
-            let background = if highlighted {
-                NSColor::colorWithWhite_alpha(1.0, 0.12)
-            } else {
-                argb(badge.background)
-            };
-            background.setFill();
+            if highlighted {
+                NSColor::windowBackgroundColor().setFill();
+                NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 4.0, 4.0).fill();
+            }
+            argb(badge.background).setFill();
             NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 4.0, 4.0).fill();
-            let color = if highlighted {
-                primary.clone()
-            } else if !content.enabled {
+            let color = if !content.enabled {
                 NSColor::disabledControlTextColor()
             } else {
                 readable(badge.foreground, badge.background)
@@ -1937,7 +1919,7 @@ mod tests {
     use super::{
         is_delay, item_enabled, row_width, segment_track, takes_key, text_width, trailing_layout,
         Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP, BADGE_ARROW_GAP, BADGE_GAP,
-        DETAIL_GAP, DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH, GROUP_BADGE_MINIMUM_WIDTH,
+        BADGE_PADDING, DETAIL_GAP, DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH,
     };
     use objc2_app_kit::NSEventModifierFlags;
     use objc2_app_kit::NSFont;
@@ -2198,7 +2180,7 @@ mod tests {
     const EDGES: f64 = 54.0;
     const TITLE: f64 = 52.0;
     const ARROW: f64 = 10.0;
-    const BADGE: f64 = GROUP_BADGE_MINIMUM_WIDTH;
+    const BADGE: f64 = 44.0;
     const BADGE_ROOM: f64 = BADGE + BADGE_GAP + BADGE_ARROW_GAP - ARROW_GAP;
 
     fn menu_width(details: &[f64], badge: Option<f64>) -> f64 {
@@ -2249,9 +2231,9 @@ mod tests {
     }
 
     #[test]
-    fn five_cjk_characters_stay_whole_beside_a_badge() {
+    fn six_cjk_characters_stay_whole_beside_a_badge() {
         let style = Style::current();
-        for name in ["香港节点 01", "新加坡节点"] {
+        for name in ["香港节点 01", "新加坡节点组"] {
             assert!(text_width(name, &style.detail_font) <= DETAIL_MINIMUM_WIDTH);
         }
     }
@@ -2269,17 +2251,33 @@ mod tests {
     }
 
     #[test]
-    fn group_row_badges_share_a_width_and_member_badges_keep_theirs() {
+    fn badges_hug_their_own_text() {
         let style = Style::current();
-        assert_eq!(style.badge_font.pointSize(), style.font.pointSize() - 2.0);
-        for label in ["38 ms", "9999 ms", "未测速", "超时", "测试中"] {
-            assert_eq!(
-                style.row_badge_width(label, true),
-                GROUP_BADGE_MINIMUM_WIDTH
-            );
+        assert_eq!(style.badge_font.pointSize(), style.font.pointSize() - 3.0);
+        for label in ["63 ms", "1234 ms", "未测速", "超时", "测试中"] {
+            let text = text_width(label, &style.badge_font);
+            assert_eq!(style.badge_width(label), text + 2.0 * BADGE_PADDING);
         }
-        assert!(style.row_badge_width("超时", false) < GROUP_BADGE_MINIMUM_WIDTH);
-        assert_eq!(style.row_badge_width("38 ms", false), BADGE);
+        assert_eq!(style.badge_width("999 ms"), BADGE);
+        assert!(style.badge_width("63 ms") < style.badge_width("1234 ms"));
+    }
+
+    #[test]
+    fn a_narrower_badge_gives_its_room_to_the_selection() {
+        let width = menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE));
+        let room = width - EDGES - ARROW - BADGE_ARROW_GAP;
+        let narrow = trailing_layout(room, TITLE, Some(DETAIL_MAXIMUM_WIDTH), Some(40.0), true);
+        assert_eq!(narrow.detail, DETAIL_MINIMUM_WIDTH + BADGE - 40.0);
+        assert_eq!(
+            narrow.badge + BADGE_GAP + narrow.detail,
+            BADGE + BADGE_GAP + DETAIL_MINIMUM_WIDTH
+        );
+    }
+
+    #[test]
+    fn long_selections_keep_the_menu_width_of_the_old_badge() {
+        let old = EDGES + TITLE + 60.0 + 12.0 + 64.0 + DETAIL_GAP + ARROW + ARROW_GAP;
+        assert_eq!(menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE)), old);
     }
 
     #[test]
