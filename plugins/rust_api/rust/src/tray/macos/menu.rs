@@ -47,9 +47,9 @@ const BADGE_ARROW_GAP: f64 = 5.0;
 const BADGE_PADDING: f64 = 3.0;
 const BADGE_MINIMUM_WIDTH: f64 = 28.0;
 const DETAIL_MAXIMUM_WIDTH: f64 = 110.0;
-/// A group row's selection up to this wide is never cut, and a longer one is
-/// cut no further: six CJK characters at 13pt. Beside a 3-digit delay a menu
-/// of long selections is as wide as it was with the old 60pt badge.
+/// The room a menu opens with for a group row's selection, six CJK characters
+/// at 13pt. Beside a 3-digit delay a menu of long selections is as wide as it
+/// was with the old 60pt badge.
 const DETAIL_MINIMUM_WIDTH: f64 = 87.0;
 const ICON_PNG_MAXIMUM_BYTES: usize = 2_100_000;
 const ICON_MAXIMUM_PIXELS: isize = 4096;
@@ -604,6 +604,7 @@ impl TrayMenu {
                 item.setView(Some(&ItemView::new(mtm, content.clone(), width, column)));
             }
         }
+        self.refresh_badge_column();
     }
 }
 
@@ -1322,7 +1323,8 @@ impl ItemView {
 
 /// Widths along a row's trailing edge, given [room] from the title's start to
 /// the arrow or edge. On a group row the badge and title stay whole and the
-/// selection truncates first, down to [DETAIL_MINIMUM_WIDTH].
+/// selection truncates first, below [DETAIL_MINIMUM_WIDTH] once a badge has
+/// widened in an open menu.
 #[derive(Debug, PartialEq)]
 struct TrailingLayout {
     badge: f64,
@@ -1344,7 +1346,7 @@ fn trailing_layout(
     });
     let detail_width = detail.map_or(0.0, |width| {
         let width = if has_submenu && badge.is_some() {
-            width.min((room - title - DETAIL_GAP).max(DETAIL_MINIMUM_WIDTH))
+            width.min((room - title - DETAIL_GAP).max(0.0))
         } else {
             width
         }
@@ -2339,6 +2341,16 @@ mod tests {
         assert_eq!(column(&["63 ms", "未测速"]), style.badge_width("63 ms"));
         assert_eq!(column(&["超时"]), style.badge_width("超时"));
         assert_eq!(badge_column(std::iter::empty()), 0.0);
+    }
+
+    #[test]
+    fn a_badge_widened_in_an_open_menu_takes_room_from_the_selection() {
+        let width = menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE));
+        let room = width - EDGES - ARROW - BADGE_ARROW_GAP;
+        let wider = trailing_layout(room, TITLE, Some(DETAIL_MAXIMUM_WIDTH), Some(50.0), true);
+        assert_eq!(wider.title, TITLE);
+        assert_eq!(wider.badge, 50.0);
+        assert_eq!(wider.detail, DETAIL_MINIMUM_WIDTH - (50.0 - BADGE));
     }
 
     #[test]
