@@ -76,6 +76,9 @@ class AppUiLocalizations implements UiLocalizations {
   String get cut => _localizations.cut;
 
   @override
+  String get details => _localizations.bannerDetails;
+
+  @override
   String get hidePassword => _localizations.hidePassword;
 
   @override

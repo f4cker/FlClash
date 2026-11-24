@@ -16305,6 +16305,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile\'s DNS settings.'**
   String get configRejectedProxyServerNameserverPolicy;
+
+  /// No description provided for @bannerDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get bannerDetails;
 }
 
 class _AppLocalizationsDelegate

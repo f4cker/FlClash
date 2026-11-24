@@ -9187,4 +9187,7 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get configRejectedProxyServerNameserverPolicy =>
       '无法应用配置：Proxy Server Nameserver Policy（代理服务器 DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。';
+
+  @override
+  String get bannerDetails => '查看详情';
 }

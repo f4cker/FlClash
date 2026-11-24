@@ -102,11 +102,7 @@ class _EntryDialogState<T> extends State<EntryDialog<T>> {
             : TextInputLimits.limit(widget.valueMaxLength!),
         keyboardType: TextInputType.text,
         controller: _valueController,
-        // Field errors say how to write the value, so they run long.
-        decoration: InputDecoration(
-          hintText: valueField.label,
-          errorMaxLines: 8,
-        ),
+        decoration: InputDecoration(hintText: valueField.label),
         onFieldSubmitted: (_) {
           _submit();
         },

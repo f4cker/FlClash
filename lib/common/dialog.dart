@@ -248,7 +248,13 @@ class Dialogs {
     if (context == null) {
       return;
     }
-    BannerHost.maybeOf(context)?.show(text, level: level, onTap: onTap);
+    BannerHost.maybeOf(context)?.show(
+      text,
+      level: level,
+      onTap: onTap,
+      onDetails:
+          onTap ?? () => unawaited(showErrorDetails(message: text, raw: null)),
+    );
   }
 
   /// A config the Core refused opens its raw words on a tap.
@@ -266,7 +272,7 @@ class Dialogs {
 
   Future<void> showErrorDetails({
     required String message,
-    required String raw,
+    required String? raw,
     String? title,
   }) {
     return _showMessage(

@@ -9707,4 +9707,7 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get configRejectedProxyServerNameserverPolicy =>
       'Couldn\'t apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile\'s DNS settings.';
+
+  @override
+  String get bannerDetails => 'Details';
 }

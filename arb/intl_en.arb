@@ -4242,5 +4242,6 @@
       }
     }
   },
-  "configRejectedProxyServerNameserverPolicy": "Couldn't apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile's DNS settings."
+  "configRejectedProxyServerNameserverPolicy": "Couldn't apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile's DNS settings.",
+  "bannerDetails": "Details"
 }
