@@ -6,6 +6,7 @@ import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -478,6 +479,66 @@ void main() {
     await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
     expect(result, 'valu');
+  });
+
+  group('a long field error', () {
+    final error = List.filled(40, 'Write it another way.').join(' ');
+
+    Future<void> open(WidgetTester tester, Widget dialog) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        TestApp(
+          child: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () =>
+                  showDialog<String>(context: context, builder: (_) => dialog),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'x');
+      await tester.pumpAndSettle();
+    }
+
+    void expectShownInFull(WidgetTester tester, String action) {
+      final text = tester.renderObject<RenderParagraph>(find.text(error));
+      expect(text.didExceedMaxLines, isFalse);
+      expect(text.size.height, greaterThan(640));
+      final button = tester.getRect(find.text(action));
+      expect(
+        const Rect.fromLTWH(0, 0, 360, 640).contains(button.center),
+        isTrue,
+      );
+    }
+
+    testWidgets('wraps under an EntryDialog field', (tester) async {
+      await open(
+        tester,
+        EntryDialog<String>(
+          title: 'Scalar',
+          valueField: Field(label: 'Value', value: '', validator: (_) => error),
+          toEntry: _scalarEntry,
+        ),
+      );
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      expectShownInFull(tester, 'Confirm');
+    });
+
+    testWidgets('wraps under an InputDialog field', (tester) async {
+      await open(
+        tester,
+        InputDialog(title: 'Value', value: '', validator: (_) => error),
+      );
+
+      expectShownInFull(tester, 'Submit');
+    });
   });
 
   testWidgets('ListEditView adds, edits, selects, and deletes items', (

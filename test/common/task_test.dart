@@ -980,7 +980,10 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
         profilesPath: '/profiles',
         profileId: 13,
         rawConfig: rawConfig,
-        realPatchConfig: const PatchClashConfig(),
+        // mihomo refuses the policy without proxy servers.
+        realPatchConfig: const PatchClashConfig(
+          dns: Dns(proxyServerNameserver: ['223.5.5.5']),
+        ),
         appendSystemDns: false,
         proxyGroups: const [],
         rules: const [],
@@ -1470,41 +1473,167 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
       return loadYaml(result.yaml) as YamlMap;
     }
 
-    test(
-      'page defaults and the whole Hosts dictionary replace the file',
-      () async {
-        for (final hosts in [
-          <String, String>{},
-          {'page.test': '192.0.2.1,192.0.2.2'},
-        ]) {
-          final config = await build(
-            rawConfig: {
-              'allow-lan': true,
-              'port': 8888,
-              'ipv6': true,
-              'unified-delay': false,
-              'tcp-concurrent': false,
-              'hosts': {'file.test': '192.0.2.3'},
-            },
-            page: PatchClashConfig(hosts: hosts),
-          );
+    test('page defaults replace the file\'s', () async {
+      final config = await build(
+        rawConfig: {
+          'allow-lan': true,
+          'port': 8888,
+          'ipv6': true,
+          'unified-delay': false,
+          'tcp-concurrent': false,
+        },
+        page: const PatchClashConfig(),
+      );
 
-          expect(config['allow-lan'], false);
-          expect(config['port'], 0);
-          expect(config['ipv6'], false);
-          expect(config['unified-delay'], true);
-          expect(config['tcp-concurrent'], true);
-          expect(
-            config['hosts'],
-            hosts.isEmpty
-                ? {}
-                : {
-                    'page.test': ['192.0.2.1', '192.0.2.2'],
-                  },
-          );
-        }
-      },
-    );
+      expect(config['allow-lan'], false);
+      expect(config['port'], 0);
+      expect(config['ipv6'], false);
+      expect(config['unified-delay'], true);
+      expect(config['tcp-concurrent'], true);
+    });
+
+    group('Hosts', () {
+      Future<Object?> hostsOf(
+        Map<String, String> page, {
+        Map<String, Object>? file,
+      }) async {
+        final config = await build(
+          rawConfig: {'hosts': ?file},
+          page: PatchClashConfig(hosts: page),
+        );
+        return config['hosts'];
+      }
+
+      test('the app\'s Hosts add to the profile\'s', () async {
+        expect(
+          await hostsOf(
+            {'page.test': '192.0.2.1,192.0.2.2'},
+            file: {'file.test': '192.0.2.3'},
+          ),
+          {
+            'file.test': '192.0.2.3',
+            'page.test': ['192.0.2.1', '192.0.2.2'],
+          },
+        );
+      });
+
+      test('on the same domain the app\'s value wins', () async {
+        expect(
+          await hostsOf(
+            {'same.test': '192.0.2.1'},
+            file: {
+              'same.test': ['192.0.2.9'],
+              'file.test': 'lan',
+            },
+          ),
+          {'same.test': '192.0.2.1', 'file.test': 'lan'},
+        );
+      });
+
+      test('empty app Hosts leave the profile\'s as they are', () async {
+        expect(
+          await hostsOf(
+            {},
+            file: {
+              'file.test': ['192.0.2.3', '192.0.2.4'],
+            },
+          ),
+          {
+            'file.test': ['192.0.2.3', '192.0.2.4'],
+          },
+        );
+      });
+
+      test('a profile without Hosts takes the app\'s', () async {
+        expect(await hostsOf({}), isEmpty);
+        expect(await hostsOf({'page.test': '192.0.2.1'}), {
+          'page.test': '192.0.2.1',
+        });
+      });
+
+      test('a cycle the merge makes is refused before the Core', () async {
+        await expectLater(
+          hostsOf({'a.test': 'b.test'}, file: {'b.test': 'a.test'}),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsCycle)
+                .having((e) => e.detail, 'detail', 'b.test'),
+          ),
+        );
+        expect(
+          await hostsOf({'b.test': '192.0.2.1'}, file: {'b.test': 'a.test'}),
+          {'b.test': '192.0.2.1'},
+          reason: 'the app value breaks it',
+        );
+      });
+
+      test('the app\'s value wins over the same domain in any case', () async {
+        expect(
+          await hostsOf(
+            {'Same.test': '192.0.2.1'},
+            file: {'same.TEST': '192.0.2.9', 'file.test': '192.0.2.3'},
+          ),
+          {'file.test': '192.0.2.3', 'Same.test': '192.0.2.1'},
+        );
+      });
+
+      test('a value mihomo refuses is named before the Core', () async {
+        await expectLater(
+          hostsOf(
+            {},
+            file: {
+              'ok.test': '192.0.2.1',
+              'bad.test': ['192.0.2.1', 'example.org'],
+            },
+          ),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsInvalid)
+                .having((e) => e.detail, 'detail', 'bad.test'),
+          ),
+        );
+        expect(
+          await hostsOf(
+            {'bad.test': '192.0.2.2'},
+            file: {
+              'bad.test': ['192.0.2.1', 'example.org'],
+            },
+          ),
+          {'bad.test': '192.0.2.2'},
+          reason: 'the app value replaces it',
+        );
+      });
+
+      test('a profile\'s string is one item, its list is not', () async {
+        expect(await hostsOf({}, file: {'one.test': '1.1.1.1 example.com'}), {
+          'one.test': '1.1.1.1 example.com',
+        }, reason: 'mihomo reads the string as a single domain');
+        await expectLater(
+          hostsOf(
+            {},
+            file: {
+              'list.test': ['1.1.1.1', 'example.com'],
+            },
+          ),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsInvalid)
+                .having((e) => e.detail, 'detail', 'list.test'),
+          ),
+        );
+      });
+
+      test('a cycle is found whatever the case of its domains', () async {
+        await expectLater(
+          hostsOf({'A.test': 'b.test'}, file: {'b.test': 'a.test'}),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsCycle)
+                .having((e) => e.detail, 'detail', 'b.test'),
+          ),
+        );
+      });
+    });
 
     test(
       'custom profile overrides apply only their selected controls',
@@ -1646,7 +1775,13 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
             },
             page: const PatchClashConfig(dns: Dns(nameserver: [])),
           ),
-          throwsStateError,
+          throwsA(
+            isA<ConfigBuildException>().having(
+              (error) => error.issue,
+              'issue',
+              ConfigBuildIssue.nameserverEmpty,
+            ),
+          ),
         );
 
         final config = await build(
@@ -1660,6 +1795,86 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
         expect(config['dns']['nameserver'], ['system://']);
       },
     );
+
+    Matcher refusal(ConfigBuildIssue issue, [String? detail]) => throwsA(
+      isA<ConfigBuildException>()
+          .having((error) => error.issue, 'issue', issue)
+          .having((error) => error.detail, 'detail', detail),
+    );
+
+    test('a proxy server policy needs proxy server nameservers', () async {
+      final rawConfig = {
+        'dns': {
+          'enable': false,
+          'proxy-server-nameserver': ['223.5.5.5'],
+          'proxy-server-nameserver-policy': {'example.com': '1.1.1.1'},
+        },
+      };
+      await expectLater(
+        build(rawConfig: rawConfig, page: const PatchClashConfig()),
+        refusal(ConfigBuildIssue.proxyServerNameserverEmpty),
+      );
+      final config = await build(
+        rawConfig: rawConfig,
+        page: const PatchClashConfig(
+          dns: Dns(proxyServerNameserver: ['119.29.29.29']),
+        ),
+      );
+      expect(config['dns']['proxy-server-nameserver'], ['119.29.29.29']);
+    });
+
+    // mihomo checks respect-rules before dns.enable.
+    test('respect-rules needs proxy server nameservers, DNS off too', () async {
+      final rawConfig = {
+        'dns': {'enable': false},
+      };
+      await expectLater(
+        build(
+          rawConfig: rawConfig,
+          page: const PatchClashConfig(dns: Dns(respectRules: true)),
+        ),
+        throwsA(isA<DnsRespectRulesUnmetException>()),
+      );
+      final config = await build(
+        rawConfig: rawConfig,
+        page: const PatchClashConfig(
+          dns: Dns(respectRules: true, proxyServerNameserver: ['119.29.29.29']),
+        ),
+      );
+      expect(config['dns']['enable'], false);
+      expect(config['dns']['respect-rules'], true);
+    });
+
+    test('a fake-ip filter rule set must be one of the profile\'s', () async {
+      Future<YamlMap> withFilter(List<String> filter, FakeIpFilterMode mode) =>
+          build(
+            rawConfig: {
+              'rule-providers': {
+                'lan': {'type': 'inline', 'behavior': 'domain', 'payload': []},
+              },
+            },
+            page: PatchClashConfig(
+              dns: Dns(
+                enhancedMode: DnsMode.fakeIp,
+                fakeIpFilterMode: mode,
+                fakeIpFilter: filter,
+              ),
+            ),
+          );
+
+      await withFilter(['rule-set:lan'], FakeIpFilterMode.blacklist);
+      await withFilter(['RULE-SET, lan ,real-ip'], FakeIpFilterMode.rule);
+      await expectLater(
+        withFilter(['rule-set:lan,cn'], FakeIpFilterMode.blacklist),
+        refusal(ConfigBuildIssue.fakeIpFilterRuleSetMissing, 'cn'),
+      );
+      await expectLater(
+        withFilter(['RULE-SET,cn,real-ip'], FakeIpFilterMode.rule),
+        refusal(ConfigBuildIssue.fakeIpFilterRuleSetMissing, 'cn'),
+      );
+      // Rule mode looks up only RULE-SET; the entry fails in the Core.
+      await withFilter(['rule-set:cn'], FakeIpFilterMode.rule);
+    });
   });
 
   group('makeRealProfileTask legacy provider file migration', () {

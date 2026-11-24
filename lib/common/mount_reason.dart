@@ -1,3 +1,4 @@
+import 'package:fl_clash/common/config_rejection.dart';
 import 'package:fl_clash/common/print.dart';
 import 'package:fl_clash/common/string.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -70,6 +71,9 @@ String mountRejectedReason(
       _ => MountSourceStatus.unsupported,
     };
     return mountSourceReason(status, name, appLocalizations);
+  }
+  if (configRejectionMessage(reason, appLocalizations) case final message?) {
+    return message;
   }
   final line = redactUrls(reason.trim()).split('\n').first.trim();
   return line.length > _mountReasonMaxLength

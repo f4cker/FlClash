@@ -240,6 +240,7 @@ class _TunOverrideSpec extends OverrideSpec<TunOverrideKey, ProfileTun> {
       (tun) => tun.dnsHijack,
       (tun, value) => tun.copyWith(dnsHijack: value),
       itemMaxLength: TextInputLimits.dnsListen,
+      itemValidator: validateDnsHijack,
     ),
     TunOverrideKey.udpTimeout => NumberOverrideField(
       (tun) => tun.udpTimeout,

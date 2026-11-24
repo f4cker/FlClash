@@ -248,7 +248,47 @@ class Dialogs {
     if (context == null) {
       return;
     }
-    BannerHost.maybeOf(context)?.show(text, level: level, onTap: onTap);
+    BannerHost.maybeOf(context)?.show(
+      text,
+      level: level,
+      onTap: onTap,
+      onDetails:
+          onTap ?? () => unawaited(showErrorDetails(message: text, raw: null)),
+    );
+  }
+
+  /// A config the Core refused opens its raw words on a tap.
+  void showErrorBanner(Object error) {
+    final message = userFacingErrorMessage(error, currentAppLocalizations);
+    final raw = rawConfigErrorOf(error);
+    showBanner(
+      message,
+      level: BannerLevel.error,
+      onTap: raw == null || raw == message
+          ? null
+          : () => unawaited(showErrorDetails(message: message, raw: raw)),
+    );
+  }
+
+  Future<void> showErrorDetails({
+    required String message,
+    required String? raw,
+    String? title,
+  }) {
+    return _showMessage(
+      message: null,
+      title: title,
+      cancelable: false,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        spacing: 8,
+        children: [
+          SelectableText(message),
+          RawErrorDetails(key: ValueKey(raw), raw: raw),
+        ],
+      ),
+    );
   }
 
   Future<void> copy(String text) async {

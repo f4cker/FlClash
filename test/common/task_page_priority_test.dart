@@ -141,7 +141,7 @@ void main() {
       expect(config['authentication'], isEmpty);
     });
 
-    test('page hosts replace the full file hosts map', () async {
+    test('page hosts add to the file hosts map', () async {
       final config = await _build(
         _page.copyWith(hosts: const {'a.test': '1.1.1.1'}),
         profile: const {
@@ -150,7 +150,7 @@ void main() {
       );
 
       expect(config['hosts']['a.test'], '1.1.1.1');
-      expect(config['hosts'].containsKey('b.test'), isFalse);
+      expect(config['hosts']['b.test'], '2.2.2.2');
     });
 
     test(

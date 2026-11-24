@@ -7,6 +7,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/disclaimer.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -75,8 +76,11 @@ Future<void> _agreeAndRestate(WidgetTester tester) async {
 
 /// [PrismApp] mounts the [BannerHost] above its navigator, so
 /// [Dialogs.showBanner] can reach it from `navigatorKey.currentContext`.
-Future<void> _pumpBannerHost(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1000, 800);
+Future<void> _pumpBannerHost(
+  WidgetTester tester, {
+  Size size = const Size(1000, 800),
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -84,15 +88,18 @@ Future<void> _pumpBannerHost(WidgetTester tester) async {
   final container = ProviderContainer();
   addTearDown(container.dispose);
   globalState.container = container;
-  container
-      .read(viewSizeProvider.notifier)
-      .update((_) => const Size(1000, 800));
+  container.read(viewSizeProvider.notifier).update((_) => size);
 
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
       child: PrismApp(
         navigatorKey: globalState.navigatorKey,
+        localizationsDelegates: const [
+          appLocalizationsDelegate,
+          AppUiLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
           globalState.measure = MeasureScope.of(context);
@@ -527,6 +534,36 @@ void main() {
       expect(tester.takeException(), null);
     },
   );
+
+  testWidgets('a banner too long to fit opens its whole text from Details', (
+    tester,
+  ) async {
+    await _pumpBannerHost(tester, size: const Size(360, 800));
+    final text = List.filled(
+      12,
+      'Change it under Advanced configuration.',
+    ).join(' ');
+
+    dialogs.showBanner(text, level: BannerLevel.error);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(text), findsOneWidget);
+    expect(find.text('Details'), findsNothing);
+  });
+
+  testWidgets('a banner that fits offers no Details', (tester) async {
+    await _pumpBannerHost(tester, size: const Size(360, 800));
+
+    dialogs.showBanner('Saved.', level: BannerLevel.error);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Saved.'), findsOneWidget);
+    expect(find.text('Details'), findsNothing);
+  });
 
   testWidgets('showBanner drops empty text before reaching the host', (
     tester,

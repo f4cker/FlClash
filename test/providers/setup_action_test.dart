@@ -759,6 +759,26 @@ void main() {
       expect(printed, ['[APP] mixed-port 0 refused, kept 7890']);
     });
 
+    test('an authorized TUN the Core did not open is reported', () async {
+      if (!system.isDesktop) return;
+      container.read(authorizedTunEnableProvider.notifier).value =
+          TunAuthorizationState.authorized;
+      await check(requested: {'tun.enable': true}, held: {'tun': false});
+
+      expect(printed, [
+        '[APP] banner: ${currentAppLocalizations.tunNotListening}',
+      ]);
+    });
+
+    test('a TUN the Core holds is no warning', () async {
+      if (!system.isDesktop) return;
+      container.read(authorizedTunEnableProvider.notifier).value =
+          TunAuthorizationState.authorized;
+      await check(requested: {'tun.enable': true}, held: {'tun': true});
+
+      expect(printed, isEmpty);
+    });
+
     test('the no-port warning stands when the Core cannot be asked', () async {
       if (!system.isDesktop) return;
       await check(requested: {}, systemProxy: true, mixedPort: 0);
@@ -2234,6 +2254,117 @@ void main() {
       },
     );
 
+    test('respect rules without a Proxy Server Nameserver stops before '
+        'the Core, and says how to fix it', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {});
+      var preloads = 0;
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, _) => nullProfileSetupState.copyWith(profileId: profile.id),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(patchClashConfigProvider, (_, _) {});
+      scoped.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(dns: Dns(respectRules: true));
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+
+      final applied = await scoped
+          .read(setupActionProvider.notifier)
+          .applyProfile(force: true, preloadInvoke: () async => preloads++);
+
+      expect(applied, isFalse);
+      verifyNever(() => core.getProfileBase(any()));
+      verifyNever(() => core.setupConfig(any()));
+      expect(preloads, 0);
+      expect(
+        printed,
+        contains(
+          '[APP] banner: ${currentAppLocalizations.dnsRespectRulesUnmetError}',
+        ),
+      );
+    });
+
+    test('with no profile the Core gets no DNS, so respect rules without '
+        'a Proxy Server Nameserver still starts', () async {
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {});
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles(const [])),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(patchClashConfigProvider, (_, _) {});
+      scoped.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(dns: Dns(respectRules: true));
+
+      expect(
+        await scoped
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true),
+        isTrue,
+      );
+      verify(() => core.setupConfig(any())).called(1);
+    });
+
+    test('the Core refusing respect rules without a Proxy Server '
+        'Nameserver reads as the same fix, not its own text', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenThrow(
+        const CoreMethodException(
+          code: 'config_rejected',
+          message:
+              'if "respect-rules" is turned on, '
+              '"proxy-server-nameserver" cannot be empty',
+        ),
+      );
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+
+      expect(
+        await scoped
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true),
+        isFalse,
+      );
+      final banners = printed.where((line) => line.startsWith('[APP] banner'));
+      expect(
+        banners,
+        contains(
+          '[APP] banner: ${currentAppLocalizations.dnsRespectRulesUnmetError}',
+        ),
+      );
+      expect(banners.join(), isNot(contains('respect-rules')));
+    });
+
     test(
       'provider directories it cannot create leave the config applied',
       () async {
@@ -2843,7 +2974,8 @@ void main() {
       expect(shownGroups(), ['Proxy']);
 
       rejecting = true;
-      setHosts({'example.com': 'not-an-address'});
+      // A value the build accepts; only the stubbed Core refuses it.
+      setHosts({'example.com': '192.0.2.1'});
       expect(await setupAction.applyProfile(), isFalse);
       expect(shownGroups(), ['Proxy']);
 

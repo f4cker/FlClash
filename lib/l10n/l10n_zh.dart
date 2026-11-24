@@ -9021,4 +9021,182 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmBackupKeyUnavailable => '无法读取证书密码，备份未完成。';
+
+  @override
+  String get dnsRespectRulesUnmetError =>
+      '无法应用配置：「遵守规则」已开启，但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写该项，或关闭「遵守规则」。';
+
+  @override
+  String get dnsRespectRulesUnmetWarning =>
+      '「遵守规则」已开启，但 Proxy Server Nameserver（代理服务器 DNS）为空。启动此配置会失败。请填写该项或关闭「遵守规则」。';
+
+  @override
+  String get dnsRespectRulesNeedsProxyServer =>
+      '开启「遵守规则」前，请先填写 Proxy Server Nameserver（代理服务器 DNS），用于解析代理服务器的域名。保存非空列表后，「遵守规则」将开启。';
+
+  @override
+  String get dnsFillProxyServerNameserver => '填写 Proxy Server Nameserver';
+
+  @override
+  String get dnsUseNameserverForProxyServer => '复制 Nameserver 并开启';
+
+  @override
+  String get dnsTurnOffRespectRules => '关闭「遵守规则」';
+
+  @override
+  String get dnsUseNameserverForProxyServerDesc =>
+      '将当前 Nameserver 列表复制到 Proxy Server Nameserver，并开启「遵守规则」。';
+
+  @override
+  String get configRejectedUnknown => '无法应用配置：内核拒绝了这份配置。可展开查看原始错误。';
+
+  @override
+  String get configRejectedProxyServerPolicy =>
+      '无法应用配置：配置中有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写 Proxy Server Nameserver。';
+
+  @override
+  String get configRejectedDefaultNameserverIp =>
+      '无法应用配置：Default Nameserver 中服务器地址的主机必须是 IP，不能是域名，如 223.5.5.5、tls://223.5.5.5。请在「进阶配置 → DNS」中修改 Default Nameserver。';
+
+  @override
+  String get configRejectedDefaultNameserverEmpty =>
+      '无法应用配置：Default Nameserver 为空。请在「进阶配置 → DNS」中至少填写一个 IP 地址。';
+
+  @override
+  String get configRejectedNameserverEmpty =>
+      '无法应用配置：DNS 已开启，但 Nameserver 为空。请在「进阶配置 → DNS」中至少填写一个 Nameserver，或在「进阶配置 → 常规」中打开「追加系统DNS」。';
+
+  @override
+  String configBuildNameserverEmpty(Object profile) {
+    return '无法应用配置「$profile」：它开启了 DNS，但 Nameserver 为空。请在「进阶配置 → DNS」中至少填写一个 Nameserver，或在「进阶配置 → 常规」中打开「追加系统DNS」。';
+  }
+
+  @override
+  String get configRejectedDnsServer =>
+      '无法应用配置：有 DNS 服务器的协议不受支持或地址格式不对。请检查「进阶配置 → DNS」中的各个 DNS 服务器列表，以及这份配置自己的 DNS 设置。';
+
+  @override
+  String configRejectedRuleSet(Object name) {
+    return '无法应用配置：引用了不存在的规则集「$name」。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。';
+  }
+
+  @override
+  String get configRejectedFakeIpFilter =>
+      '无法应用配置：Fake-IP 过滤中有无法识别的条目。rule 模式需要规则写法，如 DOMAIN-SUFFIX,lan,real-ip 或 MATCH,real-ip。请在「进阶配置 → DNS」中检查。';
+
+  @override
+  String get configRejectedFakeIpRange =>
+      '无法应用配置：Fake-IP 范围有误。请在这份配置的 DNS 设置中检查 IPv4、IPv6 网段和前缀长度；Fake-IP 模式下两者至少要填一个。';
+
+  @override
+  String get configRejectedNameserverPolicy =>
+      '无法应用配置：Nameserver Policy（DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。';
+
+  @override
+  String get configRejectedHosts =>
+      '无法应用配置：Hosts 中有无法使用的条目或循环指向。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts。';
+
+  @override
+  String get dnsServerSchemeTip =>
+      '不支持这个协议。可用的有 udp、tcp、tls、https、http、quic、system、dhcp 和 rcode。';
+
+  @override
+  String get dnsServerFormatTip => '地址格式不对，请检查协议、主机和端口。';
+
+  @override
+  String get defaultNameserverPureIpTip =>
+      'Default Nameserver 中服务器地址的主机必须是 IP，不能是域名，如 223.5.5.5、tls://223.5.5.5。';
+
+  @override
+  String get defaultNameserverEmptyTip =>
+      'Default Nameserver 至少保留一个 IP 地址，否则无法启动。';
+
+  @override
+  String get nameserverEmptyTip =>
+      '至少保留一个 Nameserver，或在「进阶配置 → 常规」中打开「追加系统DNS」。这里的 Nameserver 会替换每个配置自己的 Nameserver，为空时开启了 DNS 的配置无法启动。';
+
+  @override
+  String get dnsHijackTip =>
+      '请填写 DNS 劫持地址和端口，如 any:53、198.18.0.2:53 或 tcp://any:53。';
+
+  @override
+  String dnsListenPortTakenTip(Object port, Object listener) {
+    return '与 $listener 配置的端口 $port 冲突，请换一个端口。';
+  }
+
+  @override
+  String get controllerPortConflictTip => '与外部控制器配置的端口 9090 冲突，请换一个端口。';
+
+  @override
+  String get tunNotListening => '虚拟网卡未能启动。请检查「虚拟网卡」设置（如 DNS 劫持），也可查看日志。';
+
+  @override
+  String get hostsValueTip =>
+      '请填写一个域名（如 example.com），或一个或多个 IP 地址（用逗号或空格分隔），不能混用。';
+
+  @override
+  String hostsCycleTip(Object domain) {
+    return '「$domain」经过其他条目又指回了自己，内核会拒绝这份 Hosts。请修改其中一条。';
+  }
+
+  @override
+  String get fakeIpFilterRuleTip =>
+      '过滤模式为 rule 时，每条要写成「规则类型,内容,fake-ip 或 real-ip」，如 DOMAIN-SUFFIX,lan,real-ip，或写 MATCH,real-ip。可使用域名类规则 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-WILDCARD、DOMAIN-REGEX、GEOSITE、RULE-SET，或 MATCH。';
+
+  @override
+  String fakeIpFilterNotRulesTip(Object entry) {
+    return 'Fake-IP 过滤里的「$entry」不是规则写法，Fake-IP 模式下用 rule 过滤模式会让内核拒绝启动。请先把过滤列表改成规则写法，如 DOMAIN-SUFFIX,lan,real-ip。';
+  }
+
+  @override
+  String configBuildProxyServerPolicy(Object profile) {
+    return '无法应用配置「$profile」：它有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写 Proxy Server Nameserver。';
+  }
+
+  @override
+  String configBuildFakeIpFilterRuleSet(Object profile, Object name) {
+    return '无法应用配置「$profile」：Fake-IP 过滤引用了规则集「$name」，但这份配置里没有它。请在「进阶配置 → DNS → Fake-IP 过滤」中删掉这一条，或给这份配置加上这个规则集。';
+  }
+
+  @override
+  String dnsProxyServerPolicyUnmetWarning(Object profile) {
+    return '当前配置「$profile」有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空，无法启动。请填写 Proxy Server Nameserver。';
+  }
+
+  @override
+  String get domainMatcherTip =>
+      '域名格式不对：不能以空格开头或结尾，不能以点结尾或包含连续的点；+ 只能整段写在最前面（如 +.example.com），* 只能占一整段（如 *.example.com）。';
+
+  @override
+  String get fakeIpRangeTip => '请填写 IPv4 网段，前缀长度不大于 29，如 198.18.0.1/16。';
+
+  @override
+  String get fakeIpRange6Tip =>
+      '请填写 IPv6 网段，前缀长度不大于 125，如 fdfe:dcba:9876::1/64。';
+
+  @override
+  String interfaceNameMissingTip(Object name) {
+    return '本机现在没有名为「$name」的网卡，使用该网卡的连接可能失败。';
+  }
+
+  @override
+  String configBuildHostsCycle(Object profile, Object domain) {
+    return '无法应用配置「$profile」：App 的 Hosts 与这份配置中的 Hosts 合并后，「$domain」经过其他条目又指回了自己。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts，修改其中一条。';
+  }
+
+  @override
+  String get configRejectedProxyServerNameserverPolicy =>
+      '无法应用配置：Proxy Server Nameserver Policy（代理服务器 DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。';
+
+  @override
+  String get bannerDetails => '查看详情';
+
+  @override
+  String get configRejectedRuleSetUnnamed =>
+      '无法应用配置：规则集引用有误。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。';
+
+  @override
+  String configBuildHostsInvalid(Object profile, Object domain) {
+    return '无法应用配置「$profile」：Hosts 中「$domain」的值无法使用。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts。';
+  }
 }

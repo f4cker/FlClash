@@ -115,8 +115,17 @@ class GlobalState {
         logLevel: LogLevel.warning,
       );
       final message = userFacingErrorMessage(e, currentAppLocalizations);
+      final raw = rawConfigErrorOf(e);
       if (silence) {
-        dialogs.showBanner(message, level: BannerLevel.error);
+        dialogs.showErrorBanner(e);
+      } else if (raw != null && raw != message) {
+        unawaited(
+          dialogs.showErrorDetails(
+            title: title ?? currentAppLocalizations.tip,
+            message: message,
+            raw: raw,
+          ),
+        );
       } else {
         unawaited(
           dialogs.showAlert(

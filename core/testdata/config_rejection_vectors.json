@@ -1,0 +1,374 @@
+[
+ {
+  "kind": "respectRules",
+  "raw": "if “respect-rules” is turned on, “proxy-server-nameserver” cannot be empty",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enable": false,
+    "respect-rules": true
+   }
+  }
+ },
+ {
+  "kind": "proxyServerPolicyEmpty",
+  "raw": "disallow empty `proxy-server-nameserver` when `proxy-server-nameserver-policy` is set",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "proxy-server-nameserver-policy": {
+     "example.com": "1.1.1.1"
+    }
+   }
+  }
+ },
+ {
+  "kind": "defaultNameserverIp",
+  "raw": "default nameserver should be pure IP",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "https://doh.pub/dns-query"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "defaultNameserverEmpty",
+  "raw": "default nameserver should have at least one nameserver",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": []
+   }
+  }
+ },
+ {
+  "kind": "nameserverEmpty",
+  "raw": "if DNS configuration is turned on, NameServer cannot be empty",
+  "doc": {
+   "dns": {
+    "nameserver": [],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enable": true
+   }
+  }
+ },
+ {
+  "kind": "dnsServer",
+  "raw": "DNS NameServer[0] unsupport scheme: doh",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "doh://1.1.1.1"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "dnsServer",
+  "raw": "DNS NameServer[0] format error: address 1.1.1.1:53:53: too many colons in address",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "1.1.1.1:53:53"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "fakeIpFilter",
+  "raw": "dns.fake-ip-filter[0] [DOMAIN,example.com] error: invalid action '', must be 'fake-ip' or 'real-ip'",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "fake-ip-filter-mode": "rule",
+    "fake-ip-filter": [
+     "DOMAIN,example.com"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "fakeIpFilter",
+  "raw": "dns.fake-ip-filter[0] [IP-CIDR,1.1.1.1/32,real-ip] error: rule type 'IP-CIDR' not supported, only domain-based rules allowed",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "fake-ip-filter-mode": "rule",
+    "fake-ip-filter": [
+     "IP-CIDR,1.1.1.1/32,real-ip"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "ruleSet:my set",
+  "raw": "dns.fake-ip-filter[0] \"rule-set:my set\": not found rule-set: my set",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "fake-ip-filter": [
+     "rule-set:my set"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "ruleSet:my set",
+  "raw": "dns.fake-ip-filter[0] [RULE-SET,my set,real-ip] error: rule-set 'my set' not found",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "fake-ip-filter-mode": "rule",
+    "fake-ip-filter": [
+     "RULE-SET,my set,real-ip"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "ruleSet:cn",
+  "raw": "not found rule-set: cn",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "nameserver-policy": {
+     "rule-set:cn": "1.1.1.1"
+    }
+   }
+  }
+ },
+ {
+  "kind": "fakeIpRange",
+  "raw": "dns.fake-ip-range must be a IPv4 prefix",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "fdfe::1/64"
+   }
+  }
+ },
+ {
+  "kind": "fakeIpRange",
+  "raw": "dns.fake-ip-range6 must be a IPv6 prefix",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "",
+    "fake-ip-range6": "198.18.0.1/16"
+   }
+  }
+ },
+ {
+  "kind": "fakeIpRange",
+  "raw": "netip.ParsePrefix(\"198.18.0.1\"): no '/'",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1"
+   }
+  }
+ },
+ {
+  "kind": "fakeIpRange",
+  "raw": "netip.ParsePrefix(\"x\"): no '/'",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "x"
+   }
+  }
+ },
+ {
+  "kind": "fakeIpRange",
+  "raw": "ipnet don't have valid ip",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/31"
+   }
+  }
+ },
+ {
+  "kind": "fakeIpRange",
+  "raw": "disallow `fake-ip-range` and `fake-ip-range6` both empty with fake-ip mode",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "",
+    "fake-ip-range6": ""
+   }
+  }
+ },
+ {
+  "kind": "nameserverPolicy",
+  "raw": "dns.nameserver-policy[0]: invalid domain \"a..b\": label 2 is empty",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "nameserver-policy": {
+     "a..b": "1.1.1.1"
+    }
+   }
+  }
+ },
+ {
+  "kind": "proxyServerNameserverPolicy",
+  "raw": "dns.proxy-server-nameserver-policy[0]: invalid domain \"a..b\": label 2 is empty",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ],
+    "proxy-server-nameserver": [
+     "1.1.1.1"
+    ],
+    "proxy-server-nameserver-policy": {
+     "a..b": "1.1.1.1"
+    }
+   }
+  }
+ },
+ {
+  "kind": "hosts",
+  "raw": "[1.1.1.1 example.org] is not a valid value",
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ]
+   },
+   "hosts": {
+    "example.com": [
+     "1.1.1.1",
+     "example.org"
+    ]
+   }
+  }
+ },
+ {
+  "kind": "hosts",
+  "raw": "a.com, there is a cycle in domain name mapping",
+  "alt": [
+   "b.com, there is a cycle in domain name mapping"
+  ],
+  "doc": {
+   "dns": {
+    "nameserver": [
+     "223.5.5.5"
+    ],
+    "default-nameserver": [
+     "223.5.5.5"
+    ]
+   },
+   "hosts": {
+    "a.com": "b.com",
+    "b.com": "a.com"
+   }
+  }
+ }
+]

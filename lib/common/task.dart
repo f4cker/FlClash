@@ -236,10 +236,9 @@ Future<RealProfile> makeRealProfileTask(MakeRealProfileState data) async {
 
 /// What crosses into the isolate: never the CA's p12.
 @visibleForTesting
-MakeRealProfileState realProfileInput(MakeRealProfileState data) =>
-    data.copyWith.realPatchConfig(
-      mitm: data.realPatchConfig.mitm.withoutCaSecrets,
-    );
+MakeRealProfileState realProfileInput(MakeRealProfileState data) => data
+    .copyWith
+    .realPatchConfig(mitm: data.realPatchConfig.mitm.withoutCaSecrets);
 
 Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   final rawConfig = Map.from(data.rawConfig);
@@ -426,7 +425,43 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   if (!data.safeMode &&
       effectiveDns['enable'] == true &&
       (effectiveNameservers is! List || effectiveNameservers.isEmpty)) {
-    throw StateError('Enabled DNS requires a nameserver');
+    throw const ConfigBuildException(ConfigBuildIssue.nameserverEmpty);
+  }
+  // mihomo checks respect-rules before dns.enable, on every build path.
+  if (effectiveDns['respect-rules'] == true && _noProxyServers(effectiveDns)) {
+    throw const DnsRespectRulesUnmetException();
+  }
+  if (_proxyServerPolicyUnmet(effectiveDns)) {
+    throw const ConfigBuildException(
+      ConfigBuildIssue.proxyServerNameserverEmpty,
+    );
+  }
+  final ruleProviders = rawConfig['rule-providers'];
+  for (final name in _fakeIpFilterRuleSets(effectiveDns)) {
+    if (ruleProviders is! Map || !ruleProviders.containsKey(name)) {
+      throw ConfigBuildException(
+        ConfigBuildIssue.fakeIpFilterRuleSetMissing,
+        detail: name,
+      );
+    }
+  }
+  if (rawConfig['hosts'] case final Map hosts) {
+    // As utils.ToStringSlice reads them: a profile's string is one item,
+    // unsplit; the app's values were already split by the merge.
+    final items = <String, List<String>>{};
+    for (final MapEntry(:key, :value) in hosts.entries) {
+      final read = hostsItemsOf(value);
+      if (read == null || !isHostsItems(read)) {
+        throw ConfigBuildException(
+          ConfigBuildIssue.hostsInvalid,
+          detail: '$key',
+        );
+      }
+      items['$key'] = read;
+    }
+    if (hostsItemsCycleOf(items) case final domain?) {
+      throw ConfigBuildException(ConfigBuildIssue.hostsCycle, detail: domain);
+    }
   }
   // A colliding set is rewritten only through its stable paired rule id.
   // Older rows have no persistent association; refusing an ambiguous
@@ -667,10 +702,46 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
     ...page.geoXUrl.raw,
   };
   put(PageConfigKey.globalUa, page.globalUa ?? data.defaultUA);
+  // The app's Hosts add to the profile's; on the same domain the app wins,
+  // in any case, as mihomo's trie lowercases every domain.
+  final appDomains = {for (final key in page.hosts.keys) key.toLowerCase()};
   rawConfig['hosts'] = {
+    if (rawConfig['hosts'] case final Map hosts)
+      for (final MapEntry(:key, :value) in hosts.entries)
+        if (!appDomains.contains('$key'.toLowerCase())) key: value,
     for (final MapEntry(:key, :value) in page.hosts.entries)
       key: value.splitByMultipleSeparators,
   };
+}
+
+bool _noProxyServers(Map dns) {
+  final servers = dns['proxy-server-nameserver'];
+  return servers == null ||
+      servers == '' ||
+      (servers is List && servers.isEmpty);
+}
+
+// config.go parseDNS, whatever dns.enable says.
+bool _proxyServerPolicyUnmet(Map dns) {
+  final policy = dns['proxy-server-nameserver-policy'];
+  return policy is Map && policy.isNotEmpty && _noProxyServers(dns);
+}
+
+// The rule sets config.go parseFakeIPRules and parseDomain look up.
+Iterable<String> _fakeIpFilterRuleSets(Map dns) sync* {
+  final filter = dns['fake-ip-filter'];
+  if (dns['enhanced-mode'] != 'fake-ip' || filter is! List) return;
+  final rules = dns['fake-ip-filter-mode'] == 'rule';
+  for (final entry in filter.whereType<String>()) {
+    final item = entry.split(',').map((part) => part.trim()).toList();
+    if (rules) {
+      if (item.length > 1 && item.first.toUpperCase() == 'RULE-SET') {
+        yield item[1];
+      }
+    } else if (entry.toLowerCase().startsWith('rule-set:')) {
+      yield* entry.split(':')[1].split(',');
+    }
+  }
 }
 
 typedef ShakingStoreArgs = ({

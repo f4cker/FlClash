@@ -397,10 +397,7 @@ class SetupAction extends _$SetupAction {
         );
       } catch (error) {
         if (_isCurrent(request)) {
-          dialogs.showBanner(
-            userFacingErrorMessage(error, currentAppLocalizations),
-            level: BannerLevel.error,
-          );
+          dialogs.showErrorBanner(error);
         }
       }
       if (!applied && _isCurrent(request)) {
@@ -556,6 +553,12 @@ class SetupAction extends _$SetupAction {
           ref.read(authorizedTunEnableProvider) !=
               TunAuthorizationState.authorized)
         appLocalizations.tunMissingAuthorization,
+      // mihomo only logs a TUN it could not start, such as over a dns-hijack.
+      if (requested['tun.enable'] == true &&
+          held['tun'] != true &&
+          ref.read(authorizedTunEnableProvider) ==
+              TunAuthorizationState.authorized)
+        appLocalizations.tunNotListening,
       if (noProxyPort) appLocalizations.systemProxyNoPort,
     ];
     if (messages.isNotEmpty) {
@@ -1109,6 +1112,25 @@ class SetupAction extends _$SetupAction {
 
   /// [profilePath] stands in for the profile's file, as an unsaved edit.
   Future<BuiltProfile> _buildProfile({
+    required SetupState setupState,
+    required PatchClashConfig patchConfig,
+    String? profilePath,
+  }) =>
+      _composeProfile(
+        setupState: setupState,
+        patchConfig: patchConfig,
+        profilePath: profilePath,
+      ).catchError(
+        (Object error, StackTrace stack) => Error.throwWithStackTrace(
+          (error as ConfigBuildException).withProfile(
+            ref.read(profileProvider(setupState.profileId!))?.realLabel,
+          ),
+          stack,
+        ),
+        test: (error) => error is ConfigBuildException,
+      );
+
+  Future<BuiltProfile> _composeProfile({
     required SetupState setupState,
     required PatchClashConfig patchConfig,
     String? profilePath,
@@ -1937,6 +1959,11 @@ class SetupAction extends _$SetupAction {
         await globalState.safeRun(() async {
           final state = await ref.read(setupStateProvider(profile?.id).future);
           if (!sourceCurrent()) throw StateError('Profile setup superseded');
+          // Without a profile the Core gets no DNS, so nothing to refuse.
+          if (state.profileId != null &&
+              realPatchConfig.dns.respectRulesUnmet) {
+            throw const DnsRespectRulesUnmetException();
+          }
           setupState = state;
           return getProfile(setupState: state, patchConfig: realPatchConfig);
         }, title: 'build profile');
@@ -2093,10 +2120,14 @@ class SetupAction extends _$SetupAction {
               await _forgetConfirmedComposition(defaultRuntime: true);
               await globalState.safeRun(() => onUpdated?.call());
             }
-            throw MessageException(
-              outcome == MountRejectedOutcome.blocked
-                  ? '${currentAppLocalizations.mountApplyBlocked}\n$reason'
-                  : error.message,
+            if (outcome == MountRejectedOutcome.blocked) {
+              throw MessageException(
+                '${currentAppLocalizations.mountApplyBlocked}\n$reason',
+              );
+            }
+            throw configRejectedException(
+              error.message,
+              currentAppLocalizations,
             );
           }
         } catch (e, s) {

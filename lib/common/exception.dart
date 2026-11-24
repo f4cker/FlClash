@@ -71,6 +71,52 @@ final class RestorePartialException extends MessageException {
   ) => RestorePartialException(message, steps: steps, pendingChecks: checks);
 }
 
+/// mihomo refuses `respect-rules` without a `proxy-server-nameserver`; the
+/// setup stops before the Core sees it, so a start fails fast.
+final class DnsRespectRulesUnmetException implements Exception {
+  const DnsRespectRulesUnmetException();
+
+  @override
+  String toString() =>
+      'respect-rules is on but proxy-server-nameserver is empty';
+}
+
+final class ConfigRejectedException extends MessageException {
+  final String raw;
+
+  const ConfigRejectedException(super.message, {required this.raw});
+}
+
+enum ConfigBuildIssue {
+  nameserverEmpty,
+  proxyServerNameserverEmpty,
+
+  /// [ConfigBuildException.detail] is the rule set's name.
+  fakeIpFilterRuleSetMissing,
+
+  /// [ConfigBuildException.detail] is the domain that maps back to itself.
+  hostsCycle,
+
+  /// [ConfigBuildException.detail] is the domain whose value mihomo refuses.
+  hostsInvalid,
+}
+
+final class ConfigBuildException implements Exception {
+  final ConfigBuildIssue issue;
+  final String? detail;
+
+  /// The profile's label, added once the build is back from its isolate.
+  final String? profile;
+
+  const ConfigBuildException(this.issue, {this.detail, this.profile});
+
+  ConfigBuildException withProfile(String? profile) =>
+      ConfigBuildException(issue, detail: detail, profile: profile);
+
+  @override
+  String toString() => 'ConfigBuildException: ${issue.name} $detail';
+}
+
 final class AgeSecretKeyRequiredException implements Exception {
   const AgeSecretKeyRequiredException();
 }

@@ -220,14 +220,27 @@ class InterfaceNameModeItem extends ConsumerWidget {
   }
 }
 
+final _interfaceNamesProvider = FutureProvider.autoDispose<Set<String>>(
+  (ref) => listInterfaceNames(),
+);
+
+/// mihomo starts with any name, but binds every outbound dial to it.
 class InterfaceNameItem extends ConsumerWidget {
   const InterfaceNameItem({super.key});
 
   @override
   Widget build(BuildContext context, ref) {
+    final name = ref.watch(
+      patchClashConfigProvider.select((state) => state.interfaceName),
+    );
+    final names = ref.watch(_interfaceNamesProvider).value;
+    final missing = name.isNotEmpty && names != null && !names.contains(name);
     return ConfigTextItem(
       title: (l) => l.interfaceName,
       maxLength: TextInputLimits.name,
+      note: missing
+          ? context.appLocalizations.interfaceNameMissingTip(name)
+          : null,
       selector: patchClashConfigProvider.select((state) => state.interfaceName),
       onChanged: _tunWriter(
         (state, value) => state.copyWith(interfaceName: value.trim()),

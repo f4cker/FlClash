@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:fl_clash/common/config_rejection.dart';
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/network_error.dart';
@@ -71,6 +74,9 @@ class AppUiLocalizations implements UiLocalizations {
 
   @override
   String get cut => _localizations.cut;
+
+  @override
+  String get details => _localizations.bannerDetails;
 
   @override
   String get hidePassword => _localizations.hidePassword;
@@ -162,12 +168,24 @@ String? loginItemErrorMessage(Object error, AppLocalizations appLocalizations) {
 }
 
 String userFacingErrorMessage(Object error, AppLocalizations appLocalizations) {
+  // A setup that also starts the Core waits on both, so its error is inside.
+  if (error case ParallelWaitError(
+    errors: (final AsyncError? first, final AsyncError? second),
+  ) when first != null || second != null) {
+    return userFacingErrorMessage((first ?? second)!.error, appLocalizations);
+  }
   return loginItemErrorMessage(error, appLocalizations) ??
       networkErrorMessage(error, appLocalizations) ??
       coreLaunchBlockedMessage(error, appLocalizations) ??
       switch (error) {
         AgeSecretKeyRequiredException() =>
           appLocalizations.ageSecretKeyRequiredTip,
+        DnsRespectRulesUnmetException() =>
+          appLocalizations.dnsRespectRulesUnmetError,
+        ConfigBuildException() => configBuildMessage(error, appLocalizations),
+        CoreMethodException(:final message)
+            when configRejectionMessage(message, appLocalizations) != null =>
+          configRejectionMessage(message, appLocalizations)!,
         ReleaseNotVerifiedException() => appLocalizations.updateNotVerified,
         SystemDownloadException() => appLocalizations.updateDownloadFailed,
         CoreMethodException(code: 'rule_set_empty') =>

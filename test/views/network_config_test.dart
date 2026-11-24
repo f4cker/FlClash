@@ -183,6 +183,31 @@ void main() {
     expect(container.read(networkSettingProvider).bypassDomain, ['localhost']);
   });
 
+  group('interface name', () {
+    final realList = listInterfaceNames;
+    tearDown(() => listInterfaceNames = realList);
+
+    Future<void> pumpWithName(WidgetTester tester, String name) async {
+      listInterfaceNames = () async => {'lo0', 'en0'};
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(interfaceName: name));
+      await pumpItem(tester, const InterfaceNameItem());
+    }
+
+    testWidgets('warns about a name this Mac does not have', (tester) async {
+      await pumpWithName(tester, 'en9');
+      final l = currentAppLocalizations;
+      expect(find.text(l.interfaceNameMissingTip('en9')), findsOneWidget);
+    });
+
+    testWidgets('stays quiet for a present name', (tester) async {
+      await pumpWithName(tester, 'en0');
+      final l = currentAppLocalizations;
+      expect(find.text(l.interfaceNameMissingTip('en0')), findsNothing);
+    });
+  });
+
   group('network options items', () {
     List<Type> types({
       required bool isDesktop,

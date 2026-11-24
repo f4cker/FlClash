@@ -324,10 +324,15 @@ class ListOverrideField<M> extends ValueOverrideField<M, List<String>> {
     required this.itemMaxLength,
     this.itemValidator,
     this.description,
+    this.saveError,
   });
 
   final int itemMaxLength;
   final ConfigValidator? itemValidator;
+
+  /// Why the list cannot be saved as it is, given the page it is on.
+  final String? Function(OverrideModel<M> model, WidgetRef ref, List<String>)?
+  saveError;
 
   /// Shown on the list's own page, so long lists do not crowd the section.
   final ConfigLabel? description;
@@ -346,6 +351,10 @@ class ListOverrideField<M> extends ValueOverrideField<M, List<String>> {
       itemMaxLength: itemMaxLength,
       itemValidator: itemValidator,
       description: description,
+      saveError: switch (saveError) {
+        final saveError? => (ref, items) => saveError(model, ref, items),
+        null => null,
+      },
     );
   }
 }
@@ -380,6 +389,9 @@ abstract class OverrideSpec<K extends OverrideKey, M> {
     }
     return (model: model, keys: state.keys.difference(keys));
   }
+
+  /// Above the sections, for values that cannot run together.
+  Widget? leadOf() => null;
 
   /// What of [keys] an enabled MITM module goes over.
   List<String> notesOf(WidgetRef ref, Iterable<K> keys, AppLocalizations l) =>
@@ -594,6 +606,7 @@ class _OverrideList<K extends OverrideKey, M> extends ConsumerWidget {
       children: [
         if (spec.target.issues case final issues?)
           CustomIssuesBanner(issues: ref.watch(issues)),
+        ?spec.leadOf(),
         AnimatedEntries(
           children: [
             for (final (title, keys) in spec.sectionsOf(

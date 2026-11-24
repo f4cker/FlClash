@@ -9536,4 +9536,187 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get mitmBackupKeyUnavailable =>
       'Couldn\'t read the certificate password. Backup wasn\'t completed.';
+
+  @override
+  String get dnsRespectRulesUnmetError =>
+      'Couldn\'t apply the configuration: Respect rules is on, but Proxy Server Nameserver is empty. Fill it in under Advanced configuration → DNS, or turn off Respect rules.';
+
+  @override
+  String get dnsRespectRulesUnmetWarning =>
+      'Respect rules is on, but Proxy Server Nameserver is empty. This configuration won\'t start. Fill it in or turn off Respect rules.';
+
+  @override
+  String get dnsRespectRulesNeedsProxyServer =>
+      'Before turning on Respect rules, fill in Proxy Server Nameserver to resolve proxy server hostnames. Saving a non-empty list will turn on Respect rules.';
+
+  @override
+  String get dnsFillProxyServerNameserver => 'Fill in Proxy Server Nameserver';
+
+  @override
+  String get dnsUseNameserverForProxyServer => 'Copy Nameserver and turn on';
+
+  @override
+  String get dnsTurnOffRespectRules => 'Turn off Respect rules';
+
+  @override
+  String get dnsUseNameserverForProxyServerDesc =>
+      'Copy the current Nameserver list to Proxy Server Nameserver and turn on Respect rules.';
+
+  @override
+  String get configRejectedUnknown =>
+      'Couldn\'t apply the configuration: the core rejected it. Expand to view the original error.';
+
+  @override
+  String get configRejectedProxyServerPolicy =>
+      'Couldn\'t apply the configuration: it has a Proxy Server Nameserver Policy, but Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedDefaultNameserverIp =>
+      'Couldn\'t apply the configuration: in Default Nameserver, a server\'s host must be an IP address, not a hostname, such as 223.5.5.5 or tls://223.5.5.5. Change Default Nameserver under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedDefaultNameserverEmpty =>
+      'Couldn\'t apply the configuration: Default Nameserver is empty. Add at least one IP address under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedNameserverEmpty =>
+      'Couldn\'t apply the configuration: DNS is on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS, or turn on Append system DNS under Advanced configuration → General.';
+
+  @override
+  String configBuildNameserverEmpty(Object profile) {
+    return 'Couldn\'t apply “$profile”: it turns DNS on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS, or turn on Append system DNS under Advanced configuration → General.';
+  }
+
+  @override
+  String get configRejectedDnsServer =>
+      'Couldn\'t apply the configuration: a DNS server uses an unsupported scheme or has an invalid address. Check the DNS server lists under Advanced configuration → DNS and in this profile.';
+
+  @override
+  String configRejectedRuleSet(Object name) {
+    return 'Couldn\'t apply the configuration: it refers to a rule set “$name” that doesn\'t exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.';
+  }
+
+  @override
+  String get configRejectedFakeIpFilter =>
+      'Couldn\'t apply the configuration: Fake-IP filter contains an unrecognized entry. In rule mode, use a rule such as DOMAIN-SUFFIX,lan,real-ip or MATCH,real-ip. Check it under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedFakeIpRange =>
+      'Couldn\'t apply the configuration: a Fake-IP range is wrong. Check the IPv4 and IPv6 ranges and their prefix lengths in the profile\'s DNS settings; Fake-IP mode needs at least one of them.';
+
+  @override
+  String get configRejectedNameserverPolicy =>
+      'Couldn\'t apply the configuration: a domain in Nameserver Policy is malformed. Check the profile\'s DNS settings.';
+
+  @override
+  String get configRejectedHosts =>
+      'Couldn\'t apply the configuration: Hosts contains an invalid entry or a loop. Check Hosts under Advanced configuration → General and in this profile.';
+
+  @override
+  String get dnsServerSchemeTip =>
+      'This scheme isn\'t supported. Use udp, tcp, tls, https, http, quic, system, dhcp or rcode.';
+
+  @override
+  String get dnsServerFormatTip =>
+      'This address is malformed. Check its scheme, host and port.';
+
+  @override
+  String get defaultNameserverPureIpTip =>
+      'In Default Nameserver, a server\'s host must be an IP address, not a hostname, such as 223.5.5.5 or tls://223.5.5.5.';
+
+  @override
+  String get defaultNameserverEmptyTip =>
+      'Keep at least one IP address in Default Nameserver, or the core can\'t start.';
+
+  @override
+  String get nameserverEmptyTip =>
+      'Keep at least one Nameserver, or turn on Append system DNS under Advanced configuration → General. This list replaces each profile\'s own Nameserver, so while it is empty a profile that turns DNS on can\'t start.';
+
+  @override
+  String get dnsHijackTip =>
+      'Enter a DNS hijack address and port, such as any:53, 198.18.0.2:53 or tcp://any:53.';
+
+  @override
+  String dnsListenPortTakenTip(Object port, Object listener) {
+    return 'Port $port conflicts with the port configured for $listener. Choose another port.';
+  }
+
+  @override
+  String get controllerPortConflictTip =>
+      'Port 9090 conflicts with the port configured for the external controller. Choose another port.';
+
+  @override
+  String get tunNotListening =>
+      'TUN didn\'t start. Check the TUN settings, such as DNS hijacking, and review the log.';
+
+  @override
+  String get hostsValueTip =>
+      'Enter one domain (such as example.com), or one or more IP addresses separated by commas or spaces, not a mix.';
+
+  @override
+  String hostsCycleTip(Object domain) {
+    return '“$domain” leads back to itself through other entries, and the core refuses such Hosts. Change one of them.';
+  }
+
+  @override
+  String get fakeIpFilterRuleTip =>
+      'In rule mode, write each entry as TYPE,value,fake-ip or real-ip, such as DOMAIN-SUFFIX,lan,real-ip, or MATCH,real-ip. Use a domain rule (DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-WILDCARD, DOMAIN-REGEX, GEOSITE or RULE-SET), or MATCH.';
+
+  @override
+  String fakeIpFilterNotRulesTip(Object entry) {
+    return 'The Fake-IP filter entry “$entry” is not written as a rule, so with Fake-IP mode the rule filter mode would stop the core from starting. First rewrite the filter as rules, such as DOMAIN-SUFFIX,lan,real-ip.';
+  }
+
+  @override
+  String configBuildProxyServerPolicy(Object profile) {
+    return 'Couldn\'t apply “$profile”: it has a Proxy Server Nameserver Policy, but Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver under Advanced configuration → DNS.';
+  }
+
+  @override
+  String configBuildFakeIpFilterRuleSet(Object profile, Object name) {
+    return 'Couldn\'t apply “$profile”: Fake-IP filter refers to the rule set “$name”, which this profile doesn\'t have. Remove that entry under Advanced configuration → DNS → Fake-IP filter, or add the rule set to this profile.';
+  }
+
+  @override
+  String dnsProxyServerPolicyUnmetWarning(Object profile) {
+    return 'The current profile “$profile” has a Proxy Server Nameserver Policy, so it won\'t start while Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver.';
+  }
+
+  @override
+  String get domainMatcherTip =>
+      'This domain is malformed: no leading or trailing spaces, trailing dot or empty label; + must be a whole first label (as in +.example.com), and * a whole label (as in *.example.com).';
+
+  @override
+  String get fakeIpRangeTip =>
+      'Enter an IPv4 range with a prefix length of 29 or less, such as 198.18.0.1/16.';
+
+  @override
+  String get fakeIpRange6Tip =>
+      'Enter an IPv6 range with a prefix length of 125 or less, such as fdfe:dcba:9876::1/64.';
+
+  @override
+  String interfaceNameMissingTip(Object name) {
+    return 'This Mac has no network interface named “$name” right now. Connections using it may fail.';
+  }
+
+  @override
+  String configBuildHostsCycle(Object profile, Object domain) {
+    return 'Couldn\'t apply “$profile”: once the app\'s Hosts are merged with this profile\'s, “$domain” leads back to itself through other entries. Check Hosts under Advanced configuration → General and in this profile, and change one of them.';
+  }
+
+  @override
+  String get configRejectedProxyServerNameserverPolicy =>
+      'Couldn\'t apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile\'s DNS settings.';
+
+  @override
+  String get bannerDetails => 'Details';
+
+  @override
+  String get configRejectedRuleSetUnnamed =>
+      'Couldn\'t apply the configuration: a rule set reference is invalid. Check the rule sets referenced in Fake-IP filter, nameserver policies and sniffer settings.';
+
+  @override
+  String configBuildHostsInvalid(Object profile, Object domain) {
+    return 'Couldn\'t apply “$profile”: the Hosts value for “$domain” can\'t be used. Check Hosts under Advanced configuration → General and in this profile.';
+  }
 }

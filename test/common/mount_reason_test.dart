@@ -77,6 +77,23 @@ void main() {
     expect(mountRejectedReason('  first\nsecond  ', en), 'first');
   });
 
+  test(
+    'respect rules without a Proxy Server Nameserver says how to fix it',
+    () {
+      for (final l in [zh, en]) {
+        expect(
+          mountRejectedReason(
+            'if “respect-rules” is turned on, “proxy-server-nameserver” cannot '
+            'be empty',
+            l,
+            sourceName: names,
+          ),
+          l.dnsRespectRulesUnmetError,
+        );
+      }
+    },
+  );
+
   test('only the kept refusal is left to the setup that asked for it', () {
     expect(
       isMountKeptLog(
