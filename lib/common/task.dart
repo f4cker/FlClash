@@ -428,6 +428,20 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       (effectiveNameservers is! List || effectiveNameservers.isEmpty)) {
     throw const ConfigBuildException(ConfigBuildIssue.nameserverEmpty);
   }
+  if (_proxyServerPolicyUnmet(effectiveDns)) {
+    throw const ConfigBuildException(
+      ConfigBuildIssue.proxyServerNameserverEmpty,
+    );
+  }
+  final ruleProviders = rawConfig['rule-providers'];
+  for (final name in _fakeIpFilterRuleSets(effectiveDns)) {
+    if (ruleProviders is! Map || !ruleProviders.containsKey(name)) {
+      throw ConfigBuildException(
+        ConfigBuildIssue.fakeIpFilterRuleSetMissing,
+        detail: name,
+      );
+    }
+  }
   // A colliding set is rewritten only through its stable paired rule id.
   // Older rows have no persistent association; refusing an ambiguous
   // collision preserves the previously running configuration and all rules.
@@ -671,6 +685,34 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
     for (final MapEntry(:key, :value) in page.hosts.entries)
       key: value.splitByMultipleSeparators,
   };
+}
+
+// config.go parseDNS, whatever dns.enable says.
+bool _proxyServerPolicyUnmet(Map dns) {
+  final policy = dns['proxy-server-nameserver-policy'];
+  final servers = dns['proxy-server-nameserver'];
+  return policy is Map &&
+      policy.isNotEmpty &&
+      (servers == null ||
+          servers == '' ||
+          (servers is List && servers.isEmpty));
+}
+
+// The rule sets config.go parseFakeIPRules and parseDomain look up.
+Iterable<String> _fakeIpFilterRuleSets(Map dns) sync* {
+  final filter = dns['fake-ip-filter'];
+  if (dns['enhanced-mode'] != 'fake-ip' || filter is! List) return;
+  final rules = dns['fake-ip-filter-mode'] == 'rule';
+  for (final entry in filter.whereType<String>()) {
+    final item = entry.split(',').map((part) => part.trim()).toList();
+    if (rules) {
+      if (item.length > 1 && item.first.toUpperCase() == 'RULE-SET') {
+        yield item[1];
+      }
+    } else if (entry.toLowerCase().startsWith('rule-set:')) {
+      yield* entry.split(':')[1].split(',');
+    }
+  }
 }
 
 typedef ShakingStoreArgs = ({

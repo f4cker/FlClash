@@ -87,7 +87,13 @@ final class ConfigRejectedException extends MessageException {
   const ConfigRejectedException(super.message, {required this.raw});
 }
 
-enum ConfigBuildIssue { nameserverEmpty }
+enum ConfigBuildIssue {
+  nameserverEmpty,
+  proxyServerNameserverEmpty,
+
+  /// [ConfigBuildException.detail] is the rule set's name.
+  fakeIpFilterRuleSetMissing,
+}
 
 final class ConfigBuildException implements Exception {
   final ConfigBuildIssue issue;

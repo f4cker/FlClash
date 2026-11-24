@@ -9147,4 +9147,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String fakeIpFilterNotRulesTip(Object entry) {
     return 'Fake-IP 过滤里的「$entry」不是规则写法，Fake-IP 模式下用 rule 过滤模式会让内核拒绝启动。请先把过滤列表改成规则写法，如 DOMAIN-SUFFIX,lan,real-ip。';
   }
+
+  @override
+  String configBuildProxyServerPolicy(Object profile) {
+    return '无法应用配置「$profile」：它有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写 Proxy Server Nameserver。';
+  }
+
+  @override
+  String configBuildFakeIpFilterRuleSet(Object profile, Object name) {
+    return '无法应用配置「$profile」：Fake-IP 过滤引用了规则集「$name」，但这份配置里没有它。请在「进阶配置 → DNS → Fake-IP 过滤」中删掉这一条，或给这份配置加上这个规则集。';
+  }
+
+  @override
+  String dnsProxyServerPolicyUnmetWarning(Object profile) {
+    return '当前配置「$profile」有代理服务器 DNS 分流规则，代理服务器 DNS 为空时它将无法启动。请填写代理服务器 DNS。';
+  }
 }

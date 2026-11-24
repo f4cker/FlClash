@@ -16251,6 +16251,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The Fake-IP filter entry “{entry}” is not written as a rule, so with Fake-IP mode the rule filter mode would stop the core from starting. First rewrite the filter as rules, such as DOMAIN-SUFFIX,lan,real-ip.'**
   String fakeIpFilterNotRulesTip(Object entry);
+
+  /// No description provided for @configBuildProxyServerPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply “{profile}”: it has a Proxy Server Nameserver Policy, but Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver under Advanced configuration → DNS.'**
+  String configBuildProxyServerPolicy(Object profile);
+
+  /// No description provided for @configBuildFakeIpFilterRuleSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply “{profile}”: Fake-IP filter refers to the rule set “{name}”, which this profile doesn\'t have. Remove that entry under Advanced configuration → DNS → Fake-IP filter, or add the rule set to this profile.'**
+  String configBuildFakeIpFilterRuleSet(Object profile, Object name);
+
+  /// No description provided for @dnsProxyServerPolicyUnmetWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The current profile “{profile}” has a Proxy Server Nameserver Policy, so it won\'t start while Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver.'**
+  String dnsProxyServerPolicyUnmetWarning(Object profile);
 }
 
 class _AppLocalizationsDelegate

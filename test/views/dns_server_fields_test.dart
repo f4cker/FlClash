@@ -4,11 +4,13 @@ import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/dns.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/test_app.dart';
@@ -25,13 +27,14 @@ void main() {
     WidgetTester tester, {
     bool appendSystemDns = false,
     Dns dns = _dns,
+    List<Override> overrides = const [],
   }) async {
     const size = Size(1200, 1000);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    container = ProviderContainer();
+    container = ProviderContainer(overrides: overrides);
     addTearDown(container.dispose);
     globalState.container = container;
     container.read(viewSizeProvider.notifier).update((_) => size);
@@ -200,5 +203,34 @@ void main() {
     await tapRow(tester, l.fakeipFilter);
 
     expect(find.text(l.fakeIpFilterRuleTip), findsOneWidget);
+  });
+
+  testWidgets('a profile with a proxy server policy asks for proxy servers', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      overrides: [
+        currentProfileProvider.overrideWithValue(
+          const Profile(id: 1, label: '机场', autoUpdateDuration: Duration.zero),
+        ),
+      ],
+    );
+    final l = currentAppLocalizations;
+    final warning = find.text(l.dnsProxyServerPolicyUnmetWarning('机场'));
+    expect(warning, findsNothing);
+
+    container.read(profileSettingsProvider.notifier).value = {
+      'dns': {
+        'proxy-server-nameserver-policy': {'example.com': '1.1.1.1'},
+      },
+    };
+    await tester.pumpAndSettle();
+    expect(warning, findsOneWidget);
+
+    container.read(patchClashConfigProvider.notifier).value =
+        const PatchClashConfig(dns: Dns(proxyServerNameserver: ['223.5.5.5']));
+    await tester.pumpAndSettle();
+    expect(warning, findsNothing);
   });
 }

@@ -4192,5 +4192,32 @@
         "type": "Object"
       }
     }
+  },
+  "configBuildProxyServerPolicy": "Couldn't apply “{profile}”: it has a Proxy Server Nameserver Policy, but Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver under Advanced configuration → DNS.",
+  "@configBuildProxyServerPolicy": {
+    "placeholders": {
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
+  "configBuildFakeIpFilterRuleSet": "Couldn't apply “{profile}”: Fake-IP filter refers to the rule set “{name}”, which this profile doesn't have. Remove that entry under Advanced configuration → DNS → Fake-IP filter, or add the rule set to this profile.",
+  "@configBuildFakeIpFilterRuleSet": {
+    "placeholders": {
+      "profile": {
+        "type": "Object"
+      },
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "dnsProxyServerPolicyUnmetWarning": "The current profile “{profile}” has a Proxy Server Nameserver Policy, so it won't start while Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver.",
+  "@dnsProxyServerPolicyUnmetWarning": {
+    "placeholders": {
+      "profile": {
+        "type": "Object"
+      }
+    }
   }
 }

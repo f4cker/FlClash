@@ -94,6 +94,17 @@ String configBuildMessage(
       appLocalizations.configBuildNameserverEmpty(profile),
     ConfigBuildIssue.nameserverEmpty =>
       appLocalizations.configRejectedNameserverEmpty,
+    ConfigBuildIssue.proxyServerNameserverEmpty when profile != null =>
+      appLocalizations.configBuildProxyServerPolicy(profile),
+    ConfigBuildIssue.proxyServerNameserverEmpty =>
+      appLocalizations.configRejectedProxyServerPolicy,
+    ConfigBuildIssue.fakeIpFilterRuleSetMissing when profile != null =>
+      appLocalizations.configBuildFakeIpFilterRuleSet(
+        profile,
+        error.detail ?? '',
+      ),
+    ConfigBuildIssue.fakeIpFilterRuleSetMissing =>
+      appLocalizations.configRejectedRuleSet(error.detail ?? ''),
   };
 }
 

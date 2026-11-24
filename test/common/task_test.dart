@@ -980,7 +980,10 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
         profilesPath: '/profiles',
         profileId: 13,
         rawConfig: rawConfig,
-        realPatchConfig: const PatchClashConfig(),
+        // mihomo refuses the policy without proxy servers.
+        realPatchConfig: const PatchClashConfig(
+          dns: Dns(proxyServerNameserver: ['223.5.5.5']),
+        ),
         appendSystemDns: false,
         proxyGroups: const [],
         rules: const [],
@@ -1666,6 +1669,64 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
         expect(config['dns']['nameserver'], ['system://']);
       },
     );
+
+    Matcher refusal(ConfigBuildIssue issue, [String? detail]) => throwsA(
+      isA<ConfigBuildException>()
+          .having((error) => error.issue, 'issue', issue)
+          .having((error) => error.detail, 'detail', detail),
+    );
+
+    test('a proxy server policy needs proxy server nameservers', () async {
+      final rawConfig = {
+        'dns': {
+          'enable': false,
+          'proxy-server-nameserver': ['223.5.5.5'],
+          'proxy-server-nameserver-policy': {'example.com': '1.1.1.1'},
+        },
+      };
+      await expectLater(
+        build(rawConfig: rawConfig, page: const PatchClashConfig()),
+        refusal(ConfigBuildIssue.proxyServerNameserverEmpty),
+      );
+      final config = await build(
+        rawConfig: rawConfig,
+        page: const PatchClashConfig(
+          dns: Dns(proxyServerNameserver: ['119.29.29.29']),
+        ),
+      );
+      expect(config['dns']['proxy-server-nameserver'], ['119.29.29.29']);
+    });
+
+    test('a fake-ip filter rule set must be one of the profile\'s', () async {
+      Future<YamlMap> withFilter(List<String> filter, FakeIpFilterMode mode) =>
+          build(
+            rawConfig: {
+              'rule-providers': {
+                'lan': {'type': 'inline', 'behavior': 'domain', 'payload': []},
+              },
+            },
+            page: PatchClashConfig(
+              dns: Dns(
+                enhancedMode: DnsMode.fakeIp,
+                fakeIpFilterMode: mode,
+                fakeIpFilter: filter,
+              ),
+            ),
+          );
+
+      await withFilter(['rule-set:lan'], FakeIpFilterMode.blacklist);
+      await withFilter(['RULE-SET, lan ,real-ip'], FakeIpFilterMode.rule);
+      await expectLater(
+        withFilter(['rule-set:lan,cn'], FakeIpFilterMode.blacklist),
+        refusal(ConfigBuildIssue.fakeIpFilterRuleSetMissing, 'cn'),
+      );
+      await expectLater(
+        withFilter(['RULE-SET,cn,real-ip'], FakeIpFilterMode.rule),
+        refusal(ConfigBuildIssue.fakeIpFilterRuleSetMissing, 'cn'),
+      );
+      // Rule mode looks up only RULE-SET; the entry fails in the Core.
+      await withFilter(['rule-set:cn'], FakeIpFilterMode.rule);
+    });
   });
 
   group('makeRealProfileTask legacy provider file migration', () {

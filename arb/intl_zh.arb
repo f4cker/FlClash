@@ -2732,5 +2732,8 @@
   "hostsValueTip": "请填写一个域名（如 example.com），或一个或多个 IP 地址（用逗号或空格分隔），不能混用。",
   "hostsCycleTip": "「{domain}」经过其他条目又指回了自己，内核会拒绝这份 Hosts。请修改其中一条。",
   "fakeIpFilterRuleTip": "过滤模式为 rule 时，每条要写成「规则类型,内容,fake-ip 或 real-ip」，如 DOMAIN-SUFFIX,lan,real-ip，或写 MATCH,real-ip。只能用 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-WILDCARD、DOMAIN-REGEX、GEOSITE、RULE-SET 这些域名类规则。",
-  "fakeIpFilterNotRulesTip": "Fake-IP 过滤里的「{entry}」不是规则写法，Fake-IP 模式下用 rule 过滤模式会让内核拒绝启动。请先把过滤列表改成规则写法，如 DOMAIN-SUFFIX,lan,real-ip。"
+  "fakeIpFilterNotRulesTip": "Fake-IP 过滤里的「{entry}」不是规则写法，Fake-IP 模式下用 rule 过滤模式会让内核拒绝启动。请先把过滤列表改成规则写法，如 DOMAIN-SUFFIX,lan,real-ip。",
+  "configBuildProxyServerPolicy": "无法应用配置「{profile}」：它有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写 Proxy Server Nameserver。",
+  "configBuildFakeIpFilterRuleSet": "无法应用配置「{profile}」：Fake-IP 过滤引用了规则集「{name}」，但这份配置里没有它。请在「进阶配置 → DNS → Fake-IP 过滤」中删掉这一条，或给这份配置加上这个规则集。",
+  "dnsProxyServerPolicyUnmetWarning": "当前配置「{profile}」有代理服务器 DNS 分流规则，代理服务器 DNS 为空时它将无法启动。请填写代理服务器 DNS。"
 }

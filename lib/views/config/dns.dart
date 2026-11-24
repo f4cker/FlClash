@@ -5,6 +5,7 @@ import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/editor.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/state.dart';
@@ -211,7 +212,13 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
 
   @override
   Widget? leadOf() => target is PatchOverrideTarget<DnsOverrideKey, Dns>
-      ? _RespectRulesNotice(target)
+      ? Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _RespectRulesNotice(target),
+            _ProxyServerPolicyNotice(target),
+          ],
+        )
       : null;
 
   @override

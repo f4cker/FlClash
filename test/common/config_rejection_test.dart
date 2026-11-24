@@ -109,4 +109,28 @@ void main() {
     );
     expect(userFacingErrorMessage(named, l), contains('机场'));
   });
+
+  test('each build refusal names the profile and what to change', () {
+    final l = loadAppLocalizations(const Locale('zh'));
+    const policy = ConfigBuildException(
+      ConfigBuildIssue.proxyServerNameserverEmpty,
+    );
+    expect(
+      userFacingErrorMessage(policy, l),
+      l.configRejectedProxyServerPolicy,
+    );
+    expect(
+      userFacingErrorMessage(policy.withProfile('机场'), l),
+      l.configBuildProxyServerPolicy('机场'),
+    );
+    const ruleSet = ConfigBuildException(
+      ConfigBuildIssue.fakeIpFilterRuleSetMissing,
+      detail: 'cn',
+    );
+    expect(userFacingErrorMessage(ruleSet, l), l.configRejectedRuleSet('cn'));
+    expect(
+      userFacingErrorMessage(ruleSet.withProfile('机场'), l),
+      l.configBuildFakeIpFilterRuleSet('机场', 'cn'),
+    );
+  });
 }

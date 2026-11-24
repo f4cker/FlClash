@@ -401,6 +401,67 @@ class _RespectRulesNotice extends ConsumerWidget {
   }
 }
 
+/// The current profile's own policy is kept over the app's empty list,
+/// which mihomo refuses.
+class _ProxyServerPolicyNotice extends ConsumerWidget {
+  const _ProxyServerPolicyNotice(this.target);
+
+  final _DnsTarget target;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final hasPolicy = ref.watch(
+      profileSettingsProvider.select(
+        (settings) => switch (settings?['dns']) {
+          final Map dns =>
+            dns['proxy-server-nameserver-policy'] is Map &&
+                (dns['proxy-server-nameserver-policy'] as Map).isNotEmpty,
+          _ => false,
+        },
+      ),
+    );
+    final empty = ref.watch(
+      target.selectModel((dns) => dns.proxyServerNameserver.isEmpty),
+    );
+    final profile = ref.watch(
+      currentProfileProvider.select((profile) => profile?.realLabel),
+    );
+    final unmet = hasPolicy && empty && profile != null;
+    return AnimatedSize(
+      duration: commonDuration,
+      alignment: Alignment.topCenter,
+      child: unmet
+          ? Padding(
+              padding: EdgeInsets.only(
+                top: listHeaderPaddingOf(context).top,
+                bottom: 16,
+              ),
+              child: _Notice(
+                glyph: AppGlyphs.error,
+                color: colorScheme.errorContainer,
+                foregroundColor: colorScheme.onErrorContainer,
+                message: appLocalizations.dnsProxyServerPolicyUnmetWarning(
+                  profile,
+                ),
+                actions: TonalButton(
+                  size: TonalButtonSize.compact,
+                  label: appLocalizations.dnsFillProxyServerNameserver,
+                  onPressed: () => _fillProxyServerNameserver(
+                    context,
+                    ref,
+                    target,
+                    turnOn: false,
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox(width: double.infinity),
+    );
+  }
+}
+
 class _Notice extends StatelessWidget {
   const _Notice({
     required this.glyph,
