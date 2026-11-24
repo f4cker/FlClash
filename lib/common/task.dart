@@ -426,7 +426,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   if (!data.safeMode &&
       effectiveDns['enable'] == true &&
       (effectiveNameservers is! List || effectiveNameservers.isEmpty)) {
-    throw StateError('Enabled DNS requires a nameserver');
+    throw const ConfigBuildException(ConfigBuildIssue.nameserverEmpty);
   }
   // A colliding set is rewritten only through its stable paired rule id.
   // Older rows have no persistent association; refusing an ambiguous

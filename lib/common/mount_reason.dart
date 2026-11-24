@@ -1,4 +1,4 @@
-import 'package:fl_clash/common/exception.dart';
+import 'package:fl_clash/common/config_rejection.dart';
 import 'package:fl_clash/common/print.dart';
 import 'package:fl_clash/common/string.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -72,8 +72,8 @@ String mountRejectedReason(
     };
     return mountSourceReason(status, name, appLocalizations);
   }
-  if (isRespectRulesUnmetMessage(reason)) {
-    return appLocalizations.dnsRespectRulesUnmetError;
+  if (configRejectionMessage(reason, appLocalizations) case final message?) {
+    return message;
   }
   final line = redactUrls(reason.trim()).split('\n').first.trim();
   return line.length > _mountReasonMaxLength

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fl_clash/common/config_rejection.dart';
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/network_error.dart';
@@ -178,9 +179,10 @@ String userFacingErrorMessage(Object error, AppLocalizations appLocalizations) {
           appLocalizations.ageSecretKeyRequiredTip,
         DnsRespectRulesUnmetException() =>
           appLocalizations.dnsRespectRulesUnmetError,
+        ConfigBuildException() => configBuildMessage(error, appLocalizations),
         CoreMethodException(:final message)
-            when isRespectRulesUnmetMessage(message) =>
-          appLocalizations.dnsRespectRulesUnmetError,
+            when configRejectionMessage(message, appLocalizations) != null =>
+          configRejectionMessage(message, appLocalizations)!,
         ReleaseNotVerifiedException() => appLocalizations.updateNotVerified,
         SystemDownloadException() => appLocalizations.updateDownloadFailed,
         CoreMethodException(code: 'rule_set_empty') =>

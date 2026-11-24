@@ -16101,6 +16101,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Copy the current Nameserver list to Proxy Server Nameserver and turn on Respect rules.'**
   String get dnsUseNameserverForProxyServerDesc;
+
+  /// No description provided for @configRejectedUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: the core refused it. See the original error for why.'**
+  String get configRejectedUnknown;
+
+  /// No description provided for @configRejectedProxyServerPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: it has a Proxy Server Nameserver Policy, but Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver under Advanced configuration → DNS.'**
+  String get configRejectedProxyServerPolicy;
+
+  /// No description provided for @configRejectedDefaultNameserverIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames. Change Default Nameserver under Advanced configuration → DNS.'**
+  String get configRejectedDefaultNameserverIp;
+
+  /// No description provided for @configRejectedDefaultNameserverEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: Default Nameserver is empty. Add at least one IP address under Advanced configuration → DNS.'**
+  String get configRejectedDefaultNameserverEmpty;
+
+  /// No description provided for @configRejectedNameserverEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: DNS is on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS.'**
+  String get configRejectedNameserverEmpty;
+
+  /// No description provided for @configBuildNameserverEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply “{profile}”: it turns DNS on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS.'**
+  String configBuildNameserverEmpty(Object profile);
+
+  /// No description provided for @configRejectedDnsServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: a DNS server address is malformed, such as an unsupported scheme or a bad port. Check the DNS server lists under Advanced configuration → DNS, and the profile\'s own DNS settings.'**
+  String get configRejectedDnsServer;
+
+  /// No description provided for @configRejectedRuleSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: it refers to a rule set “{name}” that doesn\'t exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.'**
+  String configRejectedRuleSet(Object name);
+
+  /// No description provided for @configRejectedFakeIpFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: an entry in Fake-IP filter isn\'t valid. In rule mode, each entry is TYPE,value,fake-ip or TYPE,value,real-ip. Change it under Advanced configuration → DNS, or set the filter mode back to blacklist.'**
+  String get configRejectedFakeIpFilter;
+
+  /// No description provided for @configRejectedFakeIpRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: a Fake-IP range is wrong. The Fake-IP range must be an IPv4 prefix and the IPv6 one an IPv6 prefix, neither too small, and they can\'t both be empty. Check the profile\'s DNS settings.'**
+  String get configRejectedFakeIpRange;
+
+  /// No description provided for @configRejectedNameserverPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: a domain in Nameserver Policy is malformed. Check the profile\'s DNS settings.'**
+  String get configRejectedNameserverPolicy;
+
+  /// No description provided for @configRejectedHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: an entry in Hosts can\'t be used. Each domain maps to one domain or to IP addresses, and domains can\'t point at each other in a loop. Change it under Advanced configuration → General → Hosts.'**
+  String get configRejectedHosts;
 }
 
 class _AppLocalizationsDelegate

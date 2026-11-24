@@ -5,6 +5,7 @@ export 'backup.dart';
 export 'changelog.dart';
 export 'cidr.dart';
 export 'compute.dart';
+export 'config_rejection.dart';
 export 'constant.dart';
 export 'context.dart';
 export 'converter.dart';

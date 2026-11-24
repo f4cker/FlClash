@@ -1646,7 +1646,13 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
             },
             page: const PatchClashConfig(dns: Dns(nameserver: [])),
           ),
-          throwsStateError,
+          throwsA(
+            isA<ConfigBuildException>().having(
+              (error) => error.issue,
+              'issue',
+              ConfigBuildIssue.nameserverEmpty,
+            ),
+          ),
         );
 
         final config = await build(

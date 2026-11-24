@@ -2707,5 +2707,17 @@
   "dnsFillProxyServerNameserver": "填写 Proxy Server Nameserver",
   "dnsUseNameserverForProxyServer": "复制 Nameserver 并开启",
   "dnsTurnOffRespectRules": "关闭「遵守规则」",
-  "dnsUseNameserverForProxyServerDesc": "将当前 Nameserver 列表复制到 Proxy Server Nameserver，并开启「遵守规则」。"
+  "dnsUseNameserverForProxyServerDesc": "将当前 Nameserver 列表复制到 Proxy Server Nameserver，并开启「遵守规则」。",
+  "configRejectedUnknown": "无法应用配置：内核拒绝了这份配置，原因见原始错误。",
+  "configRejectedProxyServerPolicy": "无法应用配置：配置中有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写 Proxy Server Nameserver。",
+  "configRejectedDefaultNameserverIp": "无法应用配置：Default Nameserver 只能填写 IP 地址（如 223.5.5.5、tls://223.5.5.5），不能填写域名。请在「进阶配置 → DNS」中修改 Default Nameserver。",
+  "configRejectedDefaultNameserverEmpty": "无法应用配置：Default Nameserver 为空。请在「进阶配置 → DNS」中至少填写一个 IP 地址。",
+  "configRejectedNameserverEmpty": "无法应用配置：DNS 已开启，但 Nameserver 为空。请在「进阶配置 → DNS」中至少填写一个 Nameserver。",
+  "configBuildNameserverEmpty": "无法应用配置「{profile}」：它开启了 DNS，但 Nameserver 为空。请在「进阶配置 → DNS」中至少填写一个 Nameserver。",
+  "configRejectedDnsServer": "无法应用配置：有一个 DNS 服务器地址格式不对，例如协议不受支持或端口写错。请检查「进阶配置 → DNS」中的各个 DNS 服务器列表，以及这份配置自己的 DNS 设置。",
+  "configRejectedRuleSet": "无法应用配置：引用了不存在的规则集「{name}」。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。",
+  "configRejectedFakeIpFilter": "无法应用配置：Fake-IP过滤中有无法识别的条目。过滤模式为 rule 时，每条需写成「类型,内容,fake-ip」或「类型,内容,real-ip」。请在「进阶配置 → DNS」中修改，或把过滤模式改回 blacklist。",
+  "configRejectedFakeIpRange": "无法应用配置：Fake-IP 范围有误。Fake-IP范围需为 IPv4 网段，Fake-IP范围（IPv6）需为 IPv6 网段，网段不能太小，两者也不能同时为空。请检查这份配置的 DNS 设置。",
+  "configRejectedNameserverPolicy": "无法应用配置：Nameserver Policy（DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。",
+  "configRejectedHosts": "无法应用配置：Hosts 中有无法使用的条目。每个域名只能对应一个域名或若干个 IP 地址，域名之间也不能互相指向。请在「进阶配置 → 常规 → Hosts」中修改。"
 }

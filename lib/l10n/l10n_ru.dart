@@ -9883,4 +9883,54 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get dnsUseNameserverForProxyServerDesc =>
       'Copy the current Nameserver list to Proxy Server Nameserver and turn on Respect rules.';
+
+  @override
+  String get configRejectedUnknown =>
+      'Couldn\'t apply the configuration: the core refused it. See the original error for why.';
+
+  @override
+  String get configRejectedProxyServerPolicy =>
+      'Couldn\'t apply the configuration: it has a Proxy Server Nameserver Policy, but Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedDefaultNameserverIp =>
+      'Couldn\'t apply the configuration: Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames. Change Default Nameserver under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedDefaultNameserverEmpty =>
+      'Couldn\'t apply the configuration: Default Nameserver is empty. Add at least one IP address under Advanced configuration → DNS.';
+
+  @override
+  String get configRejectedNameserverEmpty =>
+      'Couldn\'t apply the configuration: DNS is on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS.';
+
+  @override
+  String configBuildNameserverEmpty(Object profile) {
+    return 'Couldn\'t apply “$profile”: it turns DNS on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS.';
+  }
+
+  @override
+  String get configRejectedDnsServer =>
+      'Couldn\'t apply the configuration: a DNS server address is malformed, such as an unsupported scheme or a bad port. Check the DNS server lists under Advanced configuration → DNS, and the profile\'s own DNS settings.';
+
+  @override
+  String configRejectedRuleSet(Object name) {
+    return 'Couldn\'t apply the configuration: it refers to a rule set “$name” that doesn\'t exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.';
+  }
+
+  @override
+  String get configRejectedFakeIpFilter =>
+      'Couldn\'t apply the configuration: an entry in Fake-IP filter isn\'t valid. In rule mode, each entry is TYPE,value,fake-ip or TYPE,value,real-ip. Change it under Advanced configuration → DNS, or set the filter mode back to blacklist.';
+
+  @override
+  String get configRejectedFakeIpRange =>
+      'Couldn\'t apply the configuration: a Fake-IP range is wrong. The Fake-IP range must be an IPv4 prefix and the IPv6 one an IPv6 prefix, neither too small, and they can\'t both be empty. Check the profile\'s DNS settings.';
+
+  @override
+  String get configRejectedNameserverPolicy =>
+      'Couldn\'t apply the configuration: a domain in Nameserver Policy is malformed. Check the profile\'s DNS settings.';
+
+  @override
+  String get configRejectedHosts =>
+      'Couldn\'t apply the configuration: an entry in Hosts can\'t be used. Each domain maps to one domain or to IP addresses, and domains can\'t point at each other in a loop. Change it under Advanced configuration → General → Hosts.';
 }

@@ -81,11 +81,29 @@ final class DnsRespectRulesUnmetException implements Exception {
       'respect-rules is on but proxy-server-nameserver is empty';
 }
 
-/// The same refusal as mihomo words it, from a config the build let through.
-bool isRespectRulesUnmetMessage(String message) =>
-    message.contains('respect-rules') &&
-    message.contains('proxy-server-nameserver') &&
-    message.contains('cannot be empty');
+final class ConfigRejectedException extends MessageException {
+  final String raw;
+
+  const ConfigRejectedException(super.message, {required this.raw});
+}
+
+enum ConfigBuildIssue { nameserverEmpty }
+
+final class ConfigBuildException implements Exception {
+  final ConfigBuildIssue issue;
+  final String? detail;
+
+  /// The profile's label, added once the build is back from its isolate.
+  final String? profile;
+
+  const ConfigBuildException(this.issue, {this.detail, this.profile});
+
+  ConfigBuildException withProfile(String? profile) =>
+      ConfigBuildException(issue, detail: detail, profile: profile);
+
+  @override
+  String toString() => 'ConfigBuildException: ${issue.name} $detail';
+}
 
 final class AgeSecretKeyRequiredException implements Exception {
   const AgeSecretKeyRequiredException();

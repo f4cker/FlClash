@@ -397,10 +397,7 @@ class SetupAction extends _$SetupAction {
         );
       } catch (error) {
         if (_isCurrent(request)) {
-          dialogs.showBanner(
-            userFacingErrorMessage(error, currentAppLocalizations),
-            level: BannerLevel.error,
-          );
+          dialogs.showErrorBanner(error);
         }
       }
       if (!applied && _isCurrent(request)) {
@@ -1109,6 +1106,25 @@ class SetupAction extends _$SetupAction {
 
   /// [profilePath] stands in for the profile's file, as an unsaved edit.
   Future<BuiltProfile> _buildProfile({
+    required SetupState setupState,
+    required PatchClashConfig patchConfig,
+    String? profilePath,
+  }) =>
+      _composeProfile(
+        setupState: setupState,
+        patchConfig: patchConfig,
+        profilePath: profilePath,
+      ).catchError(
+        (Object error, StackTrace stack) => Error.throwWithStackTrace(
+          (error as ConfigBuildException).withProfile(
+            ref.read(profileProvider(setupState.profileId!))?.realLabel,
+          ),
+          stack,
+        ),
+        test: (error) => error is ConfigBuildException,
+      );
+
+  Future<BuiltProfile> _composeProfile({
     required SetupState setupState,
     required PatchClashConfig patchConfig,
     String? profilePath,
@@ -2098,12 +2114,14 @@ class SetupAction extends _$SetupAction {
               await _forgetConfirmedComposition(defaultRuntime: true);
               await globalState.safeRun(() => onUpdated?.call());
             }
-            throw MessageException(
-              outcome == MountRejectedOutcome.blocked
-                  ? '${currentAppLocalizations.mountApplyBlocked}\n$reason'
-                  : isRespectRulesUnmetMessage(error.message)
-                  ? currentAppLocalizations.dnsRespectRulesUnmetError
-                  : error.message,
+            if (outcome == MountRejectedOutcome.blocked) {
+              throw MessageException(
+                '${currentAppLocalizations.mountApplyBlocked}\n$reason',
+              );
+            }
+            throw configRejectedException(
+              error.message,
+              currentAppLocalizations,
             );
           }
         } catch (e, s) {
