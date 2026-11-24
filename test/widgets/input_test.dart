@@ -6,6 +6,7 @@ import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -478,6 +479,41 @@ void main() {
     await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
     expect(result, 'valu');
+  });
+
+  testWidgets('EntryDialog shows a long error in full', (tester) async {
+    final error = List.filled(3, 'Write it another way.').join(' ');
+    await tester.pumpWidget(
+      TestApp(
+        overrides: [_viewSizeOverride],
+        child: Builder(
+          builder: (context) => FilledButton(
+            onPressed: () => showDialog<String>(
+              context: context,
+              builder: (_) => EntryDialog<String>(
+                title: 'Scalar',
+                valueField: Field(
+                  label: 'Value',
+                  value: '',
+                  validator: (_) => error,
+                ),
+                toEntry: _scalarEntry,
+              ),
+            ),
+            child: const Text('Scalar'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Scalar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'x');
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+
+    final text = tester.renderObject<RenderParagraph>(find.text(error));
+    expect(text.didExceedMaxLines, isFalse);
   });
 
   testWidgets('ListEditView adds, edits, selects, and deletes items', (
