@@ -9183,4 +9183,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String configBuildHostsCycle(Object profile, Object domain) {
     return '无法应用配置「$profile」：App 的 Hosts 加上这份配置自带的 Hosts 后，「$domain」经过其他条目又指回了自己，内核会拒绝。请在「进阶配置 → 常规 → Hosts」或这份配置的 Hosts 中修改其中一条。';
   }
+
+  @override
+  String get configRejectedProxyServerNameserverPolicy =>
+      '无法应用配置：Proxy Server Nameserver Policy（代理服务器 DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。';
 }

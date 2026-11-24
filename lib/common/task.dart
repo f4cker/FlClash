@@ -236,10 +236,9 @@ Future<RealProfile> makeRealProfileTask(MakeRealProfileState data) async {
 
 /// What crosses into the isolate: never the CA's p12.
 @visibleForTesting
-MakeRealProfileState realProfileInput(MakeRealProfileState data) =>
-    data.copyWith.realPatchConfig(
-      mitm: data.realPatchConfig.mitm.withoutCaSecrets,
-    );
+MakeRealProfileState realProfileInput(MakeRealProfileState data) => data
+    .copyWith
+    .realPatchConfig(mitm: data.realPatchConfig.mitm.withoutCaSecrets);
 
 Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   final rawConfig = Map.from(data.rawConfig);
@@ -427,6 +426,10 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       effectiveDns['enable'] == true &&
       (effectiveNameservers is! List || effectiveNameservers.isEmpty)) {
     throw const ConfigBuildException(ConfigBuildIssue.nameserverEmpty);
+  }
+  // mihomo checks respect-rules before dns.enable, on every build path.
+  if (effectiveDns['respect-rules'] == true && _noProxyServers(effectiveDns)) {
+    throw const DnsRespectRulesUnmetException();
   }
   if (_proxyServerPolicyUnmet(effectiveDns)) {
     throw const ConfigBuildException(
@@ -698,15 +701,17 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
   };
 }
 
+bool _noProxyServers(Map dns) {
+  final servers = dns['proxy-server-nameserver'];
+  return servers == null ||
+      servers == '' ||
+      (servers is List && servers.isEmpty);
+}
+
 // config.go parseDNS, whatever dns.enable says.
 bool _proxyServerPolicyUnmet(Map dns) {
   final policy = dns['proxy-server-nameserver-policy'];
-  final servers = dns['proxy-server-nameserver'];
-  return policy is Map &&
-      policy.isNotEmpty &&
-      (servers == null ||
-          servers == '' ||
-          (servers is List && servers.isEmpty));
+  return policy is Map && policy.isNotEmpty && _noProxyServers(dns);
 }
 
 // The rule sets config.go parseFakeIPRules and parseDomain look up.

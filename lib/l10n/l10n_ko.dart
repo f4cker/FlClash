@@ -9777,4 +9777,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String configBuildHostsCycle(Object profile, Object domain) {
     return 'Couldn\'t apply “$profile”: with the app\'s Hosts added to the profile\'s own, “$domain” leads back to itself through other entries, which the core refuses. Change one of them under Advanced configuration → General → Hosts, or in the profile\'s Hosts.';
   }
+
+  @override
+  String get configRejectedProxyServerNameserverPolicy =>
+      'Couldn\'t apply the configuration: a domain in Proxy Server Nameserver Policy is malformed. Check the profile\'s DNS settings.';
 }

@@ -5,6 +5,7 @@ import (
 	"net/netip"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -132,6 +133,39 @@ func TestHostsCycles(t *testing.T) {
 		err := parseFieldConfig(fieldDNS(), tc.hosts)
 		if (err != nil) != tc.cycle {
 			t.Errorf("%v: want cycle=%v, got %v", tc.hosts, tc.cycle, err)
+		}
+	}
+}
+
+// test/common/config_rejection_test.dart maps each of these refusals to a setting.
+type configRejectionVector struct {
+	Kind string         `json:"kind"`
+	Doc  map[string]any `json:"doc"`
+	Raw  string         `json:"raw"`
+	Alt  []string       `json:"alt"` // Go's map order picks the Hosts cycle domain named
+}
+
+func TestConfigRejectionVectors(t *testing.T) {
+	data, err := os.ReadFile("testdata/config_rejection_vectors.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var vectors []configRejectionVector
+	if err := json.Unmarshal(data, &vectors); err != nil {
+		t.Fatal(err)
+	}
+	for _, vector := range vectors {
+		vector.Doc["profile"] = map[string]any{"store-fake-ip": false}
+		buf, err := yaml.Marshal(vector.Doc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err := config.UnmarshalRawConfig(buf)
+		if err == nil {
+			_, err = config.ParseRawConfig(raw)
+		}
+		if err == nil || !slices.Contains(append(vector.Alt, vector.Raw), err.Error()) {
+			t.Errorf("%s: want %q, got %v", vector.Kind, vector.Raw, err)
 		}
 	}
 }

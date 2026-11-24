@@ -38,8 +38,10 @@ final List<_Rule> _rules = [
     message: (l, _) => l.configRejectedDnsServer,
   ),
   (
-    pattern: RegExp(r'''(?:not found rule-set: |rule-set ')([^'\s"]+)'''),
-    message: (l, match) => l.configRejectedRuleSet(match[1]!),
+    pattern: RegExp(
+      r"not found rule-set: ([^\n]+)|rule-set '([^']+)' not found",
+    ),
+    message: (l, match) => l.configRejectedRuleSet(match[1] ?? match[2]!),
   ),
   (
     pattern: RegExp(r'dns\.fake-ip-filter\['),
@@ -48,9 +50,15 @@ final List<_Rule> _rules = [
   (
     pattern: RegExp(
       r"fake-ip-range6? must be|ipnet don't have valid ip|"
-      r'`fake-ip-range` and `fake-ip-range6` both empty',
+      r'`fake-ip-range` and `fake-ip-range6` both empty|'
+      // parseDNS returns ParsePrefix's error for the ranges unwrapped.
+      r'^netip\.ParsePrefix\(',
     ),
     message: (l, _) => l.configRejectedFakeIpRange,
+  ),
+  (
+    pattern: RegExp(r'proxy-server-nameserver-policy\['),
+    message: (l, _) => l.configRejectedProxyServerNameserverPolicy,
   ),
   (
     pattern: RegExp(r'nameserver-policy\['),

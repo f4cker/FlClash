@@ -759,6 +759,26 @@ void main() {
       expect(printed, ['[APP] mixed-port 0 refused, kept 7890']);
     });
 
+    test('an authorized TUN the Core did not open is reported', () async {
+      if (!system.isDesktop) return;
+      container.read(authorizedTunEnableProvider.notifier).value =
+          TunAuthorizationState.authorized;
+      await check(requested: {'tun.enable': true}, held: {'tun': false});
+
+      expect(printed, [
+        '[APP] banner: ${currentAppLocalizations.tunNotListening}',
+      ]);
+    });
+
+    test('a TUN the Core holds is no warning', () async {
+      if (!system.isDesktop) return;
+      container.read(authorizedTunEnableProvider.notifier).value =
+          TunAuthorizationState.authorized;
+      await check(requested: {'tun.enable': true}, held: {'tun': true});
+
+      expect(printed, isEmpty);
+    });
+
     test('the no-port warning stands when the Core cannot be asked', () async {
       if (!system.isDesktop) return;
       await check(requested: {}, systemProxy: true, mixedPort: 0);

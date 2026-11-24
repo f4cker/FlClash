@@ -1756,6 +1756,28 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
       expect(config['dns']['proxy-server-nameserver'], ['119.29.29.29']);
     });
 
+    // mihomo checks respect-rules before dns.enable.
+    test('respect-rules needs proxy server nameservers, DNS off too', () async {
+      final rawConfig = {
+        'dns': {'enable': false},
+      };
+      await expectLater(
+        build(
+          rawConfig: rawConfig,
+          page: const PatchClashConfig(dns: Dns(respectRules: true)),
+        ),
+        throwsA(isA<DnsRespectRulesUnmetException>()),
+      );
+      final config = await build(
+        rawConfig: rawConfig,
+        page: const PatchClashConfig(
+          dns: Dns(respectRules: true, proxyServerNameserver: ['119.29.29.29']),
+        ),
+      );
+      expect(config['dns']['enable'], false);
+      expect(config['dns']['respect-rules'], true);
+    });
+
     test('a fake-ip filter rule set must be one of the profile\'s', () async {
       Future<YamlMap> withFilter(List<String> filter, FakeIpFilterMode mode) =>
           build(

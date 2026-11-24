@@ -107,7 +107,9 @@
     {"value": "udp://[::ffff:1.1.1.1]:53", "ok": true},
     {"value": "udp://[fe80::1%25]:53", "ok": false},
     {"value": "udp://[]:53", "ok": false},
-    {"value": "udp://[fe80::1%25en%20x]:53", "ok": true}
+    {"value": "udp://[fe80::1%25en%20x]:53", "ok": true},
+    {"value": "rcode://bogus", "ok": false},
+    {"value": "https://[2606:4700::1111]/dns-query#h3=true", "ok": true}
   ],
   "default-nameserver": [
     {"value": "223.5.5.5", "ok": true},
@@ -257,7 +259,9 @@
     {"value": "DOMAIN-WILDCARD,*,real-ip", "ok": true},
     {"value": "SRC-IP-CIDR,1.1.1.1/32,real-ip", "ok": false},
     {"value": "DOMAIN,a.com,fake-ip,x,y", "ok": true},
-    {"value": "RULE-SET,,real-ip", "ok": false}
+    {"value": "RULE-SET,,real-ip", "ok": false},
+    {"value": "DOMAIN-REGEX,^(?>a+)\\.lan$,real-ip", "ok": true},
+    {"value": "DOMAIN-REGEX,(?<=a)b\\.lan$,real-ip", "ok": true}
   ],
   "fake-ip-filter-domain": [
     {"value": "example.com", "ok": true},

@@ -109,6 +109,26 @@ void main() {
     expect(dns().nameserver, isEmpty);
   });
 
+  testWidgets('with DNS off, respect-rules still needs proxy servers', (
+    tester,
+  ) async {
+    const start = Dns(
+      nameserver: ['1.1.1.1'],
+      defaultNameserver: ['223.5.5.5'],
+      respectRules: true,
+      proxyServerNameserver: ['223.5.5.5'],
+    );
+    expect(start.enable, isFalse);
+    expect(start.copyWith(proxyServerNameserver: []).respectRulesUnmet, isTrue);
+    await pumpView(tester, dns: start);
+    final l = currentAppLocalizations;
+
+    final printed = await emptyAndSave(tester, 'Proxy Server Nameserver');
+
+    expect(printed, contains('[APP] banner: ${l.dnsRespectRulesUnmetWarning}'));
+    expect(dns().proxyServerNameserver, ['223.5.5.5']);
+  });
+
   testWidgets('Default Nameserver never saves empty', (tester) async {
     await pumpView(tester, appendSystemDns: true);
     final l = currentAppLocalizations;
