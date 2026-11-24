@@ -9344,4 +9344,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get nodeGroupDisablesUdp => '禁用 UDP';
+
+  @override
+  String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
+    return '规则「$rule」指向的「$target」中，「$node」无法转发这次 UDP 连接，这条规则被跳过。';
+  }
 }

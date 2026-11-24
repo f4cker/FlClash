@@ -4372,5 +4372,19 @@
     }
   },
   "nodeFieldThisGroup": "This group",
-  "nodeGroupDisablesUdp": "UDP disabled"
+  "nodeGroupDisablesUdp": "UDP disabled",
+  "routeUdpSkippedUnsupportedBy": "Rule “{rule}” points to “{target}”, where “{node}” couldn't forward this UDP connection, so the rule was skipped.",
+  "@routeUdpSkippedUnsupportedBy": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      },
+      "target": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  }
 }

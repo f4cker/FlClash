@@ -271,6 +271,42 @@ void main() {
     );
   });
 
+  testWidgets('a loose card enters at its delay, then steps right to icons', (
+    tester,
+  ) async {
+    await pumpCards(tester, ProxyCardType.loose, proxies: [vless]);
+    await focusCard(tester, 0);
+
+    NodeFieldIcon? focusedIcon() => FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<NodeFieldIcon>();
+    bool onDelay() =>
+        focusedIcon() == null &&
+        FocusManager.instance.primaryFocus is SkipTraversalFocusNode;
+
+    // The delay spans its row, so it is both rightmost and leftmost.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(onDelay(), isTrue);
+    for (final field in [NodeField.udp, NodeField.xudp, NodeField.tfo]) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(focusedIcon()?.field, field);
+    }
+    for (var step = 0; step < 3; step++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+    }
+    expect(onDelay(), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.skipTraversal, isFalse);
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<ProxyCard>(),
+      isNotNull,
+    );
+  });
+
   testWidgets('a group that disables UDP hides it on its cards', (
     tester,
   ) async {

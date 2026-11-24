@@ -9943,4 +9943,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get nodeGroupDisablesUdp => 'UDP disabled';
+
+  @override
+  String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
+    return 'Rule “$rule” points to “$target”, where “$node” couldn\'t forward this UDP connection, so the rule was skipped.';
+  }
 }

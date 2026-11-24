@@ -16581,6 +16581,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'UDP disabled'**
   String get nodeGroupDisablesUdp;
+
+  /// No description provided for @routeUdpSkippedUnsupportedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule “{rule}” points to “{target}”, where “{node}” couldn\'t forward this UDP connection, so the rule was skipped.'**
+  String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node);
 }
 
 class _AppLocalizationsDelegate

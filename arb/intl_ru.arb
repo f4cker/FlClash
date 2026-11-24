@@ -4187,5 +4187,6 @@
   "routeModeGlobalProxy": "Global mode was in use at the time.",
   "nodeUdpDisabledBy": "“{name}” has UDP disabled.",
   "nodeFieldThisGroup": "This group",
-  "nodeGroupDisablesUdp": "UDP disabled"
+  "nodeGroupDisablesUdp": "UDP disabled",
+  "routeUdpSkippedUnsupportedBy": "Rule “{rule}” points to “{target}”, where “{node}” couldn't forward this UDP connection, so the rule was skipped."
 }

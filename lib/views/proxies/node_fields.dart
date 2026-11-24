@@ -127,10 +127,14 @@ enum NodeField {
     NodeUdp? udp,
     List<NodeField> of = values,
     bool udpOff = false,
-  }) => [
-    if (udp == NodeUdp.enabled && !udpOff) NodeField.udp,
-    ...of.where((field) => field.isOn(proxy) && !(udpOff && field.needsUdp)),
-  ];
+  }) {
+    final noUdp =
+        udpOff || udp == NodeUdp.disabled || udp == NodeUdp.disabledByGroup;
+    return [
+      if (udp == NodeUdp.enabled && !udpOff) NodeField.udp,
+      ...of.where((field) => field.isOn(proxy) && !(noUdp && field.needsUdp)),
+    ];
+  }
 }
 
 enum NodeUdp {

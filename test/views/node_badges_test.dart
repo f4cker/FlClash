@@ -130,6 +130,23 @@ void main() {
       ]);
     });
 
+    test('a node without UDP drops all that carries it, unknown keeps it', () {
+      const proxy = Proxy(
+        name: 'n',
+        type: 'Vless',
+        udp: false,
+        xudp: true,
+        tfo: true,
+      );
+      for (final udp in [NodeUdp.disabled, NodeUdp.disabledByGroup]) {
+        expect(NodeField.onIn(proxy, udp: udp), [NodeField.tfo]);
+      }
+      expect(NodeField.onIn(proxy, udp: NodeUdp.unknown), [
+        NodeField.xudp,
+        NodeField.tfo,
+      ]);
+    });
+
     test('a switch the protocol does not read is unknown, not off', () {
       const trojan = Proxy(name: 't', type: 'Trojan', uot: true, xudp: false);
       expect(NodeField.uot.switchOf(trojan), isNull);
@@ -276,6 +293,28 @@ void main() {
       expect(notes.take(2), [
         _l.routeUdpSkippedDisabledBy('Domain(a.test)', 'Streaming', 'HK'),
         _l.routeUdpSkippedDisabled('Match', 'HK'),
+      ]);
+    });
+
+    test('the node that could not carry UDP is named, not only the target', () {
+      final notes = RouteReason(
+        _tracker(
+          skipped: const [
+            UdpSkip(
+              type: 'Domain',
+              payload: 'a.test',
+              adapter: 'Proxy',
+              refused: 'HK 01',
+              cause: 'unsupported',
+            ),
+            UdpSkip(type: 'Match', adapter: 'HK 01', refused: 'HK 01'),
+          ],
+          reason: 'no-match',
+        ),
+      ).notes(_l);
+      expect(notes.take(2), [
+        _l.routeUdpSkippedUnsupportedBy('Domain(a.test)', 'Proxy', 'HK 01'),
+        _l.routeUdpSkippedUnsupported('Match', 'HK 01'),
       ]);
     });
 

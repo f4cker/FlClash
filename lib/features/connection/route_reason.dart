@@ -50,14 +50,16 @@ class RouteReason {
     final rule = skip.payload.isEmpty
         ? skip.type
         : '${skip.type}(${skip.payload})';
+    // What refused may sit inside the rule's target.
+    final inner = skip.refused.isNotEmpty && skip.refused != skip.adapter;
     if (skip.cause != 'disabled') {
-      return l.routeUdpSkippedUnsupported(rule, skip.adapter);
+      return inner
+          ? l.routeUdpSkippedUnsupportedBy(rule, skip.adapter, skip.refused)
+          : l.routeUdpSkippedUnsupported(rule, skip.adapter);
     }
-    // The group that disabled UDP may sit inside the rule's target.
-    if (skip.refused.isNotEmpty && skip.refused != skip.adapter) {
-      return l.routeUdpSkippedDisabledBy(rule, skip.adapter, skip.refused);
-    }
-    return l.routeUdpSkippedDisabled(rule, skip.adapter);
+    return inner
+        ? l.routeUdpSkippedDisabledBy(rule, skip.adapter, skip.refused)
+        : l.routeUdpSkippedDisabled(rule, skip.adapter);
   }
 
   String short(AppLocalizations l) {
