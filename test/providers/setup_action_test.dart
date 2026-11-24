@@ -2974,7 +2974,8 @@ void main() {
       expect(shownGroups(), ['Proxy']);
 
       rejecting = true;
-      setHosts({'example.com': 'not-an-address'});
+      // A value the build accepts; only the stubbed Core refuses it.
+      setHosts({'example.com': '192.0.2.1'});
       expect(await setupAction.applyProfile(), isFalse);
       expect(shownGroups(), ['Proxy']);
 

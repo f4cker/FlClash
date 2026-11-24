@@ -1566,6 +1566,43 @@ IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
           reason: 'the app value breaks it',
         );
       });
+
+      test('the app\'s value wins over the same domain in any case', () async {
+        expect(
+          await hostsOf(
+            {'Same.test': '192.0.2.1'},
+            file: {'same.TEST': '192.0.2.9', 'file.test': '192.0.2.3'},
+          ),
+          {'file.test': '192.0.2.3', 'Same.test': '192.0.2.1'},
+        );
+      });
+
+      test('a value mihomo refuses is named before the Core', () async {
+        await expectLater(
+          hostsOf(
+            {},
+            file: {
+              'ok.test': '192.0.2.1',
+              'bad.test': ['192.0.2.1', 'example.org'],
+            },
+          ),
+          throwsA(
+            isA<ConfigBuildException>()
+                .having((e) => e.issue, 'issue', ConfigBuildIssue.hostsInvalid)
+                .having((e) => e.detail, 'detail', 'bad.test'),
+          ),
+        );
+        expect(
+          await hostsOf(
+            {'bad.test': '192.0.2.2'},
+            file: {
+              'bad.test': ['192.0.2.1', 'example.org'],
+            },
+          ),
+          {'bad.test': '192.0.2.2'},
+          reason: 'the app value replaces it',
+        );
+      });
     });
 
     test(

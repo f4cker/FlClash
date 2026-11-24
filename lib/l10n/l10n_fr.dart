@@ -10062,4 +10062,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get configRejectedRuleSetUnnamed =>
       'Couldn\'t apply the configuration: it refers to a rule set that doesn\'t exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.';
+
+  @override
+  String configBuildHostsInvalid(Object profile, Object domain) {
+    return 'Couldn\'t apply “$profile”: the Hosts value for “$domain” can\'t be used. Check Hosts under Advanced configuration → General and in this profile.';
+  }
 }

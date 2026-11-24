@@ -2743,5 +2743,6 @@
   "configBuildHostsCycle": "无法应用配置「{profile}」：App 的 Hosts 与这份配置中的 Hosts 合并后，「{domain}」经过其他条目又指回了自己。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts，修改其中一条。",
   "configRejectedProxyServerNameserverPolicy": "无法应用配置：Proxy Server Nameserver Policy（代理服务器 DNS 分流规则）中有写法错误的域名。请检查这份配置的 DNS 设置。",
   "bannerDetails": "查看详情",
-  "configRejectedRuleSetUnnamed": "无法应用配置：引用了不存在的规则集。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。"
+  "configRejectedRuleSetUnnamed": "无法应用配置：引用了不存在的规则集。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。",
+  "configBuildHostsInvalid": "无法应用配置「{profile}」：Hosts 中「{domain}」的值无法使用。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts。"
 }

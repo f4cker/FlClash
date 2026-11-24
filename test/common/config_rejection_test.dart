@@ -160,5 +160,14 @@ void main() {
       userFacingErrorMessage(cycle.withProfile('机场'), l),
       l.configBuildHostsCycle('机场', 'a.test'),
     );
+    const invalid = ConfigBuildException(
+      ConfigBuildIssue.hostsInvalid,
+      detail: 'a.test',
+    );
+    expect(userFacingErrorMessage(invalid, l), l.configRejectedHosts);
+    expect(
+      userFacingErrorMessage(invalid.withProfile('机场'), l),
+      l.configBuildHostsInvalid('机场', 'a.test'),
+    );
   });
 }

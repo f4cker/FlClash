@@ -9194,4 +9194,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get configRejectedRuleSetUnnamed =>
       '无法应用配置：引用了不存在的规则集。请检查 Fake-IP 过滤、DNS 分流规则和域名嗅探中引用的规则集。';
+
+  @override
+  String configBuildHostsInvalid(Object profile, Object domain) {
+    return '无法应用配置「$profile」：Hosts 中「$domain」的值无法使用。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts。';
+  }
 }

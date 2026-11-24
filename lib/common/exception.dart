@@ -96,6 +96,9 @@ enum ConfigBuildIssue {
 
   /// [ConfigBuildException.detail] is the domain that maps back to itself.
   hostsCycle,
+
+  /// [ConfigBuildException.detail] is the domain whose value mihomo refuses.
+  hostsInvalid,
 }
 
 final class ConfigBuildException implements Exception {

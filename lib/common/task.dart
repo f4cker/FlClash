@@ -450,6 +450,11 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       for (final MapEntry(:key, :value) in hosts.entries)
         '$key': value is List ? value.join(',') : '$value',
     };
+    for (final MapEntry(:key, :value) in text.entries) {
+      if (!isHostsValue(value)) {
+        throw ConfigBuildException(ConfigBuildIssue.hostsInvalid, detail: key);
+      }
+    }
     if (hostsCycleOf(text) case final domain?) {
       throw ConfigBuildException(ConfigBuildIssue.hostsCycle, detail: domain);
     }
@@ -693,9 +698,13 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
     ...page.geoXUrl.raw,
   };
   put(PageConfigKey.globalUa, page.globalUa ?? data.defaultUA);
-  // The app's Hosts add to the profile's; on the same domain the app wins.
+  // The app's Hosts add to the profile's; on the same domain the app wins,
+  // in any case, as mihomo's trie lowercases every domain.
+  final appDomains = {for (final key in page.hosts.keys) key.toLowerCase()};
   rawConfig['hosts'] = {
-    if (rawConfig['hosts'] case final Map hosts) ...hosts,
+    if (rawConfig['hosts'] case final Map hosts)
+      for (final MapEntry(:key, :value) in hosts.entries)
+        if (!appDomains.contains('$key'.toLowerCase())) key: value,
     for (final MapEntry(:key, :value) in page.hosts.entries)
       key: value.splitByMultipleSeparators,
   };

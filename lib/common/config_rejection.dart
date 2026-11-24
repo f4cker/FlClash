@@ -121,7 +121,10 @@ String configBuildMessage(
     ),
     ConfigBuildIssue.hostsCycle when profile != null =>
       appLocalizations.configBuildHostsCycle(profile, error.detail ?? ''),
-    ConfigBuildIssue.hostsCycle => appLocalizations.configRejectedHosts,
+    ConfigBuildIssue.hostsInvalid when profile != null =>
+      appLocalizations.configBuildHostsInvalid(profile, error.detail ?? ''),
+    ConfigBuildIssue.hostsCycle ||
+    ConfigBuildIssue.hostsInvalid => appLocalizations.configRejectedHosts,
   };
 }
 
