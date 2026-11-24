@@ -68,6 +68,21 @@ void main() {
     expect(userFacingErrorMessage(error, l), l.configRejectedUnknown);
   });
 
+  test('a rule set is named only when the Core gave its name', () {
+    final l = loadAppLocalizations(const Locale('zh'));
+    expect(
+      configRejectionMessage('not found rule-set: cn', l),
+      l.configRejectedRuleSet('cn'),
+    );
+    for (final raw in ['not found rule-set: ', "rule-set '' not found"]) {
+      expect(
+        configRejectionMessage(raw, l),
+        l.configRejectedRuleSetUnnamed,
+        reason: raw,
+      );
+    }
+  });
+
   test('the Core\'s refusal maps where it is shown', () {
     final l = loadAppLocalizations(const Locale('zh'));
     const rejected = CoreMethodException(
@@ -129,6 +144,13 @@ void main() {
       userFacingErrorMessage(ruleSet.withProfile('机场'), l),
       l.configBuildFakeIpFilterRuleSet('机场', 'cn'),
     );
+    const unnamed = ConfigBuildException(
+      ConfigBuildIssue.fakeIpFilterRuleSetMissing,
+      detail: '',
+    );
+    for (final error in [unnamed, unnamed.withProfile('机场')]) {
+      expect(userFacingErrorMessage(error, l), l.configRejectedRuleSetUnnamed);
+    }
     const cycle = ConfigBuildException(
       ConfigBuildIssue.hostsCycle,
       detail: 'a.test',

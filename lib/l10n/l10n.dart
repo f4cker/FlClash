@@ -16105,7 +16105,7 @@ abstract class AppLocalizations {
   /// No description provided for @configRejectedUnknown.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: the core refused it. See the original error for why.'**
+  /// **'Couldn\'t apply the configuration: the core rejected it. Expand to view the original error.'**
   String get configRejectedUnknown;
 
   /// No description provided for @configRejectedProxyServerPolicy.
@@ -16117,7 +16117,7 @@ abstract class AppLocalizations {
   /// No description provided for @configRejectedDefaultNameserverIp.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames. Change Default Nameserver under Advanced configuration → DNS.'**
+  /// **'Couldn\'t apply the configuration: in Default Nameserver, a server\'s host must be an IP address, not a hostname, such as 223.5.5.5 or tls://223.5.5.5. Change Default Nameserver under Advanced configuration → DNS.'**
   String get configRejectedDefaultNameserverIp;
 
   /// No description provided for @configRejectedDefaultNameserverEmpty.
@@ -16129,19 +16129,19 @@ abstract class AppLocalizations {
   /// No description provided for @configRejectedNameserverEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: DNS is on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS.'**
+  /// **'Couldn\'t apply the configuration: DNS is on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS, or turn on Append system DNS under Advanced configuration → General.'**
   String get configRejectedNameserverEmpty;
 
   /// No description provided for @configBuildNameserverEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply “{profile}”: it turns DNS on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS.'**
+  /// **'Couldn\'t apply “{profile}”: it turns DNS on, but Nameserver is empty. Add at least one Nameserver under Advanced configuration → DNS, or turn on Append system DNS under Advanced configuration → General.'**
   String configBuildNameserverEmpty(Object profile);
 
   /// No description provided for @configRejectedDnsServer.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: a DNS server address is malformed, such as an unsupported scheme or a bad port. Check the DNS server lists under Advanced configuration → DNS, and the profile\'s own DNS settings.'**
+  /// **'Couldn\'t apply the configuration: a DNS server uses an unsupported scheme or has an invalid address. Check the DNS server lists under Advanced configuration → DNS and in this profile.'**
   String get configRejectedDnsServer;
 
   /// No description provided for @configRejectedRuleSet.
@@ -16153,13 +16153,13 @@ abstract class AppLocalizations {
   /// No description provided for @configRejectedFakeIpFilter.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: an entry in Fake-IP filter isn\'t valid. In rule mode, each entry is TYPE,value,fake-ip or TYPE,value,real-ip. Change it under Advanced configuration → DNS, or set the filter mode back to blacklist.'**
+  /// **'Couldn\'t apply the configuration: Fake-IP filter contains an unrecognized entry. In rule mode, use a rule such as DOMAIN-SUFFIX,lan,real-ip or MATCH,real-ip. Check it under Advanced configuration → DNS.'**
   String get configRejectedFakeIpFilter;
 
   /// No description provided for @configRejectedFakeIpRange.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: a Fake-IP range is wrong. The Fake-IP range must be an IPv4 prefix and the IPv6 one an IPv6 prefix, neither too small, and they can\'t both be empty. Check the profile\'s DNS settings.'**
+  /// **'Couldn\'t apply the configuration: a Fake-IP range is wrong. Check the IPv4 and IPv6 ranges and their prefix lengths in the profile\'s DNS settings; Fake-IP mode needs at least one of them.'**
   String get configRejectedFakeIpRange;
 
   /// No description provided for @configRejectedNameserverPolicy.
@@ -16171,7 +16171,7 @@ abstract class AppLocalizations {
   /// No description provided for @configRejectedHosts.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply the configuration: an entry in Hosts can\'t be used. Each domain maps to one domain or to IP addresses, and domains can\'t point at each other in a loop. Change it under Advanced configuration → General → Hosts.'**
+  /// **'Couldn\'t apply the configuration: Hosts contains an invalid entry or a loop. Check Hosts under Advanced configuration → General and in this profile.'**
   String get configRejectedHosts;
 
   /// No description provided for @dnsServerSchemeTip.
@@ -16189,7 +16189,7 @@ abstract class AppLocalizations {
   /// No description provided for @defaultNameserverPureIpTip.
   ///
   /// In en, this message translates to:
-  /// **'Default Nameserver only takes IP addresses (such as 223.5.5.5 or tls://223.5.5.5), not hostnames.'**
+  /// **'In Default Nameserver, a server\'s host must be an IP address, not a hostname, such as 223.5.5.5 or tls://223.5.5.5.'**
   String get defaultNameserverPureIpTip;
 
   /// No description provided for @defaultNameserverEmptyTip.
@@ -16201,31 +16201,31 @@ abstract class AppLocalizations {
   /// No description provided for @nameserverEmptyTip.
   ///
   /// In en, this message translates to:
-  /// **'Keep at least one Nameserver. A profile that turns DNS on can\'t start with Nameserver empty, unless Append system DNS is on.'**
+  /// **'Keep at least one Nameserver, or turn on Append system DNS under Advanced configuration → General. This list replaces each profile\'s own Nameserver, so while it is empty a profile that turns DNS on can\'t start.'**
   String get nameserverEmptyTip;
 
   /// No description provided for @dnsHijackTip.
   ///
   /// In en, this message translates to:
-  /// **'Enter an IP and a port, such as any:53, 198.18.0.2:53 or tcp://any:53. TUN can\'t start with a malformed entry.'**
+  /// **'Enter a DNS hijack address and port, such as any:53, 198.18.0.2:53 or tcp://any:53.'**
   String get dnsHijackTip;
 
   /// No description provided for @dnsListenPortTakenTip.
   ///
   /// In en, this message translates to:
-  /// **'Port {port} is already used by {listener}, so DNS listening can\'t start. Choose another port.'**
+  /// **'Port {port} conflicts with the port configured for {listener}. Choose another port.'**
   String dnsListenPortTakenTip(Object port, Object listener);
 
   /// No description provided for @controllerPortConflictTip.
   ///
   /// In en, this message translates to:
-  /// **'Port 9090 is used by the external controller. Choose another port.'**
+  /// **'Port 9090 conflicts with the port configured for the external controller. Choose another port.'**
   String get controllerPortConflictTip;
 
   /// No description provided for @tunNotListening.
   ///
   /// In en, this message translates to:
-  /// **'TUN didn\'t start. Check the TUN settings, such as DNS hijacking; the log says why.'**
+  /// **'TUN didn\'t start. Check the TUN settings, such as DNS hijacking, and review the log.'**
   String get tunNotListening;
 
   /// No description provided for @hostsValueTip.
@@ -16243,7 +16243,7 @@ abstract class AppLocalizations {
   /// No description provided for @fakeIpFilterRuleTip.
   ///
   /// In en, this message translates to:
-  /// **'In rule mode, write each entry as TYPE,value,fake-ip or real-ip, such as DOMAIN-SUFFIX,lan,real-ip, or MATCH,real-ip. Only domain rules work: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-WILDCARD, DOMAIN-REGEX, GEOSITE and RULE-SET.'**
+  /// **'In rule mode, write each entry as TYPE,value,fake-ip or real-ip, such as DOMAIN-SUFFIX,lan,real-ip, or MATCH,real-ip. Use a domain rule (DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-WILDCARD, DOMAIN-REGEX, GEOSITE or RULE-SET), or MATCH.'**
   String get fakeIpFilterRuleTip;
 
   /// No description provided for @fakeIpFilterNotRulesTip.
@@ -16279,25 +16279,25 @@ abstract class AppLocalizations {
   /// No description provided for @fakeIpRangeTip.
   ///
   /// In en, this message translates to:
-  /// **'Enter an IPv4 range of /29 or wider, such as 198.18.0.1/16.'**
+  /// **'Enter an IPv4 range with a prefix length of 29 or less, such as 198.18.0.1/16.'**
   String get fakeIpRangeTip;
 
   /// No description provided for @fakeIpRange6Tip.
   ///
   /// In en, this message translates to:
-  /// **'Enter an IPv6 range of /125 or wider, such as fdfe:dcba:9876::1/64.'**
+  /// **'Enter an IPv6 range with a prefix length of 125 or less, such as fdfe:dcba:9876::1/64.'**
   String get fakeIpRange6Tip;
 
   /// No description provided for @interfaceNameMissingTip.
   ///
   /// In en, this message translates to:
-  /// **'This Mac has no network interface named “{name}” right now. The core still starts, but every connection fails while it is missing.'**
+  /// **'This Mac has no network interface named “{name}” right now. Connections using it may fail.'**
   String interfaceNameMissingTip(Object name);
 
   /// No description provided for @configBuildHostsCycle.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t apply “{profile}”: with the app\'s Hosts added to the profile\'s own, “{domain}” leads back to itself through other entries, which the core refuses. Change one of them under Advanced configuration → General → Hosts, or in the profile\'s Hosts.'**
+  /// **'Couldn\'t apply “{profile}”: once the app\'s Hosts are merged with this profile\'s, “{domain}” leads back to itself through other entries. Check Hosts under Advanced configuration → General and in this profile, and change one of them.'**
   String configBuildHostsCycle(Object profile, Object domain);
 
   /// No description provided for @configRejectedProxyServerNameserverPolicy.
@@ -16311,6 +16311,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Details'**
   String get bannerDetails;
+
+  /// No description provided for @configRejectedRuleSetUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t apply the configuration: it refers to a rule set that doesn\'t exist. Check the rule sets named in Fake-IP filter, nameserver policies and sniffer settings.'**
+  String get configRejectedRuleSetUnnamed;
 }
 
 class _AppLocalizationsDelegate

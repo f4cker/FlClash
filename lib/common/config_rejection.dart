@@ -39,9 +39,9 @@ final List<_Rule> _rules = [
   ),
   (
     pattern: RegExp(
-      r"not found rule-set: ([^\n]+)|rule-set '([^']+)' not found",
+      r"not found rule-set: ([^\n]*)|rule-set '([^']*)' not found",
     ),
-    message: (l, match) => l.configRejectedRuleSet(match[1] ?? match[2]!),
+    message: (l, match) => _ruleSetMessage(l, match[1] ?? match[2]),
   ),
   (
     pattern: RegExp(r'dns\.fake-ip-filter\['),
@@ -71,6 +71,12 @@ final List<_Rule> _rules = [
     message: (l, _) => l.configRejectedHosts,
   ),
 ];
+
+// A name is shown only when one was read; never an empty pair of quotes.
+String _ruleSetMessage(AppLocalizations l, String? name) =>
+    name == null || name.trim().isEmpty
+    ? l.configRejectedRuleSetUnnamed
+    : l.configRejectedRuleSet(name);
 
 /// What the user should change for a config mihomo refused, in their
 /// language; null when its words are not ones the app knows.
@@ -106,13 +112,13 @@ String configBuildMessage(
       appLocalizations.configBuildProxyServerPolicy(profile),
     ConfigBuildIssue.proxyServerNameserverEmpty =>
       appLocalizations.configRejectedProxyServerPolicy,
-    ConfigBuildIssue.fakeIpFilterRuleSetMissing when profile != null =>
-      appLocalizations.configBuildFakeIpFilterRuleSet(
-        profile,
-        error.detail ?? '',
-      ),
-    ConfigBuildIssue.fakeIpFilterRuleSetMissing =>
-      appLocalizations.configRejectedRuleSet(error.detail ?? ''),
+    ConfigBuildIssue.fakeIpFilterRuleSetMissing
+        when profile != null && (error.detail ?? '').isNotEmpty =>
+      appLocalizations.configBuildFakeIpFilterRuleSet(profile, error.detail!),
+    ConfigBuildIssue.fakeIpFilterRuleSetMissing => _ruleSetMessage(
+      appLocalizations,
+      error.detail,
+    ),
     ConfigBuildIssue.hostsCycle when profile != null =>
       appLocalizations.configBuildHostsCycle(profile, error.detail ?? ''),
     ConfigBuildIssue.hostsCycle => appLocalizations.configRejectedHosts,
