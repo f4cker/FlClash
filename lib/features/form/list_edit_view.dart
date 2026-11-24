@@ -34,6 +34,9 @@ abstract class EditViewState<W extends ConsumerStatefulWidget, T>
 
   Object popResult(List<T> entries);
 
+  /// Why [entries] cannot be saved; the page then stays open.
+  String? saveErrorOf(List<T> entries) => null;
+
   @protected
   List<T> get entries => _entries;
 
@@ -112,6 +115,10 @@ abstract class EditViewState<W extends ConsumerStatefulWidget, T>
   }
 
   void _handleSave() {
+    if (saveErrorOf(_entries) case final error?) {
+      dialogs.showBanner(error, level: BannerLevel.error);
+      return;
+    }
     Navigator.of(context).pop(popResult(_entries));
   }
 
@@ -284,6 +291,7 @@ class ConfigListEditItem extends ConsumerWidget {
     this.subtitle,
     this.leading,
     this.enabled = true,
+    this.saveError,
   });
 
   final ProviderListenable<List<String>> selector;
@@ -298,10 +306,14 @@ class ConfigListEditItem extends ConsumerWidget {
   final Widget? leading;
   final bool enabled;
 
+  /// Why a list cannot be saved, read when it is.
+  final String? Function(WidgetRef ref, List<String> items)? saveError;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
     final value = ref.watch(selector);
+    final saveError = this.saveError;
     final subtitle = this.subtitle;
     final label = title(appLocalizations);
     final itemValidator = this.itemValidator;
@@ -332,6 +344,7 @@ class ConfigListEditItem extends ConsumerWidget {
                 final text? => Text(text),
                 null => null,
               },
+        saveError: saveError == null ? null : (items) => saveError(ref, items),
       ),
       onChanged: (items) {
         if (items is! List) {
@@ -354,6 +367,7 @@ class ListEditView extends ConsumerStatefulWidget {
   final Widget? Function(String item)? subtitleBuilder;
   final int? itemMaxLength;
   final String? Function(String item)? itemValidator;
+  final String? Function(List<String> items)? saveError;
 
   const ListEditView({
     super.key,
@@ -364,6 +378,7 @@ class ListEditView extends ConsumerStatefulWidget {
     this.subtitleBuilder,
     this.itemMaxLength,
     this.itemValidator,
+    this.saveError,
   });
 
   @override
@@ -400,6 +415,9 @@ class _ListEditViewState extends EditViewState<ListEditView, String> {
 
   @override
   Object popResult(List<String> entries) => entries;
+
+  @override
+  String? saveErrorOf(List<String> entries) => widget.saveError?.call(entries);
 
   @override
   Future<String?> showEntryEditor(String? entry) {

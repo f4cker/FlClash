@@ -17,6 +17,17 @@ bool _respectRules(Dns dns) => dns.respectRules;
 
 Dns _setRespectRules(Dns dns, bool value) => dns.copyWith(respectRules: value);
 
+/// A `#` entry goes through a proxy, so could not find the proxy servers.
+List<String> _copyableNameservers(Dns dns) => [
+  for (final server in dns.nameserver)
+    if (!server.contains('#')) server,
+];
+
+String? _proxyServerSaveError(Dns dns, List<String> servers) =>
+    dns.respectRules && servers.isEmpty
+    ? currentAppLocalizations.dnsRespectRulesUnmetWarning
+    : null;
+
 /// The width under which, as with large text, the prompt stacks its buttons.
 const _stackedWidth = 600.0;
 
@@ -45,6 +56,8 @@ Future<void> _fillProxyServerNameserver(
       items: target.read(ref).model.proxyServerNameserver,
       itemMaxLength: TextInputLimits.dnsServer,
       titleBuilder: (item) => Text(item),
+      saveError: (servers) =>
+          _proxyServerSaveError(target.read(ref).model, servers),
     ),
   );
   if (result is! List || !context.mounted) {
@@ -86,6 +99,45 @@ class _RespectRulesField extends ToggleOverrideField<Dns> {
     );
   }
 }
+
+class _ProxyServerNameserverField extends ListOverrideField<Dns> {
+  const _ProxyServerNameserverField()
+    : super(
+        _proxyServerNameserver,
+        _setProxyServerNameserver,
+        itemMaxLength: TextInputLimits.dnsServer,
+        description: _proxyServerNameserverDesc,
+      );
+
+  @override
+  Widget build(
+    OverrideModel<Dns> model, {
+    required ConfigLabel title,
+    required Widget? leading,
+  }) {
+    if (model is! PatchOverrideTarget<DnsOverrideKey, Dns>) {
+      return super.build(model, title: title, leading: leading);
+    }
+    return ConfigListEditItem(
+      leading: leading,
+      title: title,
+      selector: model.selectModel(select),
+      onChanged: model.modelWriter(update),
+      itemMaxLength: itemMaxLength,
+      description: description,
+      saveError: (ref, servers) =>
+          _proxyServerSaveError(model.read(ref).model, servers),
+    );
+  }
+}
+
+List<String> _proxyServerNameserver(Dns dns) => dns.proxyServerNameserver;
+
+Dns _setProxyServerNameserver(Dns dns, List<String> value) =>
+    dns.copyWith(proxyServerNameserver: value);
+
+String _proxyServerNameserverDesc(AppLocalizations l) =>
+    l.proxyServerNameserverDesc;
 
 class _RespectRulesRow extends ConsumerWidget {
   const _RespectRulesRow({
@@ -184,7 +236,9 @@ class _RespectRulesPromptCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final nameserver = ref.watch(target.selectModel((dns) => dns.nameserver));
+    final copyable = ref.watch(
+      target.selectModel((dns) => _copyableNameservers(dns).isNotEmpty),
+    );
     final foreground = colorScheme.onSecondaryContainer;
     final stacked =
         MediaQuery.sizeOf(context).width <= _stackedWidth ||
@@ -200,7 +254,7 @@ class _RespectRulesPromptCard extends ConsumerWidget {
       appLocalizations.dnsFillProxyServerNameserver,
       () => _fillProxyServerNameserver(context, ref, target, turnOn: true),
     );
-    final copy = nameserver.isEmpty
+    final copy = !copyable
         ? null
         : button(
             appLocalizations.dnsUseNameserverForProxyServer,
@@ -208,7 +262,7 @@ class _RespectRulesPromptCard extends ConsumerWidget {
               ref,
               target,
               (dns) => dns.copyWith(
-                proxyServerNameserver: dns.nameserver,
+                proxyServerNameserver: _copyableNameservers(dns),
                 respectRules: true,
               ),
             ),

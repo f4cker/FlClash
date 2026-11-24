@@ -322,12 +322,7 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.fallbackLazyQuery,
       (dns, value) => dns.copyWith(fallbackLazyQuery: value),
     ),
-    DnsOverrideKey.proxyServerNameserver => ListOverrideField(
-      (dns) => dns.proxyServerNameserver,
-      (dns, value) => dns.copyWith(proxyServerNameserver: value),
-      itemMaxLength: TextInputLimits.dnsServer,
-      description: (l) => l.proxyServerNameserverDesc,
-    ),
+    DnsOverrideKey.proxyServerNameserver => const _ProxyServerNameserverField(),
     DnsOverrideKey.proxyServerNameserverPolicy => _PolicyField(
       (dns) => dns.proxyServerNameserverPolicy,
       (dns, value) => dns.copyWith(proxyServerNameserverPolicy: value),

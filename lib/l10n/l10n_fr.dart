@@ -9887,26 +9887,26 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get dnsRespectRulesUnmetError =>
-      'Couldn\'t apply the configuration: Respect Rules is on, but Proxy Server Nameserver is empty. Fill it in under Advanced Configuration → DNS, or turn off Respect Rules.';
+      'Couldn\'t apply the configuration: Respect rules is on, but Proxy Server Nameserver is empty. Fill it in under Advanced configuration → DNS, or turn off Respect rules.';
 
   @override
   String get dnsRespectRulesUnmetWarning =>
-      'Respect Rules is on, but Proxy Server Nameserver is empty. This configuration won\'t start. Fill it in or turn off Respect Rules.';
+      'Respect rules is on, but Proxy Server Nameserver is empty. This configuration won\'t start. Fill it in or turn off Respect rules.';
 
   @override
   String get dnsRespectRulesNeedsProxyServer =>
-      'Before turning on Respect Rules, fill in Proxy Server Nameserver to resolve proxy server hostnames. Saving a non-empty list will turn on Respect Rules.';
+      'Before turning on Respect rules, fill in Proxy Server Nameserver to resolve proxy server hostnames. Saving a non-empty list will turn on Respect rules.';
 
   @override
   String get dnsFillProxyServerNameserver => 'Fill in Proxy Server Nameserver';
 
   @override
-  String get dnsUseNameserverForProxyServer => 'Copy Nameserver and Turn On';
+  String get dnsUseNameserverForProxyServer => 'Copy Nameserver and turn on';
 
   @override
-  String get dnsTurnOffRespectRules => 'Turn Off Respect Rules';
+  String get dnsTurnOffRespectRules => 'Turn off Respect rules';
 
   @override
   String get dnsUseNameserverForProxyServerDesc =>
-      'Copy the current Nameserver list to Proxy Server Nameserver and turn on Respect Rules.';
+      'Copy the current Nameserver list to Proxy Server Nameserver and turn on Respect rules.';
 }

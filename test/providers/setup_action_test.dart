@@ -2244,7 +2244,9 @@ void main() {
         overrides: [
           profilesProvider.overrideWith(() => TestProfiles([profile])),
           currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
-          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          setupStateProvider.overrideWith(
+            (_, _) => nullProfileSetupState.copyWith(profileId: profile.id),
+          ),
           coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
           setupActionProvider.overrideWith(SetupAction.new),
         ],
@@ -2257,11 +2259,13 @@ void main() {
       final original = debugPrint;
       debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
       addTearDown(() => debugPrint = original);
-      Future<bool> apply() => scoped
+
+      final applied = await scoped
           .read(setupActionProvider.notifier)
           .applyProfile(force: true, preloadInvoke: () async => preloads++);
 
-      expect(await apply(), isFalse);
+      expect(applied, isFalse);
+      verifyNever(() => core.getProfileBase(any()));
       verifyNever(() => core.setupConfig(any()));
       expect(preloads, 0);
       expect(
@@ -2270,17 +2274,75 @@ void main() {
           '[APP] banner: ${currentAppLocalizations.dnsRespectRulesUnmetError}',
         ),
       );
+    });
 
-      scoped
-          .read(patchClashConfigProvider.notifier)
-          .value = const PatchClashConfig(
-        dns: Dns(
-          respectRules: true,
-          proxyServerNameserver: ['https://doh.pub/dns-query'],
+    test('with no profile the Core gets no DNS, so respect rules without '
+        'a Proxy Server Nameserver still starts', () async {
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {});
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles(const [])),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(patchClashConfigProvider, (_, _) {});
+      scoped.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(dns: Dns(respectRules: true));
+
+      expect(
+        await scoped
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true),
+        isTrue,
+      );
+      verify(() => core.setupConfig(any())).called(1);
+    });
+
+    test('the Core refusing respect rules without a Proxy Server '
+        'Nameserver reads as the same fix, not its own text', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenThrow(
+        const CoreMethodException(
+          code: 'config_rejected',
+          message:
+              'if "respect-rules" is turned on, '
+              '"proxy-server-nameserver" cannot be empty',
         ),
       );
-      expect(await apply(), isTrue);
-      verify(() => core.setupConfig(any())).called(1);
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+
+      expect(
+        await scoped
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true),
+        isFalse,
+      );
+      final banners = printed.where((line) => line.startsWith('[APP] banner'));
+      expect(
+        banners,
+        contains(
+          '[APP] banner: ${currentAppLocalizations.dnsRespectRulesUnmetError}',
+        ),
+      );
+      expect(banners.join(), isNot(contains('respect-rules')));
     });
 
     test(

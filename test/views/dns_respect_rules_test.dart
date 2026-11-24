@@ -251,6 +251,86 @@ void main() {
     expect(find.text(l.dnsRespectRulesUnmetWarning), findsNothing);
   });
 
+  testWidgets('the copy leaves out Nameserver entries sent through a proxy', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      dns: const Dns(
+        nameserver: ['https://1.1.1.1/dns-query#Proxy', 'tls://8.8.8.8'],
+      ),
+    );
+    final l = currentAppLocalizations;
+    await tapText(tester, l.respectRules);
+    await tapText(tester, l.dnsUseNameserverForProxyServer);
+
+    expect(dns().proxyServerNameserver, ['tls://8.8.8.8']);
+    expect(dns().respectRules, isTrue);
+  });
+
+  testWidgets('with only proxied Nameserver entries there is no copy', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      dns: const Dns(nameserver: ['https://1.1.1.1/dns-query#Proxy']),
+    );
+    final l = currentAppLocalizations;
+    await tapText(tester, l.respectRules);
+
+    expect(find.text(l.dnsRespectRulesNeedsProxyServer), findsOneWidget);
+    expect(find.text(l.dnsUseNameserverForProxyServer), findsNothing);
+    expect(find.text(l.dnsUseNameserverForProxyServerDesc), findsNothing);
+  });
+
+  Future<void> emptyAndSave(WidgetTester tester) async {
+    final l = currentAppLocalizations;
+    await tapText(tester, 'Proxy Server Nameserver');
+    expect(find.byType(ListEditView), findsOneWidget);
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pump();
+    await tester.tap(find.byTooltip(l.delete));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, l.delete));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip(l.save));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('with the switch on, the list will not save empty', (
+    tester,
+  ) async {
+    const servers = ['tls://1.1.1.1'];
+    await pumpView(
+      tester,
+      dns: const Dns(respectRules: true, proxyServerNameserver: servers),
+    );
+    final l = currentAppLocalizations;
+    final printed = <String>[];
+    final original = debugPrint;
+    debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+    addTearDown(() => debugPrint = original);
+
+    await emptyAndSave(tester);
+
+    expect(printed, contains('[APP] banner: ${l.dnsRespectRulesUnmetWarning}'));
+    expect(find.byType(ListEditView), findsOneWidget, reason: 'stays open');
+    expect(dns().proxyServerNameserver, servers);
+    expect(dns().respectRules, isTrue);
+  });
+
+  testWidgets('with the switch off, the list saves empty', (tester) async {
+    await pumpView(
+      tester,
+      dns: const Dns(proxyServerNameserver: ['tls://1.1.1.1']),
+    );
+
+    await emptyAndSave(tester);
+
+    expect(find.byType(ListEditView), findsNothing);
+    expect(dns().proxyServerNameserver, isEmpty);
+  });
+
   testWidgets('a profile page leaves its switch alone', (tester) async {
     await pumpView(tester, profile: true);
     final l = currentAppLocalizations;

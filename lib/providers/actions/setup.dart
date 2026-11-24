@@ -1937,7 +1937,9 @@ class SetupAction extends _$SetupAction {
         await globalState.safeRun(() async {
           final state = await ref.read(setupStateProvider(profile?.id).future);
           if (!sourceCurrent()) throw StateError('Profile setup superseded');
-          if (realPatchConfig.dns.respectRulesUnmet) {
+          // Without a profile the Core gets no DNS, so nothing to refuse.
+          if (state.profileId != null &&
+              realPatchConfig.dns.respectRulesUnmet) {
             throw const DnsRespectRulesUnmetException();
           }
           setupState = state;
@@ -2099,6 +2101,8 @@ class SetupAction extends _$SetupAction {
             throw MessageException(
               outcome == MountRejectedOutcome.blocked
                   ? '${currentAppLocalizations.mountApplyBlocked}\n$reason'
+                  : isRespectRulesUnmetMessage(error.message)
+                  ? currentAppLocalizations.dnsRespectRulesUnmetError
                   : error.message,
             );
           }
