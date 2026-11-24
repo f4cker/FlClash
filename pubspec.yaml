@@ -82,6 +82,7 @@ flutter:
     - assets/images/
     - assets/images/avatar/
     - assets/images/services/
+    - assets/images/node_fields/
     - core/Clash.Meta/component/ca/ca-certificates.crt
     - path: assets/images/tray/unix/
       platforms: [ linux, macos ]

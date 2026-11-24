@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'card.dart';
 import 'common.dart';
 import 'hidden_group_name.dart';
+import 'node_fields.dart';
 
 const _headerInset = 10.0;
 const _headerButtonInset = 4.0;
@@ -862,11 +863,26 @@ class _SelectedProxyName extends ConsumerWidget {
     if (proxyName.isEmpty) {
       return const SizedBox.shrink();
     }
-    return EmojiText(
+    final name = EmojiText(
       proxyName,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: AppTextStyle.caption1.of(context, emphasized: true).toLight,
+    );
+    if (watchGroupUdp(ref, groupName) != NodeUdp.enabled) {
+      return name;
+    }
+    return Row(
+      spacing: 6,
+      children: [
+        Flexible(child: name),
+        NodeFieldIcon(
+          field: NodeField.udp,
+          proxy: Proxy(name: groupName, type: ''),
+          line: AppTextStyle.caption1,
+          note: context.appLocalizations.nodeUdpFollowsNode(proxyName),
+        ),
+      ],
     );
   }
 }

@@ -16323,6 +16323,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t apply “{profile}”: the Hosts value for “{domain}” can\'t be used. Check Hosts under Advanced configuration → General and in this profile.'**
   String configBuildHostsInvalid(Object profile, Object domain);
+
+  /// No description provided for @nodeConfigEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled in config'**
+  String get nodeConfigEnabled;
+
+  /// No description provided for @nodeConfigDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enabled in config'**
+  String get nodeConfigDisabled;
+
+  /// No description provided for @nodeStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Status unknown'**
+  String get nodeStatusUnknown;
+
+  /// No description provided for @nodeGroupUdpDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This group has UDP disabled.'**
+  String get nodeGroupUdpDisabled;
+
+  /// No description provided for @nodeUdpFollowsNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Follows the current node “{name}”.'**
+  String nodeUdpFollowsNode(Object name);
+
+  /// No description provided for @nodeInfoConfigNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on the current configuration. The server hasn\'t been tested.'**
+  String get nodeInfoConfigNote;
+
+  /// No description provided for @nodeInfoButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Show info for “{name}”'**
+  String nodeInfoButton(Object name);
+
+  /// No description provided for @nodeFieldState.
+  ///
+  /// In en, this message translates to:
+  /// **'{field}: {state}'**
+  String nodeFieldState(Object field, Object state);
+
+  /// No description provided for @nodeFieldsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more: {names}'**
+  String nodeFieldsMore(Object count, Object names);
+
+  /// No description provided for @nodeFieldProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol'**
+  String get nodeFieldProtocol;
+
+  /// No description provided for @nodeFieldUdp.
+  ///
+  /// In en, this message translates to:
+  /// **'UDP'**
+  String get nodeFieldUdp;
+
+  /// No description provided for @nodeFieldUot.
+  ///
+  /// In en, this message translates to:
+  /// **'UDP over TCP (UoT)'**
+  String get nodeFieldUot;
+
+  /// No description provided for @nodeFieldXudp.
+  ///
+  /// In en, this message translates to:
+  /// **'XUDP packet encoding'**
+  String get nodeFieldXudp;
+
+  /// No description provided for @nodeFieldTfo.
+  ///
+  /// In en, this message translates to:
+  /// **'TCP Fast Open (TFO)'**
+  String get nodeFieldTfo;
+
+  /// No description provided for @nodeFieldMptcp.
+  ///
+  /// In en, this message translates to:
+  /// **'Multipath TCP (MPTCP)'**
+  String get nodeFieldMptcp;
+
+  /// No description provided for @nodeFieldSmux.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiplexing (smux)'**
+  String get nodeFieldSmux;
+
+  /// No description provided for @nodeFieldDialerProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialer proxy'**
+  String get nodeFieldDialerProxy;
+
+  /// No description provided for @nodeFieldInterface.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound interface'**
+  String get nodeFieldInterface;
+
+  /// No description provided for @nodeFieldProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get nodeFieldProvider;
+
+  /// No description provided for @nodeFieldCurrentNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Current node'**
+  String get nodeFieldCurrentNode;
+
+  /// No description provided for @routeExitDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual exit: Direct'**
+  String get routeExitDirect;
+
+  /// No description provided for @routeExitUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual exit: Unknown'**
+  String get routeExitUnknown;
+
+  /// No description provided for @routeUdpSkippedDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule “{rule}” points to “{target}”, which doesn\'t have UDP enabled, so the rule was skipped.'**
+  String routeUdpSkippedDisabled(Object rule, Object target);
+
+  /// No description provided for @routeUdpSkippedUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule “{rule}” points to “{target}”, which couldn\'t forward this UDP connection, so the rule was skipped.'**
+  String routeUdpSkippedUnsupported(Object rule, Object target);
+
+  /// No description provided for @routeNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No rule matched this connection, so it went direct.'**
+  String get routeNoMatch;
+
+  /// No description provided for @routeModeDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct mode was in use at the time.'**
+  String get routeModeDirect;
+
+  /// No description provided for @routeModeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global mode was in use at the time, and the actual exit was Direct.'**
+  String get routeModeGlobal;
+
+  /// No description provided for @routeInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'This is an internal connection of the core, and it went direct.'**
+  String get routeInternal;
+
+  /// No description provided for @routeReasonUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The reason for going direct wasn\'t recorded.'**
+  String get routeReasonUnknown;
+
+  /// No description provided for @routeShortNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No rule matched'**
+  String get routeShortNoMatch;
+
+  /// No description provided for @routeShortUdpSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule skipped (UDP)'**
+  String get routeShortUdpSkipped;
+
+  /// No description provided for @routeShortModeDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct mode'**
+  String get routeShortModeDirect;
+
+  /// No description provided for @routeShortModeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global mode'**
+  String get routeShortModeGlobal;
+
+  /// No description provided for @routeShortInternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal'**
+  String get routeShortInternal;
+
+  /// No description provided for @routeShortNoRule.
+  ///
+  /// In en, this message translates to:
+  /// **'No rule recorded'**
+  String get routeShortNoRule;
 }
 
 class _AppLocalizationsDelegate

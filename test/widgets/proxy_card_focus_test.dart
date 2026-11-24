@@ -3,6 +3,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/proxies/card.dart';
+import 'package:fl_clash/views/proxies/node_fields.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -17,6 +18,12 @@ const _testUrl = 'https://example.com/generate_204';
 
 class _RecordingProxiesAction extends ProxiesAction {
   static final List<String> tested = [];
+  static final List<String> changed = [];
+
+  @override
+  void changeProxyDebounce(String groupName, String proxyName) {
+    changed.add(proxyName);
+  }
 
   @override
   Future<void> proxyDelayTest(Proxy proxy, [String? testUrl]) async {
@@ -31,6 +38,7 @@ void main() {
 
   setUp(() {
     _RecordingProxiesAction.tested.clear();
+    _RecordingProxiesAction.changed.clear();
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
@@ -126,6 +134,11 @@ void main() {
     await focusCard(tester, 0);
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
+    // The card's own info button comes between, apart from the card.
+    final info = FocusManager.instance.primaryFocus?.context;
+    expect(info?.findAncestorWidgetOfExactType<InfoButton>(), isNotNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
 
     final context = FocusManager.instance.primaryFocus?.context;
     expect(
@@ -146,5 +159,36 @@ void main() {
     await tester.pump();
 
     expect(_RecordingProxiesAction.tested, ['proxy 0']);
+  });
+
+  testWidgets('the info button opens the node info without selecting', (
+    tester,
+  ) async {
+    await pumpCards(tester, ProxyCardType.standard);
+    final info = find.descendant(
+      of: find.byKey(const ValueKey('proxy 1')),
+      matching: find.byType(InfoButton),
+    );
+
+    await tester.tap(info);
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeInfoView), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeInfoView), findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeInfoView), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(_RecordingProxiesAction.changed, isEmpty);
+
+    // The card around it still selects.
+    await tester.tap(find.text('proxy 1').first);
+    await tester.pumpAndSettle();
+    expect(_RecordingProxiesAction.changed, ['proxy 1']);
   });
 }

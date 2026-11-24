@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'detail_tabs.dart';
 import 'mitm_exchanges.dart';
 import 'process_view.dart';
+import 'route_reason.dart';
 
 String mitmOutcomeText(BuildContext context, String outcome) {
   final l = context.appLocalizations;
@@ -739,6 +740,13 @@ class TrackerInfoDetailView extends ConsumerWidget {
   }
 
   Widget _buildRule(BuildContext context) {
+    final l = context.appLocalizations;
+    final reason = RouteReason(trackerInfo);
+    final exitLine = reason.exitLine(l);
+    final notes = reason.notes(l);
+    if (exitLine != null || notes.isNotEmpty) {
+      return _buildRoute(context, exitLine, notes);
+    }
     final ruleText = trackerInfo.ruleText;
     if (!canLookUpTrackerRule(context, trackerInfo)) {
       return ruleText.isEmpty
@@ -748,7 +756,6 @@ class TrackerInfoDetailView extends ConsumerWidget {
               value: ruleText,
             );
     }
-    final colorScheme = context.colorScheme;
     return DetailRow(
       title: context.appLocalizations.rule,
       copyText: ruleText.isEmpty ? null : ruleText,
@@ -757,18 +764,58 @@ class TrackerInfoDetailView extends ConsumerWidget {
         spacing: 10,
         children: [
           Flexible(child: Text(ruleText)),
-          GestureDetector(
-            onTap: () => lookUpTrackerRule(context, trackerInfo),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Text(
-                context.appLocalizations.lookupRule,
-                style: AppTextStyle.footnote
-                    .of(context, emphasized: true)
-                    .copyWith(color: colorScheme.primary),
-              ),
-            ),
+          _lookUpLink(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _lookUpLink(BuildContext context) {
+    return GestureDetector(
+      onTap: () => lookUpTrackerRule(context, trackerInfo),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Text(
+          context.appLocalizations.lookupRule,
+          style: AppTextStyle.footnote
+              .of(context, emphasized: true)
+              .copyWith(color: context.colorScheme.primary),
+        ),
+      ),
+    );
+  }
+
+  /// The rule, or the exit when none decided, then what the Core recorded of
+  /// the rules passed over and why; a skipped rule is never the one shown.
+  Widget _buildRoute(
+    BuildContext context,
+    String? exitLine,
+    List<String> notes,
+  ) {
+    final head = trackerInfo.rule.isEmpty ? exitLine : trackerInfo.ruleText;
+    final canLookUp = canLookUpTrackerRule(context, trackerInfo);
+    return DetailRow(
+      title: context.appLocalizations.rule,
+      copyText: [?head, ...notes].join('\n'),
+      value: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        spacing: 4,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 10,
+            children: [
+              if (head != null) Flexible(child: Text(head)),
+              if (canLookUp) _lookUpLink(context),
+            ],
           ),
+          for (final note in notes)
+            Text(
+              note,
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
 import 'process_view.dart';
+import 'route_reason.dart';
 import 'tracker_info_item.dart';
 
 const _fullLiveTableWidth = 1200.0;
@@ -263,6 +264,12 @@ class TrackerRuleText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (trackerInfo.rule.isEmpty) {
+      return Text(
+        RouteReason(trackerInfo).short(context.appLocalizations),
+        style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+      );
+    }
     return Text.rich(
       TextSpan(
         children: [

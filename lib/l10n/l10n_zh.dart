@@ -9199,4 +9199,121 @@ class AppLocalizationsZh extends AppLocalizations {
   String configBuildHostsInvalid(Object profile, Object domain) {
     return '无法应用配置「$profile」：Hosts 中「$domain」的值无法使用。请检查「进阶配置 → 常规 → Hosts」和这份配置中的 Hosts。';
   }
+
+  @override
+  String get nodeConfigEnabled => '配置已启用';
+
+  @override
+  String get nodeConfigDisabled => '配置未启用';
+
+  @override
+  String get nodeStatusUnknown => '状态未知';
+
+  @override
+  String get nodeGroupUdpDisabled => '此分组已禁用 UDP。';
+
+  @override
+  String nodeUdpFollowsNode(Object name) {
+    return '跟随当前节点「$name」。';
+  }
+
+  @override
+  String get nodeInfoConfigNote => '状态来自当前配置，未测试服务器是否可用。';
+
+  @override
+  String nodeInfoButton(Object name) {
+    return '查看「$name」的信息';
+  }
+
+  @override
+  String nodeFieldState(Object field, Object state) {
+    return '$field：$state';
+  }
+
+  @override
+  String nodeFieldsMore(Object count, Object names) {
+    return '另有 $count 项：$names';
+  }
+
+  @override
+  String get nodeFieldProtocol => '代理协议';
+
+  @override
+  String get nodeFieldUdp => 'UDP';
+
+  @override
+  String get nodeFieldUot => 'UDP over TCP（UoT）';
+
+  @override
+  String get nodeFieldXudp => 'XUDP 编码';
+
+  @override
+  String get nodeFieldTfo => 'TCP 快速打开（TFO）';
+
+  @override
+  String get nodeFieldMptcp => '多路径 TCP（MPTCP）';
+
+  @override
+  String get nodeFieldSmux => '多路复用（smux）';
+
+  @override
+  String get nodeFieldDialerProxy => '拨号代理';
+
+  @override
+  String get nodeFieldInterface => '绑定接口';
+
+  @override
+  String get nodeFieldProvider => '节点来源';
+
+  @override
+  String get nodeFieldCurrentNode => '当前节点';
+
+  @override
+  String get routeExitDirect => '实际出口：直连';
+
+  @override
+  String get routeExitUnknown => '实际出口：未知';
+
+  @override
+  String routeUdpSkippedDisabled(Object rule, Object target) {
+    return '规则「$rule」指向的「$target」未启用 UDP，这条规则被跳过。';
+  }
+
+  @override
+  String routeUdpSkippedUnsupported(Object rule, Object target) {
+    return '规则「$rule」指向的「$target」无法转发这次 UDP 连接，这条规则被跳过。';
+  }
+
+  @override
+  String get routeNoMatch => '没有规则匹配这次连接，最终直连。';
+
+  @override
+  String get routeModeDirect => '当时使用直连模式。';
+
+  @override
+  String get routeModeGlobal => '当时使用全局模式，实际出口为直连。';
+
+  @override
+  String get routeInternal => '这是内核的内部连接，本次直连。';
+
+  @override
+  String get routeReasonUnknown => '未记录直连原因。';
+
+  @override
+  String get routeShortNoMatch => '无匹配规则';
+
+  @override
+  String get routeShortUdpSkipped => '规则因 UDP 跳过';
+
+  @override
+  String get routeShortModeDirect => '直连模式';
+
+  @override
+  String get routeShortModeGlobal => '全局模式';
+
+  @override
+  String get routeShortInternal => '内部连接';
+
+  @override
+  String get routeShortNoRule => '未记录规则';
 }

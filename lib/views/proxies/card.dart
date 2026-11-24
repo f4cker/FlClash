@@ -8,6 +8,8 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'node_fields.dart';
+
 void selectGroupProxy(
   WidgetRef ref, {
   required String groupName,
@@ -39,6 +41,8 @@ bool _isAddableToLocal(Proxy proxy, {required bool isCustomProfile}) {
       !reservedCustomProxyNames.contains(proxy.name) &&
       GroupTypeExtension.getGroupType(proxy.type) == null;
 }
+
+const _infoRoom = 20.0;
 
 class ProxyCard extends ConsumerWidget {
   final String groupName;
@@ -145,7 +149,19 @@ class ProxyCard extends ConsumerWidget {
     );
     final typeLabel = exit?.node == true
         ? context.appLocalizations.tsExitGroupName
-        : proxy.type;
+        : nodeProtocolName(proxy.type);
+    final udp = watchNodeUdp(ref, proxy);
+    final isGroup = GroupTypeExtension.getGroupType(proxy.type) != null;
+    final current = isGroup
+        ? ref.watch(
+            realSelectedProxyStateProvider(
+              proxy.name,
+            ).select((state) => state.proxyName),
+          )
+        : proxy.name;
+    final follows = current == proxy.name
+        ? null
+        : context.appLocalizations.nodeUdpFollowsNode(current);
     final proxyNameText = _buildProxyNameText(context);
     final typeStyle = AppTextStyle.footnote
         .of(context)
@@ -159,10 +175,14 @@ class ProxyCard extends ConsumerWidget {
             children: [
               SizedBox(
                 height: measure.textHeight(AppTextStyle.footnote),
-                child: _ProxyDesc(
+                child: NodeMetaLine(
                   proxy: proxy,
-                  type: typeLabel,
+                  label: current == proxy.name
+                      ? typeLabel
+                      : '$typeLabel($current)',
                   style: typeStyle,
+                  udp: udp,
+                  udpNote: follows,
                 ),
               ),
               const SizedBox(height: 6),
@@ -174,11 +194,15 @@ class ProxyCard extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
+              spacing: 6,
               children: [
-                Flexible(
-                  flex: 1,
-                  child: TooltipText(
-                    text: Text(typeLabel, maxLines: 1, style: typeStyle),
+                Expanded(
+                  child: NodeMetaLine(
+                    proxy: proxy,
+                    label: typeLabel,
+                    style: typeStyle,
+                    udp: udp,
+                    udpNote: follows,
                   ),
                 ),
                 delayText,
@@ -202,7 +226,7 @@ class ProxyCard extends ConsumerWidget {
             (profile) => profile?.type == ProfileType.custom,
           ),
         );
-        return ContextMenuRegion(
+        final card = ContextMenuRegion(
           menuItems: _menuItems(
             context,
             ref,
@@ -230,6 +254,7 @@ class ProxyCard extends ConsumerWidget {
                       SelectionBadge(glyph: Glyphs.pin, tonal: !inUse)
                     else if (inUse)
                       const SelectionBadge(),
+                    const SizedBox(width: _infoRoom),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -238,37 +263,21 @@ class ProxyCard extends ConsumerWidget {
             ),
           ),
         );
+        // Beside the card, not in it, so opening the info never selects.
+        return Stack(
+          children: [
+            card,
+            Positioned(
+              top: 4,
+              right: 4,
+              child: InfoButton(
+                label: context.appLocalizations.nodeInfoButton(proxy.name),
+                builder: (_) => NodeInfoView(proxy: proxy),
+              ),
+            ),
+          ],
+        );
       },
-    );
-  }
-}
-
-class _ProxyDesc extends ConsumerWidget {
-  const _ProxyDesc({
-    required this.proxy,
-    required this.type,
-    required this.style,
-  });
-
-  final Proxy proxy;
-  final String type;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isGroup = GroupType.values.any((type) => type.name == proxy.type);
-    final nodeName = isGroup
-        ? ref.watch(
-            realSelectedProxyStateProvider(
-              proxy.name,
-            ).select((state) => state.proxyName),
-          )
-        : proxy.name;
-    return EmojiText(
-      nodeName == proxy.name ? type : '$type($nodeName)',
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: style,
     );
   }
 }
