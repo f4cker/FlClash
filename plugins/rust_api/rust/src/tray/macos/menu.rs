@@ -466,6 +466,7 @@ impl TrayMenu {
             self.ivars().entries.borrow_mut()[index] = entry;
             self.ivars().contents.borrow_mut()[index] = Some(content);
         }
+        self.refresh_badge_column();
     }
 
     fn apply(&self, entries: Vec<Entry>, generation: u32) {
@@ -490,6 +491,24 @@ impl TrayMenu {
             }
         }
         *self.ivars().entries.borrow_mut() = entries;
+        self.refresh_badge_column();
+    }
+
+    fn badge_column(&self) -> f64 {
+        badge_column(self.ivars().contents.borrow().iter().flatten())
+    }
+
+    /// Gives every row the width of the widest badge now in the menu.
+    fn refresh_badge_column(&self) {
+        let column = self.badge_column();
+        for item in self.itemArray().iter() {
+            if let Some(row) = item
+                .view()
+                .and_then(|view| view.downcast::<ItemView>().ok())
+            {
+                row.set_badge_column(column);
+            }
+        }
     }
 
     fn refresh_view(&self, item: &NSMenuItem, entry: &Entry, content: &ItemContent) {
@@ -555,16 +574,18 @@ impl TrayMenu {
         let entries = self.ivars().entries.borrow().clone();
         let contents = self.ivars().contents.borrow().clone();
         let mtm = self.mtm();
+        let column = self.badge_column();
         let mut widest: f64 = 0.0;
         for (entry, content) in entries.iter().zip(&contents) {
             if entry.kind == Kind::Segments {
                 for child in &entry.items {
                     let item = NSMenuItem::new(mtm);
                     configure(&item, child);
-                    widest = widest.max(ItemView::preferred_width(&ItemContent::of(child, &item)));
+                    let content = ItemContent::of(child, &item);
+                    widest = widest.max(ItemView::preferred_width(&content, 0.0));
                 }
             } else if let Some(content) = content {
-                widest = widest.max(ItemView::preferred_width(content));
+                widest = widest.max(ItemView::preferred_width(content, column));
             }
         }
         let width = widest.min(self.ivars().maximum_width);
@@ -580,7 +601,7 @@ impl TrayMenu {
                 view.update(entry.items.clone(), item.isEnabled());
                 item.setView(Some(&view));
             } else if let Some(Some(content)) = contents.get(index) {
-                item.setView(Some(&ItemView::new(mtm, content.clone(), width)));
+                item.setView(Some(&ItemView::new(mtm, content.clone(), width, column)));
             }
         }
     }
@@ -891,6 +912,7 @@ fn post(element: &AnyObject, notification: &NSString) {
 
 pub(super) struct ItemViewIvars {
     content: RefCell<ItemContent>,
+    badge_column: Cell<f64>,
     highlighted: Cell<bool>,
     monitor: RefCell<KeyMonitor>,
 }
@@ -951,7 +973,7 @@ define_class!(
 );
 
 impl ItemView {
-    fn preferred_width(content: &ItemContent) -> f64 {
+    fn preferred_width(content: &ItemContent, badge_column: f64) -> f64 {
         STYLE.with(|style| {
             row_width(
                 style.title_x + style.trailing,
@@ -963,16 +985,22 @@ impl ItemView {
                 content
                     .badge
                     .as_ref()
-                    .map(|badge| style.badge_width(&badge.label)),
+                    .map(|badge| style.badge_width(&badge.label).max(badge_column)),
                 content.has_submenu.then(|| style.arrow.size().width),
             )
         })
     }
 
-    fn new(mtm: MainThreadMarker, content: ItemContent, width: f64) -> Retained<Self> {
+    fn new(
+        mtm: MainThreadMarker,
+        content: ItemContent,
+        width: f64,
+        badge_column: f64,
+    ) -> Retained<Self> {
         let height = STYLE.with(|style| style.height);
         let this = Self::alloc(mtm).set_ivars(ItemViewIvars {
             content: RefCell::new(content),
+            badge_column: Cell::new(badge_column),
             highlighted: Cell::new(false),
             monitor: RefCell::new(KeyMonitor(None)),
         });
@@ -981,6 +1009,12 @@ impl ItemView {
         view.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
         view.update_accessibility();
         view
+    }
+
+    fn set_badge_column(&self, column: f64) {
+        if self.ivars().badge_column.replace(column) != column {
+            self.setNeedsDisplay(true);
+        }
     }
 
     fn update(&self, content: ItemContent) {
@@ -1215,10 +1249,11 @@ impl ItemView {
                 .detail
                 .is_some()
                 .then(|| content.detail_width(&style.detail_font)),
-            content
-                .badge
-                .as_ref()
-                .map(|badge| style.badge_width(&badge.label)),
+            content.badge.as_ref().map(|badge| {
+                style
+                    .badge_width(&badge.label)
+                    .max(self.ivars().badge_column.get())
+            }),
             content.has_submenu,
         );
         if let Some(badge) = &content.badge {
@@ -1322,6 +1357,16 @@ fn trailing_layout(
         detail: detail_width,
         title: room.max(0.0),
     }
+}
+
+/// The width every badge in a menu takes: its widest badge.
+fn badge_column<'a>(contents: impl Iterator<Item = &'a ItemContent>) -> f64 {
+    STYLE.with(|style| {
+        contents
+            .filter_map(|content| content.badge.as_ref())
+            .map(|badge| style.badge_width(&badge.label))
+            .fold(0.0, f64::max)
+    })
 }
 
 fn arrow_gap(has_badge: bool) -> f64 {
@@ -1917,9 +1962,10 @@ fn draw_symbol(image: &NSImage, x: f64, color: &NSColor, max_width: f64, bounds:
 mod tests {
     use super::topology::{grouped, matches, retained_enabled, retained_status, shared_index};
     use super::{
-        is_delay, item_enabled, row_width, segment_track, takes_key, text_width, trailing_layout,
-        Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP, BADGE_ARROW_GAP, BADGE_GAP,
-        BADGE_PADDING, DETAIL_GAP, DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH,
+        badge_column, is_delay, item_enabled, row_width, segment_track, takes_key, text_width,
+        trailing_layout, Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP,
+        BADGE_ARROW_GAP, BADGE_GAP, BADGE_PADDING, DETAIL_GAP, DETAIL_MAXIMUM_WIDTH,
+        DETAIL_MINIMUM_WIDTH,
     };
     use objc2_app_kit::NSEventModifierFlags;
     use objc2_app_kit::NSFont;
@@ -2260,6 +2306,39 @@ mod tests {
         }
         assert_eq!(style.badge_width("999 ms"), BADGE);
         assert!(style.badge_width("63 ms") < style.badge_width("1234 ms"));
+    }
+
+    fn badged(label: &str) -> ItemContent {
+        ItemContent {
+            label: "Group".into(),
+            detail: None,
+            icon: None,
+            badge: Some(super::BadgeContent {
+                label: label.into(),
+                background: 0,
+                foreground: 0,
+            }),
+            accessibility_label: None,
+            is_checkbox: false,
+            checked: false,
+            enabled: true,
+            keeps_open: false,
+            has_submenu: true,
+        }
+    }
+
+    #[test]
+    fn a_menus_badges_take_the_width_of_its_widest_badge() {
+        let style = Style::current();
+        let column = |labels: &[&str]| {
+            let contents: Vec<_> = labels.iter().map(|label| badged(label)).collect();
+            badge_column(contents.iter())
+        };
+        assert_eq!(column(&["63 ms", "111 ms", "34 ms"]), BADGE);
+        assert_eq!(column(&["63 ms", "1234 ms"]), style.badge_width("1234 ms"));
+        assert_eq!(column(&["63 ms", "未测速"]), style.badge_width("63 ms"));
+        assert_eq!(column(&["超时"]), style.badge_width("超时"));
+        assert_eq!(badge_column(std::iter::empty()), 0.0);
     }
 
     #[test]
