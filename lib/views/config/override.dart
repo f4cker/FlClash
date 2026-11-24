@@ -381,6 +381,9 @@ abstract class OverrideSpec<K extends OverrideKey, M> {
     return (model: model, keys: state.keys.difference(keys));
   }
 
+  /// Above the sections, for values that cannot run together.
+  Widget? leadOf() => null;
+
   /// What of [keys] an enabled MITM module goes over.
   List<String> notesOf(WidgetRef ref, Iterable<K> keys, AppLocalizations l) =>
       const [];
@@ -594,6 +597,7 @@ class _OverrideList<K extends OverrideKey, M> extends ConsumerWidget {
       children: [
         if (spec.target.issues case final issues?)
           CustomIssuesBanner(issues: ref.watch(issues)),
+        ?spec.leadOf(),
         AnimatedEntries(
           children: [
             for (final (title, keys) in spec.sectionsOf(

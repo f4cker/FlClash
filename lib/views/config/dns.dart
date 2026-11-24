@@ -7,11 +7,14 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/state.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/override.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+part 'dns/respect_rules.dart';
 
 extension on DnsOverrideKey {
   String label(AppLocalizations l) => switch (this) {
@@ -206,6 +209,11 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
   }
 
   @override
+  Widget? leadOf() => target is PatchOverrideTarget<DnsOverrideKey, Dns>
+      ? _RespectRulesNotice(target)
+      : null;
+
+  @override
   ConfigLabel? description(DnsOverrideKey key) => key.description;
 
   @override
@@ -240,10 +248,7 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.ipv6Timeout,
       (dns, value) => dns.copyWith(ipv6Timeout: value),
     ),
-    DnsOverrideKey.respectRules => ToggleOverrideField(
-      (dns) => dns.respectRules,
-      (dns, value) => dns.copyWith(respectRules: value),
-    ),
+    DnsOverrideKey.respectRules => const _RespectRulesField(),
     DnsOverrideKey.preferH3 => ToggleOverrideField(
       (dns) => dns.preferH3,
       (dns, value) => dns.copyWith(preferH3: value),

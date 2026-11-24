@@ -9805,4 +9805,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mitmBackupKeyUnavailable =>
       'Couldn\'t read the certificate password. Backup wasn\'t completed.';
+
+  @override
+  String get dnsRespectRulesUnmetError =>
+      'Respect rules is on but Proxy Server Nameserver is empty, so this configuration can\'t run. In Advanced configuration → DNS, fill in Proxy Server Nameserver or turn off Respect rules.';
+
+  @override
+  String get dnsRespectRulesUnmetWarning =>
+      'Respect rules is on but Proxy Server Nameserver is empty, so starting will fail. Fill in Proxy Server Nameserver or turn off Respect rules.';
+
+  @override
+  String get dnsRespectRulesNeedsProxyServer =>
+      'Respect rules needs a Proxy Server Nameserver, which resolves proxy server hostnames. Without one, starting fails, so Respect rules stays off until you fill it in.';
+
+  @override
+  String get dnsFillProxyServerNameserver => 'Fill in Proxy Server Nameserver';
+
+  @override
+  String get dnsUseNameserverForProxyServer => 'Use Nameserver and turn on';
+
+  @override
+  String get dnsTurnOffRespectRules => 'Turn off Respect rules';
 }

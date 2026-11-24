@@ -1354,6 +1354,10 @@ Map<String, Object?> _withLegacyDnsOverrideKeys(Map<String, Object?> json) {
 }
 
 extension DnsOverrideExt on Dns {
+  /// mihomo refuses this even with DNS off. The page writes both keys over
+  /// every profile, so its own values are the ones that run.
+  bool get respectRulesUnmet => respectRules && proxyServerNameserver.isEmpty;
+
   // toJson leaves nested models as objects; the fragment is read as plain maps.
   Map<String, Object?> get _json {
     final json = toJson();

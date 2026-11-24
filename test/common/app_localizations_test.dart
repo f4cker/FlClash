@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:fl_clash/common/app_localizations.dart';
+import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/network_error.dart';
 import 'package:fl_clash/common/webdav.dart';
 import 'package:fl_clash/core/desktop/helper_client.dart';
@@ -170,6 +171,64 @@ void main() {
         appLocalizations,
       ),
       appLocalizations.networkAccessDeniedError(401),
+    );
+  });
+
+  test('respect rules without a Proxy Server Nameserver reads as the fix, '
+      'however the start meets it', () {
+    const mihomo =
+        'if “respect-rules” is turned on, “proxy-server-nameserver” cannot be '
+        'empty';
+    try {
+      for (final locale in [const Locale('en'), const Locale('zh')]) {
+        final l = loadAppLocalizations(locale);
+        const rejected = CoreMethodException(
+          code: 'mount_rejected',
+          message: mihomo,
+          details: {'outcome': 'blocked'},
+        );
+        for (final error in <Object>[
+          const DnsRespectRulesUnmetException(),
+          rejected,
+          const CoreMethodException(code: 'config_rejected', message: mihomo),
+          ParallelWaitError<(void, void), (AsyncError?, AsyncError?)>(
+            (null, null),
+            (AsyncError(rejected, StackTrace.empty), null),
+          ),
+          ParallelWaitError<(void, void), (AsyncError?, AsyncError?)>(
+            (null, null),
+            (null, AsyncError(rejected, StackTrace.empty)),
+          ),
+        ]) {
+          expect(userFacingErrorMessage(error, l), l.dnsRespectRulesUnmetError);
+        }
+        expect(l.dnsRespectRulesUnmetError, isNot(contains('cannot be')));
+      }
+      expect(
+        loadAppLocalizations(const Locale('ja')).dnsRespectRulesUnmetError,
+        loadAppLocalizations(const Locale('en')).dnsRespectRulesUnmetError,
+      );
+    } finally {
+      loadAppLocalizations(const Locale('en'));
+    }
+  });
+
+  test('another error a start waits on still reads as its own', () {
+    expect(
+      userFacingErrorMessage(
+        ParallelWaitError<(void, void), (AsyncError?, AsyncError?)>(
+          (null, null),
+          (
+            AsyncError(
+              const CoreMethodException(code: 'x', message: 'core said no'),
+              StackTrace.empty,
+            ),
+            null,
+          ),
+        ),
+        appLocalizations,
+      ),
+      'core said no',
     );
   });
 

@@ -2234,6 +2234,55 @@ void main() {
       },
     );
 
+    test('respect rules without a Proxy Server Nameserver stops before '
+        'the Core, and says how to fix it', () async {
+      final profile = Profile.normal(label: 'p', url: 'http://127.0.0.1:9/');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.setupConfig(any())).thenAnswer((_) async {});
+      var preloads = 0;
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.listen(patchClashConfigProvider, (_, _) {});
+      scoped.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(dns: Dns(respectRules: true));
+      final printed = <String>[];
+      final original = debugPrint;
+      debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+      addTearDown(() => debugPrint = original);
+      Future<bool> apply() => scoped
+          .read(setupActionProvider.notifier)
+          .applyProfile(force: true, preloadInvoke: () async => preloads++);
+
+      expect(await apply(), isFalse);
+      verifyNever(() => core.setupConfig(any()));
+      expect(preloads, 0);
+      expect(
+        printed,
+        contains(
+          '[APP] banner: ${currentAppLocalizations.dnsRespectRulesUnmetError}',
+        ),
+      );
+
+      scoped
+          .read(patchClashConfigProvider.notifier)
+          .value = const PatchClashConfig(
+        dns: Dns(
+          respectRules: true,
+          proxyServerNameserver: ['https://doh.pub/dns-query'],
+        ),
+      );
+      expect(await apply(), isTrue);
+      verify(() => core.setupConfig(any())).called(1);
+    });
+
     test(
       'provider directories it cannot create leave the config applied',
       () async {

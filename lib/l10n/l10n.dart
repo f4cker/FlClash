@@ -16059,6 +16059,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t read the certificate password. Backup wasn\'t completed.'**
   String get mitmBackupKeyUnavailable;
+
+  /// No description provided for @dnsRespectRulesUnmetError.
+  ///
+  /// In en, this message translates to:
+  /// **'Respect rules is on but Proxy Server Nameserver is empty, so this configuration can\'t run. In Advanced configuration → DNS, fill in Proxy Server Nameserver or turn off Respect rules.'**
+  String get dnsRespectRulesUnmetError;
+
+  /// No description provided for @dnsRespectRulesUnmetWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Respect rules is on but Proxy Server Nameserver is empty, so starting will fail. Fill in Proxy Server Nameserver or turn off Respect rules.'**
+  String get dnsRespectRulesUnmetWarning;
+
+  /// No description provided for @dnsRespectRulesNeedsProxyServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Respect rules needs a Proxy Server Nameserver, which resolves proxy server hostnames. Without one, starting fails, so Respect rules stays off until you fill it in.'**
+  String get dnsRespectRulesNeedsProxyServer;
+
+  /// No description provided for @dnsFillProxyServerNameserver.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in Proxy Server Nameserver'**
+  String get dnsFillProxyServerNameserver;
+
+  /// No description provided for @dnsUseNameserverForProxyServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Nameserver and turn on'**
+  String get dnsUseNameserverForProxyServer;
+
+  /// No description provided for @dnsTurnOffRespectRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off Respect rules'**
+  String get dnsTurnOffRespectRules;
 }
 
 class _AppLocalizationsDelegate

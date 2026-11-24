@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/network_error.dart';
@@ -162,12 +164,23 @@ String? loginItemErrorMessage(Object error, AppLocalizations appLocalizations) {
 }
 
 String userFacingErrorMessage(Object error, AppLocalizations appLocalizations) {
+  // A setup that also starts the Core waits on both, so its error is inside.
+  if (error case ParallelWaitError(
+    errors: (final AsyncError? first, final AsyncError? second),
+  ) when first != null || second != null) {
+    return userFacingErrorMessage((first ?? second)!.error, appLocalizations);
+  }
   return loginItemErrorMessage(error, appLocalizations) ??
       networkErrorMessage(error, appLocalizations) ??
       coreLaunchBlockedMessage(error, appLocalizations) ??
       switch (error) {
         AgeSecretKeyRequiredException() =>
           appLocalizations.ageSecretKeyRequiredTip,
+        DnsRespectRulesUnmetException() =>
+          appLocalizations.dnsRespectRulesUnmetError,
+        CoreMethodException(:final message)
+            when isRespectRulesUnmetMessage(message) =>
+          appLocalizations.dnsRespectRulesUnmetError,
         ReleaseNotVerifiedException() => appLocalizations.updateNotVerified,
         SystemDownloadException() => appLocalizations.updateDownloadFailed,
         CoreMethodException(code: 'rule_set_empty') =>

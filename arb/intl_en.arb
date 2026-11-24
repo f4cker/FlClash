@@ -4122,5 +4122,11 @@
       }
     }
   },
-  "mitmBackupKeyUnavailable": "Couldn't read the certificate password. Backup wasn't completed."
+  "mitmBackupKeyUnavailable": "Couldn't read the certificate password. Backup wasn't completed.",
+  "dnsRespectRulesUnmetError": "Respect rules is on but Proxy Server Nameserver is empty, so this configuration can't run. In Advanced configuration → DNS, fill in Proxy Server Nameserver or turn off Respect rules.",
+  "dnsRespectRulesUnmetWarning": "Respect rules is on but Proxy Server Nameserver is empty, so starting will fail. Fill in Proxy Server Nameserver or turn off Respect rules.",
+  "dnsRespectRulesNeedsProxyServer": "Respect rules needs a Proxy Server Nameserver, which resolves proxy server hostnames. Without one, starting fails, so Respect rules stays off until you fill it in.",
+  "dnsFillProxyServerNameserver": "Fill in Proxy Server Nameserver",
+  "dnsUseNameserverForProxyServer": "Use Nameserver and turn on",
+  "dnsTurnOffRespectRules": "Turn off Respect rules"
 }

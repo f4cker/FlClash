@@ -71,6 +71,22 @@ final class RestorePartialException extends MessageException {
   ) => RestorePartialException(message, steps: steps, pendingChecks: checks);
 }
 
+/// mihomo refuses `respect-rules` without a `proxy-server-nameserver`; the
+/// setup stops before the Core sees it, so a start fails fast.
+final class DnsRespectRulesUnmetException implements Exception {
+  const DnsRespectRulesUnmetException();
+
+  @override
+  String toString() =>
+      'respect-rules is on but proxy-server-nameserver is empty';
+}
+
+/// The same refusal as mihomo words it, from a config the build let through.
+bool isRespectRulesUnmetMessage(String message) =>
+    message.contains('respect-rules') &&
+    message.contains('proxy-server-nameserver') &&
+    message.contains('cannot be empty');
+
 final class AgeSecretKeyRequiredException implements Exception {
   const AgeSecretKeyRequiredException();
 }

@@ -2700,5 +2700,11 @@
   "mitmBackupRiskRevoke": "请更换证书，并在每台信任过旧证书的设备上取消对旧证书的信任或将其移除。各设备的操作位置可能不同。",
   "mitmRestoreCaLocalNone": "这台 Mac 没有解密证书。",
   "mitmRestoreCaDamagedNone": "此备份中的解密证书无法读取，不会恢复。",
-  "mitmBackupKeyUnavailable": "无法读取证书密码，备份未完成。"
+  "mitmBackupKeyUnavailable": "无法读取证书密码，备份未完成。",
+  "dnsRespectRulesUnmetError": "已开启「遵守规则」，但 Proxy Server Nameserver（代理服务器 DNS）为空，此配置无法运行。请在 进阶配置 → DNS 中填写 Proxy Server Nameserver，或关闭「遵守规则」。",
+  "dnsRespectRulesUnmetWarning": "「遵守规则」已开启，但 Proxy Server Nameserver（代理服务器 DNS）为空，启动会失败。请填写 Proxy Server Nameserver，或关闭「遵守规则」。",
+  "dnsRespectRulesNeedsProxyServer": "「遵守规则」需要 Proxy Server Nameserver（代理服务器 DNS）来解析代理服务器的域名。它为空时启动会失败，因此填写之前「遵守规则」保持关闭。",
+  "dnsFillProxyServerNameserver": "填写 Proxy Server Nameserver",
+  "dnsUseNameserverForProxyServer": "使用 Nameserver 并开启",
+  "dnsTurnOffRespectRules": "关闭「遵守规则」"
 }

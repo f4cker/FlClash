@@ -1937,6 +1937,9 @@ class SetupAction extends _$SetupAction {
         await globalState.safeRun(() async {
           final state = await ref.read(setupStateProvider(profile?.id).future);
           if (!sourceCurrent()) throw StateError('Profile setup superseded');
+          if (realPatchConfig.dns.respectRulesUnmet) {
+            throw const DnsRespectRulesUnmetException();
+          }
           setupState = state;
           return getProfile(setupState: state, patchConfig: realPatchConfig);
         }, title: 'build profile');
