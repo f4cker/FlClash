@@ -10,6 +10,15 @@ NetworkInterfaceLister listNetworkInterfaces =
     ({bool includeLoopback = false}) =>
         NetworkInterface.list(includeLoopback: includeLoopback);
 
+/// Link-local ones too, since the Core binds by interface, not address.
+Future<Set<String>> Function() listInterfaceNames = () async => {
+  for (final interface in await NetworkInterface.list(
+    includeLoopback: true,
+    includeLinkLocal: true,
+  ))
+    interface.name,
+};
+
 extension NetworkInterfaceExt on NetworkInterface {
   bool get isWifi {
     final nameLowCase = name.toLowerCase();

@@ -9173,4 +9173,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get fakeIpRange6Tip =>
       '请填写 IPv6 网段，前缀不超过 /125，如 fdfe:dcba:9876::1/64。';
+
+  @override
+  String interfaceNameMissingTip(Object name) {
+    return '本机现在没有名为「$name」的网卡。网卡不存在时内核仍能启动，但所有连接都会失败。';
+  }
 }

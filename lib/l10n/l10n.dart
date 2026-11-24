@@ -16287,6 +16287,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter an IPv6 range of /125 or wider, such as fdfe:dcba:9876::1/64.'**
   String get fakeIpRange6Tip;
+
+  /// No description provided for @interfaceNameMissingTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This Mac has no network interface named “{name}” right now. The core still starts, but every connection fails while it is missing.'**
+  String interfaceNameMissingTip(Object name);
 }
 
 class _AppLocalizationsDelegate

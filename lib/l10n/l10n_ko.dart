@@ -9767,4 +9767,9 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get fakeIpRange6Tip =>
       'Enter an IPv6 range of /125 or wider, such as fdfe:dcba:9876::1/64.';
+
+  @override
+  String interfaceNameMissingTip(Object name) {
+    return 'This Mac has no network interface named “$name” right now. The core still starts, but every connection fails while it is missing.';
+  }
 }

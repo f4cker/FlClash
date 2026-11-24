@@ -4,7 +4,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/providers/config.dart';
-import 'package:fl_clash/ui/list_item.dart';
+import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/widgets/page_source_rows.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -285,6 +285,7 @@ class ConfigTextItem extends _ConfigItem<String> {
     this.validator,
     this.normalize,
     this.allowEmpty = false,
+    this.note,
     super.leading,
   });
 
@@ -293,6 +294,9 @@ class ConfigTextItem extends _ConfigItem<String> {
   final ConfigValidator? validator;
   final String Function(String value)? normalize;
   final bool allowEmpty;
+
+  /// A warning under the value, for one that saves but may not work.
+  final String? note;
 
   String? _normalize(String? value) {
     if (value == null) {
@@ -313,7 +317,21 @@ class ConfigTextItem extends _ConfigItem<String> {
     return ListItem.input(
       leading: leading,
       title: Text(label),
-      subtitle: value.isEmpty ? null : Text(value),
+      subtitle: switch (note) {
+        final note? => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (value.isNotEmpty) Text(value),
+            Text(
+              note,
+              style: AppTextStyle.caption1
+                  .of(context)
+                  .copyWith(color: context.colorScheme.error),
+            ),
+          ],
+        ),
+        null => value.isEmpty ? null : Text(value),
+      },
       dialogTitle: label,
       value: value,
       maxLength: maxLength,
