@@ -266,7 +266,7 @@ class ListItem<T> extends StatelessWidget {
           horizontalTitleGap: horizontalTitleGap,
           minVerticalPadding: minVerticalPadding,
           alignment: alignment,
-          minHeight: minTileHeight ?? listRowMinHeight,
+          minHeight: minTileHeight,
           onPressed: onTap,
         ),
       );
@@ -279,7 +279,7 @@ class ListItem<T> extends StatelessWidget {
       padding: padding,
       horizontalTitleGap: horizontalTitleGap,
       minVerticalPadding: minVerticalPadding,
-      minHeight: minTileHeight ?? listRowMinHeight,
+      minHeight: minTileHeight,
       alignment: alignment,
     );
     if (onTap == null) {
