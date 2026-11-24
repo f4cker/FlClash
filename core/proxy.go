@@ -120,12 +120,19 @@ func handleGetProxies() ProxiesData {
 
 // Proxy.MarshalJSON encodes each node twice, with history the host never reads.
 func proxyView(proxy constant.Proxy) any {
+	info := proxy.ProxyInfo()
 	node := nodeView{
 		Name:         proxy.Name(),
 		Type:         proxy.Type().String(),
-		ProviderName: proxy.ProxyInfo().ProviderName,
+		ProviderName: info.ProviderName,
 	}
 	if !isProxyGroupType(proxy.Type()) {
+		if isOutbound(proxy.Type()) {
+			node.UDP, node.UoT = new(proxy.SupportUDP()), new(proxy.SupportUOT())
+			node.XUDP, node.TFO = new(info.XUDP), new(info.TFO)
+			node.MPTCP, node.SMUX = new(info.MPTCP), new(info.SMUX)
+			node.DialerProxy, node.Interface = info.DialerProxy, info.Interface
+		}
 		return node
 	}
 	view, err := groupView(proxy)
@@ -136,7 +143,26 @@ func proxyView(proxy constant.Proxy) any {
 	return view
 }
 
-// No group encodes its own name, so it is appended rather than re-encoded.
+func isOutbound(adapterType constant.AdapterType) bool {
+	switch adapterType {
+	case constant.Reject, constant.RejectDrop, constant.Compatible, constant.Pass,
+		constant.PassRule, constant.Rematch, constant.Dns:
+		return false
+	default:
+		return true
+	}
+}
+
+// udp follows the selection; disableUdp is the group's own setting, absent where it has none.
+func groupExtras(proxy constant.Proxy) []any {
+	extras := []any{"udp", proxy.SupportUDP()}
+	if group, ok := proxy.Adapter().(interface{ DisableUDP() bool }); ok {
+		extras = append(extras, "disableUdp", group.DisableUDP())
+	}
+	return append(extras, "name", proxy.Name())
+}
+
+// No group encodes its own name or UDP, so they are appended rather than re-encoded.
 func groupView(proxy constant.Proxy) (json.RawMessage, error) {
 	data, err := proxy.Adapter().MarshalJSON()
 	if err != nil {
@@ -155,17 +181,22 @@ func groupView(proxy constant.Proxy) (json.RawMessage, error) {
 	if len(data) < 2 || data[0] != '{' || data[len(data)-1] != '}' {
 		return nil, fmt.Errorf("encoding is not an object: %.32s", data)
 	}
-	name, err := json.Marshal(proxy.Name())
-	if err != nil {
-		return nil, err
-	}
-	view := make(json.RawMessage, 0, len(data)+len(name)+len(`,"name":`))
+	extras := groupExtras(proxy)
+	view := make(json.RawMessage, 0, len(data)+64)
 	view = append(view, data[:len(data)-1]...)
-	if len(data) > 2 {
-		view = append(view, ',')
+	for i := 0; i < len(extras); i += 2 {
+		value, err := json.Marshal(extras[i+1])
+		if err != nil {
+			return nil, err
+		}
+		if len(view) > 1 {
+			view = append(view, ',')
+		}
+		view = append(view, '"')
+		view = append(view, extras[i].(string)...)
+		view = append(view, `":`...)
+		view = append(view, value...)
 	}
-	view = append(view, `"name":`...)
-	view = append(view, name...)
 	return append(view, '}'), nil
 }
 

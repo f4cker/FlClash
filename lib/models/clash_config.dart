@@ -241,6 +241,16 @@ abstract class Proxy with _$Proxy {
     required String type,
     String? now,
     @JsonKey(name: 'provider-name') String? providerName,
+    // A capability the Core did not send is unknown, not off.
+    bool? udp,
+    bool? uot,
+    bool? xudp,
+    bool? tfo,
+    bool? mptcp,
+    bool? smux,
+    @JsonKey(name: 'dialer-proxy') String? dialerProxy,
+    @JsonKey(name: 'interface') String? interfaceName,
+    bool? disableUdp,
   }) = _Proxy;
 
   factory Proxy.fromJson(Map<String, Object?> json) => _$ProxyFromJson(json);

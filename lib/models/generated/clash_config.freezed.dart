@@ -405,7 +405,7 @@ as List<String>?,
 /// @nodoc
 mixin _$Proxy {
 
- String get name; String get type; String? get now;@JsonKey(name: 'provider-name') String? get providerName;
+ String get name; String get type; String? get now;@JsonKey(name: 'provider-name') String? get providerName; bool? get udp; bool? get uot; bool? get xudp; bool? get tfo; bool? get mptcp; bool? get smux;@JsonKey(name: 'dialer-proxy') String? get dialerProxy;@JsonKey(name: 'interface') String? get interfaceName; bool? get disableUdp;
 /// Create a copy of Proxy
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -419,20 +419,20 @@ $ProxyCopyWith<Proxy> get copyWith => _$ProxyCopyWithImpl<Proxy>(this as Proxy, 
 @override
 bool operator ==(Object other) {
   final _this = this as Proxy;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Proxy&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.now, _this.now) || other.now == _this.now)&&(identical(other.providerName, _this.providerName) || other.providerName == _this.providerName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Proxy&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.now, _this.now) || other.now == _this.now)&&(identical(other.providerName, _this.providerName) || other.providerName == _this.providerName)&&(identical(other.udp, _this.udp) || other.udp == _this.udp)&&(identical(other.uot, _this.uot) || other.uot == _this.uot)&&(identical(other.xudp, _this.xudp) || other.xudp == _this.xudp)&&(identical(other.tfo, _this.tfo) || other.tfo == _this.tfo)&&(identical(other.mptcp, _this.mptcp) || other.mptcp == _this.mptcp)&&(identical(other.smux, _this.smux) || other.smux == _this.smux)&&(identical(other.dialerProxy, _this.dialerProxy) || other.dialerProxy == _this.dialerProxy)&&(identical(other.interfaceName, _this.interfaceName) || other.interfaceName == _this.interfaceName)&&(identical(other.disableUdp, _this.disableUdp) || other.disableUdp == _this.disableUdp));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Proxy;
-  return Object.hash(runtimeType,_this.name,_this.type,_this.now,_this.providerName);
+  return Object.hash(runtimeType,_this.name,_this.type,_this.now,_this.providerName,_this.udp,_this.uot,_this.xudp,_this.tfo,_this.mptcp,_this.smux,_this.dialerProxy,_this.interfaceName,_this.disableUdp);
 }
 
 @override
 String toString() {
   final _this = this as Proxy;
-  return 'Proxy(name: ${_this.name}, type: ${_this.type}, now: ${_this.now}, providerName: ${_this.providerName})';
+  return 'Proxy(name: ${_this.name}, type: ${_this.type}, now: ${_this.now}, providerName: ${_this.providerName}, udp: ${_this.udp}, uot: ${_this.uot}, xudp: ${_this.xudp}, tfo: ${_this.tfo}, mptcp: ${_this.mptcp}, smux: ${_this.smux}, dialerProxy: ${_this.dialerProxy}, interfaceName: ${_this.interfaceName}, disableUdp: ${_this.disableUdp})';
 }
 
 
@@ -443,7 +443,7 @@ abstract mixin class $ProxyCopyWith<$Res>  {
   factory $ProxyCopyWith(Proxy value, $Res Function(Proxy) _then) = _$ProxyCopyWithImpl;
 @useResult
 $Res call({
- String name, String type, String? now,@JsonKey(name: 'provider-name') String? providerName
+ String name, String type, String? now,@JsonKey(name: 'provider-name') String? providerName, bool? udp, bool? uot, bool? xudp, bool? tfo, bool? mptcp, bool? smux,@JsonKey(name: 'dialer-proxy') String? dialerProxy,@JsonKey(name: 'interface') String? interfaceName, bool? disableUdp
 });
 
 
@@ -460,13 +460,22 @@ class _$ProxyCopyWithImpl<$Res>
 
 /// Create a copy of Proxy
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? type = null,Object? now = freezed,Object? providerName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? type = null,Object? now = freezed,Object? providerName = freezed,Object? udp = freezed,Object? uot = freezed,Object? xudp = freezed,Object? tfo = freezed,Object? mptcp = freezed,Object? smux = freezed,Object? dialerProxy = freezed,Object? interfaceName = freezed,Object? disableUdp = freezed,}) {
   return _then(Proxy(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,now: freezed == now ? _self.now : now // ignore: cast_nullable_to_non_nullable
 as String?,providerName: freezed == providerName ? _self.providerName : providerName // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,udp: freezed == udp ? _self.udp : udp // ignore: cast_nullable_to_non_nullable
+as bool?,uot: freezed == uot ? _self.uot : uot // ignore: cast_nullable_to_non_nullable
+as bool?,xudp: freezed == xudp ? _self.xudp : xudp // ignore: cast_nullable_to_non_nullable
+as bool?,tfo: freezed == tfo ? _self.tfo : tfo // ignore: cast_nullable_to_non_nullable
+as bool?,mptcp: freezed == mptcp ? _self.mptcp : mptcp // ignore: cast_nullable_to_non_nullable
+as bool?,smux: freezed == smux ? _self.smux : smux // ignore: cast_nullable_to_non_nullable
+as bool?,dialerProxy: freezed == dialerProxy ? _self.dialerProxy : dialerProxy // ignore: cast_nullable_to_non_nullable
+as String?,interfaceName: freezed == interfaceName ? _self.interfaceName : interfaceName // ignore: cast_nullable_to_non_nullable
+as String?,disableUdp: freezed == disableUdp ? _self.disableUdp : disableUdp // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
@@ -551,10 +560,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String type,  String? now, @JsonKey(name: 'provider-name')  String? providerName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String type,  String? now, @JsonKey(name: 'provider-name')  String? providerName,  bool? udp,  bool? uot,  bool? xudp,  bool? tfo,  bool? mptcp,  bool? smux, @JsonKey(name: 'dialer-proxy')  String? dialerProxy, @JsonKey(name: 'interface')  String? interfaceName,  bool? disableUdp)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Proxy() when $default != null:
-return $default(_that.name,_that.type,_that.now,_that.providerName);case _:
+return $default(_that.name,_that.type,_that.now,_that.providerName,_that.udp,_that.uot,_that.xudp,_that.tfo,_that.mptcp,_that.smux,_that.dialerProxy,_that.interfaceName,_that.disableUdp);case _:
   return orElse();
 
 }
@@ -572,10 +581,10 @@ return $default(_that.name,_that.type,_that.now,_that.providerName);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String type,  String? now, @JsonKey(name: 'provider-name')  String? providerName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String type,  String? now, @JsonKey(name: 'provider-name')  String? providerName,  bool? udp,  bool? uot,  bool? xudp,  bool? tfo,  bool? mptcp,  bool? smux, @JsonKey(name: 'dialer-proxy')  String? dialerProxy, @JsonKey(name: 'interface')  String? interfaceName,  bool? disableUdp)  $default,) {final _that = this;
 switch (_that) {
 case _Proxy():
-return $default(_that.name,_that.type,_that.now,_that.providerName);case _:
+return $default(_that.name,_that.type,_that.now,_that.providerName,_that.udp,_that.uot,_that.xudp,_that.tfo,_that.mptcp,_that.smux,_that.dialerProxy,_that.interfaceName,_that.disableUdp);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -592,10 +601,10 @@ return $default(_that.name,_that.type,_that.now,_that.providerName);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String type,  String? now, @JsonKey(name: 'provider-name')  String? providerName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String type,  String? now, @JsonKey(name: 'provider-name')  String? providerName,  bool? udp,  bool? uot,  bool? xudp,  bool? tfo,  bool? mptcp,  bool? smux, @JsonKey(name: 'dialer-proxy')  String? dialerProxy, @JsonKey(name: 'interface')  String? interfaceName,  bool? disableUdp)?  $default,) {final _that = this;
 switch (_that) {
 case _Proxy() when $default != null:
-return $default(_that.name,_that.type,_that.now,_that.providerName);case _:
+return $default(_that.name,_that.type,_that.now,_that.providerName,_that.udp,_that.uot,_that.xudp,_that.tfo,_that.mptcp,_that.smux,_that.dialerProxy,_that.interfaceName,_that.disableUdp);case _:
   return null;
 
 }
@@ -607,13 +616,22 @@ return $default(_that.name,_that.type,_that.now,_that.providerName);case _:
 @JsonSerializable()
 
 class _Proxy implements Proxy {
-  const _Proxy({required this.name, required this.type, this.now, @JsonKey(name: 'provider-name') this.providerName});
+  const _Proxy({required this.name, required this.type, this.now, @JsonKey(name: 'provider-name') this.providerName, this.udp, this.uot, this.xudp, this.tfo, this.mptcp, this.smux, @JsonKey(name: 'dialer-proxy') this.dialerProxy, @JsonKey(name: 'interface') this.interfaceName, this.disableUdp});
   factory _Proxy.fromJson(Map<String, dynamic> json) => _$ProxyFromJson(json);
 
 @override final  String name;
 @override final  String type;
 @override final  String? now;
 @override@JsonKey(name: 'provider-name') final  String? providerName;
+@override final  bool? udp;
+@override final  bool? uot;
+@override final  bool? xudp;
+@override final  bool? tfo;
+@override final  bool? mptcp;
+@override final  bool? smux;
+@override@JsonKey(name: 'dialer-proxy') final  String? dialerProxy;
+@override@JsonKey(name: 'interface') final  String? interfaceName;
+@override final  bool? disableUdp;
 
 /// Create a copy of Proxy
 /// with the given fields replaced by the non-null parameter values.
@@ -628,18 +646,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Proxy&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.now, now) || other.now == now)&&(identical(other.providerName, providerName) || other.providerName == providerName));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Proxy&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.now, now) || other.now == now)&&(identical(other.providerName, providerName) || other.providerName == providerName)&&(identical(other.udp, udp) || other.udp == udp)&&(identical(other.uot, uot) || other.uot == uot)&&(identical(other.xudp, xudp) || other.xudp == xudp)&&(identical(other.tfo, tfo) || other.tfo == tfo)&&(identical(other.mptcp, mptcp) || other.mptcp == mptcp)&&(identical(other.smux, smux) || other.smux == smux)&&(identical(other.dialerProxy, dialerProxy) || other.dialerProxy == dialerProxy)&&(identical(other.interfaceName, interfaceName) || other.interfaceName == interfaceName)&&(identical(other.disableUdp, disableUdp) || other.disableUdp == disableUdp));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,name,type,now,providerName);
+    return Object.hash(runtimeType,name,type,now,providerName,udp,uot,xudp,tfo,mptcp,smux,dialerProxy,interfaceName,disableUdp);
 }
 
 @override
 String toString() {
-    return 'Proxy(name: $name, type: $type, now: $now, providerName: $providerName)';
+    return 'Proxy(name: $name, type: $type, now: $now, providerName: $providerName, udp: $udp, uot: $uot, xudp: $xudp, tfo: $tfo, mptcp: $mptcp, smux: $smux, dialerProxy: $dialerProxy, interfaceName: $interfaceName, disableUdp: $disableUdp)';
 }
 
 
@@ -650,7 +668,7 @@ abstract mixin class _$ProxyCopyWith<$Res> implements $ProxyCopyWith<$Res> {
   factory _$ProxyCopyWith(_Proxy value, $Res Function(_Proxy) _then) = __$ProxyCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String type, String? now,@JsonKey(name: 'provider-name') String? providerName
+ String name, String type, String? now,@JsonKey(name: 'provider-name') String? providerName, bool? udp, bool? uot, bool? xudp, bool? tfo, bool? mptcp, bool? smux,@JsonKey(name: 'dialer-proxy') String? dialerProxy,@JsonKey(name: 'interface') String? interfaceName, bool? disableUdp
 });
 
 
@@ -667,13 +685,22 @@ class __$ProxyCopyWithImpl<$Res>
 
 /// Create a copy of Proxy
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? type = null,Object? now = freezed,Object? providerName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? type = null,Object? now = freezed,Object? providerName = freezed,Object? udp = freezed,Object? uot = freezed,Object? xudp = freezed,Object? tfo = freezed,Object? mptcp = freezed,Object? smux = freezed,Object? dialerProxy = freezed,Object? interfaceName = freezed,Object? disableUdp = freezed,}) {
   return _then(_Proxy(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,now: freezed == now ? _self.now : now // ignore: cast_nullable_to_non_nullable
 as String?,providerName: freezed == providerName ? _self.providerName : providerName // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,udp: freezed == udp ? _self.udp : udp // ignore: cast_nullable_to_non_nullable
+as bool?,uot: freezed == uot ? _self.uot : uot // ignore: cast_nullable_to_non_nullable
+as bool?,xudp: freezed == xudp ? _self.xudp : xudp // ignore: cast_nullable_to_non_nullable
+as bool?,tfo: freezed == tfo ? _self.tfo : tfo // ignore: cast_nullable_to_non_nullable
+as bool?,mptcp: freezed == mptcp ? _self.mptcp : mptcp // ignore: cast_nullable_to_non_nullable
+as bool?,smux: freezed == smux ? _self.smux : smux // ignore: cast_nullable_to_non_nullable
+as bool?,dialerProxy: freezed == dialerProxy ? _self.dialerProxy : dialerProxy // ignore: cast_nullable_to_non_nullable
+as String?,interfaceName: freezed == interfaceName ? _self.interfaceName : interfaceName // ignore: cast_nullable_to_non_nullable
+as String?,disableUdp: freezed == disableUdp ? _self.disableUdp : disableUdp // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
