@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/prism_ui.dart';
 
 import '../helpers/glyph_finders.dart';
+import '../helpers/route_cover.dart';
 import '../helpers/scrollbar.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
@@ -988,5 +989,20 @@ void main() {
 
       await teardownView(tester);
     });
+  });
+
+  testWidgets('a page pushed over the requests and popped rebuilds none of '
+      'them', (tester) async {
+    await pumpRequests(tester);
+
+    expect(
+      await rebuildsWhileCovered<RequestsView>(
+        tester,
+        find.byType(RequestsView),
+      ),
+      0,
+    );
+
+    await teardownView(tester);
   });
 }
