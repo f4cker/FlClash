@@ -2735,5 +2735,8 @@
   "fakeIpFilterNotRulesTip": "Fake-IP 过滤里的「{entry}」不是规则写法，Fake-IP 模式下用 rule 过滤模式会让内核拒绝启动。请先把过滤列表改成规则写法，如 DOMAIN-SUFFIX,lan,real-ip。",
   "configBuildProxyServerPolicy": "无法应用配置「{profile}」：它有 Proxy Server Nameserver Policy（代理服务器 DNS 分流规则），但 Proxy Server Nameserver（代理服务器 DNS）为空。请在「进阶配置 → DNS」中填写 Proxy Server Nameserver。",
   "configBuildFakeIpFilterRuleSet": "无法应用配置「{profile}」：Fake-IP 过滤引用了规则集「{name}」，但这份配置里没有它。请在「进阶配置 → DNS → Fake-IP 过滤」中删掉这一条，或给这份配置加上这个规则集。",
-  "dnsProxyServerPolicyUnmetWarning": "当前配置「{profile}」有代理服务器 DNS 分流规则，代理服务器 DNS 为空时它将无法启动。请填写代理服务器 DNS。"
+  "dnsProxyServerPolicyUnmetWarning": "当前配置「{profile}」有代理服务器 DNS 分流规则，代理服务器 DNS 为空时它将无法启动。请填写代理服务器 DNS。",
+  "domainMatcherTip": "域名格式不对：不能有空格开头或结尾、末尾的点或连续的点；+ 只能整段写在最前面（如 +.example.com），* 只能占一整段（如 *.example.com）。",
+  "fakeIpRangeTip": "请填写 IPv4 网段，前缀不超过 /29，如 198.18.0.1/16。",
+  "fakeIpRange6Tip": "请填写 IPv6 网段，前缀不超过 /125，如 fdfe:dcba:9876::1/64。"
 }

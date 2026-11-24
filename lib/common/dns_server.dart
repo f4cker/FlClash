@@ -179,3 +179,69 @@ bool _mayCompile(String pattern) {
     return pattern.contains('(?');
   }
 }
+
+bool _isGoSpace(int c) =>
+    (c >= 0x09 && c <= 0x0d) ||
+    const {
+      0x20,
+      0x85,
+      0xa0,
+      0x1680,
+      0x2028,
+      0x2029,
+      0x202f,
+      0x205f,
+    }.contains(c) ||
+    (c >= 0x2000 && c <= 0x200a) ||
+    c == 0x3000;
+
+// component/trie ValidAndSplitDomain.
+bool isTrieDomain(String domain) {
+  if (domain.isEmpty || domain.endsWith('.')) return false;
+  if (_isGoSpace(domain.runes.first) || _isGoSpace(domain.runes.last)) {
+    return false;
+  }
+  final parts = domain.split('.');
+  if (parts.skip(1).any((part) => part.isEmpty)) return false;
+  for (final (index, part) in parts.indexed) {
+    if (part.contains('+') &&
+        (part != '+' || index != 0 || parts.length == 1)) {
+      return false;
+    }
+    if (part.contains('*') && part != '*') return false;
+  }
+  return true;
+}
+
+// geosite: and rule-set: name data only the Core holds.
+bool isDomainMatcher(String entry) {
+  final lower = entry.toLowerCase();
+  if (lower.startsWith('geosite:') || lower.startsWith('rule-set:')) {
+    return true;
+  }
+  return isTrieDomain(entry);
+}
+
+bool isPolicyDomain(String key) {
+  final lower = key.toLowerCase();
+  if (lower.startsWith('geosite:') || lower.startsWith('rule-set:')) {
+    return true;
+  }
+  return key.split(',').every(isDomainMatcher);
+}
+
+final _prefixBits = RegExp(r'^(0|[1-9][0-9]{0,2})$');
+
+// netip.ParsePrefix, then component/fakeip's smallest pool.
+bool isFakeIpRange(String value, {required bool v6}) {
+  final slash = value.lastIndexOf('/');
+  if (slash < 0) return false;
+  final addr = value.substring(0, slash);
+  final bits = value.substring(slash + 1);
+  if (addr.contains('%') || !_prefixBits.hasMatch(bits)) return false;
+  return switch (goParseAddr(addr)) {
+    GoAddrFamily.v4 => !v6 && int.parse(bits) <= 29,
+    GoAddrFamily.v6 => v6 && int.parse(bits) <= 125,
+    null => false,
+  };
+}

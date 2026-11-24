@@ -16269,6 +16269,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The current profile “{profile}” has a Proxy Server Nameserver Policy, so it won\'t start while Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver.'**
   String dnsProxyServerPolicyUnmetWarning(Object profile);
+
+  /// No description provided for @domainMatcherTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This domain is malformed: no leading or trailing spaces, trailing dot or empty label; + must be a whole first label (as in +.example.com), and * a whole label (as in *.example.com).'**
+  String get domainMatcherTip;
+
+  /// No description provided for @fakeIpRangeTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an IPv4 range of /29 or wider, such as 198.18.0.1/16.'**
+  String get fakeIpRangeTip;
+
+  /// No description provided for @fakeIpRange6Tip.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an IPv6 range of /125 or wider, such as fdfe:dcba:9876::1/64.'**
+  String get fakeIpRange6Tip;
 }
 
 class _AppLocalizationsDelegate

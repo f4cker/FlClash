@@ -9162,4 +9162,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String dnsProxyServerPolicyUnmetWarning(Object profile) {
     return '当前配置「$profile」有代理服务器 DNS 分流规则，代理服务器 DNS 为空时它将无法启动。请填写代理服务器 DNS。';
   }
+
+  @override
+  String get domainMatcherTip =>
+      '域名格式不对：不能有空格开头或结尾、末尾的点或连续的点；+ 只能整段写在最前面（如 +.example.com），* 只能占一整段（如 *.example.com）。';
+
+  @override
+  String get fakeIpRangeTip => '请填写 IPv4 网段，前缀不超过 /29，如 198.18.0.1/16。';
+
+  @override
+  String get fakeIpRange6Tip =>
+      '请填写 IPv6 网段，前缀不超过 /125，如 fdfe:dcba:9876::1/64。';
 }

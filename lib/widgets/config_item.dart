@@ -59,6 +59,26 @@ String? validateFakeIpFilterRule(
     ? null
     : appLocalizations.fakeIpFilterRuleTip;
 
+String? validateDomainMatcher(
+  String? value,
+  AppLocalizations appLocalizations,
+) => isDomainMatcher(value ?? '') ? null : appLocalizations.domainMatcherTip;
+
+String? validateTrieDomain(String? value, AppLocalizations appLocalizations) =>
+    isTrieDomain(value ?? '') ? null : appLocalizations.domainMatcherTip;
+
+String? validateFakeIpRange(String? value, AppLocalizations appLocalizations) =>
+    isFakeIpRange(value ?? '', v6: false)
+    ? null
+    : appLocalizations.fakeIpRangeTip;
+
+String? validateFakeIpRange6(
+  String? value,
+  AppLocalizations appLocalizations,
+) => isFakeIpRange(value ?? '', v6: true)
+    ? null
+    : appLocalizations.fakeIpRange6Tip;
+
 final _portRange = RegExp(r'^([0-9]{1,5})(?:-([0-9]{1,5}))?$');
 
 final _domainLabel = RegExp(

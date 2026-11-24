@@ -37,6 +37,9 @@ void main() {
     'dns-hijack': (value) => validateDnsHijack(value, l) == null,
     'hosts': isHostsValue,
     'fake-ip-filter-rule': isFakeIpFilterRule,
+    'fake-ip-filter-domain': isDomainMatcher,
+    'fake-ip-range': (value) => isFakeIpRange(value, v6: false),
+    'fake-ip-range6': (value) => isFakeIpRange(value, v6: true),
   };
 
   for (final MapEntry(key: kind, value: check) in validators.entries) {
@@ -102,5 +105,13 @@ void main() {
     );
     expect(hostsCycleOf({'a.com': 'b.com', 'b.com': '1.1.1.1'}), isNull);
     expect(hostsCycleOf({'a.com': 'b.com', 'c.com': 'b.com'}), isNull);
+  });
+
+  test('policy keys split at commas, and geosite: or rule-set: pass', () {
+    expect(isPolicyDomain('+.a.com,b.com'), isTrue);
+    expect(isPolicyDomain('a.com,geosite:cn'), isTrue);
+    expect(isPolicyDomain('geosite:cn,!x'), isTrue);
+    expect(isPolicyDomain('a.com,b.com.'), isFalse);
+    expect(isPolicyDomain('a*.com'), isFalse);
   });
 }

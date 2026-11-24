@@ -118,11 +118,13 @@ class _SnifferOverrideSpec extends OverrideSpec<SnifferOverrideKey, Sniffer>
       (sniffer) => sniffer.forceDomain,
       (sniffer, value) => sniffer.copyWith(forceDomain: value),
       itemMaxLength: TextInputLimits.domain,
+      itemValidator: validateDomainMatcher,
     ),
     SnifferOverrideKey.skipDomain => ListOverrideField(
       (sniffer) => sniffer.skipDomain,
       (sniffer, value) => sniffer.copyWith(skipDomain: value),
       itemMaxLength: TextInputLimits.domain,
+      itemValidator: validateDomainMatcher,
     ),
     SnifferOverrideKey.skipSrcAddress => ListOverrideField(
       (sniffer) => sniffer.skipSrcAddress,

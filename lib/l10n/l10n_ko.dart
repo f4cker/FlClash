@@ -9755,4 +9755,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String dnsProxyServerPolicyUnmetWarning(Object profile) {
     return 'The current profile “$profile” has a Proxy Server Nameserver Policy, so it won\'t start while Proxy Server Nameserver is empty. Fill in Proxy Server Nameserver.';
   }
+
+  @override
+  String get domainMatcherTip =>
+      'This domain is malformed: no leading or trailing spaces, trailing dot or empty label; + must be a whole first label (as in +.example.com), and * a whole label (as in *.example.com).';
+
+  @override
+  String get fakeIpRangeTip =>
+      'Enter an IPv4 range of /29 or wider, such as 198.18.0.1/16.';
+
+  @override
+  String get fakeIpRange6Tip =>
+      'Enter an IPv6 range of /125 or wider, such as fdfe:dcba:9876::1/64.';
 }

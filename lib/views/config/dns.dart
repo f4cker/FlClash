@@ -271,18 +271,8 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns, value) => dns.copyWith(enhancedMode: value),
       labelOf: _enhancedModeValue,
     ),
-    DnsOverrideKey.fakeIpRange => TextOverrideField(
-      (dns) => dns.fakeIpRange,
-      (dns, value) => dns.copyWith(fakeIpRange: value),
-      maxLength: TextInputLimits.cidr,
-      validator: validateCidr,
-    ),
-    DnsOverrideKey.fakeIpRange6 => TextOverrideField(
-      (dns) => dns.fakeIpRange6,
-      (dns, value) => dns.copyWith(fakeIpRange6: value),
-      maxLength: TextInputLimits.cidr,
-      validator: validateCidr,
-    ),
+    DnsOverrideKey.fakeIpRange => const _FakeIpRangeField(v6: false),
+    DnsOverrideKey.fakeIpRange6 => const _FakeIpRangeField(v6: true),
     DnsOverrideKey.fakeIpFilter => const _FakeIpFilterField(),
     DnsOverrideKey.fakeIpFilterMode => _FakeIpModeField(
       FakeIpFilterMode.values,
@@ -368,6 +358,7 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.fallbackFilter.domain,
       (dns, value) => dns.copyWith.fallbackFilter(domain: value),
       itemMaxLength: TextInputLimits.domain,
+      itemValidator: validateTrieDomain,
       description: (l) => l.fallbackFilterDomainDesc,
     ),
   };
@@ -420,13 +411,20 @@ class _FakeIpFilterField extends ListOverrideField<Dns> {
         final rules = ref.watch(
           model.selectModel((dns) => _filterIsRules(model, dns)),
         );
+        final mode = ref.watch(
+          model.selectModel((dns) => dns.fakeIpFilterMode),
+        );
         return ConfigListEditItem(
           leading: leading,
           title: title,
           selector: model.selectModel(select),
           onChanged: model.modelWriter(update),
           itemMaxLength: itemMaxLength,
-          itemValidator: rules ? validateFakeIpFilterRule : null,
+          itemValidator: switch (mode) {
+            _ when rules => validateFakeIpFilterRule,
+            FakeIpFilterMode.rule => null,
+            _ => validateDomainMatcher,
+          },
           itemSubtitle: rules
               ? (item, l) => validateFakeIpFilterRule(item, l)
               : null,
@@ -491,6 +489,64 @@ class _FakeIpModeField<T extends Object> extends OptionsOverrideField<Dns, T> {
     );
   }
 }
+
+String? _policyServersIssue(String value) => value
+    .split(RegExp(r'[, ;]+'))
+    .where((server) => server.isNotEmpty)
+    .map((server) => validateDnsServer(server, currentAppLocalizations))
+    .nonNulls
+    .firstOrNull;
+
+/// mihomo needs one of the two ranges in fake-ip mode.
+class _FakeIpRangeField extends TextOverrideField<Dns> {
+  const _FakeIpRangeField({required this.v6})
+    : super(
+        v6 ? _fakeIpRange6 : _fakeIpRange,
+        v6 ? _setFakeIpRange6 : _setFakeIpRange,
+        maxLength: TextInputLimits.cidr,
+        validator: v6 ? validateFakeIpRange6 : validateFakeIpRange,
+      );
+
+  final bool v6;
+
+  @override
+  Widget build(
+    OverrideModel<Dns> model, {
+    required ConfigLabel title,
+    required Widget? leading,
+  }) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final otherEmpty = ref.watch(
+          model.selectModel(
+            (dns) =>
+                dns.enhancedMode == DnsMode.fakeIp &&
+                (v6 ? dns.fakeIpRange : dns.fakeIpRange6).isEmpty,
+          ),
+        );
+        return ConfigTextItem(
+          leading: leading,
+          title: title,
+          selector: model.selectModel(select),
+          onChanged: model.modelWriter(update),
+          maxLength: maxLength,
+          normalize: (value) => value.trim(),
+          validator: validator,
+          allowEmpty: !otherEmpty,
+        );
+      },
+    );
+  }
+}
+
+String _fakeIpRange(Dns dns) => dns.fakeIpRange;
+
+Dns _setFakeIpRange(Dns dns, String value) => dns.copyWith(fakeIpRange: value);
+
+String _fakeIpRange6(Dns dns) => dns.fakeIpRange6;
+
+Dns _setFakeIpRange6(Dns dns, String value) =>
+    dns.copyWith(fakeIpRange6: value);
 
 class _ListenField extends TextOverrideField<Dns> {
   const _ListenField()
@@ -630,6 +686,9 @@ class _PolicyItem extends ConsumerWidget {
         entries: policy,
         keyMaxLength: TextInputLimits.domain,
         valueMaxLength: TextInputLimits.dnsServer,
+        keyValidator: (key) =>
+            isPolicyDomain(key) ? null : appLocalizations.domainMatcherTip,
+        valueValidator: _policyServersIssue,
         titleBuilder: (item) => Text(item.key),
         subtitleBuilder: (item) => Text(item.value),
       ),

@@ -20,6 +20,7 @@ class MapEditView extends ConsumerStatefulWidget {
   final Widget Function(MapEntry<String, String> item)? subtitleBuilder;
   final int? keyMaxLength;
   final int? valueMaxLength;
+  final String? Function(String key)? keyValidator;
   final String? Function(String value)? valueValidator;
   final String? Function(Map<String, String> entries)? saveError;
 
@@ -32,6 +33,7 @@ class MapEditView extends ConsumerStatefulWidget {
     this.subtitleBuilder,
     this.keyMaxLength,
     this.valueMaxLength,
+    this.keyValidator,
     this.valueValidator,
     this.saveError,
   });
@@ -79,6 +81,7 @@ class _MapEditViewState extends EditViewState<MapEditView, _Entry> {
       existingKeys: entries.map(idOf).toSet(),
       keyMaxLength: widget.keyMaxLength,
       valueMaxLength: widget.valueMaxLength,
+      keyValidator: widget.keyValidator,
       valueValidator: widget.valueValidator,
     );
   }
@@ -94,6 +97,7 @@ class _MapEditViewState extends EditViewState<MapEditView, _Entry> {
       entries: entries,
       keyMaxLength: widget.keyMaxLength,
       valueMaxLength: widget.valueMaxLength,
+      keyValidator: widget.keyValidator,
       valueValidator: widget.valueValidator,
       onChanged: onChanged,
     );
@@ -108,6 +112,7 @@ Future<MapEntry<String, String>?> showMapEntryForm(
   int? keyMaxLength,
   int? valueMaxLength,
   bool ignoreKeyCase = false,
+  String? Function(String key)? keyValidator,
   String? Function(String value)? valueValidator,
 }) {
   return showFormSheet<_Entry>(
@@ -118,6 +123,7 @@ Future<MapEntry<String, String>?> showMapEntryForm(
       keyMaxLength: keyMaxLength,
       valueMaxLength: valueMaxLength,
       ignoreKeyCase: ignoreKeyCase,
+      keyValidator: keyValidator,
       valueValidator: valueValidator,
     ),
   );
@@ -131,6 +137,7 @@ class _MapEntryForm extends StatefulWidget {
   final int? keyMaxLength;
   final int? valueMaxLength;
   final bool ignoreKeyCase;
+  final String? Function(String key)? keyValidator;
   final String? Function(String value)? valueValidator;
 
   const _MapEntryForm({
@@ -139,6 +146,7 @@ class _MapEntryForm extends StatefulWidget {
     required this.keyMaxLength,
     required this.valueMaxLength,
     required this.ignoreKeyCase,
+    required this.keyValidator,
     required this.valueValidator,
   });
 
@@ -194,6 +202,9 @@ class _MapEntryFormState extends State<_MapEntryForm> {
         field: _MapEntryField.key,
         message: appLocalizations.existsTip(_keyLabel),
       );
+    }
+    if (widget.keyValidator?.call(key) case final message?) {
+      return (field: _MapEntryField.key, message: message);
     }
     final value = _valueController.text.trim();
     if (value.isEmpty) {

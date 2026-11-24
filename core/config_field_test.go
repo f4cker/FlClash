@@ -81,6 +81,14 @@ func checkConfigField(kind, value string) error {
 		dns["fake-ip-range"] = "198.18.0.1/16"
 		dns["fake-ip-filter-mode"] = "rule"
 		dns["fake-ip-filter"] = []string{value}
+	case "fake-ip-filter-domain":
+		dns["enhanced-mode"] = "fake-ip"
+		dns["fake-ip-range"] = "198.18.0.1/16"
+		dns["fake-ip-filter"] = []string{value}
+	case "fake-ip-range", "fake-ip-range6":
+		dns["enhanced-mode"] = "fake-ip"
+		dns["fake-ip-range"] = ""
+		dns[kind] = value
 	case "dns-hijack":
 		return parseDNSHijack(value)
 	case "hosts":
