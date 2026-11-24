@@ -42,11 +42,15 @@ const ROOT_MAXIMUM_WIDTH: f64 = 380.0;
 const SUBMENU_MAXIMUM_WIDTH: f64 = 420.0;
 const DETAIL_GAP: f64 = 12.0;
 const ARROW_GAP: f64 = 8.0;
+const BADGE_GAP: f64 = 8.0;
+const BADGE_ARROW_GAP: f64 = 5.0;
+const BADGE_PADDING: f64 = 3.0;
+const BADGE_MINIMUM_WIDTH: f64 = 28.0;
 const DETAIL_MAXIMUM_WIDTH: f64 = 110.0;
-/// A group row's selection up to this wide is never cut, and a longer one is
-/// cut no further: it holds four CJK characters, "DIRECT" or "HK 01" at 13pt.
-const DETAIL_MINIMUM_WIDTH: f64 = 64.0;
-const GROUP_BADGE_MINIMUM_WIDTH: f64 = 60.0;
+/// The room a menu opens with for a group row's selection, six CJK characters
+/// at 13pt. Beside a 3-digit delay a menu of long selections is as wide as it
+/// was with the old 60pt badge.
+const DETAIL_MINIMUM_WIDTH: f64 = 87.0;
 const ICON_PNG_MAXIMUM_BYTES: usize = 2_100_000;
 const ICON_MAXIMUM_PIXELS: isize = 4096;
 const PNG_SIGNATURE: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -462,6 +466,7 @@ impl TrayMenu {
             self.ivars().entries.borrow_mut()[index] = entry;
             self.ivars().contents.borrow_mut()[index] = Some(content);
         }
+        self.refresh_badge_column();
     }
 
     fn apply(&self, entries: Vec<Entry>, generation: u32) {
@@ -486,6 +491,24 @@ impl TrayMenu {
             }
         }
         *self.ivars().entries.borrow_mut() = entries;
+        self.refresh_badge_column();
+    }
+
+    fn badge_column(&self) -> f64 {
+        badge_column(self.ivars().contents.borrow().iter().flatten())
+    }
+
+    /// Gives every row the width of the widest badge now in the menu.
+    fn refresh_badge_column(&self) {
+        let column = self.badge_column();
+        for item in self.itemArray().iter() {
+            if let Some(row) = item
+                .view()
+                .and_then(|view| view.downcast::<ItemView>().ok())
+            {
+                row.set_badge_column(column);
+            }
+        }
     }
 
     fn refresh_view(&self, item: &NSMenuItem, entry: &Entry, content: &ItemContent) {
@@ -551,16 +574,18 @@ impl TrayMenu {
         let entries = self.ivars().entries.borrow().clone();
         let contents = self.ivars().contents.borrow().clone();
         let mtm = self.mtm();
+        let column = self.badge_column();
         let mut widest: f64 = 0.0;
         for (entry, content) in entries.iter().zip(&contents) {
             if entry.kind == Kind::Segments {
                 for child in &entry.items {
                     let item = NSMenuItem::new(mtm);
                     configure(&item, child);
-                    widest = widest.max(ItemView::preferred_width(&ItemContent::of(child, &item)));
+                    let content = ItemContent::of(child, &item);
+                    widest = widest.max(ItemView::preferred_width(&content, 0.0));
                 }
             } else if let Some(content) = content {
-                widest = widest.max(ItemView::preferred_width(content));
+                widest = widest.max(ItemView::preferred_width(content, column));
             }
         }
         let width = widest.min(self.ivars().maximum_width);
@@ -576,9 +601,10 @@ impl TrayMenu {
                 view.update(entry.items.clone(), item.isEnabled());
                 item.setView(Some(&view));
             } else if let Some(Some(content)) = contents.get(index) {
-                item.setView(Some(&ItemView::new(mtm, content.clone(), width)));
+                item.setView(Some(&ItemView::new(mtm, content.clone(), width, column)));
             }
         }
+        self.refresh_badge_column();
     }
 }
 
@@ -796,7 +822,7 @@ impl Style {
                 NSFontWeightRegular
             }),
             badge_font: NSFont::monospacedDigitSystemFontOfSize_weight(
-                (size - 1.0).max(12.0),
+                (size - 3.0).max(10.0),
                 unsafe { NSFontWeightMedium },
             ),
             monogram_font: NSFont::systemFontOfSize_weight(10.0, unsafe { NSFontWeightSemibold }),
@@ -807,20 +833,11 @@ impl Style {
     }
 
     fn badge_width(&self, label: &str) -> f64 {
-        let measured = text_width(label, &self.badge_font) + 12.0;
+        let measured = text_width(label, &self.badge_font) + 2.0 * BADGE_PADDING;
         if is_delay(label) {
-            let digits = label.chars().filter(char::is_ascii_digit).count();
-            return measured.max(if digits >= 5 { 76.0 } else { 60.0 });
-        }
-        measured.min(110.0).max(46.0)
-    }
-
-    fn row_badge_width(&self, label: &str, group_row: bool) -> f64 {
-        let width = self.badge_width(label);
-        if group_row {
-            width.max(GROUP_BADGE_MINIMUM_WIDTH)
+            measured
         } else {
-            width
+            measured.min(110.0)
         }
     }
 }
@@ -896,6 +913,7 @@ fn post(element: &AnyObject, notification: &NSString) {
 
 pub(super) struct ItemViewIvars {
     content: RefCell<ItemContent>,
+    badge_column: Cell<f64>,
     highlighted: Cell<bool>,
     monitor: RefCell<KeyMonitor>,
 }
@@ -956,7 +974,7 @@ define_class!(
 );
 
 impl ItemView {
-    fn preferred_width(content: &ItemContent) -> f64 {
+    fn preferred_width(content: &ItemContent, badge_column: f64) -> f64 {
         STYLE.with(|style| {
             row_width(
                 style.title_x + style.trailing,
@@ -968,16 +986,22 @@ impl ItemView {
                 content
                     .badge
                     .as_ref()
-                    .map(|badge| style.row_badge_width(&badge.label, content.has_submenu)),
+                    .map(|badge| style.badge_width(&badge.label).max(badge_column)),
                 content.has_submenu.then(|| style.arrow.size().width),
             )
         })
     }
 
-    fn new(mtm: MainThreadMarker, content: ItemContent, width: f64) -> Retained<Self> {
+    fn new(
+        mtm: MainThreadMarker,
+        content: ItemContent,
+        width: f64,
+        badge_column: f64,
+    ) -> Retained<Self> {
         let height = STYLE.with(|style| style.height);
         let this = Self::alloc(mtm).set_ivars(ItemViewIvars {
             content: RefCell::new(content),
+            badge_column: Cell::new(badge_column),
             highlighted: Cell::new(false),
             monitor: RefCell::new(KeyMonitor(None)),
         });
@@ -986,6 +1010,12 @@ impl ItemView {
         view.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
         view.update_accessibility();
         view
+    }
+
+    fn set_badge_column(&self, column: f64) {
+        if self.ivars().badge_column.replace(column) != column {
+            self.setNeedsDisplay(true);
+        }
     }
 
     fn update(&self, content: ItemContent) {
@@ -1211,7 +1241,7 @@ impl ItemView {
                 f64::INFINITY,
                 bounds,
             );
-            trailing_x -= arrow_width + ARROW_GAP;
+            trailing_x -= arrow_width + arrow_gap(content.badge.is_some());
         }
         let layout = trailing_layout(
             trailing_x - style.title_x,
@@ -1220,44 +1250,42 @@ impl ItemView {
                 .detail
                 .is_some()
                 .then(|| content.detail_width(&style.detail_font)),
-            content
-                .badge
-                .as_ref()
-                .map(|badge| style.row_badge_width(&badge.label, content.has_submenu)),
+            content.badge.as_ref().map(|badge| {
+                style
+                    .badge_width(&badge.label)
+                    .max(self.ivars().badge_column.get())
+            }),
             content.has_submenu,
         );
         if let Some(badge) = &content.badge {
             let width = layout.badge;
-            let height = (style.badge_font.ascender() - style.badge_font.descender()).ceil() + 4.0;
+            let height = (style.badge_font.ascender() - style.badge_font.descender()).ceil() + 2.0;
             let rect = NSRect::new(
                 NSPoint::new(trailing_x - width, (bounds.size.height - height) / 2.0),
                 NSSize::new(width, height),
             );
-            let background = if highlighted {
-                NSColor::colorWithWhite_alpha(1.0, 0.12)
-            } else {
-                argb(badge.background)
-            };
-            background.setFill();
-            NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 5.0, 5.0).fill();
-            let color = if highlighted {
-                primary.clone()
-            } else if !content.enabled {
+            if highlighted {
+                NSColor::windowBackgroundColor().setFill();
+                NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 4.0, 4.0).fill();
+            }
+            argb(badge.background).setFill();
+            NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, 4.0, 4.0).fill();
+            let color = if !content.enabled {
                 NSColor::disabledControlTextColor()
             } else {
                 readable(badge.foreground, badge.background)
             };
             draw_text(
                 &badge.label,
-                rect.origin.x + 6.0,
-                width - 12.0,
+                rect.origin.x + BADGE_PADDING,
+                width - 2.0 * BADGE_PADDING,
                 &color,
                 &style.badge_font,
                 bounds,
                 NSTextAlignment::Right,
                 NSLineBreakMode::ByTruncatingMiddle,
             );
-            trailing_x -= width + DETAIL_GAP;
+            trailing_x -= width + BADGE_GAP;
         }
         if let Some(detail) = &content.detail {
             let color = if highlighted {
@@ -1295,7 +1323,8 @@ impl ItemView {
 
 /// Widths along a row's trailing edge, given [room] from the title's start to
 /// the arrow or edge. On a group row the badge and title stay whole and the
-/// selection truncates first, down to [DETAIL_MINIMUM_WIDTH].
+/// selection truncates first, below [DETAIL_MINIMUM_WIDTH] once a badge has
+/// widened in an open menu.
 #[derive(Debug, PartialEq)]
 struct TrailingLayout {
     badge: f64,
@@ -1311,13 +1340,13 @@ fn trailing_layout(
     has_submenu: bool,
 ) -> TrailingLayout {
     let badge_width = badge.map_or(0.0, |width| {
-        let width = width.min(room.max(46.0));
-        room -= width + DETAIL_GAP;
+        let width = width.min(room.max(BADGE_MINIMUM_WIDTH));
+        room -= width + BADGE_GAP;
         width
     });
     let detail_width = detail.map_or(0.0, |width| {
         let width = if has_submenu && badge.is_some() {
-            width.min((room - title - DETAIL_GAP).max(DETAIL_MINIMUM_WIDTH))
+            width.min((room - title - DETAIL_GAP).max(0.0))
         } else {
             width
         }
@@ -1329,6 +1358,24 @@ fn trailing_layout(
         badge: badge_width,
         detail: detail_width,
         title: room.max(0.0),
+    }
+}
+
+/// The width every badge in a menu takes: its widest badge.
+fn badge_column<'a>(contents: impl Iterator<Item = &'a ItemContent>) -> f64 {
+    STYLE.with(|style| {
+        contents
+            .filter_map(|content| content.badge.as_ref())
+            .map(|badge| style.badge_width(&badge.label))
+            .fold(0.0, f64::max)
+    })
+}
+
+fn arrow_gap(has_badge: bool) -> f64 {
+    if has_badge {
+        BADGE_ARROW_GAP
+    } else {
+        ARROW_GAP
     }
 }
 
@@ -1344,13 +1391,13 @@ fn row_width(
     let trailing = match (badge, arrow) {
         (Some(badge), Some(_)) => detail_room.max(
             badge
-                + DETAIL_GAP
+                + BADGE_GAP
                 + detail.map_or(0.0, |width| width.min(DETAIL_MINIMUM_WIDTH) + DETAIL_GAP),
         ),
-        (Some(badge), None) => detail_room + badge + DETAIL_GAP,
+        (Some(badge), None) => detail_room + badge + BADGE_GAP,
         (None, _) => detail_room,
     };
-    let arrow = arrow.map_or(0.0, |width| width + ARROW_GAP);
+    let arrow = arrow.map_or(0.0, |width| width + arrow_gap(badge.is_some()));
     (edges + title + trailing + arrow).ceil()
 }
 
@@ -1917,9 +1964,10 @@ fn draw_symbol(image: &NSImage, x: f64, color: &NSColor, max_width: f64, bounds:
 mod tests {
     use super::topology::{grouped, matches, retained_enabled, retained_status, shared_index};
     use super::{
-        is_delay, item_enabled, row_width, segment_track, takes_key, text_width, trailing_layout,
-        Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP, DETAIL_GAP,
-        DETAIL_MAXIMUM_WIDTH, DETAIL_MINIMUM_WIDTH, GROUP_BADGE_MINIMUM_WIDTH,
+        badge_column, is_delay, item_enabled, row_width, segment_track, takes_key, text_width,
+        trailing_layout, Entry, ItemContent, Kind, Style, TrailingLayout, ARROW_GAP,
+        BADGE_ARROW_GAP, BADGE_GAP, BADGE_PADDING, DETAIL_GAP, DETAIL_MAXIMUM_WIDTH,
+        DETAIL_MINIMUM_WIDTH,
     };
     use objc2_app_kit::NSEventModifierFlags;
     use objc2_app_kit::NSFont;
@@ -2180,7 +2228,8 @@ mod tests {
     const EDGES: f64 = 54.0;
     const TITLE: f64 = 52.0;
     const ARROW: f64 = 10.0;
-    const BADGE: f64 = 60.0;
+    const BADGE: f64 = 44.0;
+    const BADGE_ROOM: f64 = BADGE + BADGE_GAP + BADGE_ARROW_GAP - ARROW_GAP;
 
     fn menu_width(details: &[f64], badge: Option<f64>) -> f64 {
         details
@@ -2190,7 +2239,7 @@ mod tests {
     }
 
     fn layout_in(width: f64, detail: f64) -> TrailingLayout {
-        let room = width - EDGES - ARROW - ARROW_GAP;
+        let room = width - EDGES - ARROW - BADGE_ARROW_GAP;
         trailing_layout(room, TITLE, Some(detail), Some(BADGE), true)
     }
 
@@ -2199,7 +2248,7 @@ mod tests {
         let details = [38.0, 46.0, 52.0];
         let before = menu_width(&details, None);
         let after = menu_width(&details, Some(BADGE));
-        assert_eq!(after - before, BADGE + DETAIL_GAP);
+        assert_eq!(after - before, BADGE_ROOM);
         for detail in details {
             let layout = layout_in(after, detail);
             assert_eq!(layout.detail, detail);
@@ -2216,7 +2265,7 @@ mod tests {
         let before = menu_width(&[DETAIL_MAXIMUM_WIDTH], None);
         assert_eq!(
             long - before,
-            BADGE + DETAIL_GAP + DETAIL_MINIMUM_WIDTH - DETAIL_MAXIMUM_WIDTH
+            BADGE_ROOM + DETAIL_MINIMUM_WIDTH - DETAIL_MAXIMUM_WIDTH
         );
         let layout = layout_in(long, DETAIL_MAXIMUM_WIDTH);
         assert_eq!(
@@ -2227,6 +2276,14 @@ mod tests {
                 title: TITLE
             }
         );
+    }
+
+    #[test]
+    fn six_cjk_characters_stay_whole_beside_a_badge() {
+        let style = Style::current();
+        for name in ["香港节点 01", "新加坡节点组"] {
+            assert!(text_width(name, &style.detail_font) <= DETAIL_MINIMUM_WIDTH);
+        }
     }
 
     #[test]
@@ -2242,16 +2299,76 @@ mod tests {
     }
 
     #[test]
-    fn group_row_badges_share_a_width_and_member_badges_keep_theirs() {
+    fn badges_hug_their_own_text() {
         let style = Style::current();
-        for label in ["38 ms", "未测速", "超时", "测试中"] {
-            assert_eq!(
-                style.row_badge_width(label, true),
-                GROUP_BADGE_MINIMUM_WIDTH
-            );
+        assert_eq!(style.badge_font.pointSize(), style.font.pointSize() - 3.0);
+        for label in ["63 ms", "1234 ms", "未测速", "超时", "测试中"] {
+            let text = text_width(label, &style.badge_font);
+            assert_eq!(style.badge_width(label), text + 2.0 * BADGE_PADDING);
         }
-        assert!(style.row_badge_width("超时", false) < GROUP_BADGE_MINIMUM_WIDTH);
-        assert_eq!(style.row_badge_width("38 ms", false), 60.0);
+        assert_eq!(style.badge_width("999 ms"), BADGE);
+        assert!(style.badge_width("63 ms") < style.badge_width("1234 ms"));
+    }
+
+    fn badged(label: &str) -> ItemContent {
+        ItemContent {
+            label: "Group".into(),
+            detail: None,
+            icon: None,
+            badge: Some(super::BadgeContent {
+                label: label.into(),
+                background: 0,
+                foreground: 0,
+            }),
+            accessibility_label: None,
+            is_checkbox: false,
+            checked: false,
+            enabled: true,
+            keeps_open: false,
+            has_submenu: true,
+        }
+    }
+
+    #[test]
+    fn a_menus_badges_take_the_width_of_its_widest_badge() {
+        let style = Style::current();
+        let column = |labels: &[&str]| {
+            let contents: Vec<_> = labels.iter().map(|label| badged(label)).collect();
+            badge_column(contents.iter())
+        };
+        assert_eq!(column(&["63 ms", "111 ms", "34 ms"]), BADGE);
+        assert_eq!(column(&["63 ms", "1234 ms"]), style.badge_width("1234 ms"));
+        assert_eq!(column(&["63 ms", "未测速"]), style.badge_width("63 ms"));
+        assert_eq!(column(&["超时"]), style.badge_width("超时"));
+        assert_eq!(badge_column(std::iter::empty()), 0.0);
+    }
+
+    #[test]
+    fn a_badge_widened_in_an_open_menu_takes_room_from_the_selection() {
+        let width = menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE));
+        let room = width - EDGES - ARROW - BADGE_ARROW_GAP;
+        let wider = trailing_layout(room, TITLE, Some(DETAIL_MAXIMUM_WIDTH), Some(50.0), true);
+        assert_eq!(wider.title, TITLE);
+        assert_eq!(wider.badge, 50.0);
+        assert_eq!(wider.detail, DETAIL_MINIMUM_WIDTH - (50.0 - BADGE));
+    }
+
+    #[test]
+    fn a_narrower_badge_gives_its_room_to_the_selection() {
+        let width = menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE));
+        let room = width - EDGES - ARROW - BADGE_ARROW_GAP;
+        let narrow = trailing_layout(room, TITLE, Some(DETAIL_MAXIMUM_WIDTH), Some(40.0), true);
+        assert_eq!(narrow.detail, DETAIL_MINIMUM_WIDTH + BADGE - 40.0);
+        assert_eq!(
+            narrow.badge + BADGE_GAP + narrow.detail,
+            BADGE + BADGE_GAP + DETAIL_MINIMUM_WIDTH
+        );
+    }
+
+    #[test]
+    fn long_selections_keep_the_menu_width_of_the_old_badge() {
+        let old = EDGES + TITLE + 60.0 + 12.0 + 64.0 + DETAIL_GAP + ARROW + ARROW_GAP;
+        assert_eq!(menu_width(&[DETAIL_MAXIMUM_WIDTH], Some(BADGE)), old);
     }
 
     #[test]
@@ -2273,7 +2390,7 @@ mod tests {
         assert_eq!(layout.title, 150.0 - 100.0 - DETAIL_GAP);
         let member = trailing_layout(150.0, 200.0, Some(100.0), Some(60.0), false);
         assert_eq!(member.badge, 60.0);
-        assert_eq!(member.detail, 150.0 - 60.0 - DETAIL_GAP);
+        assert_eq!(member.detail, 150.0 - 60.0 - BADGE_GAP);
     }
 
     #[test]
