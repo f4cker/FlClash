@@ -258,7 +258,7 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.cacheMaxSize,
       (dns, value) => dns.copyWith(cacheMaxSize: value),
     ),
-    DnsOverrideKey.enhancedMode => OptionsOverrideField(
+    DnsOverrideKey.enhancedMode => _FakeIpModeField(
       _enhancedModes,
       (dns) => dns.enhancedMode,
       (dns, value) => dns.copyWith(enhancedMode: value),
@@ -276,13 +276,8 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       maxLength: TextInputLimits.cidr,
       validator: validateCidr,
     ),
-    DnsOverrideKey.fakeIpFilter => ListOverrideField(
-      (dns) => dns.fakeIpFilter,
-      (dns, value) => dns.copyWith(fakeIpFilter: value),
-      itemMaxLength: TextInputLimits.domain,
-      description: (l) => l.fakeipFilterDesc,
-    ),
-    DnsOverrideKey.fakeIpFilterMode => OptionsOverrideField(
+    DnsOverrideKey.fakeIpFilter => const _FakeIpFilterField(),
+    DnsOverrideKey.fakeIpFilterMode => _FakeIpModeField(
       FakeIpFilterMode.values,
       (dns) => dns.fakeIpFilterMode,
       (dns, value) => dns.copyWith(fakeIpFilterMode: value),
@@ -388,6 +383,107 @@ String? _nameserverSaveError(
         !ref.read(networkSettingProvider).appendSystemDns
     ? currentAppLocalizations.nameserverEmptyTip
     : null;
+
+// Only the app page's filter keys reach every profile, so only it is checked.
+bool _filterIsRules(OverrideModel<Dns> model, Dns dns) =>
+    model is PatchOverrideTarget<DnsOverrideKey, Dns> &&
+    dns.enhancedMode == DnsMode.fakeIp &&
+    dns.fakeIpFilterMode == FakeIpFilterMode.rule;
+
+String? _firstNonRule(List<String> filter) =>
+    filter.where((entry) => !isFakeIpFilterRule(entry)).firstOrNull;
+
+class _FakeIpFilterField extends ListOverrideField<Dns> {
+  const _FakeIpFilterField()
+    : super(
+        _fakeIpFilter,
+        _setFakeIpFilter,
+        itemMaxLength: TextInputLimits.domain,
+        description: _fakeIpFilterDesc,
+      );
+
+  @override
+  Widget build(
+    OverrideModel<Dns> model, {
+    required ConfigLabel title,
+    required Widget? leading,
+  }) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final rules = ref.watch(
+          model.selectModel((dns) => _filterIsRules(model, dns)),
+        );
+        return ConfigListEditItem(
+          leading: leading,
+          title: title,
+          selector: model.selectModel(select),
+          onChanged: model.modelWriter(update),
+          itemMaxLength: itemMaxLength,
+          itemValidator: rules ? validateFakeIpFilterRule : null,
+          itemSubtitle: rules
+              ? (item, l) => validateFakeIpFilterRule(item, l)
+              : null,
+          description: description,
+          saveError: rules
+              ? (ref, items) => switch (_firstNonRule(items)) {
+                  final entry? =>
+                    currentAppLocalizations.fakeIpFilterNotRulesTip(entry),
+                  null => null,
+                }
+              : null,
+        );
+      },
+    );
+  }
+}
+
+List<String> _fakeIpFilter(Dns dns) => dns.fakeIpFilter;
+
+Dns _setFakeIpFilter(Dns dns, List<String> value) =>
+    dns.copyWith(fakeIpFilter: value);
+
+String _fakeIpFilterDesc(AppLocalizations l) => l.fakeipFilterDesc;
+
+/// Refuses a mode that would turn a domain-style filter into rules.
+class _FakeIpModeField<T extends Object> extends OptionsOverrideField<Dns, T> {
+  const _FakeIpModeField(
+    super.options,
+    super.select,
+    super.update, {
+    super.labelOf,
+  });
+
+  @override
+  Widget build(
+    OverrideModel<Dns> model, {
+    required ConfigLabel title,
+    required Widget? leading,
+  }) {
+    final write = model.modelWriter(update);
+    return ConfigOptionsItem<T>(
+      leading: leading,
+      title: title,
+      options: options,
+      textBuilder: labelOf,
+      selector: model.selectModel(select),
+      onChanged: (ref, value) {
+        if (model case final OverrideTarget<DnsOverrideKey, Dns> target) {
+          final next = update(target.read(ref).model, value);
+          if (_filterIsRules(model, next)) {
+            if (_firstNonRule(next.fakeIpFilter) case final entry?) {
+              dialogs.showBanner(
+                currentAppLocalizations.fakeIpFilterNotRulesTip(entry),
+                level: BannerLevel.error,
+              );
+              return;
+            }
+          }
+        }
+        write(ref, value);
+      },
+    );
+  }
+}
 
 class _ListenField extends TextOverrideField<Dns> {
   const _ListenField()

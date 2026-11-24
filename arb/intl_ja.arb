@@ -4130,5 +4130,7 @@
   "controllerPortConflictTip": "Port 9090 is used by the external controller. Choose another port.",
   "tunNotListening": "TUN didn't start. Check the TUN settings, such as DNS hijacking; the log says why.",
   "hostsValueTip": "Enter one domain (such as example.com), or one or more IP addresses separated by commas or spaces, not a mix.",
-  "hostsCycleTip": "“{domain}” leads back to itself through other entries, and the core refuses such Hosts. Change one of them."
+  "hostsCycleTip": "“{domain}” leads back to itself through other entries, and the core refuses such Hosts. Change one of them.",
+  "fakeIpFilterRuleTip": "In rule mode, write each entry as TYPE,value,fake-ip or real-ip, such as DOMAIN-SUFFIX,lan,real-ip, or MATCH,real-ip. Only domain rules work: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-WILDCARD, DOMAIN-REGEX, GEOSITE and RULE-SET.",
+  "fakeIpFilterNotRulesTip": "The Fake-IP filter entry “{entry}” is not written as a rule, so with Fake-IP mode the rule filter mode would stop the core from starting. First rewrite the filter as rules, such as DOMAIN-SUFFIX,lan,real-ip."
 }

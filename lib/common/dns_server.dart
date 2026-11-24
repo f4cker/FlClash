@@ -124,3 +124,58 @@ UdpInbound? dnsListenTakenBy(
   if (port == socksPort) return UdpInbound.socks;
   return null;
 }
+
+// config.go parseFakeIPRules, over RC.ParseRulePayload and R.ParseRule.
+bool isFakeIpFilterRule(String line) {
+  final item = [for (final part in line.split(',')) _trimSpaces(part)];
+  final type = item.first.toUpperCase();
+  var payload = '';
+  var action = '';
+  if (item.length > 1) {
+    switch (type) {
+      case 'MATCH':
+        action = item[1];
+      case 'NOT' || 'OR' || 'AND' || 'SUB-RULE' || 'DOMAIN-REGEX':
+      case 'PROCESS-NAME-REGEX' || 'PROCESS-PATH-REGEX':
+        action = item.last;
+        payload = item.sublist(1, item.length - 1).join(',');
+      default:
+        payload = item[1];
+        if (item.length > 2) action = item[2];
+    }
+  }
+  action = action.toLowerCase();
+  if (action != 'fake-ip' && action != 'real-ip') return false;
+  if (type != 'MATCH' && payload.isEmpty) return false;
+  return switch (type) {
+    'DOMAIN' ||
+    'DOMAIN-SUFFIX' ||
+    'DOMAIN-KEYWORD' ||
+    'DOMAIN-WILDCARD' => true,
+    'GEOSITE' || 'RULE-SET' || 'MATCH' => true,
+    'DOMAIN-REGEX' => _mayCompile(payload),
+    _ => false,
+  };
+}
+
+String _trimSpaces(String value) {
+  var start = 0;
+  var end = value.length;
+  while (start < end && value[start] == ' ') {
+    start++;
+  }
+  while (end > start && value[end - 1] == ' ') {
+    end--;
+  }
+  return value.substring(start, end);
+}
+
+// mihomo compiles with regexp2, whose extra syntax all starts with `(?`.
+bool _mayCompile(String pattern) {
+  try {
+    RegExp(pattern);
+    return true;
+  } on FormatException {
+    return pattern.contains('(?');
+  }
+}

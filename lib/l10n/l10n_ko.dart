@@ -9731,4 +9731,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String hostsCycleTip(Object domain) {
     return '“$domain” leads back to itself through other entries, and the core refuses such Hosts. Change one of them.';
   }
+
+  @override
+  String get fakeIpFilterRuleTip =>
+      'In rule mode, write each entry as TYPE,value,fake-ip or real-ip, such as DOMAIN-SUFFIX,lan,real-ip, or MATCH,real-ip. Only domain rules work: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-WILDCARD, DOMAIN-REGEX, GEOSITE and RULE-SET.';
+
+  @override
+  String fakeIpFilterNotRulesTip(Object entry) {
+    return 'The Fake-IP filter entry “$entry” is not written as a rule, so with Fake-IP mode the rule filter mode would stop the core from starting. First rewrite the filter as rules, such as DOMAIN-SUFFIX,lan,real-ip.';
+  }
 }

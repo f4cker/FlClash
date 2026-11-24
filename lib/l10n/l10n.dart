@@ -16239,6 +16239,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'“{domain}” leads back to itself through other entries, and the core refuses such Hosts. Change one of them.'**
   String hostsCycleTip(Object domain);
+
+  /// No description provided for @fakeIpFilterRuleTip.
+  ///
+  /// In en, this message translates to:
+  /// **'In rule mode, write each entry as TYPE,value,fake-ip or real-ip, such as DOMAIN-SUFFIX,lan,real-ip, or MATCH,real-ip. Only domain rules work: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-WILDCARD, DOMAIN-REGEX, GEOSITE and RULE-SET.'**
+  String get fakeIpFilterRuleTip;
+
+  /// No description provided for @fakeIpFilterNotRulesTip.
+  ///
+  /// In en, this message translates to:
+  /// **'The Fake-IP filter entry “{entry}” is not written as a rule, so with Fake-IP mode the rule filter mode would stop the core from starting. First rewrite the filter as rules, such as DOMAIN-SUFFIX,lan,real-ip.'**
+  String fakeIpFilterNotRulesTip(Object entry);
 }
 
 class _AppLocalizationsDelegate

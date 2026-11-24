@@ -9138,4 +9138,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String hostsCycleTip(Object domain) {
     return '「$domain」经过其他条目又指回了自己，内核会拒绝这份 Hosts。请修改其中一条。';
   }
+
+  @override
+  String get fakeIpFilterRuleTip =>
+      '过滤模式为 rule 时，每条要写成「规则类型,内容,fake-ip 或 real-ip」，如 DOMAIN-SUFFIX,lan,real-ip，或写 MATCH,real-ip。只能用 DOMAIN、DOMAIN-SUFFIX、DOMAIN-KEYWORD、DOMAIN-WILDCARD、DOMAIN-REGEX、GEOSITE、RULE-SET 这些域名类规则。';
+
+  @override
+  String fakeIpFilterNotRulesTip(Object entry) {
+    return 'Fake-IP 过滤里的「$entry」不是规则写法，Fake-IP 模式下用 rule 过滤模式会让内核拒绝启动。请先把过滤列表改成规则写法，如 DOMAIN-SUFFIX,lan,real-ip。';
+  }
 }

@@ -52,6 +52,13 @@ String? validateDefaultNameserver(
 String? validateDnsHijack(String? value, AppLocalizations appLocalizations) =>
     isDnsHijack(value ?? '') ? null : appLocalizations.dnsHijackTip;
 
+String? validateFakeIpFilterRule(
+  String? value,
+  AppLocalizations appLocalizations,
+) => isFakeIpFilterRule(value ?? '')
+    ? null
+    : appLocalizations.fakeIpFilterRuleTip;
+
 final _portRange = RegExp(r'^([0-9]{1,5})(?:-([0-9]{1,5}))?$');
 
 final _domainLabel = RegExp(

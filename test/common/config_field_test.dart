@@ -36,6 +36,7 @@ void main() {
         validateDefaultNameserver(value, l) == null,
     'dns-hijack': (value) => validateDnsHijack(value, l) == null,
     'hosts': isHostsValue,
+    'fake-ip-filter-rule': isFakeIpFilterRule,
   };
 
   for (final MapEntry(key: kind, value: check) in validators.entries) {

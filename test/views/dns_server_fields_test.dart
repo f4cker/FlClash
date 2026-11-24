@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -23,6 +24,7 @@ void main() {
   Future<void> pumpView(
     WidgetTester tester, {
     bool appendSystemDns = false,
+    Dns dns = _dns,
   }) async {
     const size = Size(1200, 1000);
     tester.view.physicalSize = size;
@@ -35,8 +37,9 @@ void main() {
     container.read(viewSizeProvider.notifier).update((_) => size);
     container.listen(patchClashConfigProvider, (_, _) {});
     container.listen(networkSettingProvider, (_, _) {});
-    container.read(patchClashConfigProvider.notifier).value =
-        const PatchClashConfig(dns: _dns);
+    container.read(patchClashConfigProvider.notifier).value = PatchClashConfig(
+      dns: dns,
+    );
     container
         .read(networkSettingProvider.notifier)
         .update((state) => state.copyWith(appendSystemDns: appendSystemDns));
@@ -145,4 +148,57 @@ void main() {
       expect(find.text(l.defaultNameserverPureIpTip), findsOneWidget);
     },
   );
+
+  testWidgets('rule filter mode is refused over a domain-style filter', (
+    tester,
+  ) async {
+    await pumpView(tester, dns: _dns.copyWith(enhancedMode: DnsMode.fakeIp));
+    final l = currentAppLocalizations;
+    final printed = <String>[];
+    final original = debugPrint;
+    debugPrint = (text, {wrapWidth}) => printed.add(text ?? '');
+    addTearDown(() => debugPrint = original);
+    final row = find.text(l.fakeipFilterMode);
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(FakeIpFilterMode.rule.name).last);
+    await tester.pumpAndSettle();
+
+    expect(
+      printed,
+      contains(
+        '[APP] banner: ${l.fakeIpFilterNotRulesTip(_dns.fakeIpFilter.first)}',
+      ),
+    );
+    expect(dns().fakeIpFilterMode, FakeIpFilterMode.blacklist);
+
+    await tester.tap(find.text(l.dnsMode));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('redir-host').last);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(FakeIpFilterMode.rule.name).last);
+    await tester.pumpAndSettle();
+    expect(dns().fakeIpFilterMode, FakeIpFilterMode.rule, reason: 'no fake-ip');
+  });
+
+  testWidgets('a rule filter flags the entries that are not rules', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      dns: _dns.copyWith(
+        enhancedMode: DnsMode.fakeIp,
+        fakeIpFilterMode: FakeIpFilterMode.rule,
+        fakeIpFilter: ['DOMAIN-SUFFIX,lan,real-ip', 'example.com'],
+      ),
+    );
+    final l = currentAppLocalizations;
+    await tapRow(tester, l.fakeipFilter);
+
+    expect(find.text(l.fakeIpFilterRuleTip), findsOneWidget);
+  });
 }
