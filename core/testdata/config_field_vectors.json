@@ -213,5 +213,32 @@
     {"value": "https://1.1.1.1/dns-query#h3=true", "ok": true},
     {"value": "udp://例子.com", "ok": true},
     {"value": "udp://[1.1.1.1]:53", "ok": false}
+  ],
+  "dns-hijack": [
+    {"value": "any:53", "ok": true},
+    {"value": "tcp://any:53", "ok": true},
+    {"value": "udp://any:53", "ok": true},
+    {"value": "any", "ok": false},
+    {"value": "8.8.8.8", "ok": false},
+    {"value": "8.8.8.8:53", "ok": true},
+    {"value": "198.18.0.2:53", "ok": true},
+    {"value": "[::]:53", "ok": true},
+    {"value": "[2001:db8::1]:53", "ok": true},
+    {"value": "2001:db8::1:53", "ok": false},
+    {"value": "udp://8.8.8.8:53", "ok": true},
+    {"value": "8.8.8.8:65536", "ok": false},
+    {"value": "8.8.8.8:053", "ok": true},
+    {"value": "8.8.8.8:-1", "ok": false},
+    {"value": "dns.google:53", "ok": false},
+    {"value": "0.0.0.0:53", "ok": true},
+    {"value": "any:0", "ok": true},
+    {"value": ":53", "ok": false},
+    {"value": "[fe80::1%en0]:53", "ok": true},
+    {"value": "company:53", "ok": false},
+    {"value": "tcp://8.8.8.8", "ok": false},
+    {"value": "[1.1.1.1]:53", "ok": false},
+    {"value": "any:53:53", "ok": false},
+    {"value": "udp://[::]:53", "ok": true},
+    {"value": "198.18.0.2:5353", "ok": true}
   ]
 }

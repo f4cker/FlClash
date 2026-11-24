@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fl_clash/common/dns_server.dart';
 import 'package:fl_clash/l10n/l10n_en.dart';
 import 'package:fl_clash/widgets/config_item.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,7 @@ void main() {
     'nameserver': (value) => validateDnsServer(value, l) == null,
     'default-nameserver': (value) =>
         validateDefaultNameserver(value, l) == null,
+    'dns-hijack': (value) => validateDnsHijack(value, l) == null,
   };
 
   for (final MapEntry(key: kind, value: check) in validators.entries) {
@@ -52,5 +54,40 @@ void main() {
       l.defaultNameserverPureIpTip,
     );
     expect(validateDefaultNameserver('tls://223.5.5.5', l), isNull);
+  });
+
+  group('a DNS listen address an app port already holds', () {
+    UdpInbound? takenBy(String listen, {bool allowLan = false}) =>
+        dnsListenTakenBy(
+          listen,
+          mixedPort: 7890,
+          socksPort: 7891,
+          allowLan: allowLan,
+        );
+
+    test('a wildcard one takes it from either', () {
+      expect(takenBy('0.0.0.0:7890'), UdpInbound.mixed);
+      expect(takenBy(':7891', allowLan: true), UdpInbound.socks);
+      expect(takenBy('[::]:7890'), UdpInbound.mixed);
+    });
+
+    test('the loopback one only while the ports are on loopback too', () {
+      expect(takenBy('127.0.0.1:7890'), UdpInbound.mixed);
+      expect(takenBy('127.0.0.1:7890', allowLan: true), isNull);
+      expect(takenBy('[::1]:7890'), isNull);
+    });
+
+    test('another port, or a disabled SOCKS port, is free', () {
+      expect(takenBy('0.0.0.0:1053'), isNull);
+      expect(
+        dnsListenTakenBy(
+          '0.0.0.0:0',
+          mixedPort: 7890,
+          socksPort: 0,
+          allowLan: false,
+        ),
+        isNull,
+      );
+    });
   });
 }

@@ -9900,4 +9900,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get nameserverEmptyTip =>
       'Keep at least one Nameserver. A profile that turns DNS on can\'t start with Nameserver empty, unless Append system DNS is on.';
+
+  @override
+  String get dnsHijackTip =>
+      'Enter an IP and a port, such as any:53, 198.18.0.2:53 or tcp://any:53. TUN can\'t start with a malformed entry.';
+
+  @override
+  String dnsListenPortTakenTip(Object port, Object listener) {
+    return 'Port $port is already used by $listener, so DNS listening can\'t start. Choose another port.';
+  }
+
+  @override
+  String get controllerPortConflictTip =>
+      'Port 9090 is used by the external controller. Choose another port.';
+
+  @override
+  String get tunNotListening =>
+      'TUN didn\'t start. Check the TUN settings, such as DNS hijacking; the log says why.';
 }

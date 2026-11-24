@@ -49,6 +49,9 @@ String? validateDefaultNameserver(
         ? null
         : appLocalizations.defaultNameserverPureIpTip);
 
+String? validateDnsHijack(String? value, AppLocalizations appLocalizations) =>
+    isDnsHijack(value ?? '') ? null : appLocalizations.dnsHijackTip;
+
 final _portRange = RegExp(r'^([0-9]{1,5})(?:-([0-9]{1,5}))?$');
 
 final _domainLabel = RegExp(

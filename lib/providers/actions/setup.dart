@@ -553,6 +553,12 @@ class SetupAction extends _$SetupAction {
           ref.read(authorizedTunEnableProvider) !=
               TunAuthorizationState.authorized)
         appLocalizations.tunMissingAuthorization,
+      // mihomo only logs a TUN it could not start, such as over a dns-hijack.
+      if (requested['tun.enable'] == true &&
+          held['tun'] != true &&
+          ref.read(authorizedTunEnableProvider) ==
+              TunAuthorizationState.authorized)
+        appLocalizations.tunNotListening,
       if (noProxyPort) appLocalizations.systemProxyNoPort,
     ];
     if (messages.isNotEmpty) {

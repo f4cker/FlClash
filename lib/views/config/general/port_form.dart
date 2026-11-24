@@ -2,6 +2,7 @@ part of '../general.dart';
 
 const _minPort = 1024;
 const _maxPort = 49151;
+const _controllerPort = 9090;
 
 class _PortField {
   final TextEditingController controller;
@@ -151,6 +152,12 @@ class _PortFormState extends ConsumerState<_PortForm> {
         .map((item) => int.tryParse(item.controller.text.trim()));
     if (others.contains(port)) {
       return appLocalizations.portConflictTip;
+    }
+    // The controller holds 127.0.0.1:9090, which outranks a wildcard bind.
+    if (port == _controllerPort &&
+        ref.read(patchClashConfigProvider).externalController ==
+            ExternalControllerStatus.open) {
+      return appLocalizations.controllerPortConflictTip;
     }
     return null;
   }

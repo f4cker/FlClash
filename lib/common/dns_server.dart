@@ -96,3 +96,31 @@ bool isPureIpDnsServer(String server) {
     null => false,
   };
 }
+
+bool isDnsHijack(String entry) {
+  final scheme = entry.indexOf('://');
+  final address = scheme < 0 ? entry : entry.substring(scheme + 3);
+  return goParseAddrPort(address.replaceFirst('any', '0.0.0.0'));
+}
+
+enum UdpInbound { mixed, socks }
+
+// macOS refuses a UDP bind next to a wildcard one on the same port.
+UdpInbound? dnsListenTakenBy(
+  String listen, {
+  required int mixedPort,
+  required int socksPort,
+  required bool allowLan,
+}) {
+  final colon = listen.lastIndexOf(':');
+  if (colon < 0) return null;
+  final port = int.tryParse(listen.substring(colon + 1));
+  final host = listen.substring(0, colon);
+  final clashes =
+      const {'', '0.0.0.0', '[::]'}.contains(host) ||
+      (host == '127.0.0.1' && !allowLan);
+  if (port == null || port == 0 || !clashes) return null;
+  if (port == mixedPort) return UdpInbound.mixed;
+  if (port == socksPort) return UdpInbound.socks;
+  return null;
+}

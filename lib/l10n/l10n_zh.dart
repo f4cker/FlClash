@@ -9114,4 +9114,19 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get nameserverEmptyTip =>
       '至少保留一个 Nameserver。开启了 DNS 的配置在 Nameserver 为空时无法启动；也可以打开「追加系统DNS」。';
+
+  @override
+  String get dnsHijackTip =>
+      '请填写 IP 和端口，如 any:53、198.18.0.2:53 或 tcp://any:53。格式不对时虚拟网卡无法启动。';
+
+  @override
+  String dnsListenPortTakenTip(Object port, Object listener) {
+    return '端口 $port 已被$listener使用，DNS 监听会无法启动。请换一个端口。';
+  }
+
+  @override
+  String get controllerPortConflictTip => '9090 端口已被外部控制器使用，请换一个端口。';
+
+  @override
+  String get tunNotListening => '虚拟网卡未能启动。请检查「虚拟网卡」中的设置（如 DNS劫持），原因见日志。';
 }

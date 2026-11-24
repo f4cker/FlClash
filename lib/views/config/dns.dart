@@ -223,12 +223,7 @@ class _DnsOverrideSpec extends OverrideSpec<DnsOverrideKey, Dns> {
       (dns) => dns.enable,
       (dns, value) => dns.copyWith(enable: value),
     ),
-    DnsOverrideKey.listen => TextOverrideField(
-      (dns) => dns.listen,
-      (dns, value) => dns.copyWith(listen: value),
-      maxLength: TextInputLimits.dnsListen,
-      validator: validateListenAddress,
-    ),
+    DnsOverrideKey.listen => const _ListenField(),
     DnsOverrideKey.listenRoutingMark => NumberOverrideField(
       (dns) => dns.listenRoutingMark,
       (dns, value) => dns.copyWith(listenRoutingMark: value),
@@ -393,6 +388,68 @@ String? _nameserverSaveError(
         !ref.read(networkSettingProvider).appendSystemDns
     ? currentAppLocalizations.nameserverEmptyTip
     : null;
+
+class _ListenField extends TextOverrideField<Dns> {
+  const _ListenField()
+    : super(
+        _listen,
+        _setListen,
+        maxLength: TextInputLimits.dnsListen,
+        validator: validateListenAddress,
+      );
+
+  @override
+  Widget build(
+    OverrideModel<Dns> model, {
+    required ConfigLabel title,
+    required Widget? leading,
+  }) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final ports = ref.watch(
+          patchClashConfigProvider.select(
+            (state) => (
+              mixed: state.mixedPort,
+              socks: state.socksPort,
+              allowLan: state.allowLan,
+            ),
+          ),
+        );
+        return ConfigTextItem(
+          leading: leading,
+          title: title,
+          selector: model.selectModel(select),
+          onChanged: model.modelWriter(update),
+          maxLength: maxLength,
+          normalize: (value) => value.trim(),
+          allowEmpty: allowEmpty,
+          validator: (value, l) =>
+              validateListenAddress(value, l) ??
+              switch (dnsListenTakenBy(
+                value ?? '',
+                mixedPort: ports.mixed,
+                socksPort: ports.socks,
+                allowLan: ports.allowLan,
+              )) {
+                UdpInbound.mixed => l.dnsListenPortTakenTip(
+                  ports.mixed,
+                  l.mixedPort,
+                ),
+                UdpInbound.socks => l.dnsListenPortTakenTip(
+                  ports.socks,
+                  l.socksPort,
+                ),
+                null => null,
+              },
+        );
+      },
+    );
+  }
+}
+
+String _listen(Dns dns) => dns.listen;
+
+Dns _setListen(Dns dns, String value) => dns.copyWith(listen: value);
 
 class _ProfileDnsOverrideSpec extends _DnsOverrideSpec
     with OverrideQuickEdit<DnsOverrideKey, Dns> {

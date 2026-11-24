@@ -16203,6 +16203,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep at least one Nameserver. A profile that turns DNS on can\'t start with Nameserver empty, unless Append system DNS is on.'**
   String get nameserverEmptyTip;
+
+  /// No description provided for @dnsHijackTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an IP and a port, such as any:53, 198.18.0.2:53 or tcp://any:53. TUN can\'t start with a malformed entry.'**
+  String get dnsHijackTip;
+
+  /// No description provided for @dnsListenPortTakenTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Port {port} is already used by {listener}, so DNS listening can\'t start. Choose another port.'**
+  String dnsListenPortTakenTip(Object port, Object listener);
+
+  /// No description provided for @controllerPortConflictTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Port 9090 is used by the external controller. Choose another port.'**
+  String get controllerPortConflictTip;
+
+  /// No description provided for @tunNotListening.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN didn\'t start. Check the TUN settings, such as DNS hijacking; the log says why.'**
+  String get tunNotListening;
 }
 
 class _AppLocalizationsDelegate
