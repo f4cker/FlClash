@@ -95,6 +95,9 @@ class Scaffold extends StatefulWidget {
   final String? title;
   final Widget? titleWidget;
   final List<PopupMenuItem> titleMenuItems;
+
+  /// Called as the title menu opens, in place of [titleMenuItems].
+  final ValueListenable<List<PopupMenuItem>> Function()? titleMenuOnOpen;
   final bool isLoading;
   final List<Widget>? actions;
 
@@ -144,6 +147,7 @@ class Scaffold extends StatefulWidget {
     this.title,
     this.titleWidget,
     this.titleMenuItems = const [],
+    this.titleMenuOnOpen,
     this.actions,
     this.statusActions = const [],
     this.backAction,
@@ -641,7 +645,7 @@ class ScaffoldState extends State<Scaffold>
     return BarItemPresence.title(
       child:
           widget.titleWidget ??
-          (widget.titleMenuItems.isEmpty
+          (widget.titleMenuItems.isEmpty && widget.titleMenuOnOpen == null
               ? Text(widget.title!)
               : PopupAnchor(
                   placement: PopupPlacement.overAnchorStart,
@@ -651,7 +655,10 @@ class ScaffoldState extends State<Scaffold>
                     compact: compact,
                     onPressed: open,
                   ),
-                  popupBuilder: (_) => PopupMenu(items: widget.titleMenuItems),
+                  popupBuilder: (_) => switch (widget.titleMenuOnOpen) {
+                    final onOpen? => _TitleMenuPopup(onOpen: onOpen),
+                    null => PopupMenu(items: widget.titleMenuItems),
+                  },
                 )),
     );
   }
@@ -986,4 +993,23 @@ class ScaffoldState extends State<Scaffold>
       resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
     );
   }
+}
+
+class _TitleMenuPopup extends StatefulWidget {
+  const _TitleMenuPopup({required this.onOpen});
+
+  final ValueListenable<List<PopupMenuItem>> Function() onOpen;
+
+  @override
+  State<_TitleMenuPopup> createState() => _TitleMenuPopupState();
+}
+
+class _TitleMenuPopupState extends State<_TitleMenuPopup> {
+  late final _items = widget.onOpen();
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: _items,
+    builder: (_, items, _) => PopupMenu(items: items),
+  );
 }
