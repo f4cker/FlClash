@@ -538,7 +538,7 @@ class MitmModuleView extends ConsumerWidget {
                 ? appLocalizations.itemsCount(lines.length)
                 : appLocalizations.invalidOfCount(invalid, lines.length),
           ),
-          widget: _MitmModuleLinesView(
+          builder: (_) => _MitmModuleLinesView(
             title: title,
             header: invalid == 0 ? null : issuesHeader,
             lines: [for (final line in lines) (line, issues[line])],
@@ -799,7 +799,7 @@ class MitmModuleView extends ConsumerWidget {
                                 flashMitmSkipped(content).length,
                               ),
                             ),
-                            widget: _MitmModuleLinesView(
+                            builder: (_) => _MitmModuleLinesView(
                               title: appLocalizations.mitmIgnoredLines,
                               notes: true,
                               lines: [
@@ -888,7 +888,7 @@ class _MitmRoutingSectionState extends ConsumerState<_MitmRoutingSection> {
         ),
         ListItem.open(
           title: Text(count),
-          widget: _MitmModuleLinesView(
+          builder: (_) => _MitmModuleLinesView(
             title: l.mitmRoutingRules,
             notes: true,
             noteColor: mitmAmberColor(context),
