@@ -204,8 +204,11 @@ void main() {
     expect(find.text('123 ms · Looking up'), findsNothing);
     expect(find.text('Timeout'), findsOneWidget);
     expect(find.text('All available'), findsNothing);
-    await tester.pump(const Duration(minutes: 1));
+    await tester.pump(const Duration(seconds: 59));
     expect(calls, 2);
+    await tester.pump(const Duration(seconds: 1));
+    expect(calls, 3);
+    expect(find.text('Timeout'), findsOneWidget);
   });
 
   testWidgets('a phone card checks the first two services, and only those', (
