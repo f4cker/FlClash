@@ -1314,6 +1314,39 @@ void main() {
     );
 
     test(
+      'a stop tapped while the service snapshot loads keeps autoRun off',
+      () async {
+        container.read(appSettingProvider.notifier).value =
+            const AppSettingProps(autoRun: true);
+        final snapshot = action.serviceRead = Completer<DateTime?>();
+        final setup = container.read(setupActionProvider.notifier);
+        final initializing = setup.initStatus();
+        expect(await setup.setRunning(false), isTrue);
+        snapshot.complete(null);
+        await initializing;
+        expect(action.coreRunningCalls, [false]);
+        expect(action.applyProfileCalls, 1);
+        expect(container.read(isStartProvider), isFalse);
+        expect(container.read(runTimeProvider), isNull);
+      },
+    );
+
+    test(
+      'a stop tapped while the service snapshot loads keeps its run stopped',
+      () async {
+        final snapshot = action.serviceRead = Completer<DateTime?>();
+        final setup = container.read(setupActionProvider.notifier);
+        final initializing = setup.initStatus();
+        expect(await setup.setRunning(false), isTrue);
+        snapshot.complete(DateTime.now().subtract(const Duration(minutes: 1)));
+        await initializing;
+        expect(action.coreRunningCalls, [false]);
+        expect(container.read(isStartProvider), isFalse);
+        expect(container.read(runTimeProvider), isNull);
+      },
+    );
+
+    test(
       'a stop during startup reports its error to the request that made it',
       () async {
         final setup = container.read(setupActionProvider.notifier);

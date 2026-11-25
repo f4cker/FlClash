@@ -263,11 +263,20 @@ class SetupAction extends _$SetupAction {
     // Visibility observers must not publish a resumed start during review.
     _deferRunningPublication = true;
     _launching = true;
+    final claimed = _latestRunRequest;
     try {
       final startTime = await serviceStartTime();
       final running = startTime?.isBeforeNow ?? false;
       final digest = running ? await preferences.getAppliedConfigMd5() : null;
-      if (_initialRun != null) {
+      final tapped = identical(_latestRunRequest, claimed)
+          ? null
+          : _latestRunRequest;
+      if (_initialRun != null || (tapped?.running ?? false)) {
+        return;
+      }
+      if (tapped != null) {
+        // A stop tapped meanwhile outranks the snapshot and autoRun.
+        await globalState.safeRun(() => applyAutomatic(force: true));
         return;
       }
       _startTime = startTime;
@@ -281,6 +290,10 @@ class SetupAction extends _$SetupAction {
       }
     } finally {
       _launching = false;
+      // A start in flight owns the flag; with none, nothing is held back.
+      if (!(_latestRunRequest?.running ?? false)) {
+        _deferRunningPublication = false;
+      }
     }
   }
 
