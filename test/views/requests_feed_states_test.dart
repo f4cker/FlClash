@@ -69,6 +69,7 @@ void main() {
     required Future<List<TrackerInfo>> Function()? connectionsReader,
     Locale locale = const Locale('en'),
     Size size = const Size(600, 1000),
+    DateTime Function()? clock,
   }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
@@ -82,6 +83,7 @@ void main() {
           child: RequestsView(
             initialFeed: feed,
             connectionsReader: connectionsReader,
+            clock: clock,
           ),
         ),
       ),
@@ -277,6 +279,45 @@ void main() {
       expect(reads, readsBefore);
       expect(built, 0);
       debugOnRebuildDirtyWidget = null;
+
+      await closeMenu(tester);
+      await teardown(tester);
+    });
+
+    testWidgets('on running, a snapshot older than 3s is read again', (
+      tester,
+    ) async {
+      seed(const []);
+      var now = DateTime.utc(2026, 11, 25, 12);
+      var reads = 0;
+      await pump(
+        tester,
+        feed: RequestFeed.live,
+        connectionsReader: () async => _trackers(++reads, prefix: 'c'),
+        clock: () => now,
+      );
+      expect(reads, 1);
+      // In the background the feed stops polling, and its snapshot ages.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      addTearDown(
+        () => tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        ),
+      );
+      await tester.pump(const Duration(seconds: 5));
+      expect(reads, 1);
+
+      await openMenu(tester, 'Running');
+      await tester.pump();
+      expect(counts(tester), ['0', '1']);
+      expect(reads, 1);
+      await closeMenu(tester);
+
+      now = now.add(const Duration(seconds: 4));
+      await openMenu(tester, 'Running');
+      await tester.pump();
+      expect(reads, 2);
+      expect(counts(tester), ['0', '2']);
 
       await closeMenu(tester);
       await teardown(tester);

@@ -32,12 +32,14 @@ class RequestsView extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
   final RequestFeed? initialFeed;
   final Future<List<TrackerInfo>> Function()? connectionsReader;
+  final DateTime Function()? clock;
 
   const RequestsView({
     super.key,
     this.scrollController,
     this.initialFeed,
     @visibleForTesting this.connectionsReader,
+    @visibleForTesting this.clock,
   });
 
   @override
@@ -292,6 +294,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
         filters: _filters,
         scrollController: widget.scrollController,
         connectionsReader: widget.connectionsReader,
+        clock: widget.clock,
         onClearNarrowing: _clearNarrowing,
       ),
     };
@@ -500,6 +503,7 @@ class _LiveFeed extends ConsumerStatefulWidget {
   final RecordFilterController<TrackerInfo> filters;
   final ScrollController? scrollController;
   final Future<List<TrackerInfo>> Function()? connectionsReader;
+  final DateTime Function()? clock;
   final VoidCallback onClearNarrowing;
 
   const _LiveFeed({
@@ -508,6 +512,7 @@ class _LiveFeed extends ConsumerStatefulWidget {
     required this.filters,
     required this.scrollController,
     required this.connectionsReader,
+    this.clock,
     required this.onClearNarrowing,
   });
 
@@ -542,10 +547,12 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
   /// Stamped as it comes back; null count where it failed or Core was starting.
   ({int? count, DateTime at})? _latestRead;
 
+  DateTime get _now => widget.clock?.call() ?? DateTime.now();
+
   int? get freshCount {
     final read = _latestRead;
     if (read == null) return null;
-    if (DateTime.now().difference(read.at) > _freshSnapshot) return null;
+    if (_now.difference(read.at) > _freshSnapshot) return null;
     return read.count;
   }
 
@@ -650,7 +657,7 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
         count: connectionsReader == null && status == CoreStatus.connecting
             ? null
             : ranked.trackerInfos.length,
-        at: DateTime.now(),
+        at: _now,
       );
       return _ConnectionsRead(ranked.trackerInfos);
     } catch (error) {
@@ -671,11 +678,11 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
         _ranking = TrackerRanking.empty;
         _latestRead = (
           count: stopped == CoreStatus.disconnected ? 0 : null,
-          at: DateTime.now(),
+          at: _now,
         );
         return const _ConnectionsRead([]);
       }
-      _latestRead = (count: null, at: DateTime.now());
+      _latestRead = (count: null, at: _now);
       return const _ConnectionsRead(null);
     }
   }
