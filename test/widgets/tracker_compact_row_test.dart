@@ -140,7 +140,9 @@ void main() {
     expect(trackerCompactSpeeds(0, 12288), ('0', '12', 'KB/s'));
     expect(trackerCompactSpeeds(100, 900), ('100', '900', 'B/s'));
     expect(trackerCompactSpeeds(300, 1024 * 1024), ('<1', '1', 'MB/s'));
-    expect(trackerCompactSpeeds(1024 * 1023.9, 0), ('1024', '0', 'KB/s'));
+    expect(trackerCompactSpeeds(1024 * 999.4, 0), ('999', '0', 'KB/s'));
+    expect(trackerCompactSpeeds(1024 * 999.5, 0), ('1', '0', 'MB/s'));
+    expect(trackerCompactSpeeds(1000, 10), ('1', '<1', 'KB/s'));
   });
 
   Future<List<RecordFilter>> pump(
@@ -150,6 +152,8 @@ void main() {
     double width = 360,
     double textScale = 1,
     String? process,
+    bool boldText = false,
+    Locale? locale,
   }) async {
     final filters = <RecordFilter>[];
     if (process != null) {
@@ -169,8 +173,12 @@ void main() {
     addTearDown(tester.view.reset);
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures(boldText: boldText);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     await tester.pumpWidget(
       TestApp(
+        locale: locale,
         wrapInProviderScope: true,
         homeBuilder: (child) => HostScaffold(body: child),
         child: RecordFilterScope(
@@ -214,7 +222,7 @@ void main() {
     final note = tester.getRect(find.text('TCP'));
     final process = tester.getRect(find.text('ssh'));
     expect(
-      tester.getRect(find.byType(ProcessFilterIcon)).right,
+      tester.getRect(find.byType(ProcessIcon)).right,
       lessThan(process.left),
     );
     expect(process.right + 4, lessThanOrEqualTo(host.left));
@@ -311,6 +319,7 @@ void main() {
                       context,
                       'a-very-long-subdomain.example-cdn.com:443',
                       host: 'a-very-long-subdomain.example-cdn.com',
+                      live: isLive,
                     ) -
                     0.5,
               ),
@@ -429,16 +438,21 @@ void main() {
     expect(chip.height, lessThan(row.height - 20));
     await tester.tapAt(Offset(icon.center.dx, row.top + 3));
     await tester.tapAt(Offset(chip.center.dx, row.bottom - 3));
+    // Beside the icon too, over the start padding and the gap after it.
+    await tester.tapAt(Offset(row.left + 4 + 2, row.center.dy));
+    await tester.tapAt(Offset(icon.right + 2, row.center.dy));
     await tester.pumpAndSettle();
-    expect(filters, hasLength(4));
+    expect(filters, hasLength(6));
     expect(filters[2].kind, RecordFacetKind.app);
     expect(filters[3].kind, RecordFacetKind.proxy);
+    expect(filters[4].kind, RecordFacetKind.app);
+    expect(filters[5].kind, RecordFacetKind.app);
     expect(find.byType(TrackerInfoDetailView), findsNothing);
 
     await tester.tap(find.text('example.com:443'));
     await tester.pumpAndSettle();
     expect(find.byType(TrackerInfoDetailView), findsOneWidget);
-    expect(filters, hasLength(4));
+    expect(filters, hasLength(6));
   });
 
   testWidgets('a short name leaves its room to the host, and the host reads '
@@ -449,18 +463,18 @@ void main() {
       uploadSpeed: 1,
       downloadSpeed: 1,
     );
-    // The test font sets every glyph a full em wide: the host reads 240
-    // and the speeds 201, so only the short name leaves room for them.
-    await pump(tester, info, isLive: true, width: 600);
+    // In the test font www.exampl… reads 165 and the speeds 175: only the
+    // short name leaves room for them.
+    await pump(tester, info, isLive: true, width: 500);
     final context = tester.element(find.byType(TrackerCompactRow));
     final readable = TrackerCompactMetrics.of(
       context,
-    ).hostReadableWidthOf(context, target, host: 'www.example.com');
+    ).hostReadableWidthOf(context, target, host: 'www.example.com', live: true);
     final short = tester.getRect(find.text(target));
     expect(shows(speeds), isTrue);
     expect(short.width, greaterThanOrEqualTo(readable - 0.5));
 
-    await pump(tester, info, isLive: true, width: 600, process: 'ssh-agent');
+    await pump(tester, info, isLive: true, width: 500, process: 'ssh-agent');
     final long = tester.getRect(find.text(target));
     expect(long.left, greaterThan(short.left));
     expect(shows(speeds), isFalse);
@@ -667,6 +681,129 @@ void main() {
     expect(exitChip, findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Filter by this node')), findsNothing);
     expect(rowNode(tester).label, contains('Exit DIRECT'));
+    semantics.dispose();
+  });
+
+  TrackerCompactMetrics metricsOf(WidgetTester tester) =>
+      TrackerCompactMetrics.of(tester.element(find.byType(TrackerCompactRow)));
+
+  bool cutShort(WidgetTester tester, Finder text) =>
+      tester.renderObject<RenderParagraph>(text).didExceedMaxLines;
+
+  testWidgets('under Bold Text widths are measured again, bold, so a name '
+      'reads whole', (tester) async {
+    await pump(tester, _info(), width: 600);
+    final regular = metricsOf(tester);
+
+    await pump(tester, _info(), width: 600, boldText: true);
+    final context = tester.element(find.byType(TrackerCompactRow));
+    final bold = metricsOf(tester);
+    expect(bold, isNot(same(regular)));
+    // The test font sets bold as wide as regular, so this holds the layout
+    // to what Text draws; the wider bold itself was checked on real fonts.
+    expect(cutShort(tester, find.text('ssh')), isFalse);
+    expect(
+      tester.getSize(find.text('ssh')).width,
+      lessThanOrEqualTo(bold.processWidthOf(context, 'ssh')),
+    );
+    expect(find.widgetWithText(TonalChip, 'DIRECT'), findsOneWidget);
+    expect(
+      tester.getSize(find.text('example.com:443')).width,
+      greaterThanOrEqualTo(
+        bold.hostReadableWidthOf(
+          context,
+          'example.com:443',
+          host: 'example.com',
+        ),
+      ),
+    );
+  });
+
+  testWidgets('widths round up to whole points, so a name never ellipsizes '
+      'in the width it was measured at', (tester) async {
+    await pump(tester, _info(), width: 600, textScale: 1.15);
+    final metrics = metricsOf(tester);
+    final width = metrics.processWidthOf(
+      tester.element(find.byType(TrackerCompactRow)),
+      'ssh',
+    );
+    expect(width, width.ceilToDouble());
+    expect(width, greaterThan(tester.getSize(find.text('ssh')).width - 1));
+    expect(cutShort(tester, find.text('ssh')), isFalse);
+  });
+
+  testWidgets('widths are measured again in another language', (tester) async {
+    await pump(tester, _info(), locale: const Locale('en'));
+    final english = metricsOf(tester);
+    await pump(tester, _info(), locale: const Locale('ja'));
+    expect(metricsOf(tester), isNot(same(english)));
+  });
+
+  testWidgets('a running host holds its width as the speeds change', (
+    tester,
+  ) async {
+    Future<Rect> hostAt(int speed) async {
+      await pump(
+        tester,
+        _info(
+          host: 'www.example.com',
+          uploadSpeed: speed,
+          downloadSpeed: speed,
+        ),
+        isLive: true,
+        width: 500,
+      );
+      expect(shows(speeds), isTrue);
+      return tester.getRect(find.byType(MitmHostLine));
+    }
+
+    final idle = await hostAt(0);
+    expect(await hostAt(1024 * 1024 * 900), idle);
+  });
+
+  testWidgets('a name or host cut short ends at its ellipsis, the rest given '
+      'to what follows it', (tester) async {
+    final info = _info(
+      host: 'a-very-long-subdomain.example-cdn.com',
+    ).copyWith(mitmRewrite: const MitmConnectionRewrite(applied: true));
+    await pump(
+      tester,
+      info,
+      process: 'com.example.very-long-helper-process-name',
+    );
+    final name = find.text('com.example.very-long-helper-process-name');
+    final host = find.text('a-very-long-subdomain.example-cdn.com:443');
+    expect(cutShort(tester, name), isTrue);
+    expect(cutShort(tester, host), isTrue);
+    // Test-font glyphs are an em wide: a line ending at its ellipsis is too.
+    final metrics = metricsOf(tester);
+    final nameWidth = tester.getSize(name).width;
+    expect(nameWidth % metrics.process.fontSize!, 0);
+    expect(nameWidth, lessThan((360 - 24) * 0.3));
+    expect(tester.getSize(host).width % metrics.host.fontSize!, 0);
+    final hostRect = tester.getRect(host);
+    expect(hostRect.left - tester.getRect(name).right, 4);
+    expect(
+      tester.getRect(find.byType(MitmRewriteIcon)).left - hostRect.right,
+      MitmBadge.gap,
+    );
+  });
+
+  testWidgets('a recent row\'s summary names its network or route reason', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await pump(tester, _info(), width: 600);
+    expect(rowNode(tester).label, 'ssh, example.com:443, TCP, Exit DIRECT');
+
+    await pump(tester, _info(rule: '', routeReason: 'no-rule-matched'));
+    final context = tester.element(find.byType(TrackerCompactRow));
+    final reason = trackerCompactNote(
+      context,
+      _info(rule: '', routeReason: 'no-rule-matched'),
+    );
+    expect(reason, isNot('TCP'));
+    expect(rowNode(tester).label, contains(reason));
     semantics.dispose();
   });
 }

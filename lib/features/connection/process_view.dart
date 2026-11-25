@@ -198,11 +198,15 @@ class ProcessFilterIcon extends StatelessWidget {
 
   final double? targetHeight;
 
+  /// Room around the icon its press target covers too.
+  final EdgeInsetsGeometry targetPadding;
+
   const ProcessFilterIcon({
     super.key,
     required this.process,
     required this.size,
     this.targetHeight,
+    this.targetPadding = EdgeInsets.zero,
   });
 
   @override
@@ -228,10 +232,13 @@ class ProcessFilterIcon extends StatelessWidget {
           ),
           child: SizedBox(
             height: targetHeight,
-            child: Center(
-              widthFactor: 1,
-              heightFactor: targetHeight == null ? 1 : null,
-              child: ProcessIcon(process: process, size: size),
+            child: Padding(
+              padding: targetPadding,
+              child: Center(
+                widthFactor: 1,
+                heightFactor: targetHeight == null ? 1 : null,
+                child: ProcessIcon(process: process, size: size),
+              ),
             ),
           ),
         ),

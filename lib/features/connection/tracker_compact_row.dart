@@ -24,10 +24,18 @@ const _hostMinChars = 6;
 /// A host reads this much, as www.example.com, before anything trails it.
 const _hostReadableChars = 15;
 
+/// A running host reads this much, as www.exampl…, before its speeds.
+const _liveHostReadableChars = 10;
+
 /// The widest whole number a speed reads before its unit steps up.
-const _speedValueTemplate = '1024';
+const _speedValueTemplate = '999';
 
 const _processMaxShare = 0.3;
+
+const _iconPadding = EdgeInsetsDirectional.only(
+  start: _rowPadding,
+  end: _itemGap,
+);
 
 enum _Measured { process, host, note, exit }
 
@@ -66,6 +74,9 @@ class TrackerCompactMetrics {
 
   factory TrackerCompactMetrics.of(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
+    final bold = MediaQuery.boldTextOf(context);
+    final locale = Localizations.maybeLocaleOf(context);
+    final direction = Directionality.of(context);
     final colorScheme = context.colorScheme;
     final host = AppTextStyle.subheadline
         .of(context)
@@ -76,7 +87,7 @@ class TrackerCompactMetrics {
     final secondary = AppTextStyle.footnote
         .of(context)
         .copyWith(color: colorScheme.onSurfaceVariant);
-    final key = (scaler, MediaQuery.boldTextOf(context), host, secondary);
+    final key = (scaler, bold, locale, direction, host, secondary);
     final cached = _cache[key];
     if (cached != null) {
       return cached;
@@ -84,12 +95,24 @@ class TrackerCompactMetrics {
     if (_cache.length > 16) {
       _cache.clear();
     }
-    final measure = MeasureScope.of(context);
     final speed = secondary.toTabular;
     double widthOf(String text, TextStyle style) =>
-        measure.computeTextSize(Text(text, style: style)).width;
-    double heightOf(TextStyle style) =>
-        measure.computeTextSize(Text('Hg', style: style)).height;
+        _measure(context, text, style);
+    double heightOf(TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: 'Hg', style: style),
+        textScaler: scaler,
+        locale: locale,
+        textDirection: direction,
+        maxLines: 1,
+      )..layout();
+      try {
+        return painter.height;
+      } finally {
+        painter.dispose();
+      }
+    }
+
     final tallest = [
       heightOf(process),
       heightOf(host),
@@ -113,26 +136,23 @@ class TrackerCompactMetrics {
           _itemGap +
           unitWidth,
       chip: AppTextStyle.caption1.of(context, emphasized: true),
-      chipPadding: TonalChip.widthOf(context, ''),
+      chipPadding: TonalChip.widthOf(context, '').ceilToDouble(),
     );
   }
+
+  /// As Text draws it, Bold Text and language included, rounded up.
+  static double _measure(BuildContext context, String text, TextStyle style) =>
+      EmojiText.widthOf(context, text, style).ceilToDouble();
 
   double _widthOf(BuildContext context, _Measured kind, String text) {
     if (_widths.length > 4096) _widths.clear();
     return _widths[(kind, text)] ??=
-        MeasureScope.of(context, listen: false)
-            .computeTextSize(
-              Text(
-                text,
-                style: switch (kind) {
-                  _Measured.process => process,
-                  _Measured.host => host,
-                  _Measured.note => secondary,
-                  _Measured.exit => _chip,
-                },
-              ),
-            )
-            .width +
+        _measure(context, text, switch (kind) {
+          _Measured.process => process,
+          _Measured.host => host,
+          _Measured.note => secondary,
+          _Measured.exit => _chip,
+        }) +
         (kind == _Measured.exit ? _chipPadding : 0);
   }
 
@@ -144,10 +164,10 @@ class TrackerCompactMetrics {
     BuildContext context,
     String target, {
     required String host,
+    bool live = false,
   }) {
-    final head = host.length <= _hostReadableChars
-        ? host
-        : host.substring(0, _hostReadableChars);
+    final chars = live ? _liveHostReadableChars : _hostReadableChars;
+    final head = host.length <= chars ? host : host.substring(0, chars);
     return _widthOf(
       context,
       _Measured.host,
@@ -223,7 +243,8 @@ layoutTrackerCompactRow({
   const units = TrafficUnit.values;
   var top = max(up, down).toDouble();
   var unit = 0;
-  while (top >= 1024 && unit < units.length - 1) {
+  // Rounded, 999.5 would read as four digits.
+  while (top >= 999.5 && unit < units.length - 1) {
     top /= 1024;
     unit++;
   }
@@ -273,7 +294,7 @@ class TrackerCompactRow extends ConsumerWidget {
     this.latest,
   });
 
-  String _summary(BuildContext context, String? processName) {
+  String _summary(BuildContext context, String? processName, String? note) {
     final l = context.appLocalizations;
     final badge = MitmBadge.of(trackerInfo);
     final rewrite = MitmRewriteBadge.of(trackerInfo);
@@ -283,6 +304,7 @@ class TrackerCompactRow extends ConsumerWidget {
       trackerTargetText(trackerInfo),
       ?badge?.semanticsLabel(context),
       ?rewrite?.semanticsLabel(context),
+      if (note != null && note.isNotEmpty) note,
       if (exit.isNotEmpty) '${l.outboundExit} $exit',
     ].join(', ');
   }
@@ -342,7 +364,7 @@ class TrackerCompactRow extends ConsumerWidget {
           ),
           // On the node that opens the detail, so it is read with its action.
           child: Semantics(
-            label: _summary(context, processName),
+            label: _summary(context, processName, note),
             child: SizedBox(
               height: metrics.rowHeight,
               child: LayoutBuilder(
@@ -359,6 +381,7 @@ class TrackerCompactRow extends ConsumerWidget {
                       context,
                       target,
                       host: trackerInfo.title,
+                      live: isLive,
                     ),
                     hostMinWidth: metrics.hostMinWidth,
                     speedWidth: isLive ? metrics.speedWidth : null,
@@ -374,22 +397,22 @@ class TrackerCompactRow extends ConsumerWidget {
                     fit: StackFit.expand,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: _rowPadding,
+                        padding: const EdgeInsetsDirectional.only(
+                          end: _rowPadding,
                         ),
                         child: Row(
                           children: [
                             _buildIcon(context, process),
-                            const SizedBox(width: _itemGap),
                             if (layout.processWidth case final width?) ...[
-                              SizedBox(
-                                width: width,
+                              ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: width),
                                 child: ExcludeSemantics(
                                   child: Text(
                                     processName!,
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
+                                    textWidthBasis: TextWidthBasis.longestLine,
                                     style: metrics.process,
                                   ),
                                 ),
@@ -405,6 +428,7 @@ class TrackerCompactRow extends ConsumerWidget {
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
+                                    textWidthBasis: TextWidthBasis.longestLine,
                                     style: metrics.host,
                                   ),
                                 ),
@@ -452,15 +476,20 @@ class TrackerCompactRow extends ConsumerWidget {
                 process: connection,
                 size: _iconSize,
                 targetHeight: metrics.rowHeight,
+                targetPadding: _iconPadding,
               ),
             )
           : ExcludeSemantics(
-              child: ProcessIcon(process: connection, size: _iconSize),
+              child: Padding(
+                padding: _iconPadding,
+                child: ProcessIcon(process: connection, size: _iconSize),
+              ),
             );
     }
     return TrackerPackageIcon(
       packageName: trackerInfo.metadata.process,
       targetHeight: metrics.rowHeight,
+      padding: _iconPadding,
     );
   }
 
@@ -562,6 +591,7 @@ class _FilterTarget extends StatelessWidget {
   final String? value;
   final double height;
   final RecordFilter filter;
+  final EdgeInsetsGeometry padding;
   final Widget child;
 
   const _FilterTarget({
@@ -569,6 +599,7 @@ class _FilterTarget extends StatelessWidget {
     this.value,
     required this.height,
     required this.filter,
+    this.padding = EdgeInsets.zero,
     required this.child,
   });
 
@@ -578,7 +609,11 @@ class _FilterTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Nothing to narrow: the row's own summary names what this shows.
-    if (!offeredIn(context)) return ExcludeSemantics(child: child);
+    if (!offeredIn(context)) {
+      return ExcludeSemantics(
+        child: Padding(padding: padding, child: child),
+      );
+    }
     void onTap() => RecordFilterScope.add(context, filter);
     return Semantics(
       container: true,
@@ -592,7 +627,10 @@ class _FilterTarget extends StatelessWidget {
         onTap: onTap,
         child: SizedBox(
           height: height,
-          child: Center(child: child),
+          child: Padding(
+            padding: padding,
+            child: Center(widthFactor: 1, child: child),
+          ),
         ),
       ),
     );
@@ -604,10 +642,14 @@ class TrackerPackageIcon extends StatelessWidget {
   final String packageName;
   final double targetHeight;
 
+  /// Room around the icon its press target covers too.
+  final EdgeInsetsGeometry padding;
+
   const TrackerPackageIcon({
     super.key,
     required this.packageName,
     required this.targetHeight,
+    this.padding = EdgeInsets.zero,
   });
 
   @override
@@ -625,12 +667,16 @@ class TrackerPackageIcon extends StatelessWidget {
                     size: _iconSize,
                   ));
         if (shown == null) {
-          return const SizedBox.square(dimension: _iconSize);
+          return Padding(
+            padding: padding,
+            child: const SizedBox.square(dimension: _iconSize),
+          );
         }
         return _FilterTarget(
           label: context.appLocalizations.filterByThisApp,
           height: targetHeight,
           filter: RecordFilter(RecordFacetKind.app, packageName),
+          padding: padding,
           child: shown,
         );
       },
