@@ -282,4 +282,38 @@ void main() {
       expect((await database.mitmModulesDao.query().get()).single, module);
     },
   );
+
+  test(
+    'a v32 file from before WAL converts in place and keeps its rows',
+    () async {
+      final home = await Directory.systemTemp.createTemp('flash-prewal-');
+      addTearDown(() => home.delete(recursive: true));
+      final file = File('${home.path}/database.sqlite');
+      // The pre-WAL open: drift's default rollback journal.
+      final legacy = db.Database(NativeDatabase(file));
+      await legacy.profilesDao.putAll([
+        const Profile(id: 31, autoUpdateDuration: Duration.zero).toCompanion(),
+      ]);
+      await legacy.close();
+      final before = sqlite.sqlite3.open(file.path);
+      expect(
+        before.select('PRAGMA journal_mode').single.values.single,
+        'delete',
+      );
+      expect(before.select('PRAGMA user_version').single.values.single, 32);
+      before.close();
+
+      final opened = db.Database.onFile(file);
+      final profiles = await opened.profilesDao.query().get();
+      final mode = await opened.customSelect('PRAGMA journal_mode').getSingle();
+      await opened.close();
+
+      expect(profiles.map((profile) => profile.id), [31]);
+      expect(mode.data.values.single, 'wal');
+      final after = sqlite.sqlite3.open(file.path);
+      addTearDown(after.close);
+      expect(after.select('PRAGMA journal_mode').single.values.single, 'wal');
+      expect(after.select('PRAGMA user_version').single.values.single, 32);
+    },
+  );
 }

@@ -10,6 +10,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../helpers/app_paths.dart';
 
@@ -56,6 +57,40 @@ void main() {
       final entries = await BackupEntries.ofDatabaseSnapshot(snapshot);
       expect(entries, contains(BackupEntries.profile(101)));
       expect(entries, isNot(contains(BackupEntries.profile(102))));
+    },
+  );
+
+  test(
+    'a file-backed WAL database backs up rows not yet checkpointed',
+    () async {
+      final dir = makeDir('wal');
+      final file = File(join(dir.path, 'database.sqlite'));
+      final live = db.Database.onFile(file);
+      addTearDown(live.close);
+      // The schema lands in the main file; the row stays in the WAL.
+      await live.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');
+      await live.customStatement('PRAGMA wal_autocheckpoint = 0');
+      const profile = Profile(id: 201, autoUpdateDuration: Duration.zero);
+      await live.profilesDao.putAll([profile.toCompanion()]);
+      final mainOnly = join(dir.path, 'main-only.sqlite');
+      file.copySync(mainOnly);
+      final stale = sqlite.sqlite3.open(mainOnly);
+      final staleIds = [
+        for (final row in stale.select('SELECT id FROM profiles')) row['id'],
+      ];
+      stale.close();
+      expect(staleIds, isNot(contains(201)));
+
+      final snapshot = join(makeDir('snapshot').path, 'snapshot.sqlite');
+      await live.customStatement('VACUUM INTO ?', [snapshot]);
+      final entries = await BackupEntries.ofDatabaseSnapshot(snapshot);
+      expect(entries, contains(BackupEntries.profile(201)));
+      final copy = sqlite.sqlite3.open(snapshot);
+      addTearDown(copy.close);
+      expect(
+        copy.select('PRAGMA journal_mode').single.values.single,
+        isNot('wal'),
+      );
     },
   );
 
