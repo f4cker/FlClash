@@ -6,6 +6,7 @@ import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,71 +61,77 @@ void main() {
   });
 
   group('layout', () {
-    // 24 of padding, 28 of icon, 4 after the name; the name's column is 50 to
-    // 90 wide, the host keeps 60 and 8 stand before what trails.
+    // 24 of padding, 28 of icon, 4 after the name; the name's least is 50,
+    // the host keeps 60 at least and 120 before anything trails it, and 8
+    // stand before what trails.
     ({Set<TrackerTrailing> trailing, double? processWidth}) layout(
       double width, {
+      double? process = 40,
       double marksWidth = 0,
-      double rewriteWidth = 0,
       bool live = false,
     }) => layoutTrackerCompactRow(
       width: width,
       leadWidth: 28,
       marksWidth: marksWidth,
-      rewriteWidth: rewriteWidth,
-      hostMinWidth: 60,
+      processWidth: process,
       processMinWidth: 50,
-      processMaxWidth: 90,
+      hostReadableWidth: 120,
+      hostMinWidth: 60,
       speedWidth: live ? 150 : null,
       exitWidth: 90,
       noteWidth: live ? null : 40,
     );
 
-    test('drops the note, then the exit, then the speeds, each whole', () {
-      // At 300 the row's 30% share sets the name's column to 82.8.
-      expect(layout(300).processWidth, closeTo(82.8, 0.01));
+    test('the name takes its own width, at most 30% of the row', () {
+      expect(layout(600).processWidth, 40);
+      expect(layout(300, process: 200).processWidth, closeTo(82.8, 0.01));
+      expect(layout(600, process: null).processWidth, isNull);
+    });
+
+    test('what trails waits for the host\'s readable least, and goes note '
+        'first, then the exit, then the speeds, each whole', () {
+      // 224 of the row stand before anything trails: 52, 44, 120 and 8.
       for (final (width, parts) in [
-        (500.0, {TrackerTrailing.exit, TrackerTrailing.note}),
-        (330.0, {TrackerTrailing.exit}),
-        (240.0, <TrackerTrailing>{}),
+        (400.0, {TrackerTrailing.exit, TrackerTrailing.note}),
+        (358.0, {TrackerTrailing.exit, TrackerTrailing.note}),
+        (357.0, {TrackerTrailing.exit}),
+        (314.0, {TrackerTrailing.exit}),
+        (313.0, <TrackerTrailing>{}),
       ]) {
         expect(layout(width).trailing, parts, reason: '$width');
       }
       for (final (width, parts) in [
-        (600.0, {TrackerTrailing.speed, TrackerTrailing.exit}),
+        (500.0, {TrackerTrailing.speed, TrackerTrailing.exit}),
         (400.0, {TrackerTrailing.speed}),
-        (300.0, <TrackerTrailing>{}),
+        (373.0, <TrackerTrailing>{}),
       ]) {
         expect(layout(width, live: true).trailing, parts, reason: '$width');
       }
+      // A mark beside the host takes from what trails, not from the host.
+      expect(layout(400, marksWidth: 30, live: true).trailing, isEmpty);
     });
 
-    test('the name column keeps its width as parts go, so hosts line up', () {
-      expect(layout(1000).processWidth, 90);
-      expect(layout(500).processWidth, layout(500, live: true).processWidth);
-      expect(layout(190).processWidth, 50);
-    });
-
-    test('a live list\'s name column gives way so speeds fit', () {
-      expect(layout(360, live: true).processWidth, 86);
-      expect(layout(360, live: true).trailing, {TrackerTrailing.speed});
-      expect(layout(360).processWidth, 90);
-      // Never under its least, and alike whatever marks one row carries.
-      expect(layout(310, live: true).processWidth, 50);
-      expect(layout(310, live: true).trailing, isEmpty);
-      final rewritten = layout(360, live: true, rewriteWidth: 18);
-      expect(rewritten.processWidth, 86);
-      expect(rewritten.trailing, isEmpty);
+    test('a short name leaves its room to the host and what trails', () {
+      expect(layout(400).trailing, {
+        TrackerTrailing.exit,
+        TrackerTrailing.note,
+      });
+      final long = layout(400, process: 100);
+      expect(long.processWidth, 100);
+      expect(long.trailing, {TrackerTrailing.exit});
+      expect(layout(400, process: null).trailing, {
+        TrackerTrailing.exit,
+        TrackerTrailing.note,
+      });
     });
 
     test('only a row too narrow for both shrinks the name, then the host, '
         'and drops the name last', () {
-      // The name and the host share what is past 56 of padding, icon and gap.
-      expect(layout(56 + 60 + 50).processWidth, 50);
-      expect(layout(56 + 60 + 45).processWidth, closeTo(105 * 50 / 110, 0.01));
-      expect(layout(56 + 60 + 45).trailing, isEmpty);
-      expect(layout(56 + 60).processWidth, closeTo(60 * 50 / 110, 0.01));
-      expect(layout(56 + 40).processWidth, isNull);
+      // The name and the host share what is past 52 of padding and icon.
+      expect(layout(146, process: 30).processWidth, 30);
+      expect(layout(140, process: 30).processWidth, closeTo(84 * 30 / 90, .01));
+      expect(layout(140, process: 30).trailing, isEmpty);
+      expect(layout(90, process: 30).processWidth, isNull);
     });
   });
 
@@ -295,6 +302,19 @@ void main() {
           // and the process name outlasts them all.
           if (note || exit || speed) {
             expect(find.text('ssh'), findsOneWidget);
+            // Nothing trails a host cut short of its readable start.
+            final context = tester.element(find.byType(TrackerCompactRow));
+            expect(
+              tester.getSize(host).width,
+              greaterThanOrEqualTo(
+                metrics.hostReadableWidthOf(
+                      context,
+                      'a-very-long-subdomain.example-cdn.com:443',
+                      host: 'a-very-long-subdomain.example-cdn.com',
+                    ) -
+                    0.5,
+              ),
+            );
           }
           expect(find.byType(ProcessFilterIcon), findsOneWidget);
           if (isLive) {
@@ -358,7 +378,7 @@ void main() {
     expect(tester.widget<Text>(name).overflow, TextOverflow.ellipsis);
     expect(
       tester.getSize(name).width,
-      inInclusiveRange(metrics.processMinWidth, metrics.processMaxWidth),
+      inInclusiveRange(metrics.processMinWidth, (360 - 8 - 24) * 0.3),
     );
     expect(
       tester.getSize(host).width,
@@ -386,10 +406,10 @@ void main() {
     expect(text.maxLines, 1);
   });
 
-  testWidgets('the icon and the exit filter without opening the detail', (
-    tester,
-  ) async {
-    final filters = await pump(tester, _info());
+  testWidgets('the icon and the exit filter without opening the detail, '
+      'pressed anywhere up the row\'s height', (tester) async {
+    final filters = await pump(tester, _info(), width: 600);
+    final row = tester.getRect(find.byType(TrackerCompactRow));
 
     await tester.tap(find.byType(ProcessFilterIcon));
     await tester.pumpAndSettle();
@@ -403,10 +423,73 @@ void main() {
     expect(filters.last, const RecordFilter(RecordFacetKind.proxy, 'DIRECT'));
     expect(find.byType(TrackerInfoDetailView), findsNothing);
 
+    // A near miss, above or below either, still filters.
+    final icon = tester.getRect(find.byType(ProcessIcon));
+    final chip = tester.getRect(exitChip);
+    expect(chip.height, lessThan(row.height - 20));
+    await tester.tapAt(Offset(icon.center.dx, row.top + 3));
+    await tester.tapAt(Offset(chip.center.dx, row.bottom - 3));
+    await tester.pumpAndSettle();
+    expect(filters, hasLength(4));
+    expect(filters[2].kind, RecordFacetKind.app);
+    expect(filters[3].kind, RecordFacetKind.proxy);
+    expect(find.byType(TrackerInfoDetailView), findsNothing);
+
     await tester.tap(find.text('example.com:443'));
     await tester.pumpAndSettle();
     expect(find.byType(TrackerInfoDetailView), findsOneWidget);
-    expect(filters, hasLength(2));
+    expect(filters, hasLength(4));
+  });
+
+  testWidgets('a short name leaves its room to the host, and the host reads '
+      'its start whole before anything trails it', (tester) async {
+    const target = 'www.example.com:443';
+    final info = _info(
+      host: 'www.example.com',
+      uploadSpeed: 1,
+      downloadSpeed: 1,
+    );
+    // The test font sets every glyph a full em wide: the host reads 240
+    // and the speeds 201, so only the short name leaves room for them.
+    await pump(tester, info, isLive: true, width: 600);
+    final context = tester.element(find.byType(TrackerCompactRow));
+    final readable = TrackerCompactMetrics.of(
+      context,
+    ).hostReadableWidthOf(context, target, host: 'www.example.com');
+    final short = tester.getRect(find.text(target));
+    expect(shows(speeds), isTrue);
+    expect(short.width, greaterThanOrEqualTo(readable - 0.5));
+
+    await pump(tester, info, isLive: true, width: 600, process: 'ssh-agent');
+    final long = tester.getRect(find.text(target));
+    expect(long.left, greaterThan(short.left));
+    expect(shows(speeds), isFalse);
+    expect(long.width, greaterThanOrEqualTo(readable - 0.5));
+  });
+
+  testWidgets('an Android app without an icon shows the fallback glyph, which '
+      'filters', (tester) async {
+    final filters = <RecordFilter>[];
+    await tester.pumpWidget(
+      TestApp(
+        wrapInProviderScope: true,
+        homeBuilder: (child) => HostScaffold(body: child),
+        child: RecordFilterScope(
+          onFilter: filters.add,
+          child: const Row(
+            children: [
+              TrackerPackageIcon(packageName: 'com.example', targetHeight: 48),
+              TrackerPackageIcon(packageName: '', targetHeight: 48),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(ProcessGlyphWell), findsOneWidget);
+    await tester.tap(find.byType(ProcessGlyphWell));
+    expect(filters, const [RecordFilter(RecordFacetKind.app, 'com.example')]);
   });
 
   Future<void> openContextMenu(WidgetTester tester) async {
@@ -489,9 +572,17 @@ void main() {
     expect(inMenu(find.text('Filter by this process')), findsNothing);
   });
 
-  testWidgets('a screen reader hears the target, marks and exit, no speed', (
-    tester,
-  ) async {
+  SemanticsNode rowNode(WidgetTester tester) => tester.getSemantics(
+    find
+        .descendant(
+          of: find.byType(TrackerCompactRow),
+          matching: find.byType(CardSurface),
+        )
+        .first,
+  );
+
+  testWidgets('a screen reader hears the target, marks and exit on the node '
+      'that opens the detail, and no speed', (tester) async {
     final semantics = tester.ensureSemantics();
     await pump(
       tester,
@@ -500,12 +591,82 @@ void main() {
       width: 600,
     );
 
-    final row = tester.getSemantics(find.byType(TrackerCompactRow));
+    final row = rowNode(tester);
+    expect(row.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
     expect(row.label, contains('example.com:443'));
     expect(row.label, contains('Exit DIRECT'));
     expect(row.label, contains('ssh'));
     expect(row.label, isNot(contains('/s')));
     expect(find.bySemanticsLabel(RegExp(r'/s')), findsNothing);
+
+    tester.semantics.tap(find.semantics.byLabel(row.label));
+    await tester.pumpAndSettle();
+    expect(find.byType(TrackerInfoDetailView), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('a decrypted, rewritten row names each once', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final info = _info().copyWith(
+      metadata: _info().metadata.copyWith(mitm: true),
+      mitmRewrite: const MitmConnectionRewrite(applied: true),
+    );
+    await pump(tester, info, width: 600);
+    final context = tester.element(find.byType(TrackerCompactRow));
+    final decrypted = MitmBadge.of(info)!.semanticsLabel(context);
+    final rewritten = MitmRewriteBadge.of(info)!.semanticsLabel(context);
+
+    final label = rowNode(tester).label;
+    expect(decrypted.allMatches(label), hasLength(1));
+    expect(rewritten.allMatches(label), hasLength(1));
+    expect(find.bySemanticsLabel(decrypted), findsNothing);
+    expect(find.bySemanticsLabel(rewritten), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('the exit is a button to a screen reader that names its node '
+      'and filters by it', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final filters = await pump(tester, _info(), width: 600);
+
+    final exit = tester.getSemantics(
+      find.ancestor(of: exitChip, matching: find.byType(Semantics)).first,
+    );
+    expect(exit.label, 'Filter by this node, DIRECT');
+    expect(exit.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    tester.semantics.tap(find.semantics.byLabel(exit.label));
+    await tester.pumpAndSettle();
+    expect(filters, const [RecordFilter(RecordFacetKind.proxy, 'DIRECT')]);
+    expect(find.byType(TrackerInfoDetailView), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('outside a filtered list the exit offers no filter', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      TestApp(
+        wrapInProviderScope: true,
+        homeBuilder: (child) => HostScaffold(body: child),
+        child: SizedBox(
+          width: 600,
+          child: Builder(
+            builder: (context) => TrackerCompactRow(
+              trackerInfo: _info(),
+              isLive: false,
+              detailTitle: 'detail',
+              metrics: TrackerCompactMetrics.of(context),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(exitChip, findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Filter by this node')), findsNothing);
+    expect(rowNode(tester).label, contains('Exit DIRECT'));
     semantics.dispose();
   });
 }

@@ -21,15 +21,17 @@ const _trailingGap = 8.0;
 const _iconSize = 24.0;
 const _hostMinChars = 6;
 
+/// A host reads this much, as www.example.com, before anything trails it.
+const _hostReadableChars = 15;
+
 /// The widest whole number a speed reads before its unit steps up.
 const _speedValueTemplate = '1024';
 
-const _processMaxChars = 9;
-
 const _processMaxShare = 0.3;
 
+enum _Measured { process, host, note, exit }
+
 /// What every compact row of one list shares at the current text size.
-@immutable
 class TrackerCompactMetrics {
   final double rowHeight;
   final TextStyle process;
@@ -38,12 +40,14 @@ class TrackerCompactMetrics {
   final TextStyle speed;
   final double hostMinWidth;
   final double processMinWidth;
-  final double processMaxWidth;
   final double arrowSize;
 
   final double speedWidth;
+  final TextStyle _chip;
+  final double _chipPadding;
+  final _widths = <(_Measured, String), double>{};
 
-  const TrackerCompactMetrics._({
+  TrackerCompactMetrics._({
     required this.rowHeight,
     required this.process,
     required this.host,
@@ -51,10 +55,12 @@ class TrackerCompactMetrics {
     required this.speed,
     required this.hostMinWidth,
     required this.processMinWidth,
-    required this.processMaxWidth,
     required this.arrowSize,
     required this.speedWidth,
-  });
+    required TextStyle chip,
+    required double chipPadding,
+  }) : _chip = chip,
+       _chipPadding = chipPadding;
 
   static final _cache = <Object, TrackerCompactMetrics>{};
 
@@ -101,57 +107,93 @@ class TrackerCompactMetrics {
       speed: speed,
       hostMinWidth: widthOf('0' * _hostMinChars, host),
       processMinWidth: widthOf('0' * _hostMinChars, process),
-      processMaxWidth: widthOf('0' * _processMaxChars, process),
       arrowSize: arrowSize,
       speedWidth:
           2 * (arrowSize + 2 + widthOf(_speedValueTemplate, speed)) +
           _itemGap +
           unitWidth,
+      chip: AppTextStyle.caption1.of(context, emphasized: true),
+      chipPadding: TonalChip.widthOf(context, ''),
     );
   }
+
+  double _widthOf(BuildContext context, _Measured kind, String text) {
+    if (_widths.length > 4096) _widths.clear();
+    return _widths[(kind, text)] ??=
+        MeasureScope.of(context, listen: false)
+            .computeTextSize(
+              Text(
+                text,
+                style: switch (kind) {
+                  _Measured.process => process,
+                  _Measured.host => host,
+                  _Measured.note => secondary,
+                  _Measured.exit => _chip,
+                },
+              ),
+            )
+            .width +
+        (kind == _Measured.exit ? _chipPadding : 0);
+  }
+
+  double processWidthOf(BuildContext context, String name) =>
+      _widthOf(context, _Measured.process, name);
+
+  /// [host] whole up to its readable length, then an ellipsis for the rest.
+  double hostReadableWidthOf(
+    BuildContext context,
+    String target, {
+    required String host,
+  }) {
+    final head = host.length <= _hostReadableChars
+        ? host
+        : host.substring(0, _hostReadableChars);
+    return _widthOf(
+      context,
+      _Measured.host,
+      head == target ? head : '$head\u2026',
+    );
+  }
+
+  double noteWidthOf(BuildContext context, String note) =>
+      _widthOf(context, _Measured.note, note);
+
+  double exitWidthOf(BuildContext context, String exit) =>
+      _widthOf(context, _Measured.exit, exit);
 }
 
 enum TrackerTrailing { speed, exit, note }
 
 /// What of a compact row fits in [width], after its icon, which always
-/// stays. The process name column takes its share of the row, between
-/// [processMinWidth] and [processMaxWidth], and the host keeps at least
-/// [hostMinWidth]; a live list's column gives way to its least so speeds
-/// fit, alike on every row but for [rewriteWidth], a mark only some carry.
-/// Then trailing parts fit in what is left or go, note first,
-/// then exit, then speeds, each whole and never cut short. Only a row still
-/// too narrow shrinks the name with the host, and drops it under half its
-/// least. [processWidth] in the result is null where the name goes.
+/// stays. The name takes its own width up to 30% of the row; trailing parts
+/// show while the host keeps [hostReadableWidth], dropped note, exit, then
+/// speeds; only a row too narrow for [hostMinWidth] shrinks the name.
 @visibleForTesting
 ({Set<TrackerTrailing> trailing, double? processWidth})
 layoutTrackerCompactRow({
   required double width,
   required double leadWidth,
   required double marksWidth,
-  double rewriteWidth = 0,
-  required double hostMinWidth,
+  required double? processWidth,
   required double processMinWidth,
-  required double processMaxWidth,
+  required double hostReadableWidth,
+  required double hostMinWidth,
   double? speedWidth,
   double? exitWidth,
   double? noteWidth,
 }) {
   final inner = width - 2 * _rowPadding;
-  var column = (inner * _processMaxShare)
-      .clamp(processMinWidth, max(processMinWidth, processMaxWidth))
-      .toDouble();
-  final aligned = inner - leadWidth - marksWidth - _itemGap;
-  if (speedWidth != null) {
-    final yielded = aligned - hostMinWidth - _trailingGap - speedWidth;
-    if (yielded < column) column = max(processMinWidth, yielded);
-  }
-  final shared = aligned - rewriteWidth;
+  final shared = inner - leadWidth - marksWidth;
+  double? process = processWidth == null
+      ? null
+      : min(processWidth, inner * _processMaxShare);
+  final nameSpan = process == null ? 0.0 : process + _itemGap;
   final widths = {
     TrackerTrailing.speed: ?speedWidth,
     TrackerTrailing.exit: ?exitWidth,
     TrackerTrailing.note: ?noteWidth,
   };
-  final room = shared - column - hostMinWidth - _trailingGap;
+  final room = shared - nameSpan - hostReadableWidth - _trailingGap;
   double trailing() => widths.isEmpty
       ? 0
       : widths.values.reduce((a, b) => a + b) + _itemGap * (widths.length - 1);
@@ -163,13 +205,13 @@ layoutTrackerCompactRow({
     if (trailing() <= room) break;
     widths.remove(part);
   }
-  double? process = column;
-  if (shared - hostMinWidth < column) {
-    final least = processMinWidth / (processMinWidth + hostMinWidth);
-    process = shared - hostMinWidth >= processMinWidth
-        ? shared - hostMinWidth
-        : shared * least;
-    if (process < processMinWidth / 2) process = null;
+  if (process != null && shared - nameSpan < hostMinWidth) {
+    final least = min(processMinWidth, process);
+    final left = shared - _itemGap - hostMinWidth;
+    process = left >= least
+        ? left
+        : (shared - _itemGap) * least / (least + hostMinWidth);
+    if (process < least / 2) process = null;
   }
   return (trailing: widths.keys.toSet(), processWidth: process);
 }
@@ -274,34 +316,33 @@ class TrackerCompactRow extends ConsumerWidget {
             ref.watch(
               patchClashConfigProvider.select((state) => state.mitm.enable),
             ));
-    final hasRewrite = MitmRewriteBadge.of(trackerInfo) != null;
     final exit = trackerInfo.chains.firstOrNull ?? '';
     final note = isLive ? null : trackerCompactNote(context, trackerInfo);
-    final measure = MeasureScope.of(context);
+    final target = trackerTargetText(trackerInfo);
     const leadWidth = _iconSize + _itemGap;
-    const rewriteMark = MitmBadge.gap + MitmBadge.iconSize;
-    // With decryption on, every row keeps room for a rewrite mark, so the
-    // rows of a list line up whichever carry one.
-    final marksWidth = mitmOn ? MitmBadgeSlot.width + rewriteMark : 0.0;
-    final rewriteWidth = hasRewrite && !mitmOn ? rewriteMark : 0.0;
+    final marksWidth =
+        (mitmOn ? MitmBadgeSlot.width : 0.0) +
+        (MitmRewriteBadge.of(trackerInfo) != null
+            ? MitmBadge.gap + MitmBadge.iconSize
+            : 0.0);
     final colorScheme = context.colorScheme;
-    return Semantics(
-      container: true,
-      label: _summary(context, processName),
-      child: ContextMenuRegion(
-        menuBuilder: (menuContext) =>
-            trackerInfoMenuItems(context, trackerInfo, onClose: onClose),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _rowMargin),
-          child: PressSurface(
-            fill: const Color(0x00000000),
-            shape: AppShape.md,
-            childFills: true,
-            onPressed: () => showTrackerInfoDetail(
-              context,
-              latest?.call() ?? trackerInfo,
-              detailTitle,
-            ),
+    return ContextMenuRegion(
+      menuBuilder: (menuContext) =>
+          trackerInfoMenuItems(context, trackerInfo, onClose: onClose),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _rowMargin),
+        child: PressSurface(
+          fill: const Color(0x00000000),
+          shape: AppShape.md,
+          childFills: true,
+          onPressed: () => showTrackerInfoDetail(
+            context,
+            latest?.call() ?? trackerInfo,
+            detailTitle,
+          ),
+          // On the node that opens the detail, so it is read with its action.
+          child: Semantics(
+            label: _summary(context, processName),
             child: SizedBox(
               height: metrics.rowHeight,
               child: LayoutBuilder(
@@ -310,21 +351,23 @@ class TrackerCompactRow extends ConsumerWidget {
                     width: constraints.maxWidth,
                     leadWidth: leadWidth,
                     marksWidth: marksWidth,
-                    rewriteWidth: rewriteWidth,
-                    hostMinWidth: metrics.hostMinWidth,
+                    processWidth: processName == null || processName.isEmpty
+                        ? null
+                        : metrics.processWidthOf(context, processName),
                     processMinWidth: metrics.processMinWidth,
-                    processMaxWidth: metrics.processMaxWidth,
+                    hostReadableWidth: metrics.hostReadableWidthOf(
+                      context,
+                      target,
+                      host: trackerInfo.title,
+                    ),
+                    hostMinWidth: metrics.hostMinWidth,
                     speedWidth: isLive ? metrics.speedWidth : null,
                     exitWidth: exit.isEmpty
                         ? null
-                        : TonalChip.widthOf(context, exit),
+                        : metrics.exitWidthOf(context, exit),
                     noteWidth: note == null || note.isEmpty
                         ? null
-                        : measure
-                              .computeTextSize(
-                                Text(note, style: metrics.secondary),
-                              )
-                              .width,
+                        : metrics.noteWidthOf(context, note),
                   );
                   const dividerStart = _rowPadding + leadWidth;
                   return Stack(
@@ -338,13 +381,12 @@ class TrackerCompactRow extends ConsumerWidget {
                           children: [
                             _buildIcon(context, process),
                             const SizedBox(width: _itemGap),
-                            // Held without a name so hosts line up.
                             if (layout.processWidth case final width?) ...[
                               SizedBox(
                                 width: width,
                                 child: ExcludeSemantics(
                                   child: Text(
-                                    processName ?? '',
+                                    processName!,
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
@@ -355,11 +397,11 @@ class TrackerCompactRow extends ConsumerWidget {
                               const SizedBox(width: _itemGap),
                             ],
                             Expanded(
-                              child: MitmHostLine(
-                                trackerInfo: trackerInfo,
-                                host: ExcludeSemantics(
-                                  child: Text(
-                                    trackerTargetText(trackerInfo),
+                              child: ExcludeSemantics(
+                                child: MitmHostLine(
+                                  trackerInfo: trackerInfo,
+                                  host: Text(
+                                    target,
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
@@ -404,29 +446,21 @@ class TrackerCompactRow extends ConsumerWidget {
   Widget _buildIcon(BuildContext context, ConnectionProcess? connection) {
     if (connection != null) {
       return connection.hasProcess
-          ? ProcessFilterIcon(process: connection, size: _iconSize)
+          ? Semantics(
+              container: true,
+              child: ProcessFilterIcon(
+                process: connection,
+                size: _iconSize,
+                targetHeight: metrics.rowHeight,
+              ),
+            )
           : ExcludeSemantics(
               child: ProcessIcon(process: connection, size: _iconSize),
             );
     }
-    final process = trackerInfo.metadata.process;
-    return OwnPackageIcon(
-      packageName: process,
-      size: _iconSize,
-      builder: (context, icon) => icon == null
-          ? const SizedBox.square(dimension: _iconSize)
-          : Semantics(
-              button: true,
-              label: context.appLocalizations.filterByThisApp,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => RecordFilterScope.add(
-                  context,
-                  RecordFilter(RecordFacetKind.app, process),
-                ),
-                child: icon,
-              ),
-            ),
+    return TrackerPackageIcon(
+      packageName: trackerInfo.metadata.process,
+      targetHeight: metrics.rowHeight,
     );
   }
 
@@ -438,7 +472,8 @@ class TrackerCompactRow extends ConsumerWidget {
   ) {
     final parts = <Widget>[
       if (layout.trailing.contains(TrackerTrailing.speed)) _buildSpeed(context),
-      if (layout.trailing.contains(TrackerTrailing.exit)) _ExitChip(exit: exit),
+      if (layout.trailing.contains(TrackerTrailing.exit))
+        _ExitChip(exit: exit, height: metrics.rowHeight),
       if (layout.trailing.contains(TrackerTrailing.note))
         ExcludeSemantics(
           child: Text(
@@ -495,25 +530,110 @@ class TrackerCompactRow extends ConsumerWidget {
 
 class _ExitChip extends StatelessWidget {
   final String exit;
+  final double height;
 
-  const _ExitChip({required this.exit});
+  const _ExitChip({required this.exit, required this.height});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    return Semantics(
-      button: true,
-      label: '${context.appLocalizations.filterByThisNode} $exit',
-      excludeSemantics: true,
+    final filter = RecordFilter(RecordFacetKind.proxy, exit);
+    return _FilterTarget(
+      label: context.appLocalizations.filterByThisNode,
+      value: exit,
+      height: height,
+      filter: filter,
       child: TonalChip(
         label: exit,
         color: context.raisedSurfaceLevel.colorOf(colorScheme),
         foregroundColor: colorScheme.onSurfaceVariant,
-        onPressed: () => RecordFilterScope.add(
-          context,
-          RecordFilter(RecordFacetKind.proxy, exit),
+        onPressed: _FilterTarget.offeredIn(context)
+            ? () => RecordFilterScope.add(context, filter)
+            : null,
+      ),
+    );
+  }
+}
+
+/// Filters when pressed anywhere up the row's height, so a near miss does
+/// not open the detail.
+class _FilterTarget extends StatelessWidget {
+  final String label;
+  final String? value;
+  final double height;
+  final RecordFilter filter;
+  final Widget child;
+
+  const _FilterTarget({
+    required this.label,
+    this.value,
+    required this.height,
+    required this.filter,
+    required this.child,
+  });
+
+  static bool offeredIn(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<RecordFilterScope>() != null;
+
+  @override
+  Widget build(BuildContext context) {
+    // Nothing to narrow: the row's own summary names what this shows.
+    if (!offeredIn(context)) return ExcludeSemantics(child: child);
+    void onTap() => RecordFilterScope.add(context, filter);
+    return Semantics(
+      container: true,
+      button: true,
+      label: value == null ? label : '$label, $value',
+      onTap: onTap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onTap,
+        child: SizedBox(
+          height: height,
+          child: Center(child: child),
         ),
       ),
+    );
+  }
+}
+
+/// An Android row's app icon, or a glyph for an app without one.
+class TrackerPackageIcon extends StatelessWidget {
+  final String packageName;
+  final double targetHeight;
+
+  const TrackerPackageIcon({
+    super.key,
+    required this.packageName,
+    required this.targetHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OwnPackageIcon(
+      packageName: packageName,
+      size: _iconSize,
+      builder: (context, icon) {
+        final shown =
+            icon ??
+            (packageName.isEmpty
+                ? null
+                : const ProcessGlyphWell(
+                    glyph: AppGlyphs.appsList,
+                    size: _iconSize,
+                  ));
+        if (shown == null) {
+          return const SizedBox.square(dimension: _iconSize);
+        }
+        return _FilterTarget(
+          label: context.appLocalizations.filterByThisApp,
+          height: targetHeight,
+          filter: RecordFilter(RecordFacetKind.app, packageName),
+          child: shown,
+        );
+      },
     );
   }
 }
