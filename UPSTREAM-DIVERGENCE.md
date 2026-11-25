@@ -102,3 +102,92 @@ main（白小飞 2026-11-23）。
   16 dp margin and 16 dp row padding. With upstream's insets the pill
   overflows while a maximized window restores (`test/pages/home_test.dart`).
   Revisit if the card is redesigned.
+
+## 7. 2026-11-25 sync: what was taken from `41b05838..d7e0cb5c`
+
+- Files: see each commit on `sync/upstream-20261125`; every pick is
+  `cherry-pick -x` and carries a `Flash:` note where it was adapted.
+- Upstream: 52 commits on `dev` after `41b05838`, up to `d7e0cb5c`.
+- Flash decision:
+  - Taken as is: `1a57072d`, `fee1b89f`, `a588140a`, `7a63bb47`,
+    `f95f0f1c`, `6fc66dd6`, `1c4a5e25`, `44c88645`, `9b01010a`,
+    `da96bd09`, `e6d330d5`, `49fc786c`, `c5c7ef0e`.
+  - Adapted: `18eaaea7` (Flash's MITM, capture and module strings win
+    where both changed), `fac7b07d` (on Flash's `_beginStart` and
+    composition review; `needInitStatus` stays), `932826b5` and `06643c36`
+    (test doubles get Flash's signatures), `83214b6c` (prism_ui pinned to
+    Flash's integration merge, see section 9), `94288d79` (taken despite the
+    skip list: the prism_ui pin removes the old unfold widgets and
+    `e21abb48` builds on it; Flash's header with node fields and stacked
+    actions stays), `a27fab5e` (compact text scale on Flash's own detail
+    views; upstream's detail files stay out), `e21abb48` (the header cover
+    keeps Flash's wrapped `headerHeight`), `edc67090` (the tick still waits
+    for Flash's deferred running publication), `b2267cbc` (resources page
+    keeps its read-failure banner), `8eb40a94` (list editor and covered-page
+    tests only), `7393ea46` (regenerated providers), `09818359`
+    (`Cargo.lock` without upstream's `gdk-pixbuf-sys`), `9281e122` (on
+    `MitmView`), `c8d1e9d0` (Flash schema, restore commits and digest sink
+    kept), `d6959982` (Flash's routing-rules row uses the builder too),
+    `066d5cca` (without the connection filter test).
+  - Flash follow-ups: `test(dashboard)` expects the one-minute recheck after
+    a timeout (`a588140a`), `test(setup)` waits for the tick's traffic read
+    (`edc67090`), `chore(build)` regenerates the setup provider hash,
+    `build(prism_ui)` keeps the dock (section 9), `fix(requests)` lets the
+    live feed use prism's own loading spinner (section 9).
+  - Skipped, upstream-only targets: `bfa6a033`, `dfddcc44`, `048d88e3`,
+    `784533f1`, `255fcadf`, `cd6326a8`, `d7e0cb5c` (section 10), and the
+    request list commits in section 8.
+  - Skipped by decision: `73a0182f`, `7b97a687`, `14e87f46` (update channel,
+    section 3), `7f5972ca` (macOS swap script tests for upstream's
+    updater), `219bc95a`, `32e40e42`, `6df83255`, `4abbd15a` (phone dock and
+    navigation), `6e57e26a` (hooks).
+- On sync: start the next range at `d7e0cb5c`.
+
+## 8. Upstream request lists after 2026-11-23
+
+- Files: `lib/views/connection/requests.dart`,
+  `lib/views/dashboard/widgets/connections_table.dart`.
+- Upstream: `76e0ac4c` and `3a1c050e` (HTTP segment), `bf6c3c28` (status
+  segment size), `8682368b` (dashboard opens live connections on Active),
+  `617223a0` (a status's own empty state), `2d1126f8` (counted status menu,
+  one-line records, `record_label_line.dart`).
+- Flash decision: not taken. They build on upstream's page (segments,
+  `http_capture.dart`, `connection_filter_row.dart`, `connection_filters.dart`,
+  `http_requests.dart`, `dns_queries.dart`), which Flash does not carry
+  (section 2). Flash's dashboard already opens live connections on its live
+  feed (`RequestFeed.live`), which is what `8682368b` fixes upstream.
+- On sync: same as section 2; adopting the counted status menu would be its
+  own change on Flash's page.
+
+## 9. prism_ui integration branch for 2026-11-25
+
+- Files: `plugins/prism_ui` (branch `flash/upsync-20261125`).
+- Upstream: prism_ui `cae9a435`, the pin of FlClash `d7e0cb5c`.
+- Flash decision: `aac2e14` merges `cae9a435` into Flash's `54de34c5`
+  (no rebase). Conflicts: `null_status.dart` drops `holdsArrival` and keeps
+  Flash's `animate`; `segmented_control.dart` keeps Flash's dense insets
+  beside upstream's `_labelInsetOf`; `popup.dart` takes upstream's item
+  detail and keeps `labelEmphasized`, `labelTrailing` and `leading`.
+  `31ed1e4` then restores `navigation_dock.dart` to `54de34c5`, so the phone
+  dock keeps Flash's layout while `219bc95a`, `6df83255` and `4abbd15a`
+  stay skipped. With `holdsArrival` gone a loading page opens at once behind
+  a spinner; Flash's live feed no longer passes its own spinner as the
+  loading status, since prism waits for a caller's spinner to stop before it
+  reveals the content.
+- On sync: merge the next upstream prism_ui into `flash/upsync-20261125`'s
+  tip and keep `navigation_dock.dart` unless the dock commits are taken.
+
+## 10. Connection detail spacing that targets upstream's detail views
+
+- Files: `lib/features/connection/tracker_info_item.dart`,
+  `lib/features/connection/detail_tabs.dart`, `lib/widgets/record.dart`.
+- Upstream: `bfa6a033` (4 dp under titles via `RecordLabelLine` and
+  `DetailHeader`), `dfddcc44` and `255fcadf` (tabular hop delays in
+  `tracker_info_detail.dart`), `048d88e3` (detail head gap),
+  `784533f1` (docs for that spacing), `cd6326a8` and `d7e0cb5c` (tests for
+  upstream rows and filters).
+- Flash decision: not taken. Flash keeps its own record rows and detail view
+  (route reasons, skipped rules, node badges) and has no detail head, hop
+  delay row or `RecordLabelLine`; its custom profile members already leave
+  4 dp. `784533f1` would document spacing Flash does not use.
+- On sync: re-check if Flash adopts upstream's detail views.
