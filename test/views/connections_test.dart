@@ -1002,8 +1002,8 @@ void main() {
       expect(tester.takeException(), null);
     });
 
-    testWidgets('a failure after an empty read keeps the empty state under '
-        'the hint', (tester) async {
+    testWidgets('a failure after an empty read says the read failed under '
+        'the hint, never that there are none', (tester) async {
       final l10n = currentAppLocalizations;
       await pumpAnnounced(tester);
       await nextPoll(tester);
@@ -1012,8 +1012,8 @@ void main() {
       reader = () async => throw StateError('down');
       await nextPoll(tester);
       expect(banner(), findsOneWidget);
-      expect(find.text(l10n.nullTip(l10n.connections)), findsOneWidget);
-      expect(find.text(l10n.connectionsReadFailed), findsNothing);
+      expect(find.text(l10n.nullTip(l10n.connections)), findsNothing);
+      expect(find.text(l10n.connectionsReadFailed), findsOneWidget);
       expect(tester.takeException(), null);
 
       await teardownView(tester);

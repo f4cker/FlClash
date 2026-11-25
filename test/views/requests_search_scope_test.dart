@@ -226,6 +226,34 @@ void main() {
     await teardown(tester);
   });
 
+  testWidgets('paused, the title menu counts what the list keeps, as the '
+      'note does', (tester) async {
+    await pump(tester, feed: RequestFeed.recent);
+    await pause(tester);
+    add(trackers(400, 2000));
+    await settle(tester);
+    expect(find.text(_zh('2,400', '4,000')), findsOneWidget);
+
+    final title = lookupAppLocalizations(
+      const Locale('zh', 'CN'),
+    ).recentRequests;
+    await tester.tap(
+      find.descendant(of: find.byType(AppBar), matching: find.text(title)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final recent = find
+        .descendant(
+          of: find.byType(PopupMenu),
+          matching: find.byType(RequestFeedCount),
+        )
+        .first;
+    expect(tester.widget<RequestFeedCount>(recent).count, 2400);
+    await tester.tapAt(const Offset(300, 900));
+    await tester.pumpAndSettle();
+    await teardown(tester);
+  });
+
   for (final paused in [false, true]) {
     testWidgets('cleared ${paused ? 'paused' : 'following'}: '
         'nothing kept, the limit stays', (tester) async {

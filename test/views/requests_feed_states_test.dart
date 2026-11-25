@@ -13,7 +13,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart' show NumberFormat;
-import 'package:prism_ui/prism_ui.dart';
 
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
@@ -67,7 +66,7 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     required RequestFeed feed,
-    required Future<List<TrackerInfo>> Function() connectionsReader,
+    required Future<List<TrackerInfo>> Function()? connectionsReader,
     Locale locale = const Locale('en'),
     Size size = const Size(600, 1000),
   }) async {
@@ -311,6 +310,95 @@ void main() {
       await teardown(tester);
     });
 
+    testWidgets('a running count overtaken by a newer read takes the newer '
+        'one\'s', (tester) async {
+      seed(const []);
+      final reads = <Completer<List<TrackerInfo>>>[];
+      await pump(
+        tester,
+        feed: RequestFeed.live,
+        connectionsReader: () {
+          final read = Completer<List<TrackerInfo>>();
+          reads.add(read);
+          return read.future;
+        },
+      );
+      reads.first.completeError(Exception('core gone'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(reads, hasLength(2));
+
+      await openMenu(tester, 'Running');
+      expect(counts(tester), ['0', '—']);
+      // A retry reads again beside the poll the menu waits on.
+      tester.widget<RetryButton>(find.byType(RetryButton)).onRetry();
+      await tester.pump();
+      expect(reads, hasLength(3));
+      reads[2].complete(_trackers(7, prefix: 'c'));
+      await tester.pump();
+      reads[1].complete(_trackers(3, prefix: 'c'));
+      await tester.pump();
+      expect(counts(tester), ['0', '7']);
+
+      await closeMenu(tester);
+      await teardown(tester);
+    });
+
+    for (final (status, count) in const [
+      (CoreStatus.connecting, '—'),
+      (CoreStatus.disconnected, '0'),
+    ]) {
+      testWidgets('a running count is $count while the Core is '
+          '${status.name}', (tester) async {
+        seed(const []);
+        container.read(coreStatusProvider.notifier).value = status;
+        await pump(tester, feed: RequestFeed.recent, connectionsReader: null);
+
+        await openMenu(tester, 'Recent requests');
+        await tester.pump();
+        expect(counts(tester), ['0', count]);
+
+        await closeMenu(tester);
+        await teardown(tester);
+      });
+    }
+
+    testWidgets('a count that comes back as the menu closes reaches only '
+        'that menu, and the next one reads again', (tester) async {
+      seed(const []);
+      final reads = <Completer<List<TrackerInfo>>>[];
+      await pump(
+        tester,
+        feed: RequestFeed.recent,
+        connectionsReader: () {
+          final read = Completer<List<TrackerInfo>>();
+          reads.add(read);
+          return read.future;
+        },
+      );
+
+      await openMenu(tester, 'Recent requests');
+      await tester.tapAt(const Offset(300, 900));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(menu, findsOneWidget);
+      reads.single.complete(_trackers(4, prefix: 'c'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(counts(tester), ['0', '4']);
+      await tester.pumpAndSettle();
+      expect(menu, findsNothing);
+
+      await openMenu(tester, 'Recent requests');
+      expect(counts(tester), ['0', '—']);
+      reads.last.complete(_trackers(6, prefix: 'c'));
+      await tester.pump();
+      expect(reads, hasLength(2));
+      expect(counts(tester), ['0', '6']);
+
+      await closeMenu(tester);
+      await teardown(tester);
+    });
+
     testWidgets('the title takes a 44dp press at least', (tester) async {
       seed(const []);
       await pump(
@@ -520,6 +608,34 @@ void main() {
       expect(counts(tester), ['0', '—']);
 
       await closeMenu(tester);
+      await teardown(tester);
+    });
+
+    testWidgets('a refresh that fails after an empty read never says there '
+        'are none', (tester) async {
+      seed(const []);
+      var fails = false;
+      await pump(
+        tester,
+        feed: RequestFeed.live,
+        connectionsReader: () async {
+          if (fails) throw Exception('core gone');
+          return const [];
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('No Connections yet'), findsOneWidget);
+
+      fails = true;
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      final l10n = currentAppLocalizations;
+      expect(find.text(l10n.connectionsRefreshFailedStale), findsOneWidget);
+      expect(find.text('No Connections yet'), findsNothing);
+      expect(find.text(l10n.connectionsReadFailed), findsOneWidget);
+      // One retry, the banner's.
+      expect(find.byType(RetryButton), findsOneWidget);
+
       await teardown(tester);
     });
   });

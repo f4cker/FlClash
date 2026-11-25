@@ -11,7 +11,6 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show NumberFormat;
@@ -54,8 +53,6 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   Timer? _searchCooldown;
   String? _queuedSearch;
   final _searchText = TextEditingController();
-  final _feedMenu = ValueNotifier<List<PopupMenuItem>>(const []);
-  var _feedMenuOpening = 0;
   Future<int?>? _liveCountRead;
   late final _filters = trackerInfoFilterController(ref, 'requests');
   late var _feed =
@@ -83,7 +80,6 @@ class _RequestsViewState extends ConsumerState<RequestsView>
     _live.dispose();
     _filters.dispose();
     _searchText.dispose();
-    _feedMenu.dispose();
     super.dispose();
   }
 
@@ -217,12 +213,15 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   };
 
   /// Without a fresh snapshot the running count is unknown until a read.
-  ValueListenable<List<PopupMenuItem>> _openFeedMenu() {
-    final opening = ++_feedMenuOpening;
-    final recent = ref.read(requestsProvider).list.length;
+  List<PopupMenuItem> _openFeedMenu(
+    void Function(List<PopupMenuItem> items) update,
+  ) {
+    // Shown, Recent keeps what came in while it was paused as well.
+    final recent = _feed == RequestFeed.recent
+        ? _recent.value.trackerInfos.length
+        : ref.read(requestsProvider).list.length;
     final liveFeed = _liveFeed.currentState;
     final live = liveFeed?.freshCount;
-    _feedMenu.value = _buildFeedMenu(recent: recent, live: live);
     if (live == null) {
       final read =
           liveFeed?.pendingCount ??
@@ -231,12 +230,11 @@ class _RequestsViewState extends ConsumerState<RequestsView>
           ));
       unawaited(
         read.then((live) {
-          if (!mounted || opening != _feedMenuOpening) return;
-          _feedMenu.value = _buildFeedMenu(recent: recent, live: live);
+          if (mounted) update(_buildFeedMenu(recent: recent, live: live));
         }),
       );
     }
-    return _feedMenu;
+    return _buildFeedMenu(recent: recent, live: live);
   }
 
   Future<int?> _readLiveCount() async {
@@ -245,8 +243,12 @@ class _RequestsViewState extends ConsumerState<RequestsView>
       if (reader != null) {
         return (await reader()).length;
       }
-      if (ref.read(coreStatusProvider) != CoreStatus.connected) {
-        return 0;
+      switch (ref.read(coreStatusProvider)) {
+        case CoreStatus.disconnected:
+          return 0;
+        case CoreStatus.connecting:
+          return null;
+        case CoreStatus.connected:
       }
       return await ref
           .read(coreHandlerProvider)
@@ -536,20 +538,18 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
 
   /// The last snapshot read, before the Core's MITM reports are laid over.
   List<TrackerInfo>? _snapshot;
-  DateTime? _snapshotAt;
 
-  /// The last read's count while recent; null after a failed read.
+  /// Stamped as it comes back; null count where it failed or Core was starting.
+  ({int? count, DateTime at})? _latestRead;
+
   int? get freshCount {
-    final snapshot = _snapshot;
-    final at = _snapshotAt;
-    if (_failed || snapshot == null || at == null) return null;
-    if (DateTime.now().difference(at) > _freshSnapshot) return null;
-    return snapshot.length;
+    final read = _latestRead;
+    if (read == null) return null;
+    if (DateTime.now().difference(read.at) > _freshSnapshot) return null;
+    return read.count;
   }
 
-  Future<int?>? get pendingCount => _inFlight?.then(
-    (read) => read == null ? freshCount : read.trackerInfos?.length,
-  );
+  Future<int?>? get pendingCount => _inFlight?.then((_) => freshCount);
   Future<_ConnectionsRead?>? _inFlight;
 
   final _mitmOverlay = MitmStatusOverlay();
@@ -633,10 +633,11 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     final read = ++_reads;
     final rank = rankAfter(_ranking);
     final connectionsReader = widget.connectionsReader;
+    final status = ref.read(coreStatusProvider);
     try {
       final ranked = connectionsReader != null
           ? rank(await connectionsReader())
-          : ref.read(coreStatusProvider) == CoreStatus.connected
+          : status == CoreStatus.connected
           ? await _core.getConnectionsWith(rank)
           : rank(const []);
       // A refresh after closing a connection can overlap a poll.
@@ -645,6 +646,12 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       }
       _shownRead = read;
       _ranking = ranked.ranking;
+      _latestRead = (
+        count: connectionsReader == null && status == CoreStatus.connecting
+            ? null
+            : ranked.trackerInfos.length,
+        at: DateTime.now(),
+      );
       return _ConnectionsRead(ranked.trackerInfos);
     } catch (error) {
       if (!mounted) {
@@ -659,11 +666,16 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       }
       _shownRead = read;
       // A Core that stopped under the read has no connections, not a failure.
-      if (connectionsReader == null &&
-          ref.read(coreStatusProvider) != CoreStatus.connected) {
+      final stopped = ref.read(coreStatusProvider);
+      if (connectionsReader == null && stopped != CoreStatus.connected) {
         _ranking = TrackerRanking.empty;
+        _latestRead = (
+          count: stopped == CoreStatus.disconnected ? 0 : null,
+          at: DateTime.now(),
+        );
         return const _ConnectionsRead([]);
       }
+      _latestRead = (count: null, at: DateTime.now());
       return const _ConnectionsRead(null);
     }
   }
@@ -692,7 +704,6 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       return;
     }
     _snapshot = trackerInfos;
-    _snapshotAt = DateTime.now();
     ref
         .read(requestsProvider.notifier)
         .retainMitmStatuses(trackerInfos.map((info) => info.id));
@@ -770,16 +781,18 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
           child: NullStatusSwitcher(
             isLoading: !_loaded,
             isEmpty: unread || connections.isEmpty,
-            nullStatus: unread
+            nullStatus: unread || (stale && state.trackerInfos.isEmpty)
                 ? NullStatus(
                     label: appLocalizations.connectionsReadFailed,
                     description: appLocalizations.connectionsReadFailedDesc,
                     illustration: NullStatusIllustration.error,
-                    action: RetryButton(
-                      busy: _retrying,
-                      onRetry: _retry,
-                      filled: true,
-                    ),
+                    action: stale
+                        ? null
+                        : RetryButton(
+                            busy: _retrying,
+                            onRetry: _retry,
+                            filled: true,
+                          ),
                   )
                 : state.trackerInfos.isEmpty
                 ? NullStatus(

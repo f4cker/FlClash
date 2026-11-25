@@ -96,8 +96,13 @@ class Scaffold extends StatefulWidget {
   final Widget? titleWidget;
   final List<PopupMenuItem> titleMenuItems;
 
-  /// Called as the title menu opens, in place of [titleMenuItems].
-  final ValueListenable<List<PopupMenuItem>> Function()? titleMenuOnOpen;
+  /// Called as the title menu opens, in place of [titleMenuItems]: returns
+  /// the items to show, and may later replace them through `update`, which
+  /// does nothing once that menu is gone.
+  final List<PopupMenuItem> Function(
+    void Function(List<PopupMenuItem> items) update,
+  )?
+  titleMenuOnOpen;
   final bool isLoading;
   final List<Widget>? actions;
 
@@ -998,18 +1003,22 @@ class ScaffoldState extends State<Scaffold>
 class _TitleMenuPopup extends StatefulWidget {
   const _TitleMenuPopup({required this.onOpen});
 
-  final ValueListenable<List<PopupMenuItem>> Function() onOpen;
+  final List<PopupMenuItem> Function(
+    void Function(List<PopupMenuItem> items) update,
+  )
+  onOpen;
 
   @override
   State<_TitleMenuPopup> createState() => _TitleMenuPopupState();
 }
 
+/// Holds its own items, so a late update reaches only this menu, never one
+/// still closing.
 class _TitleMenuPopupState extends State<_TitleMenuPopup> {
-  late final _items = widget.onOpen();
+  late List<PopupMenuItem> _items = widget.onOpen((items) {
+    if (mounted) setState(() => _items = items);
+  });
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: _items,
-    builder: (_, items, _) => PopupMenu(items: items),
-  );
+  Widget build(BuildContext context) => PopupMenu(items: _items);
 }
