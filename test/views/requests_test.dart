@@ -241,8 +241,9 @@ void main() {
   testWidgets('holding the scrollbar thumb floats the start time beside it', (
     tester,
   ) async {
+    // Enough rows that the thumb rests at its minimum length.
     final requests = List.generate(
-      200,
+      400,
       (i) => TrackerInfo(
         id: '$i',
         start: DateTime.utc(2026, 1, 1, 0, 0, i),
@@ -442,12 +443,14 @@ void main() {
     await teardownView(tester);
   });
 
-  testWidgets('a narrow page keeps the stacked rows', (tester) async {
+  testWidgets('a narrow page lays the requests out in compact rows', (
+    tester,
+  ) async {
     seedRequests([_tracker(id: 'a', host: 'alpha.test')]);
 
     await pumpRequests(tester, size: _listSize);
 
-    expect(find.byType(TrackerInfoItem), findsOneWidget);
+    expect(find.byType(TrackerCompactRow), findsOneWidget);
     expect(find.byType(TrackerInfoTableRow), findsNothing);
     expect(find.text('Target'), findsNothing);
 
@@ -485,7 +488,7 @@ void main() {
           .toSet(),
       {true, false},
     );
-    expect(find.byType(TrackerInfoItem), findsNothing);
+    expect(find.byType(TrackerCompactRow), findsNothing);
     expect(
       find.descendant(
         of: find.byType(TrackerInfoTableRow),
@@ -913,7 +916,7 @@ void main() {
       var built = 0;
       debugOnRebuildDirtyWidget = (element, _) {
         final widget = element.widget;
-        if (widget is TrackerInfoItem || widget is TrackerInfoTableRow) {
+        if (widget is TrackerCompactRow || widget is TrackerInfoTableRow) {
           built++;
         }
       };

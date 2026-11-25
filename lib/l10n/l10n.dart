@@ -16581,6 +16581,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rule “{rule}” points to “{target}”, where “{node}” couldn\'t forward this UDP connection, so the rule was skipped.'**
   String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node);
+
+  /// No description provided for @requestCountUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Count unknown'**
+  String get requestCountUnknown;
+
+  /// No description provided for @clearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get clearFilters;
+
+  /// No description provided for @clearSearchAndFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search and filters'**
+  String get clearSearchAndFilters;
+
+  /// No description provided for @filterByThisNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by this node'**
+  String get filterByThisNode;
+
+  /// No description provided for @filterByNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by node'**
+  String get filterByNode;
 }
 
 class _AppLocalizationsDelegate

@@ -10209,4 +10209,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
     return 'Rule “$rule” points to “$target”, where “$node” couldn\'t forward this UDP connection, so the rule was skipped.';
   }
+
+  @override
+  String get requestCountUnknown => 'Count unknown';
+
+  @override
+  String get clearFilters => 'Clear filters';
+
+  @override
+  String get clearSearchAndFilters => 'Clear search and filters';
+
+  @override
+  String get filterByThisNode => 'Filter by this node';
+
+  @override
+  String get filterByNode => 'Filter by node';
 }

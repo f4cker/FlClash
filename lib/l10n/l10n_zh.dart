@@ -9341,4 +9341,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
     return '规则「$rule」指向的「$target」中，「$node」无法转发这次 UDP 连接，这条规则被跳过。';
   }
+
+  @override
+  String get requestCountUnknown => '数量未知';
+
+  @override
+  String get clearFilters => '清除筛选';
+
+  @override
+  String get clearSearchAndFilters => '清除搜索和筛选';
+
+  @override
+  String get filterByThisNode => '筛选此节点';
+
+  @override
+  String get filterByNode => '按节点筛选';
 }

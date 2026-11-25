@@ -4385,5 +4385,10 @@
         "type": "Object"
       }
     }
-  }
+  },
+  "requestCountUnknown": "Count unknown",
+  "clearFilters": "Clear filters",
+  "clearSearchAndFilters": "Clear search and filters",
+  "filterByThisNode": "Filter by this node",
+  "filterByNode": "Filter by node"
 }

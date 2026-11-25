@@ -4193,5 +4193,10 @@
   "nodeUdpDisabledBy": "“{name}” has UDP disabled.",
   "nodeFieldThisGroup": "This group",
   "nodeGroupDisablesUdp": "UDP disabled",
-  "routeUdpSkippedUnsupportedBy": "Rule “{rule}” points to “{target}”, where “{node}” couldn't forward this UDP connection, so the rule was skipped."
+  "routeUdpSkippedUnsupportedBy": "Rule “{rule}” points to “{target}”, where “{node}” couldn't forward this UDP connection, so the rule was skipped.",
+  "requestCountUnknown": "Count unknown",
+  "clearFilters": "Clear filters",
+  "clearSearchAndFilters": "Clear search and filters",
+  "filterByThisNode": "Filter by this node",
+  "filterByNode": "Filter by node"
 }
