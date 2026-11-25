@@ -508,7 +508,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get externalController => '外部控制器';
 
   @override
-  String get externalControllerDesc => '外部控制器开启后，可通过 9090 端口控制内核。';
+  String get externalControllerDesc => '外部控制器监听 9090 端口。';
 
   @override
   String get externalControllerSecret => '外部控制器密钥';
@@ -787,7 +787,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get writeToSystem => '写入系统';
 
   @override
-  String get writeToSystemDesc => '写入系统会同时设置系统时钟，Android 上不生效。';
+  String get writeToSystemDesc => '写入系统在 Android 上不生效。';
 
   @override
   String get sniffer => '域名嗅探';
@@ -797,9 +797,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get forceDnsMapping => '强制DNS映射';
-
-  @override
-  String get forceDnsMappingDesc => '强制 DNS 映射对通过 DNS 映射得到域名的连接也进行嗅探。';
 
   @override
   String get parsePureIp => '解析纯IP';
@@ -832,8 +829,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addOverrideEntry => '添加覆写项';
 
   @override
-  String get dnsOverrideDesc =>
-      '添加的项会覆写所有 URL 和文件配置的 DNS，未添加的项沿用配置自身的设置。自定义配置的 DNS 在其内容中设置。';
+  String get dnsOverrideDesc => '添加的项覆写 URL 和文件配置的 DNS。';
 
   @override
   String get settingEntries => '设置项';
@@ -863,8 +859,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get respectRules => '遵守规则';
 
   @override
-  String get respectRulesDesc =>
-      '遵守规则使 DNS 连接遵守规则，需配置 Proxy Server Nameserver。';
+  String get respectRulesDesc => '遵守规则需配置 Proxy Server Nameserver。';
 
   @override
   String get dnsMode => 'DNS模式';
@@ -3123,7 +3118,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routingMark => '路由标记';
 
   @override
-  String get strictRouteDesc => '严格路由防止 DNS 等流量绕过虚拟网卡，关闭 IPv6 时会阻断本机的 IPv6 连接。';
+  String get strictRouteDesc => '关闭 IPv6 时，严格路由会阻断本机的 IPv6 连接。';
 
   @override
   String get initFailed => '启动失败';
@@ -3153,8 +3148,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get disableIcmpForwarding => '禁用ICMP转发';
 
   @override
-  String get disableIcmpForwardingDesc =>
-      '禁用 ICMP 转发后由虚拟网卡直接应答 ping，ping 将不再显示真实延迟。';
+  String get disableIcmpForwardingDesc => '禁用 ICMP 转发后，ping 不再显示真实延迟。';
 
   @override
   String get excludeInterface => '排除网卡';
@@ -3163,7 +3157,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get includeInterface => '包含网卡';
 
   @override
-  String get includeInterfaceDesc => '只有从包含网卡进入的流量经过虚拟网卡，设置后排除网卡不再生效。';
+  String get includeInterfaceDesc => '设置后排除网卡不再生效。';
 
   @override
   String get includeUid => '包含用户 ID';
@@ -3187,15 +3181,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dnsHijackDesc => '未添加时劫持所有发往 53 端口的 DNS 请求（any:53）。';
 
   @override
-  String get tunOverrideDesc =>
-      '添加的项会覆写所有配置的虚拟网卡设置，未添加的项沿用配置自身的设置。自定义配置自己添加的项优先。';
+  String get tunOverrideDesc => '添加的项覆写所有配置的设置，自定义配置自己的项优先。';
 
   @override
-  String get generalOverrideDesc =>
-      '添加的项会覆写所有配置的对应设置，未添加的项沿用配置自身的设置，配置未设置时使用内核默认值。';
+  String get generalOverrideDesc => '添加的项覆写所有配置的对应设置。';
 
   @override
-  String get profileTunSettingsDesc => '仅作用于当前配置，并优先于网络设置中的虚拟网卡覆写项。';
+  String get profileTunSettingsDesc => '仅作用于当前配置，优先于网络设置中的覆写项。';
 
   @override
   String settingsCount(num count) {
@@ -9349,4 +9341,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
     return '规则「$rule」指向的「$target」中，「$node」无法转发这次 UDP 连接，这条规则被跳过。';
   }
+
+  @override
+  String get requestCountUnknown => '数量未知';
+
+  @override
+  String get clearFilters => '清除筛选';
+
+  @override
+  String get clearSearchAndFilters => '清除搜索和筛选';
+
+  @override
+  String get filterByThisNode => '筛选此节点';
+
+  @override
+  String get filterByNode => '按节点筛选';
 }

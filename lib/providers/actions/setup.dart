@@ -66,6 +66,17 @@ class _RunRequest {
   });
 }
 
+const _closestBeats = Duration(milliseconds: 500);
+
+int _nextRunTime(int? shown, Duration elapsed) {
+  final rounded = (elapsed.inMilliseconds / 1000).round() * 1000;
+  if (shown == null) {
+    return rounded;
+  }
+  final next = shown + 1000;
+  return (next - elapsed.inMilliseconds).abs() > 1000 ? rounded : next;
+}
+
 @Riverpod(keepAlive: true)
 class SetupAction extends _$SetupAction {
   CoreController get _core => ref.read(coreHandlerProvider);
@@ -82,7 +93,9 @@ class SetupAction extends _$SetupAction {
       await preferences.getCompositionRevision() < 1;
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
+  Future<void>? _initialRun;
   DateTime? _startTime;
+  DateTime? _runTimeMovedAt;
   var _resumeOnRestart = false;
   ({String digest, Set<String> names})? _outboundNames;
   _SetupInputs? _appliedInputs;
@@ -204,34 +217,71 @@ class SetupAction extends _$SetupAction {
     _runtimeTimer = null;
   }
 
+  // The runtime waits for its tick's traffic, so both redraw in one frame.
   void _refreshRunningState() {
     if (_deferRunningPublication) return;
-    _updateRunTime();
-    unawaited(ref.read(commonActionProvider.notifier).updateTraffic());
+    unawaited(
+      ref
+          .read(commonActionProvider.notifier)
+          .updateTraffic()
+          .whenComplete(_updateRunTime),
+    );
   }
 
   void _updateRunTime() {
     final startTime = _startTime;
-    ref.read(runTimeProvider.notifier).value = startTime == null
-        ? null
-        : DateTime.now().millisecondsSinceEpoch -
-              startTime.millisecondsSinceEpoch;
+    final runTime = ref.read(runTimeProvider.notifier);
+    if (startTime == null) {
+      _runTimeMovedAt = null;
+      runTime.value = null;
+      return;
+    }
+    final now = DateTime.now();
+    final movedAt = _runTimeMovedAt;
+    if (movedAt != null && now.difference(movedAt) < _closestBeats) {
+      return;
+    }
+    _runTimeMovedAt = now;
+    runTime.value = _nextRunTime(runTime.value, now.difference(startTime));
   }
 
   @protected
   Future<DateTime?> serviceStartTime() async => service?.getRunTime();
 
   Future<void> initStatus() async {
-    if (!globalState.needInitStatus) {
-      return;
+    if (globalState.needInitStatus && _initialRun == null) {
+      await _restoreStatus();
     }
+    Future<void>? joined;
+    while (!identical(joined, _initialRun)) {
+      joined = _initialRun;
+      await joined;
+    }
+  }
+
+  Future<void> _restoreStatus() async {
     // Visibility observers must not publish a resumed start during review.
     _deferRunningPublication = true;
     _launching = true;
+    final claimed = _latestRunRequest;
     try {
-      _startTime = await serviceStartTime();
-      if (_isRunning) {
-        globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
+      final startTime = await serviceStartTime();
+      final running = startTime?.isBeforeNow ?? false;
+      final digest = running ? await preferences.getAppliedConfigMd5() : null;
+      final tapped = identical(_latestRunRequest, claimed)
+          ? null
+          : _latestRunRequest;
+      if (_initialRun != null || (tapped?.running ?? false)) {
+        return;
+      }
+      if (tapped != null) {
+        // A stop tapped meanwhile outranks the snapshot and autoRun.
+        await globalState.safeRun(() => applyAutomatic(force: true));
+        return;
+      }
+      _startTime = startTime;
+      if (running) {
+        globalState.lastConfigMd5 = digest;
         await _run(true, initialize: true, resume: true);
       } else if (ref.read(appSettingProvider).autoRun) {
         await setRunning(true, initialize: true);
@@ -240,6 +290,10 @@ class SetupAction extends _$SetupAction {
       }
     } finally {
       _launching = false;
+      // A start in flight owns the flag; with none, nothing is held back.
+      if (!(_latestRunRequest?.running ?? false)) {
+        _deferRunningPublication = false;
+      }
     }
   }
 
@@ -353,12 +407,19 @@ class SetupAction extends _$SetupAction {
       previousStartTime: _startTime,
     );
     _latestRunRequest = request;
-    if (!running) {
+    final Future<bool> task;
+    if (running) {
+      _deferRunningPublication = true;
+      task = _beginStart(request);
+    } else {
       _setLocalRunning(false);
-      return _stop(request);
+      task = _stop(request);
     }
-    _deferRunningPublication = true;
-    return _beginStart(request);
+    if (initialize || _initialRun != null && !ref.read(initProvider)) {
+      // The caller reports the outcome. Bootstrap waits for the transition to settle.
+      _initialRun = task.then<void>((_) {}, onError: (Object _) {});
+    }
+    return task;
   }
 
   Future<bool> _beginStart(_RunRequest request) async {
@@ -1098,10 +1159,21 @@ class SetupAction extends _$SetupAction {
     try {
       return await ref.read(coreActionProvider.notifier).restartCore();
     } catch (_) {
-      ref.read(authorizedTunEnableProvider.notifier).value =
-          TunAuthorizationState.none;
+      _forgetTunAuthorization();
       rethrow;
     }
+  }
+
+  /// A restart asks first, as [_setupConfig] would before handing off to it:
+  /// the apply inside the restart must not hand off to the restart it runs in.
+  /// Returns whether it was granted now.
+  Future<bool> _authorizeTunBeforeRestart() async {
+    return !await requestAdmin(ref.read(patchClashConfigProvider).tun.enable);
+  }
+
+  void _forgetTunAuthorization() {
+    ref.read(authorizedTunEnableProvider.notifier).value =
+        TunAuthorizationState.none;
   }
 
   /// With a base, [BuiltProfile.yaml] is only the overlay the Core applies.

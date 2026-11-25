@@ -343,7 +343,10 @@ void _showLogDetail(BuildContext context, Log log) {
           onPressed: () => _copyLog(context, log),
         ),
       ],
-      body: _LogDetailView(log: log),
+      body: ListTextScope(
+        scale: ListTextScale.compact,
+        child: _LogDetailView(log: log),
+      ),
     ),
   );
 }
@@ -387,10 +390,7 @@ class _LogDetailView extends StatelessWidget {
           items: [
             DecorationListItem(
               minVerticalPadding: 14,
-              title: SelectableText(
-                log.payload,
-                style: AppTextStyle.subheadline.of(context),
-              ),
+              title: SelectableText(log.payload),
             ),
           ],
         ),

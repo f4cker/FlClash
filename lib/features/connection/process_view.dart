@@ -130,7 +130,19 @@ class ProcessIcon extends StatelessWidget {
     excludeFromSemantics: true,
   );
 
-  Widget _well(BuildContext context, Glyph glyph) {
+  Widget _well(BuildContext context, Glyph glyph) =>
+      ProcessGlyphWell(glyph: glyph, size: size);
+}
+
+/// A glyph in an inset well, where a source has no icon of its own.
+class ProcessGlyphWell extends StatelessWidget {
+  final Glyph glyph;
+  final double size;
+
+  const ProcessGlyphWell({super.key, required this.glyph, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     return Container(
       width: size,
@@ -184,10 +196,17 @@ class ProcessFilterIcon extends StatelessWidget {
   final ConnectionProcess process;
   final double size;
 
+  final double? targetHeight;
+
+  /// Room around the icon its press target covers too.
+  final EdgeInsetsGeometry targetPadding;
+
   const ProcessFilterIcon({
     super.key,
     required this.process,
     required this.size,
+    this.targetHeight,
+    this.targetPadding = EdgeInsets.zero,
   });
 
   @override
@@ -211,7 +230,17 @@ class ProcessFilterIcon extends StatelessWidget {
             context,
             RecordFilter(RecordFacetKind.app, process.key),
           ),
-          child: ProcessIcon(process: process, size: size),
+          child: SizedBox(
+            height: targetHeight,
+            child: Padding(
+              padding: targetPadding,
+              child: Center(
+                widthFactor: 1,
+                heightFactor: targetHeight == null ? 1 : null,
+                child: ProcessIcon(process: process, size: size),
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -518,7 +518,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get externalController => '외부 컨트롤러';
 
   @override
-  String get externalControllerDesc => '외부 컨트롤러를 사용하면 9090 포트로 코어를 제어할 수 있습니다.';
+  String get externalControllerDesc => '외부 컨트롤러는 9090 포트에서 수신합니다.';
 
   @override
   String get externalControllerSecret => '외부 컨트롤러 시크릿';
@@ -797,7 +797,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get writeToSystem => '시스템에 기록';
 
   @override
-  String get writeToSystemDesc => '시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.';
+  String get writeToSystemDesc => '시스템에 기록은 Android에서 적용되지 않습니다.';
 
   @override
   String get sniffer => '스니퍼';
@@ -807,9 +807,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'DNS 매핑 강제';
-
-  @override
-  String get forceDnsMappingDesc => 'DNS 매핑 강제는 DNS 매핑에서 도메인을 얻은 연결도 스니핑합니다.';
 
   @override
   String get parsePureIp => '순수 IP 분석';
@@ -842,8 +839,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addOverrideEntry => '덮어쓰기 항목 추가';
 
   @override
-  String get dnsOverrideDesc =>
-      '여기에 추가한 항목은 모든 URL 및 파일 프로필의 DNS를 대체합니다. 추가하지 않은 항목은 프로필 자체 설정을 유지합니다. 사용자 지정 프로필은 내용에서 DNS를 설정합니다.';
+  String get dnsOverrideDesc => '추가한 항목은 URL 및 파일 프로필의 DNS를 대체합니다.';
 
   @override
   String get settingEntries => '설정';
@@ -873,8 +869,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get respectRules => '규칙 준수';
 
   @override
-  String get respectRulesDesc =>
-      '규칙 준수는 DNS 연결을 규칙에 따라 라우팅하며 Proxy Server Nameserver가 필요합니다.';
+  String get respectRulesDesc => '규칙 준수에는 Proxy Server Nameserver가 필요합니다.';
 
   @override
   String get dnsMode => 'DNS 모드';
@@ -3223,8 +3218,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routingMark => '라우팅 마크';
 
   @override
-  String get strictRouteDesc =>
-      '엄격한 라우팅은 DNS 등의 트래픽이 TUN을 우회하지 못하게 하며, IPv6가 꺼져 있으면 이 기기의 IPv6 연결을 차단합니다.';
+  String get strictRouteDesc => 'IPv6가 꺼져 있으면 엄격한 라우팅이 이 기기의 IPv6 연결도 차단합니다.';
 
   @override
   String get initFailed => '시작 실패';
@@ -3256,7 +3250,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'ICMP 전달을 끄면 TUN이 ping에 직접 응답하므로 ping에 실제 지연 시간이 표시되지 않습니다.';
+      'ICMP 전달을 끄면 ping에 실제 지연 시간이 표시되지 않습니다.';
 
   @override
   String get excludeInterface => '제외할 인터페이스';
@@ -3265,8 +3259,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get includeInterface => '포함할 인터페이스';
 
   @override
-  String get includeInterfaceDesc =>
-      '포함할 인터페이스로 들어오는 트래픽만 TUN을 거치며, 제외할 인터페이스는 더 이상 적용되지 않습니다.';
+  String get includeInterfaceDesc => '설정하면 제외할 인터페이스는 더 이상 적용되지 않습니다.';
 
   @override
   String get includeUid => '포함할 사용자 ID';
@@ -3292,15 +3285,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      '여기에 추가한 항목은 모든 프로필의 TUN 설정을 대체합니다. 추가하지 않은 항목은 프로필 자체 설정을 유지합니다. 사용자 지정 프로필이 직접 추가한 항목이 우선합니다.';
+      '추가한 항목은 모든 프로필을 덮어쓰며, 사용자 지정 프로필 자체 항목이 우선합니다.';
 
   @override
-  String get generalOverrideDesc =>
-      '여기에 추가한 항목은 모든 프로필의 해당 설정을 대체합니다. 추가하지 않은 항목은 프로필 자체 설정을 유지하며, 프로필에 없으면 코어 기본값을 사용합니다.';
+  String get generalOverrideDesc => '추가한 항목은 모든 프로필의 해당 설정을 대체합니다.';
 
   @override
   String get profileTunSettingsDesc =>
-      '이 프로필에만 적용되며 네트워크 설정의 TUN 덮어쓰기 항목보다 우선합니다.';
+      '이 프로필에만 적용되며 네트워크 설정의 TUN 덮어쓰기보다 우선합니다.';
 
   @override
   String settingsCount(num count) {
@@ -9948,4 +9940,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
     return 'Rule “$rule” points to “$target”, where “$node” couldn\'t forward this UDP connection, so the rule was skipped.';
   }
+
+  @override
+  String get requestCountUnknown => 'Count unknown';
+
+  @override
+  String get clearFilters => 'Clear filters';
+
+  @override
+  String get clearSearchAndFilters => 'Clear search and filters';
+
+  @override
+  String get filterByThisNode => 'Filter by this node';
+
+  @override
+  String get filterByNode => 'Filter by node';
 }

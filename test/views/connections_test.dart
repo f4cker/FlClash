@@ -151,9 +151,8 @@ void main() {
     await teardownView(tester);
   });
 
-  testWidgets('shows its first connections while its page is pushed in', (
-    tester,
-  ) async {
+  testWidgets('opens at once behind a spinner, then shows its first '
+      'connections', (tester) async {
     whenConnections<RankedTrackerInfos>(
       core,
       () async => [_tracker(id: 'a', host: 'alpha.test')],
@@ -188,6 +187,11 @@ void main() {
 
     final route = ModalRoute.of(tester.element(find.byType(RequestsView)))!;
     expect(route.animation!.isAnimating, isTrue);
+    expect(find.byType(ActivityIndicator), findsOneWidget);
+
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.textContaining('alpha.test'), findsWidgets);
 
     await teardownView(tester);
@@ -998,8 +1002,8 @@ void main() {
       expect(tester.takeException(), null);
     });
 
-    testWidgets('a failure after an empty read keeps the empty state under '
-        'the hint', (tester) async {
+    testWidgets('a failure after an empty read says the read failed under '
+        'the hint, never that there are none', (tester) async {
       final l10n = currentAppLocalizations;
       await pumpAnnounced(tester);
       await nextPoll(tester);
@@ -1008,8 +1012,8 @@ void main() {
       reader = () async => throw StateError('down');
       await nextPoll(tester);
       expect(banner(), findsOneWidget);
-      expect(find.text(l10n.nullTip(l10n.connections)), findsOneWidget);
-      expect(find.text(l10n.connectionsReadFailed), findsNothing);
+      expect(find.text(l10n.nullTip(l10n.connections)), findsNothing);
+      expect(find.text(l10n.connectionsReadFailed), findsOneWidget);
       expect(tester.takeException(), null);
 
       await teardownView(tester);

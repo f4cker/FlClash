@@ -8,7 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'process_view.dart';
-import 'tracker_info_item.dart';
+import 'tracker_compact_row.dart';
 import 'tracker_info_table.dart';
 import 'tracker_search.dart';
 
@@ -135,6 +135,7 @@ class TrackerInfoList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final table = this.table;
+    final metrics = table == null ? TrackerCompactMetrics.of(context) : null;
     return RecordFeedList<TrackerInfo>(
       reverse: reverse,
       shrinkWrap: shrinkWrap,
@@ -143,17 +144,17 @@ class TrackerInfoList extends StatelessWidget {
       padding: padding,
       items: trackerInfos,
       keyOf: (trackerInfo) => ValueKey(trackerInfo.id),
-      gap: table == null ? recordListGap : 0,
-      estimatedItemExtent: table?.rowHeight ?? recordListEstimatedExtent,
+      estimatedItemExtent: table?.rowHeight ?? metrics!.rowHeight,
       itemBuilder: (trackerInfo, striped, latest) => MemoBuilder(
         inputs: table == null
-            ? [..._shownInList(trackerInfo), detailTitle]
+            ? [..._shownInList(trackerInfo), detailTitle, metrics]
             : [trackerInfo, table, striped],
         builder: (_) => _buildTrackerInfoItem(
           trackerInfo,
           isLive: false,
           detailTitle: detailTitle,
           table: table,
+          metrics: metrics,
           striped: striped,
           onClose: onClose,
           latest: latest,
@@ -198,6 +199,7 @@ class TrackerInfoAnimatedList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final table = this.table;
+    final metrics = table == null ? TrackerCompactMetrics.of(context) : null;
     final positions = table == null
         ? const <String, int>{}
         : {
@@ -211,30 +213,21 @@ class TrackerInfoAnimatedList extends StatelessWidget {
         scrollCacheExtent: cacheExtent,
         items: trackerInfos,
         keyOf: (trackerInfo) => trackerInfo.id,
-        estimatedItemExtent: table?.rowHeight ?? recordListEstimatedExtent,
-        separator: table == null ? const SizedBox(height: recordListGap) : null,
+        estimatedItemExtent: table?.rowHeight ?? metrics!.rowHeight,
         itemBuilder: (itemContext, trackerInfo) {
           final striped = positions[trackerInfo.id]?.isOdd ?? false;
           return MemoBuilder(
             key: ValueKey(trackerInfo.id),
-            // A live row reads its age off the clock, which moves on its own.
             inputs: [
               trackerInfo,
-              ...table == null
-                  ? [
-                      detailTitle,
-                      trackerInfo.start.getLastUpdateTimeDesc(
-                        itemContext,
-                        compact: true,
-                      ),
-                    ]
-                  : [table, striped],
+              ...table == null ? [detailTitle, metrics] : [table, striped],
             ],
             builder: (_) => _buildTrackerInfoItem(
               trackerInfo,
               isLive: true,
               detailTitle: detailTitle,
               table: table,
+              metrics: metrics,
               striped: striped,
               onClose: onClose,
             ),
@@ -318,12 +311,13 @@ class _TrackerInfoGroupedListState
         ref.watch(packageIconSourceProvider) != null;
     final byProcess = grouping == RecordGrouping.app && !system.isAndroid;
     final showsTraffic = isLive || table != null;
+    final metrics = table == null ? TrackerCompactMetrics.of(context) : null;
     return RecordGroupedList<TrackerInfo>(
       groups: widget.groups,
       grouping: grouping,
       controller: widget.controller,
       padding: widget.padding,
-      estimatedItemExtent: table?.rowHeight ?? recordListEstimatedExtent,
+      estimatedItemExtent: table?.rowHeight ?? metrics!.rowHeight,
       leadingOf: byProcess
           ? (group) => _processLeading(group)
           : showsIcons
@@ -343,27 +337,19 @@ class _TrackerInfoGroupedListState
             ...showsTraffic ? [trackerInfo] : _shownInList(trackerInfo),
             detailTitle,
             table,
+            metrics,
             striped,
-            if (isLive && table == null)
-              trackerInfo.start.getLastUpdateTimeDesc(context, compact: true),
           ],
-          builder: (_) {
-            final row = _buildTrackerInfoItem(
-              trackerInfo,
-              isLive: isLive,
-              detailTitle: detailTitle,
-              table: table,
-              striped: striped,
-              onClose: onClose,
-              latest: () => _latest(trackerInfo),
-            );
-            return table == null
-                ? Padding(
-                    padding: const EdgeInsets.only(top: recordListGap),
-                    child: row,
-                  )
-                : row;
-          },
+          builder: (_) => _buildTrackerInfoItem(
+            trackerInfo,
+            isLive: isLive,
+            detailTitle: detailTitle,
+            table: table,
+            metrics: metrics,
+            striped: striped,
+            onClose: onClose,
+            latest: () => _latest(trackerInfo),
+          ),
         );
       },
     );
@@ -404,6 +390,7 @@ Widget _buildTrackerInfoItem(
   required bool isLive,
   required String detailTitle,
   required RecordTable<TrackerInfo>? table,
+  required TrackerCompactMetrics? metrics,
   required bool striped,
   ValueChanged<TrackerInfo>? onClose,
   ValueGetter<TrackerInfo>? latest,
@@ -418,10 +405,11 @@ Widget _buildTrackerInfoItem(
       onClose: onClose,
     );
   }
-  return TrackerInfoItem(
+  return TrackerCompactRow(
     key: ValueKey(trackerInfo.id),
     trackerInfo: trackerInfo,
     isLive: isLive,
+    metrics: metrics!,
     onClose: onClose,
     detailTitle: detailTitle,
     latest: latest,

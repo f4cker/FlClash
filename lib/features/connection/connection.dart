@@ -3,6 +3,7 @@ export 'mitm_body.dart';
 export 'mitm_exchanges.dart';
 export 'mitm_rewrite_hits.dart';
 export 'process_view.dart';
+export 'tracker_compact_row.dart';
 export 'tracker_info_item.dart';
 export 'tracker_info_list.dart';
 export 'tracker_info_table.dart';

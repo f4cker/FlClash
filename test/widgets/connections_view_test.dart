@@ -82,7 +82,7 @@ void main() {
     await pumpConnections(tester, connectionsReader: () async => connections);
     await tester.pump(const Duration(seconds: 1));
 
-    final builtItems = find.byType(TrackerInfoItem).evaluate().length;
+    final builtItems = find.byType(TrackerCompactRow).evaluate().length;
     expect(builtItems, greaterThan(0));
     expect(builtItems, lessThan(connections.length));
     expect(find.textContaining('host-0.com'), findsOneWidget);

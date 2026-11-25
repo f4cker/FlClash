@@ -533,8 +533,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get externalController => 'Внешний контроллер';
 
   @override
-  String get externalControllerDesc =>
-      'Внешний контроллер позволяет управлять ядром через порт 9090.';
+  String get externalControllerDesc => 'Внешний контроллер слушает порт 9090.';
 
   @override
   String get externalControllerSecret => 'Секрет внешнего контроллера';
@@ -817,7 +816,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get writeToSystemDesc =>
-      '«Записывать в систему» также устанавливает системные часы; Android это игнорирует.';
+      '«Записывать в систему» не действует на Android.';
 
   @override
   String get sniffer => 'Сниффер';
@@ -827,10 +826,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'Принудительно для DNS-сопоставлений';
-
-  @override
-  String get forceDnsMappingDesc =>
-      '«Принудительно для DNS-сопоставлений» анализирует и соединения, домен которых получен из DNS-сопоставления.';
 
   @override
   String get parsePureIp => 'Разбирать чистые IP';
@@ -865,7 +860,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get dnsOverrideDesc =>
-      'Добавленные здесь параметры заменяют DNS всех профилей из URL и файлов; остальные остаются такими, как в профиле. DNS пользовательского профиля задаётся в его содержимом.';
+      'Добавленные параметры заменяют DNS профилей из URL и файлов.';
 
   @override
   String get settingEntries => 'параметры';
@@ -897,7 +892,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get respectRulesDesc =>
-      '«Соблюдать правила» направляет DNS-соединения по правилам; нужен Proxy Server Nameserver.';
+      'Для «Соблюдать правила» нужен Proxy Server Nameserver.';
 
   @override
   String get dnsMode => 'Режим DNS';
@@ -3325,7 +3320,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get strictRouteDesc =>
-      'Строгая маршрутизация не даёт трафику вроде DNS обходить TUN, а при выключенном IPv6 блокирует IPv6-соединения этого устройства.';
+      'При выключенном IPv6 строгая маршрутизация блокирует IPv6-соединения этого устройства.';
 
   @override
   String get initFailed => 'Не удалось запустить';
@@ -3357,7 +3352,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'При отключённой пересылке ICMP TUN сам отвечает на ping, поэтому ping больше не показывает реальную задержку.';
+      'При отключённой пересылке ICMP ping больше не показывает реальную задержку.';
 
   @override
   String get excludeInterface => 'Исключённые интерфейсы';
@@ -3367,7 +3362,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get includeInterfaceDesc =>
-      'Через TUN идёт только трафик с включённых интерфейсов, а исключённые интерфейсы больше не действуют.';
+      'После этого исключённые интерфейсы больше не действуют.';
 
   @override
   String get includeUid => 'Включённые ID пользователей';
@@ -3394,15 +3389,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      'Добавленные здесь параметры заменяют настройки TUN всех профилей; остальные остаются такими, как в профиле. Параметры, добавленные в самом пользовательском профиле, имеют приоритет.';
+      'Добавленные параметры переопределяют все профили; собственные параметры пользовательского профиля важнее.';
 
   @override
   String get generalOverrideDesc =>
-      'Добавленные здесь параметры заменяют соответствующие настройки всех профилей; остальные остаются такими, как в профиле, а если профиль их не задаёт, действуют значения ядра по умолчанию.';
+      'Добавленные параметры заменяют настройки всех профилей.';
 
   @override
   String get profileTunSettingsDesc =>
-      'Действует только для этого профиля и имеет приоритет над переопределяемыми параметрами TUN в настройках сети.';
+      'Только для этого профиля; важнее переопределений TUN в настройках сети.';
 
   @override
   String settingsCount(num count) {
@@ -10196,4 +10191,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String routeUdpSkippedUnsupportedBy(Object rule, Object target, Object node) {
     return 'Rule “$rule” points to “$target”, where “$node” couldn\'t forward this UDP connection, so the rule was skipped.';
   }
+
+  @override
+  String get requestCountUnknown => 'Count unknown';
+
+  @override
+  String get clearFilters => 'Clear filters';
+
+  @override
+  String get clearSearchAndFilters => 'Clear search and filters';
+
+  @override
+  String get filterByThisNode => 'Filter by this node';
+
+  @override
+  String get filterByNode => 'Filter by node';
 }

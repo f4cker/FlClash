@@ -16,7 +16,11 @@ Future<void> clearAppData() async {
       logLevel: LogLevel.warning,
     );
   }
-  await File(await appPath.databasePath).safeDelete(recursive: true);
+  final databasePath = await appPath.databasePath;
+  // A WAL left without its database would be replayed into the next one.
+  await File('$databasePath-wal').safeDelete(recursive: true);
+  await File('$databasePath-shm').safeDelete(recursive: true);
+  await File(databasePath).safeDelete(recursive: true);
   await Directory(await appPath.profilesPath).safeDelete(recursive: true);
   // Its marker went with the database; the files it names are not undone.
   await Directory(

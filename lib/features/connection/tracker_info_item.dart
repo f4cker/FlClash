@@ -428,12 +428,75 @@ List<PopupMenuItem> trackerInfoMenuItems(
         label: appLocalizations.lookupRule,
         onPressed: () => lookUpTrackerRule(context, trackerInfo),
       ),
+    ..._filterMenuItems(context, trackerInfo),
     if (onClose != null)
       PopupMenuItem(
         glyph: AppGlyphs.block,
         label: appLocalizations.closeConnection,
         section: const PopupMenuSection(),
         onPressed: () => onClose(trackerInfo),
+      ),
+  ];
+}
+
+/// Filters by the app and by each node of the chain: what a row's icon and
+/// exit chip do, and the way to them where a narrow row hides those.
+List<PopupMenuItem> _filterMenuItems(
+  BuildContext context,
+  TrackerInfo trackerInfo,
+) {
+  if (context.getInheritedWidgetOfExactType<RecordFilterScope>() == null) {
+    return const [];
+  }
+  final l = context.appLocalizations;
+  final metadata = trackerInfo.metadata;
+  void filter(RecordFacetKind kind, String value) =>
+      RecordFilterScope.add(context, RecordFilter(kind, value));
+  final app = system.isAndroid
+      ? (metadata.process.isEmpty
+            ? null
+            : (label: l.filterByThisApp, key: metadata.process))
+      : switch (processApps.processOf(metadata)) {
+          final process when process.hasProcess => (
+            label: process.kind == ProcessKind.app
+                ? l.filterByThisApp
+                : l.filterByThisProcess,
+            key: process.key,
+          ),
+          _ => null,
+        };
+  final nodes = {
+    for (final chain in trackerInfo.chains)
+      if (chain.isNotEmpty) chain,
+  }.toList();
+  return [
+    if (app != null)
+      PopupMenuItem(
+        glyph: AppGlyphs.filter,
+        label: app.label,
+        section: const PopupMenuSection(),
+        onPressed: () => filter(RecordFacetKind.app, app.key),
+      ),
+    if (nodes.length == 1)
+      PopupMenuItem(
+        glyph: AppGlyphs.filter,
+        label: l.filterByThisNode,
+        detail: nodes.single,
+        section: app == null ? const PopupMenuSection() : null,
+        onPressed: () => filter(RecordFacetKind.proxy, nodes.single),
+      )
+    else if (nodes.length > 1)
+      PopupMenuItem(
+        glyph: AppGlyphs.filter,
+        label: l.filterByNode,
+        section: app == null ? const PopupMenuSection() : null,
+        subItems: [
+          for (final node in nodes)
+            PopupMenuItem(
+              label: node,
+              onPressed: () => filter(RecordFacetKind.proxy, node),
+            ),
+        ],
       ),
   ];
 }
@@ -935,15 +998,18 @@ class TrackerInfoDetailView extends ConsumerWidget {
     final appLocalizations = context.appLocalizations;
     // A connection the Core decrypted always has the tab: what it holds, or
     // why it holds nothing, is read from the Core, not from the settings.
-    return DetailTabs(
-      tabs: [
-        (appLocalizations.overview, _buildOverview),
-        if (trackerInfo.metadata.mitm)
-          (
-            appLocalizations.httpRequests,
-            (_) => MitmExchangesView(trackerInfo: trackerInfo),
-          ),
-      ],
+    return ListTextScope(
+      scale: ListTextScale.compact,
+      child: DetailTabs(
+        tabs: [
+          (appLocalizations.overview, _buildOverview),
+          if (trackerInfo.metadata.mitm)
+            (
+              appLocalizations.httpRequests,
+              (_) => MitmExchangesView(trackerInfo: trackerInfo),
+            ),
+        ],
+      ),
     );
   }
 }

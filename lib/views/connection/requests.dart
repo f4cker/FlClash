@@ -13,6 +13,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 
 /// From this many connections a search runs at most once per
 /// [searchThrottle]: the first keystroke after a pause is searched at once,
@@ -24,16 +25,21 @@ const throttledSearchLength = 2000;
 @visibleForTesting
 const searchThrottle = Duration(milliseconds: 150);
 
+/// How long a snapshot stands for the running count before a re-read.
+const _freshSnapshot = Duration(seconds: 3);
+
 class RequestsView extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
   final RequestFeed? initialFeed;
   final Future<List<TrackerInfo>> Function()? connectionsReader;
+  final DateTime Function()? clock;
 
   const RequestsView({
     super.key,
     this.scrollController,
     this.initialFeed,
     @visibleForTesting this.connectionsReader,
+    @visibleForTesting this.clock,
   });
 
   @override
@@ -48,6 +54,8 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   Timer? _requestRefresh;
   Timer? _searchCooldown;
   String? _queuedSearch;
+  final _searchText = TextEditingController();
+  Future<int?>? _liveCountRead;
   late final _filters = trackerInfoFilterController(ref, 'requests');
   late var _feed =
       widget.initialFeed ?? ref.read(appSettingProvider).requestFeed;
@@ -73,6 +81,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
     _recent.dispose();
     _live.dispose();
     _filters.dispose();
+    _searchText.dispose();
     super.dispose();
   }
 
@@ -135,6 +144,12 @@ class _RequestsViewState extends ConsumerState<RequestsView>
     _live.search(query);
   }
 
+  void _clearNarrowing() {
+    _searchText.clear();
+    _search('');
+    _filters.clear();
+  }
+
   void _selectFeed(RequestFeed feed) {
     if (feed == _feed) {
       return;
@@ -180,8 +195,11 @@ class _RequestsViewState extends ConsumerState<RequestsView>
         final pinned = !ViewScope.isMobileOf(context);
         return Scaffold(
           title: _labelOf(_feed),
-          titleMenuItems: _buildFeedMenu(),
-          searchState: AppBarSearchState(onSearch: _search),
+          titleMenuOnOpen: _openFeedMenu,
+          searchState: AppBarSearchState(
+            onSearch: _search,
+            controller: _searchText,
+          ),
           keywords: _filters.keywordsOf(pinned: pinned),
           iconActions: _buildActions(),
           menuItems: _filters.menuItems(context, pinned: pinned),
@@ -196,12 +214,66 @@ class _RequestsViewState extends ConsumerState<RequestsView>
     RequestFeed.live => context.appLocalizations.running,
   };
 
-  List<PopupMenuItem> _buildFeedMenu() {
+  /// Without a fresh snapshot the running count is unknown until a read.
+  List<PopupMenuItem> _openFeedMenu(
+    void Function(List<PopupMenuItem> items) update,
+  ) {
+    // Shown, Recent keeps what came in while it was paused as well.
+    final recent = _feed == RequestFeed.recent
+        ? _recent.value.trackerInfos.length
+        : ref.read(requestsProvider).list.length;
+    final liveFeed = _liveFeed.currentState;
+    final live = liveFeed?.freshCount;
+    if (live == null) {
+      final read =
+          liveFeed?.pendingCount ??
+          (_liveCountRead ??= _readLiveCount().whenComplete(
+            () => _liveCountRead = null,
+          ));
+      unawaited(
+        read.then((live) {
+          if (mounted) update(_buildFeedMenu(recent: recent, live: live));
+        }),
+      );
+    }
+    return _buildFeedMenu(recent: recent, live: live);
+  }
+
+  Future<int?> _readLiveCount() async {
+    try {
+      final reader = widget.connectionsReader;
+      if (reader != null) {
+        return (await reader()).length;
+      }
+      switch (ref.read(coreStatusProvider)) {
+        case CoreStatus.disconnected:
+          return 0;
+        case CoreStatus.connecting:
+          return null;
+        case CoreStatus.connected:
+      }
+      return await ref
+          .read(coreHandlerProvider)
+          .getConnectionsWith((connections) => connections.length);
+    } catch (error) {
+      commonPrint.log(
+        'connection count error: $error',
+        logLevel: coreFailureLogLevel(error),
+      );
+      return null;
+    }
+  }
+
+  List<PopupMenuItem> _buildFeedMenu({required int recent, int? live}) {
     return [
       for (final feed in RequestFeed.values)
         PopupMenuItem(
           label: _labelOf(feed),
           checked: feed == _feed,
+          labelTrailing: RequestFeedCount(switch (feed) {
+            RequestFeed.recent => recent,
+            RequestFeed.live => live,
+          }),
           onPressed: () => _selectFeed(feed),
         ),
     ];
@@ -214,6 +286,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
         filters: _filters,
         scrollController: widget.scrollController,
         onResumeToEnd: _showLatestRequests,
+        onClearNarrowing: _clearNarrowing,
       ),
       RequestFeed.live => _LiveFeed(
         key: _liveFeed,
@@ -221,6 +294,8 @@ class _RequestsViewState extends ConsumerState<RequestsView>
         filters: _filters,
         scrollController: widget.scrollController,
         connectionsReader: widget.connectionsReader,
+        clock: widget.clock,
+        onClearNarrowing: _clearNarrowing,
       ),
     };
   }
@@ -231,12 +306,14 @@ class _RecentFeed extends StatefulWidget {
   final RecordFilterController<TrackerInfo> filters;
   final ScrollController? scrollController;
   final VoidCallback onResumeToEnd;
+  final VoidCallback onClearNarrowing;
 
   const _RecentFeed({
     required this.listController,
     required this.filters,
     required this.scrollController,
     required this.onResumeToEnd,
+    required this.onClearNarrowing,
   });
 
   @override
@@ -273,11 +350,17 @@ class _RecentFeedState extends State<_RecentFeed> {
         final requests = widget.listController.shownBy(widget.filters);
         final feed = NullStatusSwitcher(
           isEmpty: requests.isEmpty,
-          isSearching: state.isSearching || widget.filters.isFiltering,
-          nullStatus: NullStatus(
-            label: appLocalizations.nullTip(appLocalizations.requests),
-            illustration: NullStatusIllustration.requests,
-          ),
+          nullStatus: state.trackerInfos.isEmpty
+              ? NullStatus(
+                  label: appLocalizations.nullTip(appLocalizations.requests),
+                  illustration: NullStatusIllustration.requests,
+                )
+              : narrowedToNothing(
+                  context,
+                  searching: state.isSearching,
+                  filtering: widget.filters.isFiltering,
+                  onClear: widget.onClearNarrowing,
+                ),
           child: ProcessLookupOffNotice(
             visible: requests,
             child: RecordTableFrame<TrackerInfo>(
@@ -392,27 +475,17 @@ class RequestsSearchScopeNote extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                WidthBuilder(
-                  // In line with the cards' edge, or the table's text.
-                  builder: (context, width) => Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: width < recordTableMinWidth
-                          ? context.listInsets.margin
-                          : 16,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  // Not a live region: it moves with every request.
+                  child: Text(
+                    context.appLocalizations.requestsSearchScopeHint(
+                      count,
+                      limit,
                     ),
-                    // Not a live region: the count moves with every request
-                    // while following, and would be read out each time.
-                    child: Text(
-                      context.appLocalizations.requestsSearchScopeHint(
-                        count,
-                        limit,
-                      ),
-                      style: AppTextStyle.caption1
-                          .of(context)
-                          .copyWith(
-                            color: context.colorScheme.onSurfaceVariant,
-                          ),
-                    ),
+                    style: AppTextStyle.caption1
+                        .of(context)
+                        .copyWith(color: context.colorScheme.onSurfaceVariant),
                   ),
                 ),
                 Expanded(child: child),
@@ -430,6 +503,8 @@ class _LiveFeed extends ConsumerStatefulWidget {
   final RecordFilterController<TrackerInfo> filters;
   final ScrollController? scrollController;
   final Future<List<TrackerInfo>> Function()? connectionsReader;
+  final DateTime Function()? clock;
+  final VoidCallback onClearNarrowing;
 
   const _LiveFeed({
     super.key,
@@ -437,6 +512,8 @@ class _LiveFeed extends ConsumerStatefulWidget {
     required this.filters,
     required this.scrollController,
     required this.connectionsReader,
+    this.clock,
+    required this.onClearNarrowing,
   });
 
   @override
@@ -466,6 +543,22 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
 
   /// The last snapshot read, before the Core's MITM reports are laid over.
   List<TrackerInfo>? _snapshot;
+
+  /// Stamped as it comes back; null count where it failed or Core was starting.
+  ({int? count, DateTime at})? _latestRead;
+
+  DateTime get _now => widget.clock?.call() ?? DateTime.now();
+
+  int? get freshCount {
+    final read = _latestRead;
+    if (read == null) return null;
+    if (_now.difference(read.at) > _freshSnapshot) return null;
+    return read.count;
+  }
+
+  Future<int?>? get pendingCount => _inFlight?.then((_) => freshCount);
+  Future<_ConnectionsRead?>? _inFlight;
+
   final _mitmOverlay = MitmStatusOverlay();
   Timer? _mitmRefresh;
 
@@ -536,14 +629,22 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
   }
 
   /// Null when a newer read has already been shown.
-  Future<_ConnectionsRead?> _readConnections() async {
+  Future<_ConnectionsRead?> _readConnections() {
+    final read = _inFlight = _read();
+    return read.whenComplete(() {
+      if (identical(_inFlight, read)) _inFlight = null;
+    });
+  }
+
+  Future<_ConnectionsRead?> _read() async {
     final read = ++_reads;
     final rank = rankAfter(_ranking);
     final connectionsReader = widget.connectionsReader;
+    final status = ref.read(coreStatusProvider);
     try {
       final ranked = connectionsReader != null
           ? rank(await connectionsReader())
-          : ref.read(coreStatusProvider) == CoreStatus.connected
+          : status == CoreStatus.connected
           ? await _core.getConnectionsWith(rank)
           : rank(const []);
       // A refresh after closing a connection can overlap a poll.
@@ -552,6 +653,12 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       }
       _shownRead = read;
       _ranking = ranked.ranking;
+      _latestRead = (
+        count: connectionsReader == null && status == CoreStatus.connecting
+            ? null
+            : ranked.trackerInfos.length,
+        at: _now,
+      );
       return _ConnectionsRead(ranked.trackerInfos);
     } catch (error) {
       if (!mounted) {
@@ -566,11 +673,16 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       }
       _shownRead = read;
       // A Core that stopped under the read has no connections, not a failure.
-      if (connectionsReader == null &&
-          ref.read(coreStatusProvider) != CoreStatus.connected) {
+      final stopped = ref.read(coreStatusProvider);
+      if (connectionsReader == null && stopped != CoreStatus.connected) {
         _ranking = TrackerRanking.empty;
+        _latestRead = (
+          count: stopped == CoreStatus.disconnected ? 0 : null,
+          at: _now,
+        );
         return const _ConnectionsRead([]);
       }
+      _latestRead = (count: null, at: _now);
       return const _ConnectionsRead(null);
     }
   }
@@ -675,26 +787,32 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
               : null,
           child: NullStatusSwitcher(
             isLoading: !_loaded,
-            loadingStatus: const Center(child: ActivityIndicator.page()),
             isEmpty: unread || connections.isEmpty,
-            isSearching:
-                !unread && (state.isSearching || widget.filters.isFiltering),
-            nullStatus: unread
+            nullStatus: unread || (stale && state.trackerInfos.isEmpty)
                 ? NullStatus(
                     label: appLocalizations.connectionsReadFailed,
                     description: appLocalizations.connectionsReadFailedDesc,
                     illustration: NullStatusIllustration.error,
-                    action: RetryButton(
-                      busy: _retrying,
-                      onRetry: _retry,
-                      filled: true,
-                    ),
+                    action: stale
+                        ? null
+                        : RetryButton(
+                            busy: _retrying,
+                            onRetry: _retry,
+                            filled: true,
+                          ),
                   )
-                : NullStatus(
+                : state.trackerInfos.isEmpty
+                ? NullStatus(
                     label: appLocalizations.nullTip(
                       appLocalizations.connections,
                     ),
                     illustration: NullStatusIllustration.connections,
+                  )
+                : narrowedToNothing(
+                    context,
+                    searching: state.isSearching,
+                    filtering: widget.filters.isFiltering,
+                    onClear: widget.onClearNarrowing,
                   ),
             child: ProcessLookupOffNotice(
               visible: connections,
@@ -749,4 +867,56 @@ class _ConnectionsRead {
   final List<TrackerInfo>? trackerInfos;
 
   bool get failed => trackerInfos == null;
+}
+
+/// A feed's count, grouped for the locale, or a dash read as unknown.
+class RequestFeedCount extends StatelessWidget {
+  final int? count;
+
+  const RequestFeedCount(this.count, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = this.count;
+    final text = count == null
+        ? '—'
+        : NumberFormat.decimalPattern(
+            Localizations.localeOf(context).toLanguageTag(),
+          ).format(count);
+    return Semantics(
+      label: count == null
+          ? context.appLocalizations.requestCountUnknown
+          : text,
+      excludeSemantics: true,
+      child: Text(
+        text,
+        maxLines: 1,
+        style: AppTextStyle.subheadline
+            .of(context)
+            .toTabular
+            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+NullStatus narrowedToNothing(
+  BuildContext context, {
+  required bool searching,
+  required bool filtering,
+  required VoidCallback onClear,
+}) {
+  final l = context.appLocalizations;
+  return NullStatus(
+    label: UiLocalizations.of(context).noSearchResults,
+    illustration: Illustration.search,
+    action: TextButton(
+      onPressed: onClear,
+      child: Text(switch ((searching, filtering)) {
+        (true, true) => l.clearSearchAndFilters,
+        (false, true) => l.clearFilters,
+        _ => l.clearSearch,
+      }),
+    ),
+  );
 }

@@ -86,7 +86,10 @@ class _IpQualitySheetState extends ConsumerState<_IpQualitySheet> {
     if (widget.viewOnly) {
       return Scaffold(
         title: widget.title ?? localizations.outboundIp,
-        body: _KnownIpDetail(ip: ip, countryCode: widget.countryCode),
+        body: ListTextScope(
+          scale: ListTextScale.compact,
+          child: _KnownIpDetail(ip: ip, countryCode: widget.countryCode),
+        ),
       );
     }
     final isLoading =
@@ -107,7 +110,10 @@ class _IpQualitySheetState extends ConsumerState<_IpQualitySheet> {
           ),
         ),
       ],
-      body: _IpQualityDetail(ip: ip, countryCode: widget.countryCode),
+      body: ListTextScope(
+        scale: ListTextScale.compact,
+        child: _IpQualityDetail(ip: ip, countryCode: widget.countryCode),
+      ),
     );
   }
 }

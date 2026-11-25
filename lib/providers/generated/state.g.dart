@@ -737,7 +737,7 @@ final class SharedStateProvider
   }
 }
 
-String _$sharedStateHash() => r'5d9d1ab78d2f6e74b33c6a4532f7ea7945f1a2ef';
+String _$sharedStateHash() => r'b3cdbdda5cd9590a584085f979fcddc640541bb9';
 
 @ProviderFor(vpnRouteAddress)
 final vpnRouteAddressProvider = VpnRouteAddressProvider._();
@@ -4246,7 +4246,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'23f151397578b2e3607c875709ad1e82c1725f7a';
+String _$setupStateHash() => r'c9492ce50fbbeb2891c3f592b7a55c5687666732';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

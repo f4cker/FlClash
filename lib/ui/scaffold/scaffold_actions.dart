@@ -207,6 +207,8 @@ class _SheetPop {
   final bool atFoot;
 }
 
+const _titleMenuMinTarget = 44.0;
+
 class _TitleMenuButton extends StatelessWidget {
   const _TitleMenuButton({
     required this.title,
@@ -226,17 +228,23 @@ class _TitleMenuButton extends StatelessWidget {
       onTap: onPressed,
       shape: AppShape.sm,
       overlay: PressRegion.focusOverlay,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: compact ? 2 : 4,
-        children: [
-          Flexible(child: Text(title)),
-          GlyphIcon(
-            Glyphs.chevronDown,
-            size: compact ? 16 : 20,
-            color: context.colorScheme.onSurfaceVariant,
-          ),
-        ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _titleMenuMinTarget,
+          minHeight: _titleMenuMinTarget,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: compact ? 2 : 4,
+          children: [
+            Flexible(child: Text(title)),
+            GlyphIcon(
+              Glyphs.chevronDown,
+              size: compact ? 16 : 20,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -80,10 +80,12 @@ class _CappedDebounceSetupAction extends _UnflooredDebounceSetupAction {
 
 class TestCommonAction extends CommonAction {
   int trafficUpdates = 0;
+  Completer<void>? trafficGate;
 
   @override
   Future<void> updateTraffic() async {
     trafficUpdates++;
+    await trafficGate?.future;
   }
 }
 
@@ -93,15 +95,19 @@ class TestSetupAction extends SetupAction {
   int trafficResets = 0;
   int applyProfileCalls = 0;
   final List<bool> appliedForce = [];
+  Completer<void>? profileGate;
   bool blockCoreCalls = false;
   Error? coreRunningError;
+  Exception? coreRunningException;
   final Set<bool> unansweredCoreCalls = {};
   int authorizeCalls = 0;
   AuthorizeCode authorizeResult = AuthorizeCode.none;
   DateTime? serviceStart;
+  Completer<DateTime?>? serviceRead;
 
   @override
-  Future<DateTime?> serviceStartTime() async => serviceStart;
+  Future<DateTime?> serviceStartTime() =>
+      serviceRead?.future ?? Future.value(serviceStart);
 
   @override
   Duration get minApplyDebounce => const Duration(milliseconds: 100);
@@ -123,6 +129,10 @@ class TestSetupAction extends SetupAction {
     final error = coreRunningError;
     if (error != null) {
       throw error;
+    }
+    final exception = coreRunningException;
+    if (exception != null) {
+      throw exception;
     }
     if (unansweredCoreCalls.contains(running)) {
       throw const CoreMethodException(code: 'no_response', message: '');
@@ -184,6 +194,9 @@ class TestSetupAction extends SetupAction {
   }) async {
     applyProfileCalls++;
     appliedForce.add(force);
+    if (profileGate case final gate?) {
+      await gate.future;
+    }
     await preloadInvoke?.call();
     return true;
   }
@@ -288,6 +301,7 @@ void main() {
   tearDown(() async {
     action.blockCoreCalls = false;
     action.coreRunningError = null;
+    action.coreRunningException = null;
     action.unansweredCoreCalls.clear();
     for (final gate in action.pendingCoreCalls) {
       if (!gate.isCompleted) {
@@ -851,6 +865,27 @@ void main() {
       expect(action.trafficResets, 1);
     });
 
+    test('a stop whose answer the transport drops stays stopped, and the '
+        'lost session after it brings nothing back', () async {
+      markInitialized();
+      final setup = container.read(setupActionProvider.notifier);
+      await setup.setRunning(true);
+      action.coreRunningException = const CoreMethodException(
+        code: 'transport_disconnected',
+        message: 'Core transport disconnected',
+      );
+
+      await expectLater(
+        setup.setRunning(false),
+        throwsA(isA<CoreMethodException>()),
+      );
+      setup.onCoreLost();
+
+      expect(container.read(isStartProvider), isFalse);
+      expect(container.read(runTimeProvider), isNull);
+      expect(setup.wantsRunning, isFalse);
+    });
+
     test(
       'an initial start the core leaves unanswered is stopped again',
       () async {
@@ -940,6 +975,43 @@ void main() {
       expect(trafficUpdates(), 5);
 
       await setup.setRunning(false);
+    });
+
+    testWidgets('the clock moves once its tick has read the traffic', (
+      tester,
+    ) async {
+      final setup = buildScoped();
+      await setup.setRunning(true);
+      final common =
+          scoped.read(commonActionProvider.notifier) as TestCommonAction;
+      final gate = common.trafficGate = Completer<void>();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 700)),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(trafficUpdates(), 2);
+      expect(scoped.read(runTimeProvider), 0);
+
+      gate.complete();
+      await tester.pump();
+      expect(scoped.read(runTimeProvider), 1000);
+
+      await setup.setRunning(false);
+    });
+
+    testWidgets('a lost Core session stops the clock for good', (tester) async {
+      final setup = buildScoped();
+      await setup.setRunning(true);
+      await tester.pump(const Duration(seconds: 2));
+
+      setup.onCoreLost();
+      final updates = trafficUpdates();
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(scoped.read(runTimeProvider), isNull);
+      expect(trafficUpdates(), updates);
+      expect(scoped.read(isStartProvider), isFalse);
     });
 
     testWidgets('a start while hidden waits for the app to be shown', (
@@ -1192,13 +1264,103 @@ void main() {
 
   group('initStatus', () {
     test('is a no-op once the status has already been initialized', () async {
-      globalState.needInitStatus = false;
+      final setup = container.read(setupActionProvider.notifier);
+      await setup.setRunning(true, initialize: true);
+      await setup.initStatus();
 
-      await container.read(setupActionProvider.notifier).initStatus();
-
-      expect(action.coreRunningCalls, isEmpty);
-      expect(action.applyProfileCalls, 0);
+      expect(action.coreRunningCalls, [true]);
+      expect(action.applyProfileCalls, 1);
     });
+
+    test(
+      'initialization waits for a start requested before bootstrap finished',
+      () async {
+        final setup = container.read(setupActionProvider.notifier);
+        final gate = action.profileGate = Completer<void>();
+        final starting = setup.setRunning(true, initialize: true);
+        // Flash checks the composition review before it applies.
+        await pumpEventQueue();
+        expect(action.applyProfileCalls, 1);
+
+        var ready = false;
+        final initializing = setup.initStatus().then((_) => ready = true);
+        await pumpEventQueue();
+        expect(ready, isFalse);
+        gate.complete();
+        await initializing;
+        expect(await starting, isTrue);
+        expect(action.applyProfileCalls, 1);
+      },
+    );
+
+    test(
+      'a pending service snapshot yields to a start tapped while it loads',
+      () async {
+        final snapshot = action.serviceRead = Completer<DateTime?>();
+        final gate = action.profileGate = Completer<void>();
+        final setup = container.read(setupActionProvider.notifier);
+        var ready = false;
+        final initializing = setup.initStatus().then((_) => ready = true);
+        final starting = setup.setRunning(true, initialize: true);
+        snapshot.complete(null);
+        await pumpEventQueue();
+        expect(action.applyProfileCalls, 1);
+        expect(ready, isFalse);
+        gate.complete();
+        await initializing;
+        expect(await starting, isTrue);
+        expect(container.read(isStartProvider), isTrue);
+      },
+    );
+
+    test(
+      'a stop tapped while the service snapshot loads keeps autoRun off',
+      () async {
+        container.read(appSettingProvider.notifier).value =
+            const AppSettingProps(autoRun: true);
+        final snapshot = action.serviceRead = Completer<DateTime?>();
+        final setup = container.read(setupActionProvider.notifier);
+        final initializing = setup.initStatus();
+        expect(await setup.setRunning(false), isTrue);
+        snapshot.complete(null);
+        await initializing;
+        expect(action.coreRunningCalls, [false]);
+        expect(action.applyProfileCalls, 1);
+        expect(container.read(isStartProvider), isFalse);
+        expect(container.read(runTimeProvider), isNull);
+      },
+    );
+
+    test(
+      'a stop tapped while the service snapshot loads keeps its run stopped',
+      () async {
+        final snapshot = action.serviceRead = Completer<DateTime?>();
+        final setup = container.read(setupActionProvider.notifier);
+        final initializing = setup.initStatus();
+        expect(await setup.setRunning(false), isTrue);
+        snapshot.complete(DateTime.now().subtract(const Duration(minutes: 1)));
+        await initializing;
+        expect(action.coreRunningCalls, [false]);
+        expect(container.read(isStartProvider), isFalse);
+        expect(container.read(runTimeProvider), isNull);
+      },
+    );
+
+    test(
+      'a stop during startup reports its error to the request that made it',
+      () async {
+        final setup = container.read(setupActionProvider.notifier);
+        await setup.setRunning(true, initialize: true);
+        action.unansweredCoreCalls.add(false);
+        await expectLater(
+          setup.setRunning(false),
+          throwsA(isA<CoreMethodException>()),
+        );
+        await setup.initStatus();
+        expect(action.coreRunningCalls, [true, false]);
+        expect(action.applyProfileCalls, 1);
+      },
+    );
 
     test('starts the core when autoRun is enabled', () async {
       container.read(appSettingProvider.notifier).value = const AppSettingProps(
