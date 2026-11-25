@@ -683,6 +683,8 @@ void main() {
         return const Traffic();
       });
       await tick.future.timeout(const Duration(seconds: 3));
+      // The clock moves once the tick's traffic read returns.
+      await pumpEventQueue();
       expect(container.read(runTimeProvider), greaterThan(180000));
     },
   );
