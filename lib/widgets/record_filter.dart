@@ -72,6 +72,13 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
     }
   }
 
+  /// Drops every filter; the grouping stays.
+  void clear() {
+    if (filters.isNotEmpty) {
+      _setFilters(const []);
+    }
+  }
+
   void toggle(RecordFilter filter) {
     filters.contains(filter) ? remove(filter) : add(filter);
   }
