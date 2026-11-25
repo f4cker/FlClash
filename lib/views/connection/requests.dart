@@ -675,7 +675,6 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
               : null,
           child: NullStatusSwitcher(
             isLoading: !_loaded,
-            loadingStatus: const Center(child: ActivityIndicator.page()),
             isEmpty: unread || connections.isEmpty,
             isSearching:
                 !unread && (state.isSearching || widget.filters.isFiltering),
