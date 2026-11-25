@@ -332,7 +332,6 @@ class _AccessViewState extends ConsumerState<AccessView>
       isLoading: !_loaded,
       isEmpty: packages.isEmpty,
       isSearching: isSearching,
-      loadingStatus: const Center(child: ActivityIndicator.page()),
       nullStatus: NullStatus(
         label: context.appLocalizations.noData,
         illustration: NullStatusIllustration.apps,

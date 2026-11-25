@@ -268,9 +268,6 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
       ],
       body: NullStatusSwitcher(
         isLoading: resources == null,
-        loadingStatus: const NullStatus(
-          illustration: NullStatusIllustration.data,
-        ),
         child: ReadFailureFrame(
           banner: _listsFailed
               ? ReadFailureBanner(
