@@ -1490,6 +1490,7 @@ dependencies = [
  "dispatch2",
  "encoding_rs",
  "flutter_rust_bridge",
+ "futures-util",
  "gdk-sys",
  "gio-sys",
  "glib-sys",
