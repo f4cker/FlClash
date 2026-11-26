@@ -15233,12 +15233,6 @@ abstract class AppLocalizations {
   /// **'Update now'**
   String get updateImmediately;
 
-  /// No description provided for @updateMenuVersion.
-  ///
-  /// In en, this message translates to:
-  /// **'NEW {available}'**
-  String updateMenuVersion(String available);
-
   /// No description provided for @viewUpdate.
   ///
   /// In en, this message translates to:

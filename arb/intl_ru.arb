@@ -3837,7 +3837,6 @@
   "vpnServiceStartFailed": "Не удалось запустить службу VPN.",
   "updateVersionSummary": "Текущая версия: {current}\nДоступная версия: {available}",
   "updateImmediately": "Обновить сейчас",
-  "updateMenuVersion": "НОВАЯ {available}",
   "viewUpdate": "Посмотреть обновление",
   "trayStartCore": "Запустить ядро",
   "trayStopCore": "Остановить ядро",

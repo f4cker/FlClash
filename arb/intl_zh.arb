@@ -2548,7 +2548,6 @@
   "vpnServiceStartFailed": "VPN 服务无法启动。",
   "updateVersionSummary": "当前版本：{current}\n可更新版本：{available}",
   "updateImmediately": "立即更新",
-  "updateMenuVersion": "NEW {available}",
   "viewUpdate": "查看更新",
   "trayStartCore": "启动核心",
   "trayStopCore": "停止核心",

@@ -3837,7 +3837,6 @@
   "vpnServiceStartFailed": "VPN サービスを起動できませんでした。",
   "updateVersionSummary": "現在のバージョン：{current}\n更新可能なバージョン：{available}",
   "updateImmediately": "今すぐ更新",
-  "updateMenuVersion": "NEW {available}",
   "viewUpdate": "更新を確認",
   "trayStartCore": "コアを起動",
   "trayStopCore": "コアを停止",

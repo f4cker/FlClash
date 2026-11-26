@@ -3904,14 +3904,6 @@
     }
   },
   "updateImmediately": "Update now",
-  "updateMenuVersion": "NEW {available}",
-  "@updateMenuVersion": {
-    "placeholders": {
-      "available": {
-        "type": "String"
-      }
-    }
-  },
   "viewUpdate": "View update",
   "trayStartCore": "Start core",
   "trayStopCore": "Stop core",

@@ -9106,11 +9106,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateImmediately => '지금 업데이트';
 
   @override
-  String updateMenuVersion(String available) {
-    return 'NEW $available';
-  }
-
-  @override
   String get viewUpdate => '업데이트 보기';
 
   @override

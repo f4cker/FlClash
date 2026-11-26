@@ -9358,11 +9358,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get updateImmediately => 'Actualizar ahora';
 
   @override
-  String updateMenuVersion(String available) {
-    return 'NUEVA $available';
-  }
-
-  @override
   String get viewUpdate => 'Ver actualización';
 
   @override

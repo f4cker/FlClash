@@ -9367,11 +9367,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get updateImmediately => 'Mettre à jour maintenant';
 
   @override
-  String updateMenuVersion(String available) {
-    return 'NOUVELLE $available';
-  }
-
-  @override
   String get viewUpdate => 'Voir la mise à jour';
 
   @override

@@ -9337,11 +9337,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get updateImmediately => 'Обновить сейчас';
 
   @override
-  String updateMenuVersion(String available) {
-    return 'НОВАЯ $available';
-  }
-
-  @override
   String get viewUpdate => 'Посмотреть обновление';
 
   @override

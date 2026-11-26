@@ -19,7 +19,6 @@ import 'constant.dart';
 import 'keyboard.dart';
 import 'l10n_labels.dart';
 import 'mitm_indicator.dart';
-import 'mac_update.dart';
 import 'print.dart';
 import 'provider_reader.dart';
 import 'string.dart';
@@ -302,8 +301,7 @@ class AppTray implements TrayPort {
                 appLocalizations.trayCoreProcessing,
               _ => appLocalizations.updateImmediately,
             },
-            detail:
-                '${appLocalizations.updateMenuVersion(displayVersionLabel(available.versionLabel))}${available.manifest?.channel == ReleaseChannel.beta ? ' · ${appLocalizations.releaseBeta}' : ''}',
+            detail: versionLabelParts(available.versionLabel).version,
             enabled:
                 !read(updateInstallBusyProvider) &&
                 read(updateDownloadStateProvider) is! UpdateDownloading,

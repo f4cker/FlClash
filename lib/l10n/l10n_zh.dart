@@ -8545,11 +8545,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateImmediately => '立即更新';
 
   @override
-  String updateMenuVersion(String available) {
-    return 'NEW $available';
-  }
-
-  @override
   String get viewUpdate => '查看更新';
 
   @override

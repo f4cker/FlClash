@@ -3837,7 +3837,6 @@
   "vpnServiceStartFailed": "Le service VPN n'a pas pu démarrer.",
   "updateVersionSummary": "Version actuelle : {current}\nVersion disponible : {available}",
   "updateImmediately": "Mettre à jour maintenant",
-  "updateMenuVersion": "NOUVELLE {available}",
   "viewUpdate": "Voir la mise à jour",
   "trayStartCore": "Démarrer le noyau",
   "trayStopCore": "Arrêter le noyau",

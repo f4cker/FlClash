@@ -195,18 +195,18 @@ void main() {
   );
 
   test(
-    'update row carries full target in a separate clickable detail column',
+    'update row shows only the target version in its detail column',
     () async {
       container.listen(availableUpdateStateProvider, (_, _) {});
       container.listen(updateInstallBusyProvider, (_, _) {});
       container.listen(lastUpdateCheckStateProvider, (_, _) {});
       container.read(availableUpdateStateProvider.notifier).value =
-          const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+          const UpdateAvailable({'tag_name': 'v1.0.0-beta.12+2026111920'});
       await update(_trayState());
       final row = showCall()!.menu.firstWhere(
         (item) => item.label == 'Update now',
       );
-      expect(row.detail, 'NEW 1.0.0 (2026111902)');
+      expect(row.detail, '1.0.0-beta.12');
       expect(row.enabled, isTrue);
       container.read(updateInstallBusyProvider.notifier).value = true;
       await update(_trayState());

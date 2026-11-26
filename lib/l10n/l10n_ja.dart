@@ -9031,11 +9031,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get updateImmediately => '今すぐ更新';
 
   @override
-  String updateMenuVersion(String available) {
-    return 'NEW $available';
-  }
-
-  @override
   String get viewUpdate => '更新を確認';
 
   @override

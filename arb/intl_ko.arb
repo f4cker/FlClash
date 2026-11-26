@@ -3837,7 +3837,6 @@
   "vpnServiceStartFailed": "VPN 서비스를 시작하지 못했습니다.",
   "updateVersionSummary": "현재 버전: {current}\n업데이트 가능 버전: {available}",
   "updateImmediately": "지금 업데이트",
-  "updateMenuVersion": "NEW {available}",
   "viewUpdate": "업데이트 보기",
   "trayStartCore": "코어 시작",
   "trayStopCore": "코어 중지",
