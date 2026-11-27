@@ -191,6 +191,11 @@ String processLabelOf(ConnectionProcess process) => switch (process.kind) {
   ProcessKind.otherDevice => currentAppLocalizations.otherDevice,
 };
 
+String processFilterActionOf(ConnectionProcess process) =>
+    process.kind == ProcessKind.app
+    ? currentAppLocalizations.filterByThisApp
+    : currentAppLocalizations.filterByThisProcess;
+
 /// The leading icon of a row, which filters the list by the process.
 class ProcessFilterIcon extends StatelessWidget {
   final ConnectionProcess process;
@@ -211,10 +216,7 @@ class ProcessFilterIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    final tooltip = process.kind == ProcessKind.app
-        ? appLocalizations.filterByThisApp
-        : appLocalizations.filterByThisProcess;
+    final tooltip = processFilterActionOf(process);
     final named =
         process.service != null ||
         (process.app?.launchdLabel.isNotEmpty ?? false);
@@ -248,45 +250,69 @@ class ProcessFilterIcon extends StatelessWidget {
 }
 
 /// The table's process cell: a small icon and the app or process name, the
-/// full process and path on hover.
+/// full process and path on hover; in a filtered list, a press on either
+/// filters by the process.
 class ProcessCell extends StatelessWidget {
   final Metadata metadata;
 
   const ProcessCell({super.key, required this.metadata});
+
+  static const _inset = EdgeInsets.symmetric(horizontal: 6, vertical: 2);
 
   @override
   Widget build(BuildContext context) {
     return ConnectionProcessBuilder(
       metadata: metadata,
       builder: (context, process) {
-        final text = Text(
-          processLabelOf(process),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: process.hasProcess
-              ? null
-              : TextStyle(color: context.colorScheme.onSurfaceVariant),
+        final label = processLabelOf(process);
+        final row = Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: [
+            ProcessIcon(process: process, size: 16),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: process.hasProcess
+                    ? null
+                    : TextStyle(color: context.colorScheme.onSurfaceVariant),
+              ),
+            ),
+          ],
         );
         if (!process.hasProcess) {
-          return Row(
-            spacing: 6,
-            children: [
-              ProcessIcon(process: process, size: 16),
-              Flexible(child: text),
-            ],
-          );
+          return Padding(padding: _inset, child: row);
         }
-        return Tooltip(
+        final named = Tooltip(
           message: [
             process.name,
             if (process.path.isNotEmpty) process.path,
           ].join('\n'),
-          child: Row(
-            spacing: 6,
-            children: [
-              ProcessIcon(process: process, size: 16),
-              Flexible(child: text),
-            ],
+          child: row,
+        );
+        if (context.getInheritedWidgetOfExactType<RecordFilterScope>() ==
+            null) {
+          return Padding(padding: _inset, child: named);
+        }
+        void onTap() => RecordFilterScope.add(
+          context,
+          RecordFilter(RecordFacetKind.app, process.key),
+        );
+        return Semantics(
+          container: true,
+          button: true,
+          label: '${processFilterActionOf(process)}, $label',
+          onTap: onTap,
+          excludeSemantics: true,
+          child: PressSurface(
+            fill: const Color(0x00000000),
+            shape: AppShape.sm,
+            inkColor: context.colorScheme.onSurfaceVariant,
+            childFills: true,
+            onPressed: onTap,
+            child: Padding(padding: _inset, child: named),
           ),
         );
       },

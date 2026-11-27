@@ -83,6 +83,8 @@ void main() {
     WidgetTester tester, {
     Size size = _tableSize,
     bool withCoreManager = false,
+    RequestFeed feed = RequestFeed.recent,
+    Future<List<TrackerInfo>> Function()? reader,
   }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
@@ -98,12 +100,15 @@ void main() {
               ? const CoreManager(
                   child: RequestsView(initialFeed: RequestFeed.recent),
                 )
-              : const RequestsView(initialFeed: RequestFeed.recent),
+              : RequestsView(initialFeed: feed, connectionsReader: reader),
         ),
       ),
     );
     await tester.pump();
     await tester.pump();
+    if (feed == RequestFeed.live) {
+      await tester.pump(const Duration(milliseconds: 400));
+    }
   }
 
   Future<void> teardownView(WidgetTester tester) async {
@@ -529,6 +534,79 @@ void main() {
     await teardownView(tester);
   });
 
+  for (final (layout, size) in [('table', _tableSize), ('rows', _listSize)]) {
+    for (final feed in RequestFeed.values) {
+      testWidgets('tapping a process in the ${feed.name} $layout keeps only '
+          'its requests, as a removable chip, beside the exit filter and the '
+          'search', (tester) async {
+        final requests = [
+          _tracker(id: 'a', host: 'alpha.test', chains: const ['Tokyo']),
+          _tracker(
+            id: 'b',
+            host: 'beta.test',
+            process: 'wget',
+            chains: const ['Tokyo'],
+          ),
+          _tracker(id: 'c', host: 'gamma.test'),
+          _tracker(id: 'd', host: 'delta.example', chains: const ['Tokyo']),
+        ];
+        if (feed == RequestFeed.recent) {
+          seedRequests(requests);
+        }
+        await pumpRequests(
+          tester,
+          size: size,
+          feed: feed,
+          reader: () async => requests,
+        );
+        bool shows(String host) =>
+            find.textContaining(host).evaluate().isNotEmpty;
+        Finder chip(String label) => find.widgetWithText(Chip, label);
+
+        await tester.tap(find.widgetWithText(TonalChip, 'Tokyo').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byGlyph(AppGlyphs.search));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), '.test');
+        await tester.pumpAndSettle();
+        expect(
+          [
+            for (final host in ['alpha', 'beta', 'gamma', 'delta']) shows(host),
+          ],
+          [true, true, false, false],
+        );
+        expect(chip('curl'), findsNothing);
+
+        await tester.tap(find.text('curl').first);
+        await tester.pumpAndSettle();
+        expect(find.byType(TrackerInfoDetailView), findsNothing);
+        expect(
+          [
+            for (final host in ['alpha', 'beta', 'gamma', 'delta']) shows(host),
+          ],
+          [true, false, false, false],
+        );
+        expect(tester.widget<Chip>(chip('curl')).onDeleted, isNotNull);
+        expect(chip('Tokyo'), findsOneWidget);
+        expect(find.widgetWithText(TextField, '.test'), findsOneWidget);
+
+        await tester.tap(chip('curl'));
+        await tester.pumpAndSettle();
+        expect(chip('curl'), findsNothing);
+        expect(chip('Tokyo'), findsOneWidget);
+        expect(find.widgetWithText(TextField, '.test'), findsOneWidget);
+        expect(
+          [
+            for (final host in ['alpha', 'beta', 'gamma', 'delta']) shows(host),
+          ],
+          [true, true, false, false],
+        );
+
+        await teardownView(tester);
+      });
+    }
+  }
+
   testWidgets(
     'ordered core outcomes update mounted list and detail including early arrival',
     (tester) async {
@@ -651,7 +729,7 @@ void main() {
 
     await pumpRequests(tester);
 
-    await tester.tap(find.text('curl'));
+    await tester.tap(find.textContaining('alpha.test').first);
     await tester.pumpAndSettle();
 
     expect(find.text('Request details'), findsOneWidget);

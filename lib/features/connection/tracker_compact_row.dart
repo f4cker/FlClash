@@ -402,23 +402,12 @@ class TrackerCompactRow extends ConsumerWidget {
                         ),
                         child: Row(
                           children: [
-                            _buildIcon(context, process),
-                            if (layout.processWidth case final width?) ...[
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: width),
-                                child: ExcludeSemantics(
-                                  child: Text(
-                                    processName!,
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                    textWidthBasis: TextWidthBasis.longestLine,
-                                    style: metrics.process,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: _itemGap),
-                            ],
+                            ..._buildProcess(
+                              context,
+                              process,
+                              processName,
+                              layout.processWidth,
+                            ),
                             Expanded(
                               child: ExcludeSemantics(
                                 child: MitmHostLine(
@@ -467,30 +456,57 @@ class TrackerCompactRow extends ConsumerWidget {
     );
   }
 
-  Widget _buildIcon(BuildContext context, ConnectionProcess? connection) {
-    if (connection != null) {
-      return connection.hasProcess
-          ? Semantics(
-              container: true,
-              child: ProcessFilterIcon(
-                process: connection,
-                size: _iconSize,
-                targetHeight: metrics.rowHeight,
-                targetPadding: _iconPadding,
-              ),
-            )
-          : ExcludeSemantics(
-              child: Padding(
-                padding: _iconPadding,
-                child: ProcessIcon(process: connection, size: _iconSize),
-              ),
-            );
+  /// The icon and the name ahead of the host, with the gap after them.
+  List<Widget> _buildProcess(
+    BuildContext context,
+    ConnectionProcess? process,
+    String? processName,
+    double? nameWidth,
+  ) {
+    final name = nameWidth == null
+        ? null
+        : ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: nameWidth),
+            child: Text(
+              processName!,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textWidthBasis: TextWidthBasis.longestLine,
+              style: metrics.process,
+            ),
+          );
+    if (process != null &&
+        process.hasProcess &&
+        _FilterTarget.offeredIn(context)) {
+      return [
+        TrackerProcessFilter(
+          process: process,
+          height: metrics.rowHeight,
+          name: name,
+        ),
+        const SizedBox(width: _itemGap - TrackerProcessFilter.endInset),
+      ];
     }
-    return TrackerPackageIcon(
-      packageName: trackerInfo.metadata.process,
-      targetHeight: metrics.rowHeight,
-      padding: _iconPadding,
-    );
+    return [
+      if (process == null)
+        TrackerPackageIcon(
+          packageName: trackerInfo.metadata.process,
+          targetHeight: metrics.rowHeight,
+          padding: _iconPadding,
+        )
+      else
+        ExcludeSemantics(
+          child: Padding(
+            padding: _iconPadding,
+            child: ProcessIcon(process: process, size: _iconSize),
+          ),
+        ),
+      if (name != null) ...[
+        ExcludeSemantics(child: name),
+        const SizedBox(width: _itemGap),
+      ],
+    ];
   }
 
   List<Widget> _buildTrailing(
@@ -630,6 +646,72 @@ class _FilterTarget extends StatelessWidget {
           child: Padding(
             padding: padding,
             child: Center(widthFactor: 1, child: child),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A row's icon and process name as one press that filters by the process,
+/// its whole name however short the row cuts it, leaving the host to open
+/// the detail.
+class TrackerProcessFilter extends StatelessWidget {
+  final ConnectionProcess process;
+  final double height;
+  final Widget? name;
+
+  const TrackerProcessFilter({
+    super.key,
+    required this.process,
+    required this.height,
+    this.name,
+  });
+
+  /// The share of the room around the icon and name that the hover shades.
+  static const startInset = 6.0;
+  static const endInset = 2.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final action = processFilterActionOf(process);
+    final label = processLabelOf(process);
+    final filter = RecordFilter(RecordFacetKind.app, process.key);
+    final name = this.name;
+    return _FilterTarget(
+      label: action,
+      value: label,
+      height: height,
+      filter: filter,
+      padding: const EdgeInsetsDirectional.only(
+        start: _rowPadding - startInset,
+      ),
+      child: Tooltip(
+        message: [
+          action,
+          label,
+          if (process.name != label) process.name,
+        ].join('\n'),
+        child: PressSurface(
+          fill: const Color(0x00000000),
+          shape: AppShape.sm,
+          inkColor: context.colorScheme.onSurfaceVariant,
+          childFills: true,
+          onPressed: () => RecordFilterScope.add(context, filter),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: startInset,
+              end: endInset,
+              top: 4,
+              bottom: 4,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ProcessIcon(process: process, size: _iconSize),
+                if (name != null) ...[const SizedBox(width: _itemGap), name],
+              ],
+            ),
           ),
         ),
       ),

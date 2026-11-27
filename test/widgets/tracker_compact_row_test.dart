@@ -7,6 +7,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -211,7 +212,7 @@ void main() {
     // The test font sets every glyph a full em wide.
     await pump(tester, _info(), width: 600);
 
-    expect(find.byType(ProcessFilterIcon), findsOneWidget);
+    expect(find.byType(TrackerProcessFilter), findsOneWidget);
     expect(find.text('ssh'), findsOneWidget);
     expect(find.text('example.com:443'), findsOneWidget);
     expect(find.widgetWithText(TonalChip, 'DIRECT'), findsOneWidget);
@@ -325,7 +326,7 @@ void main() {
               ),
             );
           }
-          expect(find.byType(ProcessFilterIcon), findsOneWidget);
+          expect(find.byType(TrackerProcessFilter), findsOneWidget);
           if (isLive) {
             expect(!exit || speed, isTrue, reason: 'exit without speeds');
             dropped.add([speed, exit].where((part) => part).length);
@@ -367,7 +368,7 @@ void main() {
     await pump(tester, _info(), width: 200, textScale: 3.2);
 
     expect(tester.takeException(), isNull);
-    expect(find.byType(ProcessFilterIcon), findsOneWidget);
+    expect(find.byType(TrackerProcessFilter), findsOneWidget);
     expect(find.text('example.com:443'), findsOneWidget);
   });
 
@@ -420,7 +421,7 @@ void main() {
     final filters = await pump(tester, _info(), width: 600);
     final row = tester.getRect(find.byType(TrackerCompactRow));
 
-    await tester.tap(find.byType(ProcessFilterIcon));
+    await tester.tap(find.byType(TrackerProcessFilter));
     await tester.pumpAndSettle();
     expect(filters, const [
       RecordFilter(RecordFacetKind.app, 'exe:/usr/bin/ssh'),
@@ -805,5 +806,137 @@ void main() {
     expect(reason, isNot('TCP'));
     expect(rowNode(tester).label, contains(reason));
     semantics.dispose();
+  });
+
+  group('the process', () {
+    const long = 'com.example.very-long-helper-process-name';
+    final processFilter = find.byType(TrackerProcessFilter);
+
+    testWidgets('its icon and name are one press that filters by the whole '
+        'process, the name cut short or not, and leave the host to the '
+        'detail', (tester) async {
+      final filters = await pump(tester, _info(), process: long);
+      final name = find.text(long);
+      expect(
+        tester.renderObject<RenderParagraph>(name).didExceedMaxLines,
+        isTrue,
+      );
+      final target = tester.getRect(processFilter);
+      final host = tester.getRect(find.text('example.com:443'));
+      expect(target.right, lessThanOrEqualTo(host.left));
+      expect(
+        target.contains(tester.getRect(find.byType(ProcessIcon)).center),
+        isTrue,
+      );
+
+      await tester.tap(name);
+      await tester.pumpAndSettle();
+      expect(filters, const [
+        RecordFilter(RecordFacetKind.app, 'exe:/usr/local/bin/$long'),
+      ]);
+      expect(find.byType(TrackerInfoDetailView), findsNothing);
+
+      // Between the name and the host the row opens the detail again.
+      await tester.tapAt(Offset(host.left - 1, host.center.dy));
+      await tester.pumpAndSettle();
+      expect(find.byType(TrackerInfoDetailView), findsOneWidget);
+      expect(filters, hasLength(1));
+    });
+
+    testWidgets('it is a button to a screen reader that names the process '
+        'and filters by it, as the exit is', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final filters = await pump(tester, _info(), width: 600);
+
+      final node = tester.getSemantics(
+        find
+            .ancestor(
+              of: find.byType(ProcessIcon),
+              matching: find.byType(Semantics),
+            )
+            .first,
+      );
+      expect(node.label, 'Filter by this process, ssh');
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
+      tester.semantics.tap(find.semantics.byLabel(node.label));
+      await tester.pumpAndSettle();
+      expect(filters, const [
+        RecordFilter(RecordFacetKind.app, 'exe:/usr/bin/ssh'),
+      ]);
+      expect(find.byType(TrackerInfoDetailView), findsNothing);
+      // The row's own summary still names it.
+      expect(rowNode(tester).label, startsWith('ssh, '));
+      semantics.dispose();
+    });
+
+    testWidgets('a key press filters by it once it has the focus', (
+      tester,
+    ) async {
+      final filters = await pump(tester, _info(), width: 600);
+
+      Focus.of(tester.element(find.byType(ProcessIcon))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(filters, const [
+        RecordFilter(RecordFacetKind.app, 'exe:/usr/bin/ssh'),
+      ]);
+      expect(find.byType(TrackerInfoDetailView), findsNothing);
+    });
+
+    testWidgets('an unknown process offers no filter, and its room opens the '
+        'detail', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final info = _info();
+      final filters = await pump(
+        tester,
+        info.copyWith(
+          metadata: info.metadata.copyWith(process: '', processPath: ''),
+        ),
+        width: 600,
+      );
+
+      expect(processFilter, findsNothing);
+      expect(
+        find.bySemanticsLabel(RegExp('Filter by this (app|process)')),
+        findsNothing,
+      );
+      await tester.tapAt(tester.getRect(find.byType(ProcessIcon)).center);
+      await tester.pumpAndSettle();
+      expect(filters, isEmpty);
+      expect(find.byType(TrackerInfoDetailView), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('outside a filtered list it offers no filter', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        TestApp(
+          wrapInProviderScope: true,
+          homeBuilder: (child) => HostScaffold(body: child),
+          child: SizedBox(
+            width: 600,
+            child: Builder(
+              builder: (context) => TrackerCompactRow(
+                trackerInfo: _info(),
+                isLive: false,
+                detailTitle: 'detail',
+                metrics: TrackerCompactMetrics.of(context),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(processFilter, findsNothing);
+      expect(find.text('ssh'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('Filter by this process')),
+        findsNothing,
+      );
+      semantics.dispose();
+    });
   });
 }

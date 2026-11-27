@@ -362,6 +362,87 @@ void main() {
       expect(find.byType(Tooltip), findsNothing);
       expect(tester.getTopLeft(find.text('Unknown process')).dx, named);
     });
+
+    Future<List<RecordFilter>> pumpFiltered(
+      WidgetTester tester,
+      TrackerInfo info,
+    ) async {
+      final filters = <RecordFilter>[];
+      await pump(
+        tester,
+        RecordFilterScope(
+          onFilter: filters.add,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 220,
+              child: ProcessCell(metadata: info.metadata),
+            ),
+          ),
+        ),
+      );
+      return filters;
+    }
+
+    testWidgets('in a filtered list the icon and name filter by the app, a '
+        'button named like the exit\'s', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final filters = await pumpFiltered(tester, _app);
+      expect(find.byType(PressSurface), findsOneWidget);
+
+      final node = tester.getSemantics(find.byType(PressSurface));
+      expect(node.label, 'Filter by this app, Example Browser · Helper');
+      expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
+      await tester.tap(find.text('Example Browser · Helper'));
+      await tester.tap(find.byType(Image));
+      expect(filters, const [
+        RecordFilter(RecordFacetKind.app, 'app:com.example.browser'),
+        RecordFilter(RecordFacetKind.app, 'app:com.example.browser'),
+      ]);
+
+      tester.semantics.tap(find.semantics.byLabel(node.label));
+      expect(filters, hasLength(3));
+      semantics.dispose();
+    });
+
+    testWidgets('a key press filters by the process once it has the focus', (
+      tester,
+    ) async {
+      final filters = await pumpFiltered(tester, _cli);
+      Focus.of(tester.element(find.text('ssh'))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(filters, const [
+        RecordFilter(RecordFacetKind.app, 'exe:/usr/bin/ssh'),
+      ]);
+    });
+
+    testWidgets('an unknown process or another device offers no filter, and '
+        'lines up with a named one', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpFiltered(tester, _app);
+      final named = tester.getTopLeft(find.text('Example Browser · Helper')).dx;
+      for (final (info, label) in [
+        (_unknown, 'Unknown process'),
+        (_remote, 'Other device'),
+      ]) {
+        final filters = await pumpFiltered(tester, info);
+        expect(find.byType(PressSurface), findsNothing);
+        expect(find.bySemanticsLabel(RegExp('Filter by this')), findsNothing);
+        await tester.tap(find.text(label));
+        expect(filters, isEmpty);
+        expect(tester.getTopLeft(find.text(label)).dx, named);
+      }
+      semantics.dispose();
+    });
+
+    testWidgets('outside a filtered list the cell is no button', (
+      tester,
+    ) async {
+      await pump(tester, ProcessCell(metadata: _app.metadata));
+      expect(find.byType(PressSurface), findsNothing);
+      expect(find.text('Example Browser · Helper'), findsOneWidget);
+    });
   });
 
   testWidgets('the table shows the whole start time', (tester) async {
