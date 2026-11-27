@@ -6,10 +6,13 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/proxies/card.dart';
+import 'package:fl_clash/views/proxies/common.dart' as cards;
 import 'package:fl_clash/views/proxies/list.dart';
+import 'package:fl_clash/views/proxies/node_fields.dart';
 import 'package:fl_clash/widgets/widgets.dart' hide ListHeader;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,10 +20,15 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
 import '../helpers/host_scaffold.dart';
-import 'package:prism_ui/prism_ui.dart' hide ListHeader;
 
 class _RecordingProxiesAction extends ProxiesAction {
   static final List<String> tested = [];
+  static final List<String> changed = [];
+
+  @override
+  void changeProxyDebounce(String groupName, String proxyName) {
+    changed.add(proxyName);
+  }
 
   @override
   Future<void> delayTestPageGroup(
@@ -64,6 +72,7 @@ void main() {
       unfoldSet: unfoldSet,
     );
     _RecordingProxiesAction.tested.clear();
+    _RecordingProxiesAction.changed.clear();
     container = ProviderContainer(
       overrides: [
         viewModeProvider.overrideWithValue(viewMode),
@@ -564,5 +573,153 @@ void main() {
     expect(cut('Global'), isFalse);
     expect(testOf('Global').top, greaterThan(nameOf('Global').bottom));
     expect(tester.getSize(headerOf('Global')).height, greaterThan(wide));
+  });
+
+  const longName = 'Singapore Premium Relay via Tokyo Gateway 新加坡 01';
+
+  Rect cardOf(WidgetTester tester, String group, String name) =>
+      tester.getRect(find.byKey(ValueKey('$group.$name')).first);
+
+  testWidgets('a row of one-line names keeps no empty line, a row with a '
+      'two-line name grows by its second line, and cards in a row are even', (
+    tester,
+  ) async {
+    await pumpList(
+      tester,
+      size: const Size(400, 700),
+      unfoldSet: const {'G'},
+      groups: [
+        const Group(
+          type: GroupType.Selector,
+          name: 'G',
+          all: [
+            Proxy(name: 'one', type: 'ss'),
+            Proxy(name: 'two', type: 'ss'),
+            Proxy(name: longName, type: 'ss'),
+            Proxy(name: 'four', type: 'ss'),
+          ],
+        ),
+      ],
+    );
+    final measure = globalState.measure;
+    final line = measure.textHeight(AppTextStyle.subheadline);
+    final band = max(line, cards.nodeBadgeSize);
+    final details = measure.textHeight(AppTextStyle.footnote);
+    final oneLine = 8 + band + 6 + details + 8;
+    final twoLine = 8 + (band - line) / 2 + line * 2 + 6 + details + 8;
+
+    expect(cardOf(tester, 'G', 'one').height, oneLine);
+    expect(cardOf(tester, 'G', 'two').height, oneLine);
+    expect(cardOf(tester, 'G', longName).height, twoLine);
+    expect(cardOf(tester, 'G', 'four').height, twoLine);
+    expect(
+      cardOf(tester, 'G', longName).top - cardOf(tester, 'G', 'one').bottom,
+      cards.proxyGridSpacing,
+    );
+    expect(
+      cards.getItemHeight(ProxyCardType.standard, nameHeight: line),
+      oneLine,
+    );
+  });
+
+  testWidgets('the name, its badge and the info button share a centre', (
+    tester,
+  ) async {
+    await pumpList(
+      tester,
+      groups: [_group('G0', 4)],
+      unfoldSet: const {'G0'},
+      selectedMap: const {'G0': 'G0-1'},
+    );
+    final card = find.byKey(const ValueKey('G0.G0-1')).first;
+    final name = tester.getRect(
+      find.descendant(of: card, matching: find.byType(EmojiText)),
+    );
+    final line = globalState.measure.textHeight(AppTextStyle.subheadline);
+    final badge = tester.getCenter(
+      find.descendant(of: card, matching: find.byType(SelectionBadge)),
+    );
+    final info = tester.getCenter(
+      find.descendant(of: card, matching: find.byType(InfoButton)),
+    );
+
+    expect(badge.dy, name.top + line / 2);
+    expect(info.dy, badge.dy);
+    expect(tester.getRect(card).top + 8, lessThanOrEqualTo(name.top));
+  });
+
+  testWidgets('tapping the info button opens the info without selecting', (
+    tester,
+  ) async {
+    await pumpList(tester, groups: [_group('G0', 4)], unfoldSet: const {'G0'});
+    final card = find.byKey(const ValueKey('G0.G0-2')).first;
+    final info = find.descendant(of: card, matching: find.byType(InfoButton));
+
+    // The edge of its hit area, outside the glyph.
+    await tester.tapAt(tester.getTopLeft(info) + const Offset(2, 2));
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeInfoView), findsOneWidget);
+    expect(_RecordingProxiesAction.changed, isEmpty);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeInfoView), findsNothing);
+    await tester.tap(find.text('G0-2').first);
+    await tester.pumpAndSettle();
+    expect(_RecordingProxiesAction.changed, ['G0-2']);
+  });
+
+  testWidgets('nothing overflows at twice the text size 360 wide', (
+    tester,
+  ) async {
+    await pumpList(
+      tester,
+      size: const Size(360, 1400),
+      textScale: 2,
+      unfoldSet: const {'G'},
+      groups: [
+        const Group(
+          type: GroupType.Selector,
+          name: 'G',
+          now: longName,
+          all: [
+            Proxy(
+              name: longName,
+              type: 'Vless',
+              udp: true,
+              xudp: true,
+              tfo: true,
+              mptcp: true,
+              smux: true,
+            ),
+            Proxy(name: 'HK 01', type: 'Shadowsocks', udp: true, uot: true),
+            Proxy(
+              name: '美国 洛杉矶 超时节点 Los Angeles',
+              type: 'Trojan',
+              udp: true,
+              dialerProxy: 'relay',
+              interfaceName: 'en0',
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(tester.takeException(), isNull);
+    for (final name in [longName, 'HK 01', '美国 洛杉矶 超时节点 Los Angeles']) {
+      final card = cardOf(tester, 'G', name);
+      for (final text
+          in find
+              .descendant(
+                of: find.byKey(ValueKey('G.$name')).first,
+                matching: find.byType(RichText),
+              )
+              .evaluate()) {
+        final box = text.renderObject! as RenderBox;
+        final rect = box.localToGlobal(Offset.zero) & box.size;
+        expect(rect.bottom, lessThanOrEqualTo(card.bottom - 8));
+        expect(rect.top, greaterThanOrEqualTo(card.top));
+      }
+    }
   });
 }

@@ -7,6 +7,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -75,6 +76,7 @@ class ProxiesListView extends ConsumerStatefulWidget {
 class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
   late final ScrollController _controller;
   int _columns = 1;
+  double _cardWidth = 0;
   Map<String, double> _headerHeights = const {};
   int _groupColumns = 1;
   double _gap = 0;
@@ -139,19 +141,28 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
   GroupOffsets _getGroupOffsets() {
     final state = ref.read(proxiesListStateProvider);
     final offsets = <double>[];
-    final rowExtent = getRowExtent(state.proxyCardType);
     final columnOffsets = List.filled(_groupColumns, 0.0);
     for (final (index, group) in state.groups.indexed) {
       final column = index % _groupColumns;
       offsets.add(columnOffsets[column]);
       columnOffsets[column] += _headerHeightOf(group.name) + _gap;
       if (state.currentUnfoldSet.contains(group.name)) {
-        final rowCount = (group.all.length + _columns - 1) ~/ _columns;
-        columnOffsets[column] += _rowsExtent(rowCount, rowExtent);
+        columnOffsets[column] += _rowsExtent(
+          _rowExtentsOf(group, state.proxyCardType),
+        );
       }
     }
     return GroupOffsets(state.groups, offsets);
   }
+
+  List<double> _rowExtentsOf(Group group, ProxyCardType cardType) =>
+      nodeRowExtents(
+        context,
+        group.all,
+        columns: _columns,
+        cardWidth: _cardWidth,
+        proxyCardType: cardType,
+      );
 
   double _headerHeightOf(String groupName) =>
       _headerHeights[groupName] ?? listHeaderHeight;
@@ -218,19 +229,15 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
 
   void _scrollToGroupSelected(String groupName) {
     final cardType = ref.read(proxiesListStateProvider).proxyCardType;
-    final proxies = ref
-        .read(proxiesListStateProvider)
-        .groups
-        .getGroup(groupName)
-        ?.all;
-    if (proxies == null) {
+    final group = ref.read(proxiesListStateProvider).groups.getGroup(groupName);
+    if (group == null) {
       return;
     }
     final rowOffset = selectedRowOffset(
-      proxies: proxies,
+      proxies: group.all,
       selectedProxyName: ref.read(selectedProxyNameProvider(groupName)),
       columns: _columns,
-      rowExtent: getRowExtent(cardType),
+      rowExtents: _rowExtentsOf(group, cardType),
     );
     if (rowOffset == null) {
       return;
@@ -288,6 +295,10 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
                 textScale: MediaQuery.textScalerOf(context).scale(1),
               );
               _columns = columns;
+              _cardWidth = nodeCardWidth(
+                max(groupWidth - _headerInset * 2, 0),
+                columns,
+              );
               _groupColumns = groupColumns;
               _gap = gap;
               _headerHeights = {
@@ -303,6 +314,7 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
                 group: group,
                 headerHeight: _headerHeightOf(group.name),
                 columns: columns,
+                cardWidth: _cardWidth,
                 cardType: cardType,
                 gap: gap,
                 onChange: _handleChange,
@@ -367,8 +379,8 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
   }
 }
 
-double _rowsExtent(int rowCount, double rowExtent) =>
-    rowCount == 0 ? 0 : rowCount * rowExtent + _lastRowGrowth;
+double _rowsExtent(List<double> rowExtents) =>
+    rowExtents.isEmpty ? 0 : sumExtents(rowExtents) + _lastRowGrowth;
 
 class _GroupSliverKey extends ValueKey<String> {
   const _GroupSliverKey(super.value);
@@ -383,6 +395,7 @@ class _GroupSliver extends ConsumerStatefulWidget {
     required this.group,
     required this.headerHeight,
     required this.columns,
+    required this.cardWidth,
     required this.cardType,
     required this.gap,
     required this.onChange,
@@ -392,6 +405,7 @@ class _GroupSliver extends ConsumerStatefulWidget {
   final Group group;
   final double headerHeight;
   final int columns;
+  final double cardWidth;
   final ProxyCardType cardType;
   final double gap;
   final void Function(String groupName) onChange;
@@ -404,8 +418,8 @@ class _GroupSliver extends ConsumerStatefulWidget {
 class _GroupSliverState extends ConsumerState<_GroupSliver>
     with SingleTickerProviderStateMixin {
   Widget? _rows;
-  (double, double)? _rowsShape;
-  double _rowExtent = 0;
+  (List<double>, double)? _rowsShape;
+  List<double> _unfoldedExtents = const [];
   late final _controller = AnimationController(
     vsync: this,
     value: ref.read(unfoldSetProvider).contains(widget.group.name) ? 1 : 0,
@@ -445,6 +459,16 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
     }
   }
 
+  List<double> _extents = const [];
+
+  List<double> _rowExtents() => nodeRowExtents(
+    context,
+    widget.group.all,
+    columns: widget.columns,
+    cardWidth: widget.cardWidth,
+    proxyCardType: widget.cardType,
+  );
+
   Widget _buildCard(Proxy proxy) {
     final group = widget.group;
     final cardType = widget.cardType;
@@ -469,17 +493,17 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
 
   /// Rows past the [count] the unfolding shows stay hidden until it settles,
   /// and build one after another behind the ones it shows.
-  Widget _buildRows(double extent, double unfoldingExtent, int count) {
+  Widget _buildRows(List<double> extents, double unfoldingExtent, int count) {
     final proxies = widget.group.all;
     final columns = widget.columns;
+    final ends = [
+      for (var row = 0, end = 0.0; row < extents.length; row++)
+        end += extents[row],
+    ];
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: _headerInset),
       sliver: SliverGrid(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columns,
-          crossAxisSpacing: 8,
-          mainAxisExtent: extent,
-        ),
+        gridDelegate: NodeGridDelegate(columns: columns, rowExtents: extents),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final row = index ~/ columns;
@@ -488,7 +512,7 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
               key: ValueKey(proxy.name),
               motion: _controller,
               buildAfter: row < count
-                  ? max(0.0, 1 - (row + 1) * extent / unfoldingExtent)
+                  ? max(0.0, 1 - ends[row] / unfoldingExtent)
                   : min(0.6 + 0.1 * (row - count), 0.95),
               builder: (_) => _buildCard(proxy),
             );
@@ -508,24 +532,30 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
       unfoldSetProvider.select((state) => state.contains(groupName)),
     );
     final unfolded = _controller.isCompleted;
+    _extents = _controller.isDismissed ? const [] : _rowExtents();
     Widget? rows;
     if (!_controller.isDismissed && widget.group.all.isNotEmpty) {
-      final extent = getRowExtent(widget.cardType);
-      final columns = widget.columns;
-      final rowCount = (widget.group.all.length + columns - 1) ~/ columns;
-      final visible = min(
-        rowCount.toDouble(),
-        MediaQuery.sizeOf(context).height / extent,
-      );
-      final count = min(rowCount, visible.floor() + 1);
+      final extents = _extents;
+      final rowCount = extents.length;
+      final height = MediaQuery.sizeOf(context).height;
+      var visible = 0;
+      for (var end = extents.first; end <= height; end += extents[visible]) {
+        if (++visible == rowCount) break;
+      }
+      final count = min(rowCount, visible + 1);
       final unfoldingExtent =
-          count * extent + (count == rowCount ? _lastRowGrowth : 0);
-      if (_rows == null || _rowsShape != (extent, unfoldingExtent)) {
-        _rows = _buildRows(extent, unfoldingExtent, count);
-        _rowsShape = (extent, unfoldingExtent);
+          sumExtents(extents.take(count)) +
+          (count == rowCount ? _lastRowGrowth : 0);
+      final shape = _rowsShape;
+      if (_rows == null ||
+          shape == null ||
+          !listEquals(shape.$1, extents) ||
+          shape.$2 != unfoldingExtent) {
+        _rows = _buildRows(extents, unfoldingExtent, count);
+        _rowsShape = (extents, unfoldingExtent);
       }
       if (unfolded) {
-        _rowExtent = extent;
+        _unfoldedExtents = extents;
       }
       rows = UnfoldSliver(
         motion: _controller,
@@ -581,15 +611,10 @@ class _GroupSliverState extends ConsumerState<_GroupSliver>
     bool isExpand,
     Widget Function({double floating, double lift}) buildHeader,
   ) {
-    final columns = widget.columns;
-    final rowCount = (widget.group.all.length + columns - 1) ~/ columns;
-    final rowsExtent = isExpand ? _rowsExtent(rowCount, _rowExtent) : 0.0;
+    final rowsExtent = isExpand ? _rowsExtent(_unfoldedExtents) : 0.0;
     final headerHeight = widget.headerHeight;
     final groupExtent =
-        headerHeight +
-        (_controller.isDismissed
-            ? 0.0
-            : _rowsExtent(rowCount, getRowExtent(widget.cardType)));
+        headerHeight + (_controller.isDismissed ? 0.0 : _rowsExtent(_extents));
     final coversRows = !_controller.isDismissed;
     (double, double, double, Color)? headerState;
     Widget? header;

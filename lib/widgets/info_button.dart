@@ -24,6 +24,9 @@ class InfoButton extends StatefulWidget {
     this.label,
   });
 
+  /// The side of its square hit area.
+  static const size = _buttonSize;
+
   final List<String> paragraphs;
 
   /// Replaces [paragraphs] when the popover holds more than prose.

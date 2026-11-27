@@ -8,6 +8,7 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'common.dart';
 import 'node_fields.dart';
 
 void selectGroupProxy(
@@ -42,8 +43,6 @@ bool _isAddableToLocal(Proxy proxy, {required bool isCustomProfile}) {
       GroupTypeExtension.getGroupType(proxy.type) == null;
 }
 
-const _infoRoom = 20.0;
-
 class ProxyCard extends ConsumerWidget {
   final String groupName;
   final Proxy proxy;
@@ -63,27 +62,12 @@ class ProxyCard extends ConsumerWidget {
   Measure get measure => globalState.measure;
 
   Widget _buildProxyNameText(BuildContext context) {
-    if (type == ProxyCardType.compact) {
-      return SizedBox(
-        height: measure.textHeight(AppTextStyle.subheadline) * 1,
-        child: EmojiText(
-          proxy.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyle.subheadline.of(context),
-        ),
-      );
-    } else {
-      return SizedBox(
-        height: measure.textHeight(AppTextStyle.subheadline) * 2,
-        child: EmojiText(
-          proxy.name,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyle.subheadline.of(context),
-        ),
-      );
-    }
+    return EmojiText(
+      proxy.name,
+      maxLines: type == ProxyCardType.compact ? 1 : 2,
+      overflow: TextOverflow.ellipsis,
+      style: AppTextStyle.subheadline.of(context),
+    );
   }
 
   void _handleSelect(WidgetRef ref) {
@@ -169,6 +153,8 @@ class ProxyCard extends ConsumerWidget {
       udpOff: watchGroupDisablesUdp(ref, groupName),
     );
     final proxyNameText = _buildProxyNameText(context);
+    final line = measure.textHeight(AppTextStyle.subheadline);
+    final band = nodeTitleBand;
     final typeStyle = AppTextStyle.footnote
         .of(context)
         .copyWith(
@@ -191,7 +177,7 @@ class ProxyCard extends ConsumerWidget {
                   udpNote: follows,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: nodeCardRowGap),
               delayText,
             ],
           )
@@ -246,26 +232,45 @@ class ProxyCard extends ConsumerWidget {
             key: key,
             onPressed: () => _handleSelect(ref),
             isSelected: inUse,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
-                  children: [
-                    Expanded(child: proxyNameText),
-                    if (pinned)
-                      SelectionBadge(glyph: Glyphs.pin, tonal: !inUse)
-                    else if (inUse)
-                      const SelectionBadge(),
-                    const SizedBox(width: _infoRoom),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                details,
-              ],
+            padding: EdgeInsets.symmetric(horizontal: nodeCardPadding.left),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: nodeCardPadding.top),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: nodeBadgeGap,
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: (band - line) / 2),
+                          child: proxyNameText,
+                        ),
+                      ),
+                      if (pinned || inUse)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: (band - nodeBadgeSize) / 2,
+                          ),
+                          child: pinned
+                              ? SelectionBadge(
+                                  size: nodeBadgeSize,
+                                  glyph: Glyphs.pin,
+                                  tonal: !inUse,
+                                )
+                              : const SelectionBadge(size: nodeBadgeSize),
+                        ),
+                      const SizedBox(width: nodeInfoRoom),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: nodeCardRowGap),
+                    child: details,
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -274,7 +279,7 @@ class ProxyCard extends ConsumerWidget {
           children: [
             card,
             Positioned(
-              top: 4,
+              top: nodeCardPadding.top + band / 2 - InfoButton.size / 2,
               right: 4,
               child: InfoButton(
                 label: context.appLocalizations.nodeInfoButton(proxy.name),

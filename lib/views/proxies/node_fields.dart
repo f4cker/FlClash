@@ -480,7 +480,7 @@ class NodeMetaLine extends StatelessWidget {
   final List<NodeField> fields;
   final String? udpNote;
 
-  static const _gap = 6.0;
+  static const _gap = 4.0;
 
   double _width(BuildContext context, String text) {
     final painter = TextPainter(

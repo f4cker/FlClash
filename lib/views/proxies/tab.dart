@@ -27,6 +27,7 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
   TabController? _tabController;
   final Map<String, ScrollController> _scrollControllers = {};
   int _columns = 1;
+  double _cardWidth = 0;
 
   @override
   void initState() {
@@ -97,7 +98,13 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
       proxies: group.all,
       selectedProxyName: ref.read(selectedProxyNameProvider(group.name)),
       columns: _columns,
-      rowExtent: getRowExtent(cardType),
+      rowExtents: nodeRowExtents(
+        context,
+        group.all,
+        columns: _columns,
+        cardWidth: _cardWidth,
+        proxyCardType: cardType,
+      ),
     );
     if (rowOffset == null) {
       return;
@@ -221,6 +228,10 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
                           textScale: MediaQuery.textScalerOf(context).scale(1),
                         );
                         _columns = columns;
+                        _cardWidth = nodeCardWidth(
+                          max(width - context.listInsets.margin * 2, 0),
+                          columns,
+                        );
                         return TabBarView(
                           controller: controller,
                           children: [
@@ -230,6 +241,7 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
                                 controller: _scrollControllerOf(group.name),
                                 group: group,
                                 columns: columns,
+                                cardWidth: _cardWidth,
                                 cardType: cardType,
                               ),
                           ],
@@ -248,6 +260,7 @@ class ProxyGroupView extends ConsumerWidget {
   final Group group;
   final ScrollController controller;
   final int columns;
+  final double cardWidth;
   final ProxyCardType cardType;
 
   const ProxyGroupView({
@@ -255,6 +268,7 @@ class ProxyGroupView extends ConsumerWidget {
     required this.group,
     required this.controller,
     required this.columns,
+    required this.cardWidth,
     required this.cardType,
   });
 
@@ -280,11 +294,16 @@ class ProxyGroupView extends ConsumerWidget {
           controller: controller,
           scrollCacheExtent: cacheExtent,
           padding: context.listInsets.page(bottom: 16 + context.bottomInset),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
+          gridDelegate: NodeGridDelegate(
+            columns: columns,
             mainAxisSpacing: proxyGridSpacing,
-            crossAxisSpacing: 8,
-            mainAxisExtent: getItemHeight(cardType),
+            rowExtents: nodeRowExtents(
+              context,
+              proxies,
+              columns: columns,
+              cardWidth: cardWidth,
+              proxyCardType: cardType,
+            ),
           ),
           itemCount: proxies.length,
           addAutomaticKeepAlives: false,
