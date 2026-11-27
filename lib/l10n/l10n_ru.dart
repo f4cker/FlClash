@@ -7120,20 +7120,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get addedRulesReloadTimeout =>
-      'Ядро не перезагрузилось за 15 секунд; изменение отменено.';
-
-  @override
   String get addedRulesReloadFailed =>
       'Ядро не приняло новую конфигурацию; изменение отменено.';
 
   @override
-  String get addedRuleSetLoadFailed =>
-      'Не удалось скачать набор правил; изменение отменено.';
+  String get addedRulesApplyFailed =>
+      'Не удалось применить; изменение отменено.';
 
   @override
-  String get addedRuleSetLoadTimeout =>
-      'Набор правил не скачался за 15 секунд; изменение отменено.';
+  String get addedRuleSetLoadFailed =>
+      'Не удалось скачать набор правил; изменение отменено.';
 
   @override
   String get ruleDeleteTitle => 'Удалить это правило?';

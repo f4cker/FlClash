@@ -1078,10 +1078,12 @@ class SetupAction extends _$SetupAction {
   /// [onMountRejected] hears this apply's mount refusal, and no other's.
   Future<bool> applyProfileReporting({
     required void Function(String reason) onMountRejected,
+    void Function(Object error)? onFailed,
   }) async {
     final result = await _runSetup(
       silence: true,
       onMountRejected: onMountRejected,
+      onFailed: onFailed,
     );
     return result != _SetupTaskResult.failed;
   }
@@ -1104,6 +1106,7 @@ class SetupAction extends _$SetupAction {
     bool Function()? owns,
     Future<void> Function()? preloadInvoke,
     void Function(String reason)? onMountRejected,
+    void Function(Object error)? onFailed,
   }) async {
     final result = await _setupScheduler.run(() async {
       if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
@@ -1122,6 +1125,7 @@ class SetupAction extends _$SetupAction {
           announceMountSkips: announceMountSkips,
           preloadInvoke: preloadInvoke,
           onMountRejected: onMountRejected,
+          onFailed: onFailed,
           onUpdated: () async {
             if (ref.exists(tailscaleNodesProvider)) {
               ref.invalidate(tailscaleNodesProvider);
@@ -1954,6 +1958,7 @@ class SetupAction extends _$SetupAction {
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
     void Function(String reason)? onMountRejected,
+    void Function(Object error)? onFailed,
   }) async {
     if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     final adoptionPending = await _compositionPending;
@@ -2029,15 +2034,25 @@ class SetupAction extends _$SetupAction {
     final realProfile =
         adoption?.built ??
         await globalState.safeRun(() async {
-          final state = await ref.read(setupStateProvider(profile?.id).future);
-          if (!sourceCurrent()) throw StateError('Profile setup superseded');
-          // Without a profile the Core gets no DNS, so nothing to refuse.
-          if (state.profileId != null &&
-              realPatchConfig.dns.respectRulesUnmet) {
-            throw const DnsRespectRulesUnmetException();
+          try {
+            final state = await ref.read(
+              setupStateProvider(profile?.id).future,
+            );
+            if (!sourceCurrent()) throw StateError('Profile setup superseded');
+            // Without a profile the Core gets no DNS, so nothing to refuse.
+            if (state.profileId != null &&
+                realPatchConfig.dns.respectRulesUnmet) {
+              throw const DnsRespectRulesUnmetException();
+            }
+            setupState = state;
+            return await getProfile(
+              setupState: state,
+              patchConfig: realPatchConfig,
+            );
+          } catch (error) {
+            onFailed?.call(error);
+            rethrow;
           }
-          setupState = state;
-          return getProfile(setupState: state, patchConfig: realPatchConfig);
         }, title: 'build profile');
     final profileFailed = realProfile == null;
     if (profileFailed || !sourceCurrent()) {
@@ -2204,6 +2219,7 @@ class SetupAction extends _$SetupAction {
           }
         } catch (e, s) {
           setupFailed = true;
+          onFailed?.call(e);
           if (!(owns?.call() ?? true)) return;
           if (rpcStarted && !definitelyKept) {
             await _forgetConfirmedComposition(defaultRuntime: defaultRuntime);

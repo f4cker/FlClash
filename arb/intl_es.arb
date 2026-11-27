@@ -2440,10 +2440,9 @@
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
-  "addedRulesReloadTimeout": "El núcleo no terminó de recargarse en 15 segundos; se deshizo el cambio.",
   "addedRulesReloadFailed": "El núcleo no aceptó la nueva configuración; se deshizo el cambio.",
+  "addedRulesApplyFailed": "No se pudo aplicar; se deshizo el cambio.",
   "addedRuleSetLoadFailed": "No se pudo descargar el conjunto de reglas; se deshizo el cambio.",
-  "addedRuleSetLoadTimeout": "El conjunto de reglas no terminó de descargarse en 15 segundos; se deshizo el cambio.",
   "ruleDeleteTitle": "¿Eliminar esta regla?",
   "ruleSetDeleteTitle": "¿Eliminar el conjunto de reglas «{name}»?",
   "@ruleSetDeleteTitle": {

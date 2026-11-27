@@ -2506,10 +2506,9 @@
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
-  "addedRulesReloadTimeout": "The core did not finish reloading in 15 seconds; the change was undone.",
   "addedRulesReloadFailed": "The core did not take the new config; the change was undone.",
+  "addedRulesApplyFailed": "The change could not be applied and was undone.",
   "addedRuleSetLoadFailed": "The rule set could not be downloaded; the change was undone.",
-  "addedRuleSetLoadTimeout": "The rule set did not finish downloading in 15 seconds; the change was undone.",
   "ruleDeleteTitle": "Delete this rule?",
   "ruleSetDeleteTitle": "Delete rule set “{name}”?",
   "@ruleSetDeleteTitle": {

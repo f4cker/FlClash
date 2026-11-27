@@ -2440,10 +2440,9 @@
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
-  "addedRulesReloadTimeout": "コアの再読み込みが15秒以内に完了しなかったため、変更を元に戻しました。",
   "addedRulesReloadFailed": "コアが新しい設定を受け入れなかったため、変更を元に戻しました。",
+  "addedRulesApplyFailed": "適用できなかったため、変更を元に戻しました。",
   "addedRuleSetLoadFailed": "ルールセットをダウンロードできなかったため、変更を元に戻しました。",
-  "addedRuleSetLoadTimeout": "ルールセットのダウンロードが15秒以内に完了しなかったため、変更を元に戻しました。",
   "ruleDeleteTitle": "このルールを削除しますか？",
   "ruleSetDeleteTitle": "ルールセット「{name}」を削除しますか？",
   "@ruleSetDeleteTitle": {

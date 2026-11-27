@@ -6555,16 +6555,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get relookup => '重新查询';
 
   @override
-  String get addedRulesReloadTimeout => '内核 15 秒内没有完成重新加载，这次修改已撤销。';
-
-  @override
   String get addedRulesReloadFailed => '内核没有接受新的配置，这次修改已撤销。';
 
   @override
-  String get addedRuleSetLoadFailed => '规则集下载失败，这次修改已撤销。';
+  String get addedRulesApplyFailed => '没能应用，这次修改已撤销。';
 
   @override
-  String get addedRuleSetLoadTimeout => '规则集 15 秒内没有下载完成，这次修改已撤销。';
+  String get addedRuleSetLoadFailed => '规则集下载失败，这次修改已撤销。';
 
   @override
   String get ruleDeleteTitle => '删除这条规则？';

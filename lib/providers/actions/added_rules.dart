@@ -1,16 +1,14 @@
 part of '../action.dart';
 
 /// How a change to the added rules ended: [error] says why it was undone;
-/// [pending] means it was written while the Core was not running, to take
-/// effect once it starts; [ruleId] is the rule written.
+/// [pending] that it is kept but not in effect yet; [ruleId] the rule written.
 typedef AddedRulesSave = ({String? error, bool pending, int? ruleId});
 
 /// The rules and rule sets the rules page edits for a profile, in the order
 /// the added rules apply. For a custom profile they are its own rules.
 typedef AddedRulesState = ({List<Rule> rules, List<AddedRuleSet> sets});
 
-/// How long a save waits for the Core to reload, and a new rule set for its
-/// first download.
+/// When a save is told it is slow, and how long a new rule set gets to load.
 const addedRulesSaveTimeout = Duration(seconds: 15);
 
 /// What a save rolls back to when the Core does not take it.
@@ -62,9 +60,13 @@ class AddedRulesAction extends _$AddedRulesAction {
   @visibleForTesting
   Future<bool> applyAddedRulesProfile({
     void Function(String reason)? onMountRejected,
+    void Function(Object error)? onFailed,
   }) => ref
       .read(setupActionProvider.notifier)
-      .applyProfileReporting(onMountRejected: onMountRejected ?? (_) {});
+      .applyProfileReporting(
+        onMountRejected: onMountRejected ?? (_) {},
+        onFailed: onFailed,
+      );
 
   Future<AddedRulesState> load(Profile profile) async {
     final rules = profile.type == ProfileType.custom
@@ -637,18 +639,7 @@ class AddedRulesAction extends _$AddedRulesAction {
     final result = Completer<AddedRulesSave>();
     final prior = _writeTail;
     final run = () async {
-      try {
-        await prior.timeout(saveTimeout * 2);
-      } on TimeoutException {
-        result.complete((
-          error: currentAppLocalizations.addedRulesApplyPending,
-          pending: false,
-          ruleId: null,
-        ));
-        // Keep this rejected request in the lane until earlier work settles.
-        await prior;
-        return;
-      }
+      await prior;
       try {
         final save = await _commitInLane(
           profile,
@@ -741,21 +732,10 @@ class AddedRulesAction extends _$AddedRulesAction {
       await onSuccess?.call();
       return (error: null, pending: true, ruleId: id);
     }
-    final (error, lateApply) = await _reload(waitFor?.call());
+    final (error, unready) = await _reload(waitFor?.call());
     if (error == null) {
       await onSuccess?.call();
-      return (error: null, pending: false, ruleId: id);
-    }
-    if (lateApply != null) {
-      earlyResult.complete((
-        error: appLocalizations.addedRulesApplyPending,
-        pending: false,
-        ruleId: null,
-      ));
-      // Future.timeout does not cancel setup, which can still publish.
-      try {
-        await lateApply;
-      } catch (_) {}
+      return (error: null, pending: unready, ruleId: id);
     }
     Set<int> conflicts = {};
     Object? restoreError;
@@ -821,58 +801,83 @@ class AddedRulesAction extends _$AddedRulesAction {
     return (error: failureMessage, pending: false, ruleId: null);
   }
 
-  /// Null once the Core runs the profile as written and [set], if any, has
-  /// loaded; else why not.
-  Future<(String?, Future<bool>?)> _reload(AddedRuleSet? set) async {
+  /// Why the Core did not take the profile, else whether [set] is unloaded.
+  Future<(String?, bool)> _reload(AddedRuleSet? set) async {
     final appLocalizations = currentAppLocalizations;
-    final deadline = DateTime.now().add(saveTimeout);
-    final bool applied;
-    Future<bool>? applying;
+    final started = DateTime.now();
     String? rejection;
-    String reloadFailed() =>
-        [appLocalizations.addedRulesReloadFailed, ?rejection].join('\n');
+    Object? failure;
+    var applied = false;
+    final slow = Timer(saveTimeout, () {
+      commonPrint.log(
+        'added rules: apply still running after ${saveTimeout.inSeconds}s',
+        logLevel: LogLevel.warning,
+      );
+    });
     try {
-      applying = applyAddedRulesProfile(
+      applied = await applyAddedRulesProfile(
         onMountRejected: (reason) => rejection = reason,
+        onFailed: (error) => failure ??= error,
       );
-      applied = await applying.timeout(saveTimeout);
-    } on TimeoutException {
-      return (appLocalizations.addedRulesReloadTimeout, applying);
-    } catch (_) {
-      return (reloadFailed(), null);
+    } catch (error) {
+      failure ??= error;
+    } finally {
+      slow.cancel();
     }
-    if (!applied) return (reloadFailed(), null);
-    if (set == null) return (null, null);
+    if (!applied) {
+      final reason = switch ((rejection, failure)) {
+        (final String rejection, _) => rejection,
+        (_, final Object failure) => userFacingErrorMessage(
+          failure,
+          appLocalizations,
+        ),
+        _ => null,
+      };
+      commonPrint.log(
+        'added rules: apply failed: ${reason ?? 'no reason given'}',
+        logLevel: LogLevel.warning,
+      );
+      return (
+        switch ((rejection, reason)) {
+          (null, final String reason) =>
+            '${appLocalizations.addedRulesApplyFailed}\n$reason',
+          _ => [appLocalizations.addedRulesReloadFailed, ?reason].join('\n'),
+        },
+        false,
+      );
+    }
+    if (set == null) return (null, false);
+    final deadline = started.add(saveTimeout);
+    const poll = Duration(milliseconds: 400);
     while (true) {
-      final RuleSetView? view;
+      final left = deadline.difference(DateTime.now());
+      RuleSetView? view;
       try {
-        final remaining = deadline.difference(DateTime.now());
-        if (remaining <= Duration.zero) {
-          return (appLocalizations.addedRuleSetLoadTimeout, null);
-        }
-        view = await loadAddedRuleSetView(set).timeout(remaining);
+        view = await loadAddedRuleSetView(
+          set,
+        ).timeout(left > poll ? left : poll);
       } on TimeoutException {
-        return (appLocalizations.addedRuleSetLoadTimeout, null);
-      } catch (_) {
-        return (appLocalizations.addedRuleSetLoadFailed, null);
+        break;
+      } catch (error) {
+        commonPrint.log(
+          'added rules: rule set ${set.name} status unreadable: '
+          '${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
       }
-      if (view != null && view.status == 'ok') return (null, null);
-      if (view != null && view.status == 'failed') {
-        return (appLocalizations.addedRuleSetLoadFailed, null);
+      if (view?.status == 'ok') return (null, false);
+      if (view?.status == 'failed') {
+        return (appLocalizations.addedRuleSetLoadFailed, false);
       }
-      if (DateTime.now().isAfter(deadline)) {
-        return (appLocalizations.addedRuleSetLoadTimeout, null);
-      }
-      final remaining = deadline.difference(DateTime.now());
-      if (remaining <= Duration.zero) {
-        return (appLocalizations.addedRuleSetLoadTimeout, null);
-      }
-      await Future.delayed(
-        remaining < const Duration(milliseconds: 400)
-            ? remaining
-            : const Duration(milliseconds: 400),
-      );
+      final wait = deadline.difference(DateTime.now());
+      if (wait <= Duration.zero) break;
+      await Future.delayed(wait < poll ? wait : poll);
     }
+    commonPrint.log(
+      'added rules: rule set ${set.name} kept, not loaded yet',
+      logLevel: LogLevel.warning,
+    );
+    return (null, true);
   }
 
   /// Identify the running provider from the paired rule in the last applied

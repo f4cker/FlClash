@@ -50,12 +50,17 @@ class FakeAddedRulesAction extends AddedRulesAction {
   /// Told to the next apply's own listener, as the Core's mount refusal.
   String? rejection;
 
+  /// Told to a failed apply's own listener, as the error that failed it.
+  Object? failure;
+
   @override
   Future<bool> applyAddedRulesProfile({
     void Function(String reason)? onMountRejected,
+    void Function(Object error)? onFailed,
   }) async {
     final applied = await reload();
     if (!applied && rejection != null) onMountRejected?.call(rejection!);
+    if (!applied && failure != null) onFailed?.call(failure!);
     return applied;
   }
 }
@@ -149,25 +154,24 @@ void main() {
   });
 
   test(
-    'timeout retains the write until late apply settles and compensation finishes',
+    'a slow apply that succeeds keeps the write, and a save queued behind it runs after',
     () async {
       final slow = Completer<bool>();
       final started = Completer<void>();
       final applied = <String>[];
+      final fake = FakeAddedRulesAction(() async {
+        applied.add(await target());
+        if (applied.length == 1) {
+          started.complete();
+          return slow.future;
+        }
+        return true;
+      });
       container = ProviderContainer(
         overrides: [
           currentProfileIdProvider.overrideWithBuild((_, _) => 1),
           coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
-          addedRulesActionProvider.overrideWith(
-            () => FakeAddedRulesAction(() async {
-              applied.add(await target());
-              if (applied.length == 1) {
-                started.complete();
-                return slow.future;
-              }
-              return true;
-            }),
-          ),
+          addedRulesActionProvider.overrideWith(() => fake),
         ],
       );
       final action = container.read(addedRulesActionProvider.notifier);
@@ -180,21 +184,27 @@ void main() {
       final second = action.putRule(
         profile,
         original.copyWith(ruleTarget: 'PROXY'),
-        previous: original,
+        previous: original.copyWith(ruleTarget: 'REJECT'),
       );
-      final firstResult = await first;
-      expect(firstResult.error, currentAppLocalizations.addedRulesApplyPending);
-      expect(await target(), 'REJECT');
+      var answered = false;
+      unawaited(Future.any([first, second]).then((_) => answered = true));
+      // Well past the 30 ms save timeout: neither is answered early.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(answered, isFalse);
       expect(applied, ['REJECT']);
       slow.complete(true);
-      final secondResult = await second;
-      expect(secondResult.error, isNull);
+      final firstResult = await first;
+      expect(firstResult.error, isNull);
+      expect(firstResult.pending, isFalse);
+      expect(firstResult.ruleId, original.id);
+      expect((await second).error, isNull);
       expect(await target(), 'PROXY');
-      expect(applied, ['REJECT', 'DIRECT', 'PROXY']);
+      expect(applied, ['REJECT', 'PROXY']);
+      expect(fake.warnings, isEmpty);
     },
   );
   test(
-    'stalled apply rejects queued writes and serializes delayed completion',
+    'a retry queued behind a slow apply that fails waits and then succeeds',
     () async {
       final slow = Completer<bool>();
       final started = Completer<void>();
@@ -222,30 +232,26 @@ void main() {
         previous: original,
       );
       await started.future;
-      final second = action.putRule(
+      final retry = action.putRule(
         profile,
         original.copyWith(ruleTarget: 'PROXY'),
         previous: original,
       );
+      var answered = false;
+      unawaited(retry.then((_) => answered = true));
+      // Well past twice the 30 ms save timeout: the retry is not turned away.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(answered, isFalse);
+      expect(applied, ['REJECT']);
+      slow.complete(false);
       expect(
         (await first).error,
-        currentAppLocalizations.addedRulesApplyPending,
+        startsWith(currentAppLocalizations.addedRulesReloadFailed),
       );
-      expect(
-        (await second).error,
-        currentAppLocalizations.addedRulesApplyPending,
-      );
-      expect(await target(), 'REJECT');
-      expect(applied, ['REJECT']);
-      slow.complete(true);
-      // A rejected request cannot run after the old apply eventually finishes.
-      final third = await action.putRule(
-        profile,
-        original.copyWith(ruleTarget: 'PASS'),
-        previous: original,
-      );
-      expect(third.error, isNull);
-      expect(applied, ['REJECT', 'DIRECT', 'PASS']);
+      final retryResult = await retry;
+      expect(retryResult.error, isNull);
+      expect(await target(), 'PROXY');
+      expect(applied, ['REJECT', 'DIRECT', 'PROXY']);
     },
   );
 
@@ -291,7 +297,7 @@ void main() {
       expect(applied, ['REJECT']);
     },
   );
-  test('late apply cannot race rollback or a queued restore', () async {
+  test('late apply failure cannot race rollback or a queued restore', () async {
     final applyGate = Completer<void>();
     final started = Completer<void>();
     final compensationGate = Completer<bool>();
@@ -304,7 +310,7 @@ void main() {
         started.complete();
         await applyGate.future;
         applied.add(await target());
-        return true;
+        return false;
       }
       applied.add(await target());
       compensating.complete();
@@ -324,7 +330,6 @@ void main() {
       previous: original,
     );
     await started.future;
-    expect((await save).error, currentAppLocalizations.addedRulesApplyPending);
     expect(await target(), 'REJECT');
     final restore = action.runRestoreInLane(() async {
       restoreRan = true;
@@ -333,11 +338,16 @@ void main() {
       original.copyWith(ruleTarget: 'EXTERNAL'),
       profileId: 1,
     );
+    await Future<void>.delayed(const Duration(milliseconds: 120));
     expect(restoreRan, isFalse);
     applyGate.complete();
     await compensating.future;
     expect(applied, ['EXTERNAL', 'EXTERNAL']);
     expect(await target(), 'EXTERNAL');
+    expect(
+      (await save).error,
+      contains(currentAppLocalizations.addedRulesRollbackReloadTimeout),
+    );
     expect(restoreRan, isFalse);
     compensationGate.complete(true);
     await restore;
@@ -346,7 +356,7 @@ void main() {
 
   for (final throws in [false, true]) {
     test(
-      'late apply failure settles before rollback: throws=$throws',
+      'a slow apply that fails is undone and says why: throws=$throws',
       () async {
         final slow = Completer<bool>();
         final started = Completer<void>();
@@ -374,25 +384,55 @@ void main() {
           previous: original,
         );
         await started.future;
-        expect(
-          (await save).error,
-          currentAppLocalizations.addedRulesApplyPending,
-        );
+        await Future<void>.delayed(const Duration(milliseconds: 120));
         expect(await target(), 'REJECT');
         if (throws) {
-          slow.completeError(StateError('late failure'));
+          slow.completeError(const DnsRespectRulesUnmetException());
         } else {
           slow.complete(false);
         }
-        await action.runRestoreInLane(() async {});
+        final appLocalizations = currentAppLocalizations;
+        expect(
+          (await save).error,
+          throws
+              ? '${appLocalizations.addedRulesApplyFailed}\n'
+                    '${appLocalizations.dnsRespectRulesUnmetError}'
+              : appLocalizations.addedRulesReloadFailed,
+        );
         expect(await target(), 'DIRECT');
         expect(calls, 2);
-        expect(fake.warnings, [
-          currentAppLocalizations.addedRulesApplyRestored,
-        ]);
+        expect(fake.warnings, isEmpty);
       },
     );
   }
+
+  test('a failed apply tells the error that failed it', () async {
+    var calls = 0;
+    final fake = FakeAddedRulesAction(() async => ++calls != 1)
+      ..failure = const DnsRespectRulesUnmetException();
+    container = ProviderContainer(
+      overrides: [
+        currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        addedRulesActionProvider.overrideWith(() => fake),
+      ],
+    );
+    final appLocalizations = currentAppLocalizations;
+    final result = await container
+        .read(addedRulesActionProvider.notifier)
+        .putRule(
+          profile,
+          original.copyWith(ruleTarget: 'REJECT'),
+          previous: original,
+        );
+    expect(
+      result.error,
+      '${appLocalizations.addedRulesApplyFailed}\n'
+      '${appLocalizations.dnsRespectRulesUnmetError}',
+    );
+    expect(calls, 2);
+    expect(await target(), 'DIRECT');
+  });
 
   test('failed reload preserves writes from an independent editor', () async {
     final slow = Completer<bool>();
@@ -650,43 +690,48 @@ void main() {
     );
   });
 
-  test('late compensating reload failure is reported after timeout', () async {
-    final slow = Completer<bool>();
-    var calls = 0;
-    final fake = FakeAddedRulesAction(
-      () async => ++calls == 1 ? slow.future : false,
-    );
-    container = ProviderContainer(
-      overrides: [
-        currentProfileIdProvider.overrideWithBuild((_, _) => 1),
-        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
-        addedRulesActionProvider.overrideWith(() => fake),
-      ],
-    );
-    final result = await container
-        .read(addedRulesActionProvider.notifier)
-        .putRule(
-          profile,
-          original.copyWith(ruleTarget: 'REJECT'),
-          previous: original,
-        );
-    expect(result.error, isNotNull);
-    expect(fake.warnings, isEmpty);
-    slow.complete(true);
-    // Queue another operation to wait for the held write lane to settle.
-    await fake.putRule(
-      profile,
-      original.copyWith(ruleTarget: 'PROXY'),
-      previous: original,
-    );
-    expect(
-      fake.warnings.single,
-      allOf(
-        startsWith(currentAppLocalizations.addedRulesApplyRestoreFailed),
-        contains('restoring the running configuration failed'),
-      ),
-    );
-  });
+  test(
+    'a slow apply that fails waits for the compensating reload to answer',
+    () async {
+      final slow = Completer<bool>();
+      final started = Completer<void>();
+      var calls = 0;
+      final fake = FakeAddedRulesAction(() async {
+        if (++calls == 1) {
+          started.complete();
+          return slow.future;
+        }
+        return false;
+      });
+      container = ProviderContainer(
+        overrides: [
+          currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+          coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+          addedRulesActionProvider.overrideWith(() => fake),
+        ],
+      );
+      final save = container
+          .read(addedRulesActionProvider.notifier)
+          .putRule(
+            profile,
+            original.copyWith(ruleTarget: 'REJECT'),
+            previous: original,
+          );
+      await started.future;
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      slow.complete(false);
+      final result = await save;
+      expect(
+        result.error,
+        allOf(
+          startsWith(currentAppLocalizations.addedRulesReloadFailed),
+          contains('restoring the running configuration failed'),
+        ),
+      );
+      expect(calls, 2);
+      expect(fake.warnings, isEmpty);
+    },
+  );
 
   for (final outcome in [true, false]) {
     test('slow compensation reports its final outcome: $outcome', () async {
@@ -732,48 +777,54 @@ void main() {
     });
   }
 
-  test(
-    'provider disposed during a late apply still reports the outcome',
-    () async {
-      final slow = Completer<bool>();
-      final started = Completer<void>();
-      var calls = 0;
-      final fake = FakeAddedRulesAction(() async {
-        if (++calls == 1) {
-          started.complete();
-          return slow.future;
+  for (final outcome in [true, false]) {
+    test(
+      'provider disposed during a slow apply still answers: $outcome',
+      () async {
+        final slow = Completer<bool>();
+        final started = Completer<void>();
+        var calls = 0;
+        final fake = FakeAddedRulesAction(() async {
+          if (++calls == 1) {
+            started.complete();
+            return slow.future;
+          }
+          return true;
+        });
+        container = ProviderContainer(
+          overrides: [
+            currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+            coreStatusProvider.overrideWithBuild(
+              (_, _) => CoreStatus.connected,
+            ),
+            addedRulesActionProvider.overrideWith(() => fake),
+          ],
+        );
+        final action = container.read(addedRulesActionProvider.notifier);
+        final save = action.putRule(
+          profile,
+          original.copyWith(ruleTarget: 'REJECT'),
+          previous: original,
+        );
+        await started.future;
+        container.dispose();
+        slow.complete(outcome);
+        final result = await save;
+        expect(calls, 1);
+        if (outcome) {
+          expect(result.error, isNull);
+          expect(await target(), 'REJECT');
+        } else {
+          expect(
+            result.error,
+            contains(currentAppLocalizations.addedRulesRollbackReloadFailed),
+          );
+          expect(await target(), 'DIRECT');
         }
-        return true;
-      });
-      container = ProviderContainer(
-        overrides: [
-          currentProfileIdProvider.overrideWithBuild((_, _) => 1),
-          coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
-          addedRulesActionProvider.overrideWith(() => fake),
-        ],
-      );
-      final action = container.read(addedRulesActionProvider.notifier);
-      final save = action.putRule(
-        profile,
-        original.copyWith(ruleTarget: 'REJECT'),
-        previous: original,
-      );
-      await started.future;
-      expect(
-        (await save).error,
-        currentAppLocalizations.addedRulesApplyPending,
-      );
-      container.dispose();
-      slow.complete(true);
-      await action.runRestoreInLane(() async {});
-      expect(calls, 1);
-      expect(await target(), 'DIRECT');
-      expect(
-        fake.warnings.single,
-        startsWith(currentAppLocalizations.addedRulesApplyRestoreFailed),
-      );
-    },
-  );
+        expect(fake.warnings, isEmpty);
+      },
+    );
+  }
 
   test(
     'throwing feedback cannot release the lane before compensation',
@@ -808,12 +859,12 @@ void main() {
         previous: original,
       );
       await started.future;
+      slow.complete(false);
+      await compensating.future;
       expect(
         (await save).error,
-        currentAppLocalizations.addedRulesApplyPending,
+        contains(currentAppLocalizations.addedRulesRollbackReloadTimeout),
       );
-      slow.complete(true);
-      await compensating.future;
       var released = false;
       final lane = action.runRestoreInLane(() async => released = true);
       // Well past the 30 ms compensation timeout.
@@ -832,46 +883,103 @@ void main() {
       expect(await target(), 'PROXY');
     },
   );
-  test(
-    'stalled provider query respects reload deadline and rolls back',
-    () async {
-      final dir = await Directory.systemTemp.createTemp('added-rule-timeout-');
-      addTearDown(() => dir.delete(recursive: true));
-      final stalled = Completer<RuleSetView?>();
-      var applies = 0;
-      container = ProviderContainer(
-        overrides: [
-          currentProfileIdProvider.overrideWithBuild((_, _) => 1),
-          coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
-          addedRulesActionProvider.overrideWith(
-            () => FakeAddedRulesAction(
-              () async {
-                applies++;
-                return true;
-              },
-              profilesPath: dir.path,
-              providerView: () => stalled.future,
+  for (final stalls in [true, false]) {
+    test(
+      'a set the Core never reports loaded is kept as not ready yet: stalls=$stalls',
+      () async {
+        final dir = await Directory.systemTemp.createTemp(
+          'added-rule-timeout-',
+        );
+        addTearDown(() => dir.delete(recursive: true));
+        final stalled = Completer<RuleSetView?>();
+        var applies = 0;
+        var queries = 0;
+        container = ProviderContainer(
+          overrides: [
+            currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+            coreStatusProvider.overrideWithBuild(
+              (_, _) => CoreStatus.connected,
             ),
+            addedRulesActionProvider.overrideWith(
+              () => FakeAddedRulesAction(
+                () async {
+                  applies++;
+                  return true;
+                },
+                profilesPath: dir.path,
+                providerView: () {
+                  queries++;
+                  // No identity match: the view never names this set.
+                  return stalls ? stalled.future : Future.value(null);
+                },
+              ),
+            ),
+          ],
+        );
+        const set = AddedRuleSet(
+          id: 123,
+          profileId: 1,
+          name: 'ads',
+          url: 'https://x.test/ads',
+        );
+        final result = await container
+            .read(addedRulesActionProvider.notifier)
+            .putSet(profile, set, target: 'REJECT')
+            .timeout(const Duration(seconds: 2));
+        expect(result.error, isNull);
+        expect(result.pending, isTrue);
+        expect(result.ruleId, set.id);
+        expect(applies, 1);
+        expect(queries, greaterThan(0));
+        expect(
+          (await database.addedRuleSetsDao.query(1).get()).single.name,
+          'ads',
+        );
+        expect(
+          (await database.rulesDao.queryAddedRules(1).get())
+              .singleWhere((r) => r.id == set.id)
+              .ruleTarget,
+          'REJECT',
+        );
+        stalled.complete(null);
+      },
+    );
+  }
+
+  test('a set the Core reports loaded is in effect', () async {
+    final dir = await Directory.systemTemp.createTemp('added-rule-loaded-');
+    addTearDown(() => dir.delete(recursive: true));
+    var queries = 0;
+    container = ProviderContainer(
+      overrides: [
+        currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        addedRulesActionProvider.overrideWith(
+          () => FakeAddedRulesAction(
+            () async => true,
+            profilesPath: dir.path,
+            // Loading at first, then loaded.
+            providerView: () async => ++queries == 1
+                ? null
+                : const RuleSetView(name: 'flash-added-ads', status: 'ok'),
           ),
-        ],
-      );
-      const set = AddedRuleSet(
-        id: 123,
-        profileId: 1,
-        name: 'ads',
-        url: 'https://x.test/ads',
-      );
-      final result = await container
-          .read(addedRulesActionProvider.notifier)
-          .putSet(profile, set, target: 'REJECT')
-          .timeout(const Duration(seconds: 2));
-      expect(result.error, isNotNull);
-      expect(applies, 2);
-      expect(await database.addedRuleSetsDao.query(1).get(), isEmpty);
-      expect(await target(), 'DIRECT');
-      stalled.complete(null);
-    },
-  );
+        ),
+      ],
+    );
+    const set = AddedRuleSet(
+      id: 123,
+      profileId: 1,
+      name: 'ads',
+      url: 'https://x.test/ads',
+    );
+    final result = await container
+        .read(addedRulesActionProvider.notifier)
+        .putSet(profile, set, target: 'REJECT');
+    expect(result.error, isNull);
+    expect(result.pending, isFalse);
+    expect(queries, 2);
+  });
+
   test(
     'external edit during failed set save preserves both pair rows and coherent generated YAML',
     () async {
@@ -1215,7 +1323,7 @@ void main() {
     },
   );
   test(
-    'stalled compensation warns promptly but blocks later writes until it settles',
+    'stalled compensation warns promptly and later writes wait until it settles',
     () async {
       final slow = Completer<bool>();
       var calls = 0;
@@ -1248,19 +1356,16 @@ void main() {
         original.copyWith(ruleTarget: 'PROXY'),
         previous: original,
       );
-      expect(
-        (await next).error,
-        currentAppLocalizations.addedRulesApplyPending,
-      );
+      var answered = false;
+      unawaited(next.then((_) => answered = true));
+      // Well past twice the 30 ms save timeout: it waits its turn.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(answered, isFalse);
       expect(calls, 2);
       expect(await target(), 'DIRECT');
       slow.complete(true);
-      final retry = await action.putRule(
-        profile,
-        original.copyWith(ruleTarget: 'PROXY'),
-        previous: original,
-      );
-      expect(retry.error, isNull);
+      expect((await next).error, isNull);
+      expect(calls, 3);
       expect(await target(), 'PROXY');
     },
   );

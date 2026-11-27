@@ -11879,29 +11879,23 @@ abstract class AppLocalizations {
   /// **'Look up again'**
   String get relookup;
 
-  /// No description provided for @addedRulesReloadTimeout.
-  ///
-  /// In en, this message translates to:
-  /// **'The core did not finish reloading in 15 seconds; the change was undone.'**
-  String get addedRulesReloadTimeout;
-
   /// No description provided for @addedRulesReloadFailed.
   ///
   /// In en, this message translates to:
   /// **'The core did not take the new config; the change was undone.'**
   String get addedRulesReloadFailed;
 
+  /// No description provided for @addedRulesApplyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The change could not be applied and was undone.'**
+  String get addedRulesApplyFailed;
+
   /// No description provided for @addedRuleSetLoadFailed.
   ///
   /// In en, this message translates to:
   /// **'The rule set could not be downloaded; the change was undone.'**
   String get addedRuleSetLoadFailed;
-
-  /// No description provided for @addedRuleSetLoadTimeout.
-  ///
-  /// In en, this message translates to:
-  /// **'The rule set did not finish downloading in 15 seconds; the change was undone.'**
-  String get addedRuleSetLoadTimeout;
 
   /// No description provided for @ruleDeleteTitle.
   ///

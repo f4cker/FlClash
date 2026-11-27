@@ -6984,17 +6984,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get addedRulesReloadTimeout => '코어가 15초 안에 다시 로드를 완료하지 못해 변경을 되돌렸습니다.';
-
-  @override
   String get addedRulesReloadFailed => '코어가 새 구성을 적용하지 못해 변경을 되돌렸습니다.';
 
   @override
-  String get addedRuleSetLoadFailed => '규칙 세트를 다운로드하지 못해 변경을 되돌렸습니다.';
+  String get addedRulesApplyFailed => '적용하지 못해 변경을 되돌렸습니다.';
 
   @override
-  String get addedRuleSetLoadTimeout =>
-      '규칙 세트 다운로드가 15초 안에 완료되지 않아 변경을 되돌렸습니다.';
+  String get addedRuleSetLoadFailed => '규칙 세트를 다운로드하지 못해 변경을 되돌렸습니다.';
 
   @override
   String get ruleDeleteTitle => '이 규칙을 삭제할까요?';

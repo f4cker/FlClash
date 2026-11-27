@@ -7113,20 +7113,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get addedRulesReloadTimeout =>
-      'The core did not finish reloading in 15 seconds; the change was undone.';
-
-  @override
   String get addedRulesReloadFailed =>
       'The core did not take the new config; the change was undone.';
 
   @override
-  String get addedRuleSetLoadFailed =>
-      'The rule set could not be downloaded; the change was undone.';
+  String get addedRulesApplyFailed =>
+      'The change could not be applied and was undone.';
 
   @override
-  String get addedRuleSetLoadTimeout =>
-      'The rule set did not finish downloading in 15 seconds; the change was undone.';
+  String get addedRuleSetLoadFailed =>
+      'The rule set could not be downloaded; the change was undone.';
 
   @override
   String get ruleDeleteTitle => 'Delete this rule?';

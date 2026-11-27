@@ -7169,20 +7169,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get addedRulesReloadTimeout =>
-      'Le moteur ne s’est pas rechargé en 15 secondes ; la modification a été annulée.';
-
-  @override
   String get addedRulesReloadFailed =>
       'Le moteur n’a pas accepté la nouvelle configuration ; la modification a été annulée.';
 
   @override
-  String get addedRuleSetLoadFailed =>
-      'Impossible de télécharger le jeu de règles ; la modification a été annulée.';
+  String get addedRulesApplyFailed =>
+      'Impossible d’appliquer ; la modification a été annulée.';
 
   @override
-  String get addedRuleSetLoadTimeout =>
-      'Le jeu de règles n’a pas été téléchargé en 15 secondes ; la modification a été annulée.';
+  String get addedRuleSetLoadFailed =>
+      'Impossible de télécharger le jeu de règles ; la modification a été annulée.';
 
   @override
   String get ruleDeleteTitle => 'Supprimer cette règle ?';

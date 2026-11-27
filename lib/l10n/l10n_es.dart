@@ -7161,20 +7161,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get addedRulesReloadTimeout =>
-      'El núcleo no terminó de recargarse en 15 segundos; se deshizo el cambio.';
-
-  @override
   String get addedRulesReloadFailed =>
       'El núcleo no aceptó la nueva configuración; se deshizo el cambio.';
 
   @override
-  String get addedRuleSetLoadFailed =>
-      'No se pudo descargar el conjunto de reglas; se deshizo el cambio.';
+  String get addedRulesApplyFailed =>
+      'No se pudo aplicar; se deshizo el cambio.';
 
   @override
-  String get addedRuleSetLoadTimeout =>
-      'El conjunto de reglas no terminó de descargarse en 15 segundos; se deshizo el cambio.';
+  String get addedRuleSetLoadFailed =>
+      'No se pudo descargar el conjunto de reglas; se deshizo el cambio.';
 
   @override
   String get ruleDeleteTitle => '¿Eliminar esta regla?';

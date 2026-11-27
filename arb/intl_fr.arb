@@ -2440,10 +2440,9 @@
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
-  "addedRulesReloadTimeout": "Le moteur ne s’est pas rechargé en 15 secondes ; la modification a été annulée.",
   "addedRulesReloadFailed": "Le moteur n’a pas accepté la nouvelle configuration ; la modification a été annulée.",
+  "addedRulesApplyFailed": "Impossible d’appliquer ; la modification a été annulée.",
   "addedRuleSetLoadFailed": "Impossible de télécharger le jeu de règles ; la modification a été annulée.",
-  "addedRuleSetLoadTimeout": "Le jeu de règles n’a pas été téléchargé en 15 secondes ; la modification a été annulée.",
   "ruleDeleteTitle": "Supprimer cette règle ?",
   "ruleSetDeleteTitle": "Supprimer le jeu de règles « {name} » ?",
   "@ruleSetDeleteTitle": {

@@ -1111,9 +1111,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
     if (!await confirmRuleDelete(context, text: text, setName: set?.name)) {
       return;
     }
-    final result = set != null
-        ? await _actions.deleteSet(profile, set, rule: editable.rule)
-        : await _actions.deleteRule(profile, editable.rule);
+    final result = await _whileApplying(
+      set != null
+          ? _actions.deleteSet(profile, set, rule: editable.rule)
+          : _actions.deleteRule(profile, editable.rule),
+    );
     if (!mounted) return;
     if (result.error case final error?) {
       _showBanner(error, RuleTone.red);
@@ -1133,11 +1135,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
   Future<void> _move(_Editable editable, {required bool up}) async {
     final profile = ref.read(currentProfileProvider);
     if (profile == null) return;
-    final result = await _actions.moveRule(
-      profile,
-      editable.rule,
-      up: up,
-      expectedOrder: _ownRules,
+    final result = await _whileApplying(
+      _actions.moveRule(
+        profile,
+        editable.rule,
+        up: up,
+        expectedOrder: _ownRules,
+      ),
     );
     if (!mounted) return;
     if (result.error case final error?) {
@@ -1145,6 +1149,23 @@ class _RulesViewState extends ConsumerState<RulesView> {
     }
     await _loadEditable();
     await _loadList();
+  }
+
+  /// Waits for [save], saying it is still applying once it runs long.
+  Future<T> _whileApplying<T>(Future<T> save) async {
+    final timer = Timer(addedRulesSaveTimeout, () {
+      if (mounted) {
+        _showBanner(
+          context.appLocalizations.addedRulesApplyPending,
+          RuleTone.amber,
+        );
+      }
+    });
+    try {
+      return await save;
+    } finally {
+      timer.cancel();
+    }
   }
 
   void _showBanner(String text, RuleTone tone, {bool lookupAction = false}) {
@@ -1173,8 +1194,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
   }) async {
     final appLocalizations = context.appLocalizations;
     final shown = outcome.isSet ? outcome.name : outcome.text;
+    final unready =
+        outcome.isSet && outcome.pending && !outcome.deleted && _coreRunning;
     final text = outcome.deleted
         ? appLocalizations.ruleDeletedBanner
+        : unready
+        ? appLocalizations.ruleSetIssueMissing(shown)
         : outcome.pending
         ? appLocalizations.ruleSavedPendingBanner
         : outcome.isSet
@@ -1186,7 +1211,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
         : appLocalizations.ruleAddedBanner(shown);
     _showBanner(
       text,
-      RuleTone.green,
+      unready ? RuleTone.amber : RuleTone.green,
       lookupAction: !outcome.deleted && !outcome.pending && _lookup == null,
     );
     await _loadEditable();

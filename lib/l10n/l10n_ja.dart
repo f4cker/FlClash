@@ -6912,17 +6912,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get addedRulesReloadTimeout => 'コアの再読み込みが15秒以内に完了しなかったため、変更を元に戻しました。';
-
-  @override
   String get addedRulesReloadFailed => 'コアが新しい設定を受け入れなかったため、変更を元に戻しました。';
 
   @override
-  String get addedRuleSetLoadFailed => 'ルールセットをダウンロードできなかったため、変更を元に戻しました。';
+  String get addedRulesApplyFailed => '適用できなかったため、変更を元に戻しました。';
 
   @override
-  String get addedRuleSetLoadTimeout =>
-      'ルールセットのダウンロードが15秒以内に完了しなかったため、変更を元に戻しました。';
+  String get addedRuleSetLoadFailed => 'ルールセットをダウンロードできなかったため、変更を元に戻しました。';
 
   @override
   String get ruleDeleteTitle => 'このルールを削除しますか？';

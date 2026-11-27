@@ -5,6 +5,7 @@ import 'package:fl_clash/common/added_rule_edit.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/providers.dart' show addedRulesSaveTimeout;
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
@@ -640,6 +641,7 @@ class RuleEditFrame extends StatelessWidget {
                   ],
                 ),
               ),
+              _ApplyingNotice(active: busy),
               if (error case final error?) ...[
                 const SizedBox(height: 14),
                 Semantics(
@@ -688,6 +690,67 @@ class RuleEditFrame extends StatelessWidget {
     return OverflowBox(
       maxWidth: screen + 2 * (ruleEditAlertMargin - margin),
       child: dialog,
+    );
+  }
+}
+
+/// Says a save is still applying once it has run [addedRulesSaveTimeout]:
+/// the dialog keeps waiting for it, since a slow apply still counts.
+class _ApplyingNotice extends StatefulWidget {
+  final bool active;
+
+  const _ApplyingNotice({required this.active});
+
+  @override
+  State<_ApplyingNotice> createState() => _ApplyingNoticeState();
+}
+
+class _ApplyingNoticeState extends State<_ApplyingNotice> {
+  Timer? _timer;
+  bool _shown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) _start();
+  }
+
+  @override
+  void didUpdateWidget(_ApplyingNotice oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active == oldWidget.active) return;
+    _timer?.cancel();
+    _shown = false;
+    if (widget.active) _start();
+  }
+
+  void _start() {
+    _timer = Timer(addedRulesSaveTimeout, () {
+      if (mounted) setState(() => _shown = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_shown) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Semantics(
+        liveRegion: true,
+        child: Text(
+          context.appLocalizations.addedRulesApplyPending,
+          textAlign: TextAlign.center,
+          style: AppTextStyle.footnote
+              .of(context)
+              .copyWith(color: context.colorScheme.onSurfaceVariant),
+        ),
+      ),
     );
   }
 }

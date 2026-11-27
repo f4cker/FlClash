@@ -2440,10 +2440,9 @@
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
-  "addedRulesReloadTimeout": "Ядро не перезагрузилось за 15 секунд; изменение отменено.",
   "addedRulesReloadFailed": "Ядро не приняло новую конфигурацию; изменение отменено.",
+  "addedRulesApplyFailed": "Не удалось применить; изменение отменено.",
   "addedRuleSetLoadFailed": "Не удалось скачать набор правил; изменение отменено.",
-  "addedRuleSetLoadTimeout": "Набор правил не скачался за 15 секунд; изменение отменено.",
   "ruleDeleteTitle": "Удалить это правило?",
   "ruleSetDeleteTitle": "Удалить набор правил «{name}»?",
   "@ruleSetDeleteTitle": {
